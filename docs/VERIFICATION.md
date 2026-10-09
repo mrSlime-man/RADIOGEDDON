@@ -1,0 +1,103 @@
+# Verification Status
+
+What has been verified, how, and what has not. Integrity rule: nothing is
+marked hardware-verified without evidence from a physical device. As of
+`1.0.0-beta.1`, **no physical-hardware testing has been done** — the entire
+"Not verified" section below stands open.
+
+## Environment
+
+The project is developed and built in CI containers with no Flipper Zero
+attached (no USB device, no `/dev/ttyACM*`). Every radio behaviour is therefore
+unverified and is listed under "Not verified".
+
+## Verified by automation (evidence-backed)
+
+All of the following run in GitHub Actions on every pull request and every
+release tag (`.github/workflows/ci.yml` → `build.yml`), and can be reproduced
+locally.
+
+| Area | Method | Result |
+|------|--------|--------|
+| Official build | SDK 1.4.3 pinned by SHA-256, API asserted 87.1, `.fap` manifest verified | Pass — `radiogeddon-official.fap` |
+| Unleashed build | SDK unlshd-093 pinned by SHA-256, API asserted 88.9, manifest verified | Pass — `radiogeddon-unleashed.fap` |
+| RogueMaster build | RogueMaster source at commit `38d7ae9`, built with its own `fbt`, API asserted 88.16, manifest verified | Pass — `radiogeddon-roguemaster.fap` |
+| Lint | `ufbt lint` (clang-format) | Pass, no warnings |
+| DSP/parse unit tests | `make -C test check` → `test_dsp` | Pass — 31 checks |
+| Analysis-engine unit tests | `make -C test check` → `test_analyzer` | Pass — 24 checks |
+| Memory safety of tested code | tests built `-Werror` under `-fsanitize=address,undefined` | Pass — no ASan/UBSan reports |
+| Documentation links | `scripts/check_links.py` (offline link + anchor check) | Pass |
+| `.fap` metadata | `scripts/verify_fap.py` parses `.fapmeta` and asserts magic, API, target, name, version, icon | Pass for all three artifacts |
+
+Host-test total: **55 checks, 0 failures.** What the suite covers (synthetic
+signals, not real captures):
+
+- `test_dsp` — RAW `RAW_Data` parsing (incl. whitespace, signs, out-of-range),
+  duration clustering, cluster sorting, and a RAW capture→file→reparse
+  round-trip.
+- `test_analyzer` — PWM identification and bit extraction from Princeton-style
+  frames, PPM-shaped input, frame segmentation and repeat detection,
+  constant-vs-changing field maps for fixed and rolling-style presses, RAW
+  similarity scoring, and degenerate/empty input safety.
+
+The Manchester encoding branch has no dedicated unit test yet.
+
+## Release-pipeline integrity
+
+- Releases are produced only from a version tag by `release.yml`, after the full
+  build pipeline passes. The workflow stages assets in a draft, re-downloads
+  them, checks them against `SHA256SUMS`, and only then publishes; any failure
+  deletes the draft.
+- Each `.fap` carries a signed build-provenance attestation
+  (`actions/attest-build-provenance`) linking it to the workflow run and the
+  tagged commit. Toolchain builds are not byte-for-byte reproducible across
+  machines, so provenance — not cross-machine hash equality — is the integrity
+  guarantee.
+
+## Code review of the pre-merge branches
+
+The two development branches were reviewed against the firmware sources during
+the merge; defects found and fixed:
+
+1. **Critical — internal radio reported absent.** Device presence had been
+   gated on `subghz_devices_begin()`'s return value, which is `false` for the
+   internal CC1101 (its interconnect `begin` hook is empty). On real hardware
+   every radio screen would have shown "No radio". Fixed to use
+   `subghz_devices_is_connect()` after an ignored-return `begin()`. This
+   compiles and passes host tests either way, so only source review caught it —
+   and it is itself a prime item for hardware confirmation (checklist W2).
+2. **Replay modulation fidelity.** Replay reproduces the capture's exact
+   modulation, including loading a custom CC1101 register array from a file's
+   `Custom_preset_data`; an unrecognised preset is refused rather than
+   transmitted on a default modulation.
+3. **Destructive delete.** Deleting a recording now requires explicit
+   confirmation.
+
+Earlier stabilization fixes from the analyzer branch are retained: RX start/stop
+ordering matching the firmware, the TX region gate via `subghz_devices_set_tx`,
+replay no longer mutating the stored file, cross-thread GUI safety (worker
+records to a mutex-protected history and posts an event), and invalid-frequency
+guards before tuning.
+
+## NOT verified (requires physical hardware)
+
+Everything about on-device radio behaviour, and the end-to-end workflow. See the
+[hardware checklist](HARDWARE_CHECKLIST.md). In particular:
+
+- Real over-the-air reception and live protocol decoding.
+- RAW capture fidelity, and replay producing a working transmission.
+- The internal-radio presence fix (defect 1) actually resolving "No radio" on a
+  device.
+- The analysis engine's inferences against real captured signals (host tests use
+  synthetic waveforms only).
+- Regional TX enforcement actually blocking disallowed frequencies on hardware.
+- Long-run memory stability and absence of radio-threading crashes.
+- That each per-firmware `.fap` loads and runs on its matching firmware.
+
+## How this file is updated
+
+After running the [hardware checklist](HARDWARE_CHECKLIST.md) on a device, move
+each confirmed item into the "Verified" section with the date, firmware family
+and version, and a one-line evidence note (log excerpt or observed behaviour).
+Report results through the hardware-report issue form so they can be
+corroborated.

@@ -1,0 +1,96 @@
+# Reusable build + verification pipeline, shared by CI (ci.yml) and releases
+# (release.yml) so a release artifact passes exactly the same gates as a PR.
+#
+# Jobs:
+#   docs        offline Markdown link/anchor check
+#   host-tests  55 host unit-test checks under ASan/UBSan
+#   fap         one .fap per firmware family, built against the SDK pinned in
+#               scripts/firmware_pins.sh (checksum-verified), API asserted,
+#               manifest verified; clang-format lint on the official job
+name: Build
+
+on:
+  workflow_call:
+    inputs:
+      ref:
+        description: Commit, tag or branch to build (default - the triggering ref)
+        type: string
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  docs:
+    name: docs (links)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.ref }}
+          persist-credentials: false
+      - name: Check Markdown links and anchors
+        run: python3 scripts/check_links.py
+
+  host-tests:
+    name: host tests (ASan/UBSan)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.ref }}
+          persist-credentials: false
+      - name: Run unit tests
+        run: make -C test check
+
+  fap:
+    name: fap (${{ matrix.target }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [official, unleashed, roguemaster]
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.ref }}
+          persist-credentials: false
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install pinned ufbt
+        run: |
+          source scripts/firmware_pins.sh
+          python -m pip install --disable-pip-version-check "ufbt==${UFBT_VERSION}"
+
+      - name: Build and verify (${{ matrix.target }})
+        run: scripts/build_target.sh "${{ matrix.target }}" out
+
+      - name: Lint (clang-format)
+        if: matrix.target == 'official'
+        env:
+          UFBT_HOME: ${{ github.workspace }}/.ufbt-official
+        run: ufbt lint
+
+      - name: Summary
+        run: |
+          {
+            echo "### radiogeddon-${{ matrix.target }}.fap"
+            echo '```'
+            cat "out/radiogeddon-${{ matrix.target }}.build-info"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@v6
+        with:
+          name: fap-${{ matrix.target }}
+          path: |
+            out/radiogeddon-${{ matrix.target }}.fap
+            out/radiogeddon-${{ matrix.target }}.build-info
+          if-no-files-found: error
+          retention-days: 30

@@ -1,0 +1,19 @@
+# ufbt SDK homes / build caches
+.ufbt/
+.ufbt-*/
+dist/debug/
+*.o
+*.elf
+*.map
+__pycache__/
+*.pyc
+
+# editor / IDE
+.vscode/
+
+# host test binaries
+test/build/
+
+# Build output. Release binaries are published as GitHub Release assets by
+# .github/workflows/release.yml (built from the tag), never committed.
+dist/

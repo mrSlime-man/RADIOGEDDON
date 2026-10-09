@@ -1,0 +1,24 @@
+# Continuous integration: every pull request and every push to main runs the
+# full shared pipeline (links, host tests, Official/Unleashed/RogueMaster
+# builds with API + manifest verification, lint). Feature-branch pushes are not
+# built on their own; open a pull request to get CI, which avoids running the
+# same commit twice.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  pipeline:
+    name: Pipeline
+    uses: ./.github/workflows/build.yml

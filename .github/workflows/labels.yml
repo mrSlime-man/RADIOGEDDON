@@ -1,0 +1,43 @@
+# Keeps the repository's issue labels in sync with .github/labels.json.
+# Creates missing labels and updates colour/description of existing ones; never
+# deletes labels. Runs when the label file changes on main, or on demand.
+name: Labels
+
+on:
+  push:
+    branches: [main]
+    paths: [".github/labels.json"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: labels
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    name: Sync labels
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+          sparse-checkout: .github/labels.json
+          sparse-checkout-cone-mode: false
+      - name: Create or update labels
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          python3 -c 'import json,sys; [print(f"{l[\"name\"]}\t{l[\"color\"]}\t{l[\"description\"]}") for l in json.load(open(".github/labels.json"))]' |
+          while IFS=$'\t' read -r name color description; do
+            gh label create "$name" --color "$color" --description "$description" --force
+            echo "synced: $name"
+          done
