@@ -64,6 +64,7 @@ region's rules.
 | F6c | Cancel: start recording, press Back, then Back on the name screen. | No file is added to the Database; recording again works. |
 | F6d | Card removed while recording. | The recording stops with `SD card write failed`; no crash; after reinserting the card, recording works again. |
 | F6e | Hopper auto-record with long activity (hold a remote for 10 s on a hop frequency). | One `HOP_*.sub` with all of it; the hopper resumes afterwards. |
+| F6f | OK while recording: start recording in Receive, wait for a decode, press OK. | The RAW name screen appears first; after saving, the receiver shows the decoded list again and OK saves the decode. Both files are in the Database. |
 | F7 | Custom-preset replay: a stock-app RAW `.sub` saved with a custom preset. | Replays on the correct modulation, or is cleanly refused (`Unsupported file`) — never sent on the wrong modulation. |
 | F8 | Delete: choose Delete on a saved file. | Confirmation shown; Cancel/Back keeps the file; Delete removes it; back in the Database the file is gone and the highlight stays near where it was. |
 | F11 | Database list: open Database with a mix of decoded, RAW and stock-app `.sub` files. | `Reading files...` with a rising percentage, then every file newest first with the right type, frequency and date; the counts at the top match the folder. |

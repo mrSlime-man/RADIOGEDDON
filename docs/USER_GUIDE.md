@@ -163,7 +163,7 @@ The screen shows:
 | Button | Action |
 |--------|--------|
 | Up / Down | Highlight a decoded signal (the newest is highlighted automatically) |
-| OK | Save the highlighted decoded signal |
+| OK | Save the highlighted decoded signal. While recording, it stops the recording and asks for its name first; the decoded list is kept |
 | Left | Start RAW recording; press again to stop and name it |
 | Back | While recording: stop and name it. Otherwise: stop the radio and return |
 

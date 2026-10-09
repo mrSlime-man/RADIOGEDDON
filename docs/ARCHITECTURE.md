@@ -201,7 +201,10 @@ flowchart LR
   loss note are written, and the file is closed.
 - **Saving.** The capture lives in `recording.tmp` until it is saved: Save
   renames it to a name that does not exist yet; Back, a failed save, an empty
-  capture or a write error deletes it.
+  capture or a write error deletes it. A `recording.tmp` left by a reboot
+  during recording is deleted when the app starts. Saving a decode while
+  recording stops and names the recording first, because leaving the receiver
+  stops the radio session the recorder is attached to.
 - Ring, formatter and loss accounting are host-tested, the ring with a real
   producer thread, and the recorder end to end against stub Furi/Storage
   layers that can make the "card" slow or fail (see
@@ -227,7 +230,9 @@ radio session before the receiver can start.
 
 **Settings.** `helpers/radiogeddon_settings.c` stores frequency, modulation and
 the scan options in a small Flipper Format file. Every field is validated on
-load and falls back to its default independently.
+load and falls back to its default independently. A save writes
+`settings.tmp` and renames it over `settings.txt` only when every field was
+written, so a card error keeps the previous file.
 
 **Frequency Hopper.** The scene starts the receive session, then a hopper
 thread (`helpers/radiogeddon_hopper.c`, 3 KB stack) drives it: every 10 ms it
