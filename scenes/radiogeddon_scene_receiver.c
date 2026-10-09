@@ -159,9 +159,11 @@ bool radiogeddon_scene_receiver_on_event(void* context, SceneManagerEvent event)
                     app->receiver_preserve_history = true;
                     scene_manager_next_scene(app->scene_manager, RadioGeddonSceneSaveName);
                 }
-            } else {
-                radiogeddon_subghz_record_start(app->subghz, NULL);
+            } else if(radiogeddon_subghz_record_start(app->subghz, NULL)) {
                 notification_message(app->notifications, &sequence_set_only_red_255);
+            } else {
+                // Not enough free memory for a capture buffer: refuse cleanly.
+                notification_message(app->notifications, &sequence_blink_red_100);
             }
             consumed = true;
             break;

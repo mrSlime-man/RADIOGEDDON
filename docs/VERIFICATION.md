@@ -79,6 +79,23 @@ replay no longer mutating the stored file, cross-thread GUI safety (worker
 records to a mutex-protected history and posts an event), and invalid-frequency
 guards before tuning.
 
+## Reported by users on physical hardware
+
+These are results reported by a tester, not independently reproduced or
+logged by the project. They are recorded separately from the automated
+evidence above and from the checklist's "Verified" bar.
+
+| Date | Firmware | Build | Reported result |
+|------|----------|-------|-----------------|
+| 2026-10-09 | RogueMaster (version not recorded) | `v1.0.0-beta.1` | **Crash on launch**: "Flipper crashed and was rebooted — Out of memory", before the main menu. |
+| 2026-10-09 | RogueMaster (version not recorded) | PR #3 (memory fix, later `v1.0.0-beta.2`) | The app launches to the main menu and works ("it is working"). Individual checklist items were not reported separately. |
+
+The crash was caused by allocating about 110 KB of radio state (a 64 KB RAW
+buffer, the protocol decoders and keystore, and the Sub-GHz worker) at app
+start; see [Architecture](ARCHITECTURE.md). Checklist item W1 (launch) on
+RogueMaster is therefore user-reported as passing; it still needs a logged
+report through the hardware-report form to count as verified.
+
 ## NOT verified (requires physical hardware)
 
 Everything about on-device radio behaviour, and the end-to-end workflow. See the

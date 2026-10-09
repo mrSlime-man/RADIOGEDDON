@@ -60,8 +60,14 @@ bottom.
 
 ## A recording shows `FULL`
 
-RAW recordings hold up to 16,384 timing samples. Stop recording shortly after the
-transmission; for long or continuous signals, record a short section.
+RAW recordings hold up to 16,384 timing samples, or fewer if little memory was
+free when recording started. Stop recording shortly after the transmission; for
+long or continuous signals, record a short section.
+
+## Recording doesn't start (red LED blinks)
+
+There was not enough free memory for a capture buffer. Close other apps or
+restart the Flipper, then try again.
 
 ## Saving fails (error tone)
 
