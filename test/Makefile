@@ -22,10 +22,20 @@ STUB_HDRS := stubs/furi.h stubs/storage/storage.h stubs/datetime/datetime.h \
 RECORDER_SRC := test_recorder.c stubs/furi_stub.c ../helpers/radiogeddon_recorder.c \
 		../helpers/rg_ring.c ../helpers/rg_rawfmt.c ../helpers/rg_raw.c
 
-.PHONY: check clean tsan
+# Fuzz targets (test/fuzz/). `check` replays their committed corpus with the
+# host compiler; `make fuzz` runs them under libFuzzer (needs clang).
+FUZZ_RAW_SRC := fuzz/fuzz_raw.c ../helpers/rg_raw.c ../helpers/rg_analyzer.c
+FUZZ_DB_SRC := fuzz/fuzz_db.c ../helpers/rg_db.c ../helpers/radiogeddon_dsp.c
+FUZZ_SAMPLES_SRC := fuzz/fuzz_samples.c ../helpers/rg_analyzer.c ../helpers/rg_timeline.c
+FUZZ_TARGETS := fuzz_raw fuzz_db fuzz_samples
+FUZZ_CC ?= clang
+FUZZ_TIME ?= 60
+
+.PHONY: check clean tsan fuzz
 check: $(BUILD)/test_dsp $(BUILD)/test_analyzer $(BUILD)/test_scan $(BUILD)/test_hop $(BUILD)/test_raw \
 		$(BUILD)/test_timeline $(BUILD)/test_ring $(BUILD)/test_rawfmt $(BUILD)/test_recorder \
-		$(BUILD)/test_db $(BUILD)/test_memstat $(BUILD)/test_dbload
+		$(BUILD)/test_db $(BUILD)/test_memstat $(BUILD)/test_dbload \
+		$(addprefix $(BUILD)/replay_,$(FUZZ_TARGETS))
 	$(BUILD)/test_dsp
 	$(BUILD)/test_analyzer
 	$(BUILD)/test_scan
@@ -38,6 +48,7 @@ check: $(BUILD)/test_dsp $(BUILD)/test_analyzer $(BUILD)/test_scan $(BUILD)/test
 	$(BUILD)/test_db
 	$(BUILD)/test_memstat
 	$(BUILD)/test_dbload
+	for t in $(FUZZ_TARGETS); do $(BUILD)/replay_$$t fuzz/corpus/$$t || exit 1; done
 
 $(BUILD)/test_dsp: $(DSP_SRC) ../helpers/radiogeddon_dsp.h | $(BUILD)
 	$(CC) $(CFLAGS) $(SAN) -o $@ $(DSP_SRC)
@@ -77,6 +88,39 @@ $(BUILD)/test_recorder: $(RECORDER_SRC) ../helpers/radiogeddon_recorder.h $(STUB
 $(BUILD)/test_dbload: $(DBLOAD_SRC) ../helpers/radiogeddon_db.h ../helpers/rg_db.h $(STUB_HDRS) \
 		| $(BUILD)
 	$(CC) $(CFLAGS) $(SAN) -Istubs -DSTUB_TRACK_ALLOC -pthread -o $@ $(DBLOAD_SRC)
+
+$(BUILD)/replay_fuzz_raw: fuzz/replay.c $(FUZZ_RAW_SRC) ../helpers/rg_raw.h \
+		../helpers/rg_analyzer.h | $(BUILD)
+	$(CC) $(CFLAGS) $(SAN) -o $@ fuzz/replay.c $(FUZZ_RAW_SRC)
+
+$(BUILD)/replay_fuzz_db: fuzz/replay.c $(FUZZ_DB_SRC) ../helpers/rg_db.h \
+		../helpers/radiogeddon_dsp.h | $(BUILD)
+	$(CC) $(CFLAGS) $(SAN) -o $@ fuzz/replay.c $(FUZZ_DB_SRC)
+
+$(BUILD)/replay_fuzz_samples: fuzz/replay.c $(FUZZ_SAMPLES_SRC) ../helpers/rg_analyzer.h \
+		../helpers/rg_timeline.h | $(BUILD)
+	$(CC) $(CFLAGS) $(SAN) -o $@ fuzz/replay.c $(FUZZ_SAMPLES_SRC)
+
+# libFuzzer builds. New inputs go to build/corpus/<target>; the committed
+# corpus is only read. A failing input is saved as build/<target>-crash-*.
+$(BUILD)/fuzz_raw: $(FUZZ_RAW_SRC) | $(BUILD)
+	$(FUZZ_CC) $(CFLAGS) -g -fsanitize=fuzzer,address,undefined -fno-sanitize-recover=all \
+		-o $@ $(FUZZ_RAW_SRC)
+
+$(BUILD)/fuzz_db: $(FUZZ_DB_SRC) | $(BUILD)
+	$(FUZZ_CC) $(CFLAGS) -g -fsanitize=fuzzer,address,undefined -fno-sanitize-recover=all \
+		-o $@ $(FUZZ_DB_SRC)
+
+$(BUILD)/fuzz_samples: $(FUZZ_SAMPLES_SRC) | $(BUILD)
+	$(FUZZ_CC) $(CFLAGS) -g -fsanitize=fuzzer,address,undefined -fno-sanitize-recover=all \
+		-o $@ $(FUZZ_SAMPLES_SRC)
+
+fuzz: $(addprefix $(BUILD)/,$(FUZZ_TARGETS))
+	for t in $(FUZZ_TARGETS); do \
+		mkdir -p $(BUILD)/corpus/$$t && \
+		$(BUILD)/$$t -max_total_time=$(FUZZ_TIME) -max_len=16384 -print_final_stats=1 \
+			-artifact_prefix=$(BUILD)/$$t- $(BUILD)/corpus/$$t fuzz/corpus/$$t || exit 1; \
+	done
 
 # Optional: the ring under ThreadSanitizer (not part of check; needs TSan).
 tsan: | $(BUILD)

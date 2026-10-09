@@ -77,16 +77,23 @@ device; use `.ufbt-unleashed` for an Unleashed device.
 ### Test
 
 ```bash
-make -C test check                    # 55 host checks, -Werror, ASan + UBSan
+make -C test check                    # host tests + fuzz corpus, -Werror, ASan + UBSan
+make -C test fuzz FUZZ_TIME=60        # fuzz each target under libFuzzer (needs clang)
 python3 scripts/check_links.py        # Markdown links and anchors
 UFBT_HOME=$PWD/.ufbt-official ufbt lint     # clang-format check
 UFBT_HOME=$PWD/.ufbt-official ufbt format   # apply formatting
+UFBT_HOME=$PWD/.ufbt-official python3 scripts/static_analysis.py  # GCC -fanalyzer + clang-tidy
 ```
 
-The host tests cover the firmware-independent code in
-`helpers/radiogeddon_dsp.*` and `helpers/rg_analyzer.*`. If you change or add
-analysis logic, add a test in `test/` — keep that code free of firmware
-headers so it stays host-testable.
+The host tests cover the firmware-independent code (`helpers/rg_*` and
+`helpers/radiogeddon_dsp.*`) and, through small Furi/Storage stand-ins in
+`test/stubs/`, the recorder and the Database loader. If you change or add such
+logic, add a test in `test/` and keep that code free of firmware headers so it
+stays host-testable. Code that reads files from the SD card should also get a
+fuzz target (`test/fuzz/`); an input that once broke it goes into
+`test/fuzz/corpus/<target>/` so every test run replays it. The static analysis
+checks are listed, with the reasons for the ones turned off, in
+[`.clang-tidy`](.clang-tidy).
 
 CI cannot exercise the radio. If you tested on hardware, say so (and on which
 firmware) in your pull request; if you did not, say that too.
@@ -114,8 +121,9 @@ firmware) in your pull request; if you did not, say that too.
 2. Make your change with tests and documentation updates.
 3. Add an entry under **Unreleased** in [CHANGELOG.md](CHANGELOG.md).
 4. Open a pull request; the template's checklist explains what reviewers look
-   for. CI (links, host tests, Official/Unleashed/RogueMaster builds with
-   API and manifest verification, lint) must pass.
+   for. CI (links, host tests, fuzzing, static analysis,
+   Official/Unleashed/RogueMaster builds with API and manifest verification,
+   lint) must pass.
 
 ## Releasing (maintainers)
 

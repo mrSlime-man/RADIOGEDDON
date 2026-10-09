@@ -17,3 +17,6 @@ test/build/
 # Build output. Release binaries are published as GitHub Release assets by
 # .github/workflows/release.yml (built from the tag), never committed.
 dist/
+
+# static analysis work files (scripts/static_analysis.py)
+/build/

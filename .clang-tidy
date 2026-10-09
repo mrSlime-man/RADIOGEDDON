@@ -1,0 +1,36 @@
+# clang-tidy checks for the app's device code, run by scripts/static_analysis.py
+# (and picked up by editors). Every finding fails CI.
+#
+# Turned off, and why:
+#   DeprecatedOrUnsafeBufferHandling, cert-err33-c
+#       Ask for C11 Annex K functions (snprintf_s), which newlib does not have,
+#       and for every snprintf result to be checked; ours fill fixed display
+#       buffers where cutting the text short is the intended behaviour.
+#   bugprone-easily-swappable-parameters
+#       Fires on most (x, y) and (count, max) signatures; style, not a defect.
+#   performance-no-int-to-ptr
+#       Fires inside the SDK's furi_check() macro.
+#   misc-include-cleaner
+#       Wants each SDK type's own header (furi/core/mutex.h, ...) instead of
+#       the umbrella headers (furi.h) the SDK is meant to be used through.
+Checks: >
+  -*,
+  clang-analyzer-*,
+  -clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling,
+  bugprone-*,
+  -bugprone-easily-swappable-parameters,
+  cert-*,
+  -cert-err33-c,
+  concurrency-*,
+  misc-*,
+  -misc-include-cleaner,
+  performance-*,
+  -performance-no-int-to-ptr,
+  portability-*,
+  readability-duplicate-include,
+  readability-inconsistent-declaration-parameter-name,
+  readability-misleading-indentation,
+  readability-non-const-parameter,
+  readability-redundant-declaration,
+  readability-suspicious-call-argument
+WarningsAsErrors: "*"

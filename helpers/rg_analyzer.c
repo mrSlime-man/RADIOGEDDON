@@ -566,12 +566,10 @@ static void rg_finish_timing(RgAnalyzer* a) {
         nl_in++;
     rg_top_two(r->low_peaks, nl_in, &r->params.ppm_short_us, &r->params.ppm_long_us);
 
-    if(nh + nl == 0)
+    if(nh + nl == 0 || r->noise_pct > 50 || r->jitter_pct > 25)
         r->quality = RgQualityPoor;
     else if(r->noise_pct <= 15 && r->jitter_pct <= 10)
         r->quality = RgQualityGood;
-    else if(r->noise_pct > 50 || r->jitter_pct > 25)
-        r->quality = RgQualityPoor;
     else
         r->quality = RgQualityFair;
 }

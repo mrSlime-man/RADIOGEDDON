@@ -82,7 +82,7 @@ helpers/
   rg_db.*                   Pure database index: .sub header parsing, duplicates, query
   rg_memstat.*              Pure memory bookkeeping: lowest/peak, session cost, fit check
 assets/                     10x10 launcher icon (compiled into the .fap)
-test/                       Host unit tests (519 checks) + reference .sub fixtures
+test/                       Host unit tests (522 checks), fuzz targets + corpus, .sub fixtures
 scripts/                    Pinned builds, manifest verification, packaging, link check
 tools/brand/                Generator for the logo, banner and social preview
 .github/workflows/          CI (ci.yml), shared build pipeline (build.yml), release.yml
@@ -352,8 +352,11 @@ results are labelled.
   version, builds the `.fap`, and verifies its manifest with
   `scripts/verify_fap.py`.
 - `.github/workflows/build.yml` runs that for all three firmware families plus
-  host tests, link checks and lint, for every pull request (`ci.yml`) and every
-  release tag (`release.yml`).
+  host tests, fuzzing (`make -C test fuzz`), static analysis
+  (`scripts/static_analysis.py`: GCC `-fanalyzer` and clang-tidy over the
+  device code with the exact build flags, on the Official and Unleashed SDKs),
+  link checks and lint, for every pull request (`ci.yml`) and every release
+  tag (`release.yml`).
 - Releases are created only from tags, after all builds pass; assets are
   staged in a draft, re-downloaded and checksum-verified before publishing, and
   each `.fap` gets a signed build-provenance attestation.

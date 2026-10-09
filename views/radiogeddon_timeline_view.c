@@ -92,7 +92,7 @@ static void radiogeddon_timeline_view_draw(Canvas* canvas, void* model) {
         uint8_t cols[TL_WIDTH];
         rg_timeline_raster(m->samples, m->count, m->first_us, m->left_us, upp, cols, TL_WIDTH);
         uint8_t prev = 0;
-        for(uint32_t x = 0; x < TL_WIDTH; x++) {
+        for(int32_t x = 0; x < (int32_t)TL_WIDTH; x++) {
             uint8_t c = cols[x];
             if(c == (RG_TL_HIGH | RG_TL_LOW) ||
                (c && prev && c != prev && prev != (RG_TL_HIGH | RG_TL_LOW))) {
@@ -107,7 +107,7 @@ static void radiogeddon_timeline_view_draw(Canvas* canvas, void* model) {
 
         // Recording end, dotted.
         if(m->at_end && m->total_us >= m->left_us && m->total_us < m->left_us + span) {
-            uint32_t x = (uint32_t)((m->total_us - m->left_us) / upp);
+            int32_t x = (int32_t)((m->total_us - m->left_us) / upp);
             for(int32_t y = TL_HIGH_Y; y <= TL_LOW_Y; y += 3)
                 canvas_draw_dot(canvas, x, y);
         }
@@ -155,7 +155,7 @@ static void radiogeddon_timeline_view_draw(Canvas* canvas, void* model) {
         if(bw < 2) bw = 2;
         if(bx > TL_WIDTH - 2) bx = TL_WIDTH - 2;
         if(bx + bw > TL_WIDTH) bw = TL_WIDTH - bx;
-        canvas_draw_box(canvas, bx, TL_BAR_Y, bw, 3);
+        canvas_draw_box(canvas, (int32_t)bx, TL_BAR_Y, bw, 3);
     }
 
     // Position: current frame and sample index at the left edge.

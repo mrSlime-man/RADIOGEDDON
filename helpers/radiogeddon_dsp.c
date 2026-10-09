@@ -41,6 +41,10 @@ size_t radiogeddon_dsp_parse_line(
         long v = strtol(p, &end, 10);
         if(end == p) break;
         p = end;
+        // Out-of-range values (and strtol's overflow result) saturate like the
+        // RAW reader's instead of overflowing the negation.
+        if(v > (long)INT32_MAX) v = INT32_MAX;
+        if(v < -(long)INT32_MAX) v = -INT32_MAX;
         uint32_t a = (uint32_t)((v < 0) ? -v : v);
         if(a == 0) continue;
         parsed++;
