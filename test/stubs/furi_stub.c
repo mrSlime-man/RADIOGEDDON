@@ -1,6 +1,7 @@
 /* Host implementations of the stubs in test/stubs (see furi.h there). */
 #define _POSIX_C_SOURCE 200809L
 #include <dirent.h>
+#include <ctype.h>
 #include <errno.h>
 #include <stdarg.h>
 #include <sys/stat.h>
@@ -9,6 +10,8 @@
 #include "furi.h"
 #include "storage/storage.h"
 #include "datetime/datetime.h"
+#include "furi_hal_rtc.h"
+#include <unistd.h>
 
 size_t stub_heap_free = 64 * 1024;
 bool stub_open_fails = false;
@@ -70,14 +73,59 @@ void stub_alloc_reset_peak(void) {
 
 struct FuriString {
     char* text;
+    size_t len;
     size_t cap;
 };
+
+/* Room for @p need characters plus the terminator (no realloc, so the
+ * allocation counter sees every block). */
+static void stub_string_reserve(FuriString* s, size_t need) {
+    if(need + 1 <= s->cap) return;
+    size_t cap = s->cap * 2 > need + 1 ? s->cap * 2 : need + 1;
+    char* text = malloc(cap);
+    memcpy(text, s->text, s->len + 1);
+    free(s->text);
+    s->text = text;
+    s->cap = cap;
+}
 
 FuriString* furi_string_alloc(void) {
     FuriString* s = malloc(sizeof(FuriString));
     s->cap = 16;
+    s->len = 0;
     s->text = malloc(s->cap);
     s->text[0] = '\0';
+    return s;
+}
+
+FuriString*(furi_string_alloc_set_str)(const char cstr[]) {
+    FuriString* s = furi_string_alloc();
+    furi_string_set_str(s, cstr);
+    return s;
+}
+
+FuriString*(furi_string_alloc_set)(const FuriString* source) {
+    return furi_string_alloc_set_str(source->text);
+}
+
+FuriString* furi_string_alloc_vprintf(const char format[], va_list args) {
+    FuriString* s = furi_string_alloc();
+    va_list copy;
+    va_copy(copy, args);
+    int n = vsnprintf(NULL, 0, format, copy);
+    va_end(copy);
+    if(n < 0) n = 0;
+    stub_string_reserve(s, (size_t)n);
+    vsnprintf(s->text, s->cap, format, args);
+    s->len = (size_t)n;
+    return s;
+}
+
+FuriString* furi_string_alloc_printf(const char format[], ...) {
+    va_list args;
+    va_start(args, format);
+    FuriString* s = furi_string_alloc_vprintf(format, args);
+    va_end(args);
     return s;
 }
 
@@ -86,24 +134,122 @@ void furi_string_free(FuriString* s) {
     free(s);
 }
 
-void furi_string_printf(FuriString* s, const char* format, ...) {
+int furi_string_printf(FuriString* s, const char* format, ...) {
     va_list args;
     va_start(args, format);
     int n = vsnprintf(NULL, 0, format, args);
     va_end(args);
     if(n < 0) n = 0;
-    if((size_t)n + 1 > s->cap) {
-        free(s->text);
-        s->cap = (size_t)n + 1;
-        s->text = malloc(s->cap);
-    }
+    stub_string_reserve(s, (size_t)n);
     va_start(args, format);
     vsnprintf(s->text, s->cap, format, args);
     va_end(args);
+    s->len = (size_t)n;
+    return n;
 }
 
 const char* furi_string_get_cstr(const FuriString* s) {
     return s->text;
+}
+
+size_t furi_string_size(const FuriString* s) {
+    return s->len;
+}
+
+void furi_string_reset(FuriString* s) {
+    s->len = 0;
+    s->text[0] = '\0';
+}
+
+void furi_string_push_back(FuriString* s, char c) {
+    stub_string_reserve(s, s->len + 1);
+    s->text[s->len++] = c;
+    s->text[s->len] = '\0';
+}
+
+char furi_string_get_char(const FuriString* s, size_t index) {
+    furi_check(index < s->len);
+    return s->text[index];
+}
+
+void furi_string_set_char(FuriString* s, size_t index, const char c) {
+    furi_check(index < s->len);
+    s->text[index] = c;
+}
+
+void(furi_string_set_str)(FuriString* s, const char cstr[]) {
+    size_t n = strlen(cstr);
+    stub_string_reserve(s, n);
+    memmove(s->text, cstr, n + 1);
+    s->len = n;
+}
+
+void(furi_string_set)(FuriString* s, FuriString* source) {
+    if(s != source) furi_string_set_str(s, source->text);
+}
+
+void(furi_string_cat_str)(FuriString* s, const char cstr[]) {
+    size_t n = strlen(cstr);
+    stub_string_reserve(s, s->len + n);
+    memcpy(s->text + s->len, cstr, n + 1);
+    s->len += n;
+}
+
+void(furi_string_cat)(FuriString* s, const FuriString* other) {
+    furi_string_cat_str(s, other->text);
+}
+
+int(furi_string_cmp_str)(const FuriString* a, const char cstr[]) {
+    return strcmp(a->text, cstr);
+}
+
+int(furi_string_cmp)(const FuriString* a, const FuriString* b) {
+    return strcmp(a->text, b->text);
+}
+
+int(furi_string_cmpi_str)(const FuriString* a, const char cstr[]) {
+    const unsigned char* x = (const unsigned char*)a->text;
+    const unsigned char* y = (const unsigned char*)cstr;
+    while(*x && tolower(*x) == tolower(*y)) {
+        x++;
+        y++;
+    }
+    return tolower(*x) - tolower(*y);
+}
+
+int(furi_string_cmpi)(const FuriString* a, const FuriString* b) {
+    return furi_string_cmpi_str(a, b->text);
+}
+
+bool(furi_string_equal_str)(const FuriString* a, const char cstr[]) {
+    return strcmp(a->text, cstr) == 0;
+}
+
+bool(furi_string_equal)(const FuriString* a, const FuriString* b) {
+    return strcmp(a->text, b->text) == 0;
+}
+
+size_t furi_string_search_str(const FuriString* s, const char needle[], size_t start) {
+    if(start > s->len) return FURI_STRING_FAILURE;
+    const char* hit = strstr(s->text + start, needle);
+    return hit ? (size_t)(hit - s->text) : FURI_STRING_FAILURE;
+}
+
+void furi_string_replace_at(FuriString* s, size_t pos, size_t len, const char replace[]) {
+    furi_check(pos <= s->len && len <= s->len - pos);
+    size_t n = strlen(replace);
+    size_t tail = s->len - pos - len;
+    stub_string_reserve(s, s->len - len + n);
+    memmove(s->text + pos + n, s->text + pos + len, tail + 1);
+    memcpy(s->text + pos, replace, n);
+    s->len = s->len - len + n;
+}
+
+void furi_string_left(FuriString* s, size_t index) {
+    if(index < s->len) {
+        s->len = index;
+        s->text[index] = '\0';
+    }
 }
 
 void datetime_timestamp_to_datetime(uint32_t timestamp, DateTime* dt) {
@@ -206,17 +352,130 @@ File* storage_file_alloc(Storage* storage) {
     return calloc(1, sizeof(File));
 }
 
+static bool stub_exists(const char* path) {
+    struct stat st;
+    return stat(path, &st) == 0;
+}
+
 bool storage_file_open(File* file, const char* path, FS_AccessMode access, FS_OpenMode mode) {
-    (void)mode;
     if(stub_open_fails) return false;
-    if(access == FSAM_READ) {
-        file->fp = fopen(path, "rb");
-    } else {
-        file->fp = fopen(path, "wb");
-        stub_written = 0;
+    bool exists = stub_exists(path);
+    const char* how = NULL;
+    switch(mode) {
+    case FSOM_OPEN_EXISTING:
+        if(exists) how = access == FSAM_READ ? "rb" : "r+b";
+        break;
+    case FSOM_OPEN_ALWAYS:
+        if(!exists) {
+            FILE* f = fopen(path, "wb");
+            if(f) fclose(f);
+        }
+        how = access == FSAM_READ ? "rb" : "r+b";
+        break;
+    case FSOM_OPEN_APPEND:
+        how = "a+b";
+        break;
+    case FSOM_CREATE_NEW:
+        if(!exists) how = "w+b";
+        break;
+    case FSOM_CREATE_ALWAYS:
+        how = "w+b";
+        break;
     }
-    if(file->fp) stub_files_open++;
+    file->fp = how ? fopen(path, how) : NULL;
+    if(!file->fp) return false;
+    if(access & FSAM_WRITE) stub_written = 0;
+    stub_files_open++;
+    return true;
+}
+
+bool storage_file_is_open(File* file) {
     return file->fp != NULL;
+}
+
+bool storage_file_seek(File* file, uint32_t offset, bool from_start) {
+    if(!file->fp) return false;
+    return fseeko(file->fp, (off_t)offset, from_start ? SEEK_SET : SEEK_CUR) == 0;
+}
+
+uint64_t storage_file_tell(File* file) {
+    return file->fp ? (uint64_t)ftello(file->fp) : 0;
+}
+
+bool storage_file_truncate(File* file) {
+    if(!file->fp) return false;
+    fflush(file->fp);
+    return ftruncate(fileno(file->fp), ftello(file->fp)) == 0;
+}
+
+uint64_t storage_file_size(File* file) {
+    if(!file->fp) return 0;
+    fflush(file->fp);
+    struct stat st;
+    return fstat(fileno(file->fp), &st) == 0 ? (uint64_t)st.st_size : 0;
+}
+
+bool storage_file_sync(File* file) {
+    return file->fp && fflush(file->fp) == 0;
+}
+
+bool storage_file_eof(File* file) {
+    return !file->fp || storage_file_tell(file) >= storage_file_size(file);
+}
+
+FS_Error storage_common_remove(Storage* storage, const char* path) {
+    (void)storage;
+    if(remove(path) == 0) return FSE_OK;
+    return errno == ENOENT ? FSE_NOT_EXIST : FSE_INTERNAL;
+}
+
+bool stub_rename_keeps_target = false;
+
+FS_Error storage_common_rename(Storage* storage, const char* old_path, const char* new_path) {
+    (void)storage;
+    if(!stub_exists(old_path)) return FSE_NOT_EXIST;
+    if(stub_rename_keeps_target && stub_exists(new_path)) return FSE_EXIST;
+    return rename(old_path, new_path) == 0 ? FSE_OK : FSE_INTERNAL;
+}
+
+FS_Error storage_common_mkdir(Storage* storage, const char* path) {
+    (void)storage;
+    if(mkdir(path, 0777) == 0) return FSE_OK;
+    return errno == EEXIST ? FSE_EXIST : FSE_INTERNAL;
+}
+
+bool storage_common_exists(Storage* storage, const char* path) {
+    (void)storage;
+    return stub_exists(path);
+}
+
+void storage_get_next_filename(
+    Storage* storage,
+    const char* dirname,
+    const char* filename,
+    const char* fileextension,
+    FuriString* nextfilename,
+    uint8_t max_len) {
+    (void)max_len;
+    char path[512];
+    furi_string_set_str(nextfilename, filename);
+    for(unsigned i = 1; i < 1000; i++) {
+        snprintf(
+            path,
+            sizeof(path),
+            "%s/%s%s",
+            dirname,
+            furi_string_get_cstr(nextfilename),
+            fileextension);
+        if(!storage_common_exists(storage, path)) return;
+        furi_string_printf(nextfilename, "%s%u", filename, i);
+    }
+}
+
+DateTime stub_datetime = {12, 34, 56, 9, 10, 2026, 5};
+
+void furi_hal_rtc_get_datetime(DateTime* datetime) {
+    *datetime = stub_datetime;
 }
 
 size_t storage_file_read(File* file, void* buf, size_t size) {
@@ -301,5 +560,8 @@ FS_Error storage_common_timestamp(Storage* storage, const char* path, uint32_t* 
 }
 
 void storage_file_free(File* file) {
+    /* As in the firmware: freeing an open file closes it. */
+    if(file->fp) storage_file_close(file);
+    if(file->dir) storage_dir_close(file);
     free(file);
 }

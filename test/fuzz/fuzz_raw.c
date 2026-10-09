@@ -97,6 +97,9 @@ static void check_analysis(const RgAnalysis* r, size_t samples) {
     REQUIRE(r->bit_count <= RG_ANALYZER_MAX_BITS);
     REQUIRE(strlen(r->bits) <= RG_ANALYZER_MAX_BITS);
     REQUIRE(r->group_count <= RG_ANALYZER_MAX_GROUPS);
+    /* The dominant pattern is the first group's frame. */
+    REQUIRE(r->group_count == 0 || r->groups[0].frame < r->frames_kept);
+    REQUIRE(strlen(r->bits) == (r->group_count ? r->frames[r->groups[0].frame].bit_count : 0u));
     REQUIRE(strlen(r->field_map) <= RG_ANALYZER_MAX_BITS);
     REQUIRE(r->const_bits + r->changing_bits <= RG_ANALYZER_MAX_BITS);
     REQUIRE(r->id_start + r->id_len <= RG_ANALYZER_MAX_BITS);

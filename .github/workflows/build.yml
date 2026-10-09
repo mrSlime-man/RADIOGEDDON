@@ -3,7 +3,9 @@
 #
 # Jobs:
 #   docs        offline Markdown link/anchor check
-#   host-tests  host unit tests and the fuzz corpus replay under ASan/UBSan
+#   host-tests  host unit tests and the fuzz corpus replay under ASan/UBSan,
+#               then the format tests on the firmware's FlipperFormat code and
+#               Sub-GHz test files (downloaded at the pinned release)
 #   fuzz        the fuzz targets under libFuzzer for a fixed time each
 #   fap         one .fap per firmware family, built against the SDK pinned in
 #               scripts/firmware_pins.sh (checksum-verified), API asserted,
@@ -38,7 +40,7 @@ jobs:
   host-tests:
     name: host tests (ASan/UBSan)
     runs-on: ubuntu-24.04
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v6
         with:
@@ -46,6 +48,8 @@ jobs:
           persist-credentials: false
       - name: Run unit tests
         run: make -C test check
+      - name: Run format tests (firmware FlipperFormat code and test files)
+        run: make -C test formats
 
   fuzz:
     name: fuzz (libFuzzer)

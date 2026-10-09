@@ -87,6 +87,14 @@ to follow [Semantic Versioning](https://semver.org/) (pre-1.0.0 releases use
   Their corpus is replayed by every `make -C test check`, and CI fuzzes each
   target for 60 s. CI also runs GCC's `-fanalyzer` and clang-tidy over the
   device code with the exact build flags.
+- **Format tests** (development): the firmware's own FlipperFormat and stream
+  code, built on the host with RadioGeddon's settings and `.sub` loading
+  code, run against the 85 Sub-GHz test files of the firmware's unit tests
+  (downloaded at the pinned release and checksum-checked, not committed):
+  every file loads with the details an independent reading finds, the
+  Database index and RAW reader agree, settings survive a save and reload,
+  malformed settings fall back field by field, and a save that fails
+  part-way keeps the old file.
 
 ### Changed
 - **Progress percentages** for long SD-card work: reading the Database
@@ -131,6 +139,11 @@ to follow [Semantic Versioning](https://semver.org/) (pre-1.0.0 releases use
 - Signal Info no longer misreads a RAW value beyond ±2,147,483,647 (only a
   damaged or hand-edited file has one): it counts as the longest duration,
   as in the analyzer, instead of overflowing. Found by the fuzz tests.
+- RAW files with a comma after each value (`RAW_Data: 1718, -32700, ...`,
+  which the firmware's RAW player accepts and some of its own test files
+  use) are now read in full. Before, Unknown Protocol Analysis, Pulse
+  Timeline and Compare found no samples in them and Signal Info counted one
+  value a line. Found by the format tests.
 
 ## [1.0.0-beta.2] - 2026-10-09
 

@@ -154,7 +154,9 @@ size_t rg_raw_reader_read(RgRawReader* r, int32_t* out, size_t max) {
             r->in_number = true;
         } else if(c == '-' && !r->in_number && !r->negative) {
             r->negative = true;
-        } else if(c == ' ' || c == '\t' || c == '\r' || c == '\n') {
+        } else if(c == ' ' || c == '\t' || c == '\r' || c == '\n' || (c == ',' && r->in_number)) {
+            /* A comma right after a value separates it too ("1718, -32700"),
+             * as the firmware's RAW player reads it. */
             if(r->negative && !r->in_number) { /* a lone '-' */
                 r->corrupt = true;
                 rg_raw_lexer_reset(r, c == '\n' ? RgRawLexLineStart : RgRawLexSkip);

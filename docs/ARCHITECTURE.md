@@ -61,6 +61,7 @@ views/                      Custom canvas views: scanner sweep, live receiver, p
                             database list
 helpers/
   radiogeddon_subghz.*      Radio wrapper: device, decoders, RAW capture, hopper retune, TX
+  radiogeddon_bands.*       Modulation presets and frequency lists (no radio SDK needed)
   radiogeddon_recorder.*    Streaming RAW recorder: lock-free ring + SD writer thread
   radiogeddon_storage.*     SD-card layout, .sub parsing, streaming RAW file access
   radiogeddon_scanner.*     Scanner sweep thread, results and CSV export
@@ -82,7 +83,7 @@ helpers/
   rg_db.*                   Pure database index: .sub header parsing, duplicates, query
   rg_memstat.*              Pure memory bookkeeping: lowest/peak, session cost, fit check
 assets/                     10x10 launcher icon (compiled into the .fap)
-test/                       Host unit tests (522 checks), fuzz targets + corpus, .sub fixtures
+test/                       Host unit tests (532 checks), format tests, fuzz targets, fixtures
 scripts/                    Pinned builds, manifest verification, packaging, link check
 tools/brand/                Generator for the logo, banner and social preview
 .github/workflows/          CI (ci.yml), shared build pipeline (build.yml), release.yml

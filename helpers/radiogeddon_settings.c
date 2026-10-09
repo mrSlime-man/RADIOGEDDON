@@ -1,5 +1,5 @@
 #include "radiogeddon_settings.h"
-#include "radiogeddon_subghz.h"
+#include "radiogeddon_bands.h"
 #include "rg_db.h"
 
 #include <lib/flipper_format/flipper_format.h>

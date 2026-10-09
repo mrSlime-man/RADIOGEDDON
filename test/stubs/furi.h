@@ -17,6 +17,14 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <assert.h>
+#include "core/common_defines.h"
+
+/* newlib's attribute macro, used in firmware headers. */
+#ifndef _ATTRIBUTE
+#define _ATTRIBUTE(attrs) __attribute__(attrs)
+#endif
+
 #define FURI_LOG_E(tag, ...) \
     do {                     \
         (void)(tag);         \
@@ -59,12 +67,52 @@ uint32_t furi_kernel_get_tick_frequency(void);
 
 size_t memmgr_heap_get_max_free_block(void);
 
-/* Strings: just what the code under test uses. */
+/* Strings: what the code under test and the firmware's FlipperFormat and
+ * stream code (test_formats) use, with the firmware's semantics. */
+#include <stdarg.h>
 typedef struct FuriString FuriString;
+#define FURI_STRING_FAILURE ((size_t) - 1)
 FuriString* furi_string_alloc(void);
+FuriString* furi_string_alloc_set(const FuriString* source);
+FuriString* furi_string_alloc_set_str(const char cstr[]);
+FuriString* furi_string_alloc_printf(const char format[], ...);
+FuriString* furi_string_alloc_vprintf(const char format[], va_list args);
 void furi_string_free(FuriString* s);
-void furi_string_printf(FuriString* s, const char* format, ...);
+int furi_string_printf(FuriString* s, const char* format, ...);
 const char* furi_string_get_cstr(const FuriString* s);
+size_t furi_string_size(const FuriString* s);
+void furi_string_reset(FuriString* s);
+void furi_string_push_back(FuriString* s, char c);
+char furi_string_get_char(const FuriString* s, size_t index);
+void furi_string_set_char(FuriString* s, size_t index, const char c);
+void furi_string_set(FuriString* s, FuriString* source);
+void furi_string_set_str(FuriString* s, const char cstr[]);
+void furi_string_cat(FuriString* s, const FuriString* other);
+void furi_string_cat_str(FuriString* s, const char cstr[]);
+int furi_string_cmp(const FuriString* a, const FuriString* b);
+int furi_string_cmp_str(const FuriString* a, const char cstr[]);
+int furi_string_cmpi(const FuriString* a, const FuriString* b);
+int furi_string_cmpi_str(const FuriString* a, const char cstr[]);
+bool furi_string_equal(const FuriString* a, const FuriString* b);
+bool furi_string_equal_str(const FuriString* a, const char cstr[]);
+size_t furi_string_search_str(const FuriString* s, const char needle[], size_t start);
+void furi_string_replace_at(FuriString* s, size_t pos, size_t len, const char replace[]);
+void furi_string_left(FuriString* s, size_t index);
+
+#define STUB_STR_SELECT(fs, cs, a, b) \
+    _Generic((b), char*: cs, const char*: cs, FuriString*: fs, const FuriString*: fs)(a, b)
+#define furi_string_alloc_set(a)                \
+    _Generic(                                   \
+        (a),                                    \
+        char*: furi_string_alloc_set_str,       \
+        const char*: furi_string_alloc_set_str, \
+        FuriString*: furi_string_alloc_set,     \
+        const FuriString*: furi_string_alloc_set)(a)
+#define furi_string_set(a, b)   STUB_STR_SELECT(furi_string_set, furi_string_set_str, a, b)
+#define furi_string_cat(a, b)   STUB_STR_SELECT(furi_string_cat, furi_string_cat_str, a, b)
+#define furi_string_cmp(a, b)   STUB_STR_SELECT(furi_string_cmp, furi_string_cmp_str, a, b)
+#define furi_string_cmpi(a, b)  STUB_STR_SELECT(furi_string_cmpi, furi_string_cmpi_str, a, b)
+#define furi_string_equal(a, b) STUB_STR_SELECT(furi_string_equal, furi_string_equal_str, a, b)
 
 /* Test controls. */
 extern size_t stub_heap_free; /* what memmgr_heap_get_max_free_block() reports */

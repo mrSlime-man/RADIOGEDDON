@@ -130,6 +130,18 @@ static void test_parse_clamped_large(void) {
     CHECK(max_us == 2000000000u, "large magnitude preserved");
 }
 
+// "RAW_Data: 1718, -32700, ..." as in some of the firmware's test files: a
+// comma right after a value is a separator, as for the firmware's RAW player.
+static void test_parse_commas(void) {
+    printf("test_parse_commas\n");
+    size_t count = 0;
+    uint32_t min_us = 0, max_us = 0;
+    size_t n = radiogeddon_dsp_parse_line(
+        "1718, -32700, 32700,-494 1047", &count, &min_us, &max_us, NULL, NULL, 0);
+    CHECK(n == 5, "five values");
+    CHECK(min_us == 494 && max_us == 32700, "min and max over all of them");
+}
+
 // Values past int32 (found by fuzz/fuzz_db.c): strtol's overflow result used
 // to be negated, which is undefined. They now saturate like the RAW reader.
 static void test_parse_out_of_range(void) {
@@ -199,6 +211,7 @@ int main(void) {
     test_parse_garbage_tail();
     test_parse_clamped_large();
     test_parse_out_of_range();
+    test_parse_commas();
     test_clustering();
     test_cluster_cap();
     test_raw_roundtrip();
