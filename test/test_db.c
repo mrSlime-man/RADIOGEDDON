@@ -314,6 +314,44 @@ static void test_misc(void) {
     CHECK(strcmp(rg_db_show_name(RgDbShowDamaged), "Damaged") == 0, "filter label");
 }
 
+static void test_names(void) {
+    printf("test_names\n");
+    RgDb db;
+    build(&db);
+    CHECK(rg_db_find(&db, "RG_2.sub") == 5, "find by name");
+    CHECK(rg_db_find(&db, "rg_2.sub") == -1, "find is exact");
+
+    CHECK(rg_db_check_name("garage left_2") == RgDbNameOk, "plain name");
+    CHECK(rg_db_check_name("") == RgDbNameEmpty, "empty");
+    char longname[RG_DB_NAME_MAX + 2];
+    memset(longname, 'a', sizeof(longname) - 1);
+    longname[sizeof(longname) - 1] = '\0';
+    CHECK(rg_db_check_name(longname) == RgDbNameTooLong, "too long");
+    longname[RG_DB_NAME_MAX] = '\0';
+    CHECK(rg_db_check_name(longname) == RgDbNameOk, "longest allowed");
+    const char* bad[] = {"a/b", "a\\b", "a:b", "a*", "a?", "\"a\"", "<a>", "a|b", "a\tb"};
+    bool all_bad = true;
+    for(size_t i = 0; i < sizeof(bad) / sizeof(bad[0]); i++)
+        all_bad = all_bad && rg_db_check_name(bad[i]) == RgDbNameBadChar;
+    CHECK(all_bad, "characters FAT cannot store");
+    CHECK(rg_db_check_name(".hidden") == RgDbNameBadEdge, "leading dot");
+    CHECK(rg_db_check_name("name.") == RgDbNameBadEdge, "trailing dot");
+    CHECK(rg_db_check_name(" name") == RgDbNameBadEdge, "leading space");
+    CHECK(rg_db_check_name("name ") == RgDbNameBadEdge, "trailing space");
+    CHECK(rg_db_check_name("v1.2") == RgDbNameOk, "inner dot is fine");
+    CHECK(rg_db_name_error_text(RgDbNameEmpty)[0] != '\0', "error text");
+
+    char n1[] = "gate.SUB";
+    rg_db_strip_ext(n1, ".sub");
+    CHECK(strcmp(n1, "gate") == 0, "extension stripped, any case");
+    char n2[] = "gate.sub.txt";
+    rg_db_strip_ext(n2, ".sub");
+    CHECK(strcmp(n2, "gate.sub.txt") == 0, "only a trailing extension");
+    char n3[] = "sub";
+    rg_db_strip_ext(n3, ".sub");
+    CHECK(strcmp(n3, "sub") == 0, "shorter than the extension");
+}
+
 int main(void) {
     test_parse();
     test_damaged();
@@ -321,6 +359,7 @@ int main(void) {
     test_duplicates();
     test_select();
     test_misc();
+    test_names();
 
     printf("\n%d checks, %d failures\n", g_checks, g_failures);
     if(g_failures) {

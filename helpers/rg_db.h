@@ -137,3 +137,32 @@ const char* rg_db_show_name(RgDbShow show);
 
 /** Case-insensitive substring test ("" matches everything). */
 bool rg_db_name_matches(const char* name, const char* search);
+
+/** Index of the entry named @p name (exact match), or -1. */
+int32_t rg_db_find(const RgDb* db, const char* name);
+
+/* ---- File names for Rename ------------------------------------------------ */
+
+/** Longest name a file can be renamed to, without the extension. */
+#define RG_DB_NAME_MAX 60
+
+typedef enum {
+    RgDbNameOk,
+    RgDbNameEmpty,
+    RgDbNameTooLong,
+    RgDbNameBadChar, /* < > : " / \ | ? * or a control character */
+    RgDbNameBadEdge, /* starts with '.' or a space, or ends with '.' or a space */
+} RgDbNameError;
+
+/**
+ * Check a new file name, given without its extension. Rejects what the FAT
+ * file system on the SD card cannot store or would silently change, and names
+ * starting with '.', which the Database hides.
+ */
+RgDbNameError rg_db_check_name(const char* name);
+
+/** Short message for a name error, for the keyboard's error box. */
+const char* rg_db_name_error_text(RgDbNameError error);
+
+/** Remove a trailing @p ext (any case, e.g. ".sub") from @p name in place. */
+void rg_db_strip_ext(char* name, const char* ext);

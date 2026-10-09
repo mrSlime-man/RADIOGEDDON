@@ -87,12 +87,19 @@ and was not kept. Check the card and record again.
   so it can recreate `/ext/apps_data/radiogeddon/signals`.
 - Check the card with **Settings → Storage** on the Flipper, or in qFlipper.
 
-## A file won't open in the Database (error tone)
+## A file shows `BAD` in the Database
 
-The file couldn't be parsed as a Flipper `.sub` file — for example a truncated
-copy or a file with a missing header. Open it in a text editor on your computer:
-valid files start with `Filetype: Flipper SubGhz Key File` or
-`Filetype: Flipper SubGhz RAW File`.
+The file couldn't be read as a Flipper Sub-GHz `.sub` file, for example a
+truncated copy, a file with a missing header, or another kind of file renamed
+to `.sub`. It opens with only `File details`, `Rename` and `Delete`;
+`File details` shows how its first line starts. Valid files start with
+`Filetype: Flipper SubGhz Key File` or `Filetype: Flipper SubGhz RAW File`.
+
+## Rename says `Name already used`
+
+Another file in the signals folder has that name. The SD card ignores letter
+case, so `Gate` and `gate` are the same name: rename to something else first,
+then to the new spelling.
 
 ## Replay shows an error
 

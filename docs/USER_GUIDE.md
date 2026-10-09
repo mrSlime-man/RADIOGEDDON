@@ -259,8 +259,9 @@ old_capture                 BAD
 | `Files indexed` | How many files are listed. When memory is short only part of a very large folder is indexed, and this shows `N of M` |
 
 The sort, filter and search last until you return to the main menu. After a
-delete the list is re-read and keeps your place. Choose a file to open its
-action menu (titled with the file name):
+rename or delete the list is re-read and keeps your place. Choose a file to
+open its action menu (titled with the file name; it opens where you left it
+when you come back from a report):
 
 | Action | What you get |
 |--------|--------------|
@@ -270,7 +271,13 @@ action menu (titled with the file name):
 | `Crypto Analysis` | Static vs. rolling-code classification and key-byte statistics for decoded protocols |
 | `Compare with...` | Pick a second file and see what is the same (`=`) and what differs (`~`); for two RAW captures, a timing-match score and a comparison of their frame patterns |
 | `Replay (TX)` | Transmit the recording, where permitted |
+| `File details` | File name, size, date modified, type, frequency, preset, sample count or bits, and the names of its duplicates |
+| `Rename` | Type a new name (`.sub` is added). Names the SD card can't store (`< > : " / \ | ? *`, or a `.` or space at the start or end) and names already used are refused, so renaming never replaces another file. The SD card ignores letter case, so a name that differs only in case counts as used |
+| `Save report to SD` | Writes *Signal Info & Analysis*, plus *Unknown Protocol Analysis* for a RAW capture or *Crypto Analysis* for a decoded signal, to `apps_data/radiogeddon/reports/<name>.txt`. Shows `Writing report...`, then the file name. An existing report is never replaced: the new one gets `_2`, `_3` and so on |
 | `Delete` | Delete the file (asks for confirmation) |
+
+A **damaged file** (`BAD` in the list) opens with only `File details` (which
+shows the start of its first line), `Rename` and `Delete`.
 
 Reports open in a scrolling text view: **Up / Down** to scroll, **Back** to
 return to the action menu. Every result is labelled `[CONFIRMED]`,

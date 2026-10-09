@@ -70,8 +70,13 @@ region's rules.
 | F11a | Sort and filter: press Left through the sort orders; in Options try each `Show` value and a protocol. | Each order and filter lists the expected files; leaving with Back and reopening a file keeps the order and filter until the main menu. |
 | F11b | Search: Options → `Search name`, type part of a name in either case; then save an empty text. | Only matching names, `*` in the header; empty text lists all again. |
 | F11c | Duplicates: copy a decoded `.sub` and a RAW capture with qFlipper under new names, then `Reload from SD`. | Both pairs show `=` and `=1`; `Show: Duplicates` lists the four files. |
-| F11d | Damaged file: copy a text file renamed to `bad.sub` and a `.sub` cut to 20 bytes into the folder. | Both listed as `BAD` with "Not a readable .sub file"; opening one gives the error tone, no crash. |
+| F11d | Damaged file: copy a text file renamed to `bad.sub` and a `.sub` cut to 20 bytes into the folder. | Both listed as `BAD` with "Not a readable .sub file"; opening one shows only File details (with the start of the first line), Rename and Delete; no crash. |
 | F11e | Large folder and memory: 200+ files; open Database, then `Unknown Protocol Analysis` and `Pulse Timeline` on a long RAW capture from it. | Indexing time noted; the analyses run (or report not enough memory) without a crash; free heap returns to baseline after leaving to the main menu. |
+| F12 | Rename: rename a file to a new name, then try an existing name, `a/b`, `.x` and the same name in other letter case. | The new name is listed and opens; the others are refused on the keyboard (`Name already used`, `Not allowed`, `No . or space`); no file is replaced. |
+| F12a | File details on a decoded file, a RAW capture and a duplicate. | Size and date match qFlipper; type, frequency and preset match Signal Info; the duplicate's copies are named. |
+| F12b | Save report to SD on a RAW capture and on a decoded signal; then again on the same file. | `Report saved`, `reports/<name>.txt`, then `<name>_2.txt`; the files on the card contain the labelled sections shown on screen. |
+| F12c | Save report with the SD card nearly full or write-protected. | `Report not saved` with a reason; no partial report left on the card. |
+| F12d | Menu position: open a file, choose a report lower in the menu, press Back. | The menu returns with the same item highlighted. |
 | F9 | SD card removed mid-session. | Save/open fail gracefully with an error tone; no crash. |
 | F10 | Memory: several capture/save/open/replay cycles. | Free heap (CLI `free` or the log) returns to baseline; no growth across cycles. |
 

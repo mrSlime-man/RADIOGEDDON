@@ -342,3 +342,53 @@ const char* rg_db_show_name(RgDbShow show) {
         return "?";
     }
 }
+
+int32_t rg_db_find(const RgDb* db, const char* name) {
+    for(size_t i = 0; i < db->count; i++) {
+        if(strcmp(rg_db_name(db, &db->entries[i]), name) == 0) return (int32_t)i;
+    }
+    return -1;
+}
+
+/* ---- File names ----------------------------------------------------------- */
+
+RgDbNameError rg_db_check_name(const char* name) {
+    size_t len = strlen(name);
+    if(len == 0) return RgDbNameEmpty;
+    if(len > RG_DB_NAME_MAX) return RgDbNameTooLong;
+    for(size_t i = 0; i < len; i++) {
+        unsigned char c = (unsigned char)name[i];
+        if(c < 0x20 || c == 0x7F || strchr("<>:\"/\\|?*", c)) return RgDbNameBadChar;
+    }
+    if(name[0] == '.' || name[0] == ' ' || name[len - 1] == '.' || name[len - 1] == ' ')
+        return RgDbNameBadEdge;
+    return RgDbNameOk;
+}
+
+const char* rg_db_name_error_text(RgDbNameError error) {
+    switch(error) {
+    case RgDbNameOk:
+        return "";
+    case RgDbNameEmpty:
+        return "Enter a name";
+    case RgDbNameTooLong:
+        return "Name too long";
+    case RgDbNameBadChar:
+        return "Not allowed:\n< > : \" / \\ | ? *";
+    case RgDbNameBadEdge:
+        return "No . or space at\nstart or end";
+    default:
+        return "Invalid name";
+    }
+}
+
+void rg_db_strip_ext(char* name, const char* ext) {
+    size_t len = strlen(name);
+    size_t elen = strlen(ext);
+    if(len < elen) return;
+    char* tail = name + len - elen;
+    for(size_t i = 0; i < elen; i++) {
+        if(rg_db_lower(tail[i]) != rg_db_lower(ext[i])) return;
+    }
+    *tail = '\0';
+}

@@ -67,6 +67,7 @@ helpers/
   radiogeddon_hopper.*      Hopper thread, auto-recording, statistics report
   radiogeddon_settings.*    Settings persisted to the SD card
   radiogeddon_db.*          Database index: lists the signals folder, reads file heads
+  radiogeddon_report.*      Writes a file's analysis reports to reports/<name>.txt
   radiogeddon_history.*     Per-session list of decoded signals (max 32, de-duplicated)
   radiogeddon_analysis.*    Text reports: info, analysis, crypto, compare, unknown-protocol
   radiogeddon_dsp.*         Pure RAW parsing / clustering helpers (no firmware headers)
@@ -79,7 +80,7 @@ helpers/
   rg_hop.*                  Pure hopper state machine: dwell, hold, lock, history
   rg_db.*                   Pure database index: .sub header parsing, duplicates, query
 assets/                     10x10 launcher icon (compiled into the .fap)
-test/                       Host unit tests (423 checks) + reference .sub fixtures
+test/                       Host unit tests (439 checks) + reference .sub fixtures
 scripts/                    Pinned builds, manifest verification, packaging, link check
 tools/brand/                Generator for the logo, banner and social preview
 .github/workflows/          CI (ci.yml), shared build pipeline (build.yml), release.yml
@@ -253,7 +254,15 @@ numbers without touching the card. The list view (`radiogeddon_db_view`)
 draws from the index; the query is changed only between
 `radiogeddon_db_view_lock` and `_unlock`, so the view never draws while it
 changes. The index and view are freed on returning to the main menu, and
-rebuilt after a delete or `Reload from SD`.
+rebuilt after a rename, a delete or `Reload from SD`, keeping the highlighted
+file by name.
+
+Files the index marks damaged, or that `radiogeddon_storage_load` cannot
+parse, open with only File details, Rename and Delete. Rename checks the new
+name with `rg_db_check_name` and refuses an existing file before calling
+`storage_common_rename`, which would otherwise replace it. Reports are written
+section by section through one reused string, to a new file opened with
+`FSOM_CREATE_NEW`; a partly written report is removed.
 
 ## Analysis pipeline
 

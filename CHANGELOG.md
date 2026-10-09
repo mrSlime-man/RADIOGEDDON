@@ -61,9 +61,19 @@ to follow [Semantic Versioning](https://semver.org/) (pre-1.0.0 releases use
   files, search names, and reload. Duplicates are marked with `=` (decoded:
   same protocol, frequency, bits and key; RAW: identical contents). The index
   is sized to the folder and the free heap, exists only while the Database is
-  open, and is re-read after a delete.
+  open, and is re-read after a rename or delete.
+- **File details** for a Database file: size, date, type, frequency, preset,
+  samples or bits, and the names of its duplicates.
+- **Rename** from the Database. Names the SD card cannot store and names
+  already used are refused, so a rename never replaces another file.
+- **Save report to SD**: writes a file's analysis reports, with their labels
+  and a legend, to `apps_data/radiogeddon/reports/<name>.txt`, never
+  replacing an existing report.
 
 ### Changed
+- A damaged `.sub` in the Database now opens with File details, Rename and
+  Delete instead of only an error tone.
+- The file menu keeps its highlighted item when you come back from a report.
 - Saving never overwrites an existing file: a name that is taken gets `_2`,
   `_3` and so on (the result screen shows the final name).
 - Back while recording now stops the recording and opens the name screen;

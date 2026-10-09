@@ -16,6 +16,7 @@
 #define RADIOGEDDON_APP_FOLDER     EXT_PATH("apps_data/radiogeddon")
 #define RADIOGEDDON_SIGNALS_FOLDER RADIOGEDDON_APP_FOLDER "/signals"
 #define RADIOGEDDON_SCANS_FOLDER   RADIOGEDDON_APP_FOLDER "/scans"
+#define RADIOGEDDON_REPORTS_FOLDER RADIOGEDDON_APP_FOLDER "/reports"
 #define RADIOGEDDON_SUB_EXTENSION  ".sub"
 /* A RAW capture is streamed here, then renamed when the user saves it. */
 #define RADIOGEDDON_RECORD_TEMP    RADIOGEDDON_APP_FOLDER "/recording.tmp"
@@ -91,6 +92,14 @@ void radiogeddon_loaded_signal_reset(RadioGeddonLoadedSignal* sig);
  * if all are taken.
  */
 bool radiogeddon_storage_make_unique_path(Storage* storage, FuriString* out, const char* name);
+
+/** As above in any @p folder, with extension @p ext (e.g. ".txt"). */
+bool radiogeddon_storage_make_unique_path_in(
+    Storage* storage,
+    FuriString* out,
+    const char* folder,
+    const char* name,
+    const char* ext);
 
 /** Build a timestamped scan-results path, e.g. ".../scans/SCAN_20261009_163500.csv". */
 void radiogeddon_storage_make_scan_path(FuriString* out);

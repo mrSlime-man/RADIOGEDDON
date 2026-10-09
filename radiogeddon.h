@@ -29,6 +29,7 @@
 #include "helpers/radiogeddon_settings.h"
 #include "helpers/radiogeddon_scanner.h"
 #include "helpers/radiogeddon_hopper.h"
+#include "helpers/radiogeddon_report.h"
 #include "views/radiogeddon_scanner_view.h"
 #include "views/radiogeddon_receiver_view.h"
 #include "views/radiogeddon_timeline_view.h"
@@ -110,6 +111,7 @@ struct RadioGeddonApp {
     uint8_t preset_index; // index into radiogeddon_preset table
     size_t selected_history_index;
     bool have_loaded_signal; // a signal loaded from file is available for analysis
+    bool file_damaged; // the open Database file is not a readable .sub
     RadioGeddonLoadedSignal loaded; // parsed representation of a loaded .sub file
     RadioGeddonLoadedSignal loaded_b; // second parsed signal (comparison)
 

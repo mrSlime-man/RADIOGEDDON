@@ -9,7 +9,7 @@ verified, and its known limits. For step-by-step use, see the
 **Every feature below is implemented, compiles for all three firmware
 families, and passes CI. None has yet been verified on a physical Flipper
 Zero.** "Unit-tested" means the feature's firmware-independent logic is covered
-by the host test suite (423 checks); radio behaviour can only be confirmed on a
+by the host test suite (439 checks); radio behaviour can only be confirmed on a
 device ([VERIFICATION.md](VERIFICATION.md)).
 
 | Feature | Implemented | Unit-tested logic | Verified on hardware |
@@ -229,6 +229,16 @@ manufacturer keystore to identify KeeLoq-family signals.)
   is open.
 - Open a file to analyse, compare, replay or delete it; deleting asks for
   confirmation and the list is re-read afterwards.
+- **File details**: size, date, type, frequency, preset, samples or bits, and
+  the names of its duplicates.
+- **Rename** from the device. Names the FAT file system can't store, and names
+  already used, are refused, so a rename never replaces another file.
+- **Report export**: *Save report to SD* writes the file's reports (Info &
+  Analysis plus Unknown Protocol Analysis or Crypto Analysis), with their
+  labels and a legend, to `apps_data/radiogeddon/reports/<name>.txt`, never
+  replacing an existing report.
+- **Damaged files** open with File details (showing the start of the first
+  line), Rename and Delete only, instead of an error tone.
 - The receiver keeps up to 32 decoded signals per session, listing identical
   consecutive repeats once.
 
@@ -264,8 +274,6 @@ Regional rules are enforced by the firmware itself
 | On-device verification of all features | Next milestone — [hardware checklist](HARDWARE_CHECKLIST.md) |
 | External CC1101 module selection | Planned ([Roadmap](ROADMAP.md)) |
 | Custom frequency entry, custom modulation entry | Planned — currently a fixed table and four presets |
-| Renaming saved recordings in the app | Planned — rename via qFlipper meanwhile |
-| Saving analysis reports to the SD card | Planned |
 | Decoders beyond the firmware's own library | Not planned for now — identification relies on the firmware |
 | Desktop companion application | Deferred; files stay standard `.sub` so one can be built later |
 | Key recovery, rolling-code bypass, brute force, jamming | **Never** — out of scope by design |
