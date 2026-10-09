@@ -134,6 +134,7 @@ bool radiogeddon_scene_receiver_on_event(void* context, SceneManagerEvent event)
         case ReceiverCustomToggleRecord:
             if(radiogeddon_subghz_is_recording(app->subghz)) {
                 radiogeddon_subghz_record_stop(app->subghz);
+                notification_message(app->notifications, &sequence_reset_red);
                 radiogeddon_receiver_view_set_recording(
                     app->receiver_view,
                     false,

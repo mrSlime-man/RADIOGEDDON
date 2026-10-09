@@ -10,9 +10,13 @@
 # deletes the draft, so a partial or broken release is never made public.
 # Tags with a pre-release suffix (e.g. -beta.1) are published as pre-releases.
 #
-# workflow_dispatch exists only as a fallback for environments that cannot push
-# tags: it builds the selected branch head and lets the release create the tag
-# on that exact commit when it is published.
+# workflow_dispatch serves two purposes:
+#   - dry_run=true: exercise the whole flow (build, package, draft upload,
+#     re-download and verify) and then delete the private draft instead of
+#     publishing. Drafts are not public and create no tag. Use before tagging.
+#   - dry_run=false: fallback for environments that cannot push tags; builds the
+#     selected branch head and the release creates the tag on that exact commit
+#     when it is published.
 name: Release
 
 on:
@@ -24,6 +28,10 @@ on:
         description: Tag to create on the selected branch head (e.g. v1.0.0-beta.1)
         required: true
         type: string
+      dry_run:
+        description: Build and stage a draft, verify it, then delete it (publish nothing)
+        type: boolean
+        default: true
 
 permissions:
   contents: read
@@ -113,6 +121,7 @@ jobs:
       TITLE: ${{ needs.prepare.outputs.title }}
       PRERELEASE: ${{ needs.prepare.outputs.prerelease }}
       EVENT: ${{ github.event_name }}
+      DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -129,7 +138,7 @@ jobs:
         run: scripts/package_release.sh release
 
       - name: Attest build provenance
-        if: ${{ !github.event.repository.private }}
+        if: ${{ !github.event.repository.private && !(github.event_name == 'workflow_dispatch' && inputs.dry_run) }}
         uses: actions/attest-build-provenance@v3
         with:
           subject-path: release/radiogeddon-*.fap
@@ -164,7 +173,14 @@ jobs:
           (cd "$RUNNER_TEMP/check" && sha256sum -c SHA256SUMS)
 
       - name: Publish release
+        if: env.DRY_RUN != 'true'
         run: gh release edit "$TAG" --draft=false
+
+      - name: Dry run - delete the verified draft
+        if: env.DRY_RUN == 'true'
+        run: |
+          gh release delete "$TAG" --yes
+          echo "Dry run complete: draft for $TAG was built, uploaded, verified and deleted."
 
       - name: Delete draft on failure
         if: failure()
@@ -177,7 +193,7 @@ jobs:
       - name: Summary
         run: |
           {
-            echo "### Published ${TITLE}"
+            if [ "$DRY_RUN" = "true" ]; then echo "### Dry run OK: ${TITLE} (nothing published)"; else echo "### Published ${TITLE}"; fi
             echo "https://github.com/${GH_REPO}/releases/tag/${TAG}"
             echo '```'
             cat release/SHA256SUMS

@@ -1,0 +1,91 @@
+name: Bug report
+description: Something in RadioGeddon crashes, misbehaves, or does not match the documentation.
+labels: ["bug", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a problem. Please check
+        [Troubleshooting](https://github.com/mrSlime-man/RADIOGEDDON/blob/main/docs/TROUBLESHOOTING.md)
+        first — the most common issue ("API mismatch" / app won't open) is installing
+        the `.fap` built for a different firmware family.
+
+        **Do not attach captures of devices you do not own**, and avoid posting
+        recordings of rolling-code remotes you still use (keys, gates, cars).
+        Security vulnerabilities belong in a
+        [private report](https://github.com/mrSlime-man/RADIOGEDDON/security/policy), not here.
+  - type: dropdown
+    id: firmware
+    attributes:
+      label: Firmware family
+      options:
+        - Official
+        - Unleashed
+        - RogueMaster
+        - Other / custom build
+    validations:
+      required: true
+  - type: input
+    id: firmware-version
+    attributes:
+      label: Firmware version
+      description: Settings → About on the Flipper, or the version shown in qFlipper.
+      placeholder: e.g. 1.4.3, unlshd-093, RM 2026-10-xx
+    validations:
+      required: true
+  - type: input
+    id: app-version
+    attributes:
+      label: RadioGeddon version
+      description: Shown at the top of RadioGeddon → About.
+      placeholder: e.g. 1.0.0-beta.1
+    validations:
+      required: true
+  - type: dropdown
+    id: artifact
+    attributes:
+      label: Which .fap did you install?
+      options:
+        - radiogeddon-official.fap
+        - radiogeddon-unleashed.fap
+        - radiogeddon-roguemaster.fap
+        - Built from source
+    validations:
+      required: true
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: Include the exact on-screen text of any error message.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open RadioGeddon → Receive & Record
+        2. ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behaviour
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Device log (optional)
+      description: |
+        Connect over USB, run `ufbt cli` (or use qFlipper's CLI), type `log`, reproduce
+        the problem, and paste the output here.
+      render: shell
+  - type: checkboxes
+    id: confirm
+    attributes:
+      label: Confirmation
+      options:
+        - label: I am using RadioGeddon only on devices I own or am authorized to test.
+          required: true

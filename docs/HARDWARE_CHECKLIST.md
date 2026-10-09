@@ -1,95 +1,73 @@
 # Hardware Verification Checklist
 
-These steps require a physical Flipper Zero and **cannot** be verified in the
-build/CI environment. Each item lists how to perform it and what a pass looks
-like. Record results in the table at the bottom.
+RadioGeddon builds for three firmware families and passes all automated checks,
+but **none of the items below has been verified on a physical Flipper Zero
+yet**. This is the test plan for doing that. Any subset is useful — please
+report results (passes and failures alike) with the
+[Hardware test report](https://github.com/mrSlime-man/RADIOGEDDON/issues/new?template=hardware_report.yml)
+form, quoting the item IDs.
 
-> No Flipper Zero was connected during development, so **every item below is
-> currently UNVERIFIED**. This file is the test plan to run on real hardware.
+Only transmit with devices you own or are authorized to test, and within your
+region's rules.
 
 ## Setup
 
-- [ ] H0. Build and install: `ufbt launch` with the device connected over USB,
-      or copy `dist/radiogeddon.fap` to `apps/Sub-GHz/`.
-- [ ] H1. Copy the reference captures from `test/fixtures/*.sub` to
-      `/ext/apps_data/radiogeddon/signals/` on the SD card (create the folder or
-      let the app create it on first run, then copy via qFlipper).
-- [ ] H2. Open a serial log for diagnostics: `ufbt cli` then `log` (leave running
-      in a second terminal).
+| ID | Step |
+|----|------|
+| S1 | Install the `.fap` for your firmware ([Installation](INSTALLATION.md)). |
+| S2 | Copy `test/fixtures/*.sub` to `/ext/apps_data/radiogeddon/signals/` (create the folder, or launch the app once first). |
+| S3 | Optional but helpful: open a device log — connect USB, run `ufbt cli`, type `log`, keep it running. |
+| S4 | Note your firmware family and version (Settings → About) and your device's region. |
 
-## End-to-end workflow (completion criteria)
+## End-to-end workflow
 
-1. [ ] **Launch** — App starts from Apps → Sub-GHz → RadioGeddon; main menu
-   renders; no crash in the log.
-2. [ ] **Start receiver** — Settings → set `433.92 MHz`, `AM 650`. Open
-   Receive & Record. RSSI meter moves; "Listening..." shown. (If "No radio"
-   appears, the internal CC1101 failed to init — capture the log.)
-3. [ ] **Capture a transmission** — Trigger a known remote (e.g. a Princeton/CAME
-   gate remote) or transmit `princeton_ref_a.sub` from a second Flipper. The
-   decoded protocol appears in the list; decoded count increments.
-4. [ ] **Display info** — The decoded protocol name and `[n]` index show on
-   screen.
-5. [ ] **Save** — Press OK, accept/edit the name, confirm success tone. Also test
-   RAW: press Left to record, let a burst in, press Left again, name & save.
-6. [ ] **Reopen** — Database → open the saved file. Signal Info & Analysis shows
-   correct frequency, protocol, bits/key (protocol) or sample count & pulse
-   range (RAW).
-7. [ ] **Analyze structure** — For a RAW file, timing groups and estimated base
-   `Te` are shown; for a protocol file, `[CONFIRMED]` and bit breakdown.
-8. [ ] **Compare** — From a saved signal, Compare with… and pick a second file
-   (e.g. `princeton_ref_a` vs `princeton_ref_b`). The `Key` line is marked
-   changed (`~`) while `Proto`/`Freq` are constant (`=`).
-9. [ ] **Replay (authorized)** — For a RAW or static file, Replay → Send. With a
-   permitted region/frequency it transmits (verify on a receiver/second
-   Flipper). A dynamic/rolling-code file must report "Protected/rolling code".
-   A region-blocked frequency must report "Blocked by region".
-10. [ ] **Exit safely** — Back out through every screen to the launcher. No crash,
-    no hang; the radio LED is off; the log shows a clean app exit.
+| ID | Step | Pass when |
+|----|------|-----------|
+| W1 | Launch: Apps → Sub-GHz → RadioGeddon. | Main menu lists the six items; no error in the log. |
+| W2 | Start the receiver: Settings `433.92`, `AM 650`; open `Receive & Record`. | Header reads `433.92 AM 650`; RSSI bar reacts to a nearby remote; `Listening...` (not `No radio`). |
+| W3 | Capture a supported transmission: a fixed-code remote, or send `princeton_ref_a.sub` from a second Flipper. | `Decoded: 1` with `[1] <protocol>`; green LED blink. |
+| W4 | Review decoded info: Up/Down through the list. | Each entry shows its protocol name; newest stays selected. |
+| W5 | Save: OK to store the decode; then Left / press / Left to record RAW and save it. | Success tone each time; list kept on return; red LED only while recording. |
+| W6 | Reopen: Database → each new file → `Signal Info & Analysis`. | Correct frequency and preset; protocol/bits/key for the decode; `RAW` + sample count + pulse range for the capture. |
+| W7 | Analyse: run `Signal Info & Analysis` and `Unknown Protocol Analysis` on the RAW file. | Plausible timing groups and Te; an encoding hypothesis with a confidence %; every engine line labelled `[HYPOTHESIS]`. |
+| W8 | Compare: `princeton_ref_a` vs `princeton_ref_b`, then two captures of the same button. | `= Proto`, `= Freq`, `~ Key` for the fixtures; a high `RAW timing match` for the two same-button captures. |
+| W9 | Replay (only where authorized): open a RAW or static-code file → `Replay (TX)` → `Send`. | `Transmitting` then `Signal sent`; a receiver/second Flipper sees it. A rolling-code file reports `Protected/rolling code`; a region-disallowed frequency reports `Blocked by region`. |
+| W10 | Exit: Back out through every screen to the launcher. | No crash or hang; radio LED off; log shows a clean exit. |
 
-## Module-specific checks
+## Per-feature checks
 
-- [ ] Scanner sweeps the frequency table; bars update; selecting a frequency with
-      OK opens the receiver tuned to it.
-- [ ] Frequency Hopper cycles 315 / 390 / 433.92 / 868.35 MHz; the displayed
-      frequency changes as it hops; when a transmission starts on one of those
-      bands it holds there and decodes it; OK saves a decode; Back exits cleanly
-      with the radio released.
-- [ ] Crypto Analysis on a static protocol says `[CONFIRMED] Static code`; on a
-      KeeLoq-family capture says `[CONFIRMED] Dynamic code` and explicitly states
-      no key recovery.
-- [ ] Rapid repeated transmissions do not crash; history de-duplicates identical
-      consecutive parcels and caps at 32 entries.
-- [ ] RAW capture of a long/continuous signal shows the `FULL` indicator at the
-      16384-sample cap without crashing.
-- [ ] SD card removed mid-session: save/open fail gracefully with an error tone,
-      no crash.
-- [ ] Memory: run several capture/save/open/replay cycles; free heap (via `log`
-      or `free` in CLI) returns to baseline — no growth across cycles.
-
-- [ ] Unknown Protocol Analysis on a RAW capture reports base `Te`, an encoding
-      hypothesis with a confidence %, frame/repeat counts, extracted bits and —
-      across repeated presses — a constant-vs-changing field map and device-ID
-      candidate. Every line is labelled `[HYPOTHESIS]`; capturing the same
-      fixed-code remote twice should yield 0 changing bits, a rolling-code
-      remote should yield a changing suffix.
-- [ ] RAW-vs-RAW Compare shows a timing-similarity %: ~100% for two captures of
-      the same fixed button, low for different buttons.
-- [ ] Custom-preset replay: a stock-app RAW `.sub` saved with a custom preset
-      replays on the correct modulation (or is cleanly refused if its preset is
-      unknown) — never transmitted on the wrong modulation.
-- [ ] Delete asks for confirmation; Cancel/Back keeps the file, Delete removes it.
+| ID | Check | Pass when |
+|----|-------|-----------|
+| F1 | Scanner sweeps the table; bars update; OK on a frequency opens the receiver tuned to it. | Matches description; Back exits cleanly. |
+| F2 | Frequency Hopper cycles 315 / 390 / 433.92 / 868.35 MHz. | Displayed frequency changes; it holds on a band carrying a transmission long enough to decode; OK saves; Back releases the radio. |
+| F3 | Crypto Analysis on a static protocol vs a rolling-code (KeeLoq-family) capture. | Static → `[CONFIRMED] Static code`; rolling → `[CONFIRMED] Dynamic code` and an explicit "no key recovery" note. |
+| F4 | Unknown Protocol Analysis across several presses in one RAW capture. | Same fixed remote → 0 changing bits; rolling-code remote → a changing suffix with a device-ID candidate; all `[HYPOTHESIS]`. |
+| F5 | History: send rapid repeated transmissions. | No crash; identical consecutive parcels listed once; list caps at 32. |
+| F6 | RAW capture of a long/continuous signal. | `FULL` indicator at the 16,384-sample cap; no crash. |
+| F7 | Custom-preset replay: a stock-app RAW `.sub` saved with a custom preset. | Replays on the correct modulation, or is cleanly refused (`Unsupported file`) — never sent on the wrong modulation. |
+| F8 | Delete: choose Delete on a saved file. | Confirmation shown; Cancel/Back keeps the file; Delete removes it. |
+| F9 | SD card removed mid-session. | Save/open fail gracefully with an error tone; no crash. |
+| F10 | Memory: several capture/save/open/replay cycles. | Free heap (CLI `free` or the log) returns to baseline; no growth across cycles. |
 
 ## Per-firmware load check
 
-Each artifact must load on its matching firmware (install the wrong one and the
-Flipper should report an API mismatch rather than crash):
+Install each build on its matching firmware; installing the wrong one should
+produce an API error rather than a crash (see [Troubleshooting](TROUBLESHOOTING.md#the-app-wont-open)).
 
-- [ ] `radiogeddon-official.fap` on Official firmware — launches.
-- [ ] `radiogeddon-unleashed.fap` on Unleashed — launches.
-- [ ] `radiogeddon-roguemaster.fap` on RogueMaster — launches.
+| ID | Check | Pass when |
+|----|-------|-----------|
+| L1 | `radiogeddon-official.fap` on Official firmware. | Launches. |
+| L2 | `radiogeddon-unleashed.fap` on Unleashed. | Launches. |
+| L3 | `radiogeddon-roguemaster.fap` on RogueMaster. | Launches. |
 
 ## Results log
 
-| Date | Firmware | Item | Pass/Fail | Notes |
-|------|----------|------|-----------|-------|
-|      |          |      |           |       |
+Copy this into a hardware-report issue and fill it in:
+
+| ID | Firmware + version | Pass/Fail | Notes (observed behaviour, log excerpt) |
+|----|--------------------|-----------|------------------------------------------|
+| W1 | | | |
+| W2 | | | |
+
+When results come in, [VERIFICATION.md](VERIFICATION.md) is updated to move
+confirmed items into its evidence-backed table.

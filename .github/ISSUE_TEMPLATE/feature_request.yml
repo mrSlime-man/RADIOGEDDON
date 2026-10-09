@@ -1,0 +1,42 @@
+name: Feature request
+description: Suggest an improvement or a new capability.
+labels: ["enhancement", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Check the [Roadmap](https://github.com/mrSlime-man/RADIOGEDDON/blob/main/docs/ROADMAP.md)
+        first. RadioGeddon is an analysis and authorized-testing tool: requests for key
+        recovery, rolling-code bypass, jamming, or unauthorized transmission will be closed.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or use case
+      description: What are you trying to do, and what gets in the way today?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: How would it work on the device (screens, buttons, files)?
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Radio / receive / scanner / hopper
+        - Signal analysis
+        - Signal database / files
+        - Replay / transmit
+        - User interface
+        - Build, CI, release
+        - Documentation
+    validations:
+      required: true

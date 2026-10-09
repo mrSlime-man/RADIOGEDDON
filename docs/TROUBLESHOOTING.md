@@ -1,87 +1,117 @@
 # Troubleshooting
 
-## The app won't open / "API version mismatch"
+Problems are grouped by where they show up. If none of this helps, please
+[open an issue](https://github.com/mrSlime-man/RADIOGEDDON/issues/new/choose)
+with your firmware family and version, the RadioGeddon version from the About
+screen, the exact on-screen text, and the steps to reproduce.
 
-You installed a build that doesn't match your firmware. The `.fap` embeds the
-SDK API version it was built against, and the firmware refuses incompatible
-builds on purpose. Install the build matching your firmware family, or rebuild
-from source against your SDK. See
-[FIRMWARE_COMPATIBILITY.md](FIRMWARE_COMPATIBILITY.md). **Do not** try to edit
-the file's metadata to force it — that bypasses a safety check and will crash.
+## The app won't open
 
-## "Radio not available" on the Receiver / Record / Hopper screen
+The Flipper checks every app against its firmware before running it. These
+messages come from the firmware (text from the official firmware; forks may
+word them slightly differently):
 
-The app could not initialise the internal CC1101 radio. Usually this means the
-app is running somewhere without radio hardware (an emulator), or the radio is
-busy. Press **Back** to leave the screen. If it persists on real hardware,
-reboot the Flipper (**Settings → System → Reboot**) and try again.
+| Message | Cause | Fix |
+|---------|-------|-----|
+| `Error: Outdated App` — *Update the app* | The `.fap` was built for an **older API major version** than your firmware — usually `radiogeddon-official.fap` on Unleashed or RogueMaster. | Install the file for your firmware family. |
+| `Error: Outdated Firmware` — *Update firmware* | The `.fap` was built for a **newer API major version** — usually the Unleashed or RogueMaster file on official firmware. | Install the file for your firmware family. |
+| `Error: Missing Imports` | Right family, but your firmware is older than the build expects (lower API minor version), or the file is from another fork. | Update your firmware, or build from source against your firmware's SDK. |
+| `Error: HW Target Mismatch` | Not a Flipper Zero `f7` build. | Download a release `.fap` again. |
+| `Error: Invalid File` / `Invalid Manifest` | The file is damaged or incomplete. | Download it again and check `sha256sum -c SHA256SUMS`. |
 
-## "RX start failed"
+How to tell which firmware you have, and what each build supports:
+[Firmware Compatibility](FIRMWARE_COMPATIBILITY.md). Never edit a `.fap` to
+change its API version — that disables a safety check and can crash the device.
 
-The selected frequency isn't valid for the radio, or RX couldn't start. Open
-**Settings** and choose a standard frequency (e.g. 433.92). If it still fails,
-reboot the Flipper.
+## The app isn't in the Apps menu
 
-## "SD write failed" when recording
+The file must be in a folder the launcher scans, normally `apps/Sub-GHz/` on the
+SD card, and must end in `.fap`. Re-copy it with qFlipper
+([Installation](INSTALLATION.md)) and restart the Flipper if it still doesn't
+appear.
 
-The recording could not be opened on the SD card. Check that:
-- an SD card is inserted and not write-protected;
-- the card has free space;
-- the card is formatted correctly (the Flipper uses FAT). Re-seat or reformat
-  the card via **Settings → Storage** if needed.
+## `No radio` — `Sub-GHz device not found or not responding.`
 
-## Recording shows "No samples"
+The Scanner, Receive & Record or Frequency Hopper couldn't access the CC1101
+radio. Press **Back** and try again. If it persists, reboot the Flipper (**Settings → Power → Reboot**, or hold
+**Left + Back**). If it still happens after a reboot, please report it with a
+device log — this is exactly the kind of result the
+[hardware checklist](HARDWARE_CHECKLIST.md) needs.
 
-No RF activity was captured on the current frequency/modulation before you
-pressed Stop. Make sure you are on the right frequency and modulation for your
-device (**Settings**), keep the remote close, and press the remote's button
-*during* recording. OOK remotes are usually `AM650`; many sensors use `AM270`.
+## Nothing is decoded while receiving
 
-## Replay says "TX blocked by region"
+- **Wrong frequency.** Use the **Scanner** while pressing the remote and pick the
+  frequency whose bar jumps, then press **OK** to receive there.
+- **Wrong modulation.** Most remotes are `AM 650`; some sensors need `AM 270`;
+  FSK devices need an `FM` preset (**Settings → Modulation**).
+- **Unknown protocol.** Only protocols your firmware can decode are recognised.
+  Press **Left** to record RAW instead, then use *Unknown Protocol Analysis*
+  from the **Database**.
+- **Rolling-code manufacturer names missing.** Some KeeLoq-family protocols are
+  only fully identified when the firmware's manufacturer keystore is on the SD
+  card.
 
-The firmware's region policy does not allow transmitting on that frequency.
-This is enforced by the firmware, not by RadioGeddon, and is expected on
-official firmware for frequencies outside your region's allowed bands. Only
-transmit where you are legally authorized.
+## RSSI stays at the bottom
 
-## Replay says "Not a RAW recording" / "Unsupported preset"
+Make sure the transmitter is actually sending (many remotes only transmit while
+the button is held) and is within a few metres. The bar's scale runs from
+−100 dBm (empty) to −30 dBm (full); background noise usually sits near the
+bottom.
 
-RadioGeddon's replay streams **RAW** `.sub` recordings. It can replay:
-- recordings made by RadioGeddon itself, and
-- other RAW `.sub` files that use a standard preset (AM270/AM650/FM238/FM476).
+## A recording shows `FULL`
 
-Decoded-protocol `.sub` files (non-RAW) and files with a custom preset are not
-replayed by this app — open them in the stock Sub-GHz app instead.
+RAW recordings hold up to 16,384 timing samples. Stop recording shortly after the
+transmission; for long or continuous signals, record a short section.
 
-## Replay "Sent" but the device didn't react
+## Saving fails (error tone)
 
-Rolling-code remotes (garage doors, modern car keys) intentionally cannot be
-replayed: each press uses a new code. RadioGeddon flags these as
-`(rolling)` in the Receiver. A one-to-one replay only works for fixed-code
-devices, and only where you are authorized to transmit.
+- An SD card must be inserted, writable, and have free space.
+- If the card was replaced or reformatted while the app was open, restart the app
+  so it can recreate `/ext/apps_data/radiogeddon/signals`.
+- Check the card with **Settings → Storage** on the Flipper, or in qFlipper.
 
-## Menus feel sluggish while receiving
+## A file won't open in the Database (error tone)
 
-Live screens refresh a few times per second and decode on a background worker,
-so navigation stays responsive. If you still see lag, leave the live screen
-(press Back) before browsing saved files — only one radio operation runs at a
-time by design.
+The file couldn't be parsed as a Flipper `.sub` file — for example a truncated
+copy or a file with a missing header. Open it in a text editor on your computer:
+valid files start with `Filetype: Flipper SubGhz Key File` or
+`Filetype: Flipper SubGhz RAW File`.
 
-## Compare always says "DIFFERENT"
+## Replay shows an error
 
-Comparison works on RAW recordings. Make sure both files are RAW `.sub`
-captures (the info screen shows `Protocol: RAW`). Captures of the *same* button
-taken at different times should score high; different buttons or noisy captures
-score low. Rolling-code captures will differ every time by design.
+| Message | What to do |
+|---------|-----------|
+| `Blocked by region` | Your Flipper's region settings forbid transmitting on this frequency. This is enforced by the firmware; only transmit where you are legally allowed to. |
+| `Protected/rolling code` | Rolling-code (dynamic) protocols and protocols the firmware can't encode are never replayed. This is intentional. |
+| `Unsupported file` | The file couldn't be read, or its modulation preset isn't one RadioGeddon recognises (standard AM/FM presets or a stored custom register set). |
+| `File not found` | The file was moved or deleted; reopen it from the Database. |
+| `No radio device` / `Radio busy` | Go back, wait a moment and try again; reboot if it persists. |
 
-## Where are my recordings?
+## Replay said `Signal sent` but the device didn't react
 
-In `/ext/apps_data/radiogeddon/signals` on the SD card, as standard `.sub` files, shared with the
-stock Sub-GHz app. You can manage them there or from **Saved Signals** in the
-app.
+- The device may use a rolling code captured as RAW — a replayed press has
+  already been used and is rejected by the receiver. That is how rolling codes
+  are meant to work.
+- The capture may be weak or incomplete: re-record closer to the transmitter and
+  check *Signal Info & Analysis* for a clean, regular timing pattern.
+- Some receivers need the button held for longer than a single replayed burst.
 
-## Reporting a bug
+## Compare gives a low score for the same button
 
-Open an issue at <https://github.com/mrslime-man/radiogeddon> and include:
-your firmware name and version, which build of RadioGeddon you installed, the
-exact on-screen message, and the steps to reproduce.
+The RAW timing match compares two captures sample by sample from the start
+without aligning them. If one recording started earlier (more noise before the
+signal) or caught a different part of the transmission, the score drops even for
+the same button. Start both recordings the same way — just before pressing the
+button — or compare decoded files instead.
+
+## *Unknown Protocol Analysis* shows `0` changing bits for a rolling-code remote
+
+The field map compares frames within one recording, and a single press usually
+repeats the same frame. Record **several presses** in one RAW capture to see
+which bits change between presses.
+
+## Collecting a device log
+
+1. Connect the Flipper over USB.
+2. Open a CLI session: `ufbt cli` (or the CLI in qFlipper), then type `log`.
+3. Reproduce the problem and copy the output into your issue.

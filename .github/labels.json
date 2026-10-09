@@ -1,0 +1,21 @@
+[
+  {"name": "bug", "color": "d73a4a", "description": "Something isn't working"},
+  {"name": "enhancement", "color": "a2eeef", "description": "New feature or request"},
+  {"name": "documentation", "color": "0075ca", "description": "Improvements or additions to documentation"},
+  {"name": "hardware-verification", "color": "7c3aed", "description": "Results from testing on a physical Flipper Zero"},
+  {"name": "needs-triage", "color": "fbca04", "description": "Awaiting maintainer review"},
+  {"name": "firmware: official", "color": "22d3ee", "description": "Specific to the official firmware build"},
+  {"name": "firmware: unleashed", "color": "0ea5e9", "description": "Specific to the Unleashed firmware build"},
+  {"name": "firmware: roguemaster", "color": "6366f1", "description": "Specific to the RogueMaster firmware build"},
+  {"name": "area: radio", "color": "06b6d4", "description": "Receive, scanner, hopper, RAW capture, transmit"},
+  {"name": "area: analysis", "color": "a855f7", "description": "Signal analysis engine and heuristics"},
+  {"name": "area: ui", "color": "c084fc", "description": "Screens, menus and controls"},
+  {"name": "area: ci", "color": "6b7280", "description": "Build, CI and release tooling"},
+  {"name": "security", "color": "b60205", "description": "Security-relevant issue"},
+  {"name": "question", "color": "d876e3", "description": "Further information is requested"},
+  {"name": "good first issue", "color": "7057ff", "description": "Good for newcomers"},
+  {"name": "help wanted", "color": "008672", "description": "Extra attention is needed"},
+  {"name": "duplicate", "color": "cfd3d7", "description": "This issue or pull request already exists"},
+  {"name": "wontfix", "color": "ffffff", "description": "This will not be worked on"},
+  {"name": "invalid", "color": "e4e669", "description": "This doesn't seem right"}
+]

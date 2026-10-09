@@ -1,160 +1,188 @@
+<div align="center">
+
+<img src="docs/assets/brand/banner.svg" alt="RadioGeddon — standalone Sub-GHz signal analysis for Flipper Zero" width="100%">
+
 # RadioGeddon
 
-**A standalone Sub-GHz radio analysis toolkit for Flipper Zero.**
+**A standalone Sub-GHz radio analysis toolkit for the Flipper Zero.**
+Scan, hop, capture, identify, analyse, compare and (where authorized) replay
+Sub-GHz signals — entirely on the device, with no computer, phone or network.
 
-RadioGeddon scans, captures, decodes, analyzes, compares and (where authorized
-and legal) replays Sub-GHz radio signals entirely on the device — no computer,
-phone, server or internet connection required.
+[![CI](https://github.com/mrSlime-man/RADIOGEDDON/actions/workflows/ci.yml/badge.svg)](https://github.com/mrSlime-man/RADIOGEDDON/actions/workflows/ci.yml)
+[![Latest release](https://img.shields.io/github/v/release/mrSlime-man/RADIOGEDDON?include_prereleases&sort=semver&label=release)](https://github.com/mrSlime-man/RADIOGEDDON/releases)
+[![License: MIT](https://img.shields.io/badge/license-MIT-22d3ee.svg)](LICENSE)
+[![Platform: Flipper Zero](https://img.shields.io/badge/platform-Flipper%20Zero%20(f7)-a855f7.svg)](https://flipperzero.one)
+[![Firmware: Official · Unleashed · RogueMaster](https://img.shields.io/badge/firmware-Official%20%C2%B7%20Unleashed%20%C2%B7%20RogueMaster-0ea5e9.svg)](docs/FIRMWARE_COMPATIBILITY.md)
+[![Hardware: unverified](https://img.shields.io/badge/hardware-unverified-f59e0b.svg)](docs/VERIFICATION.md)
 
-It is built on the official Flipper Zero Sub-GHz subsystem and GUI stack, so it
-reuses the firmware's real radio drivers and protocol decoders rather than
-reimplementing them. Recordings are stored as standard `.sub` files, compatible
-with the firmware's own Sub-GHz app.
+[Download](#-download) · [Install](docs/INSTALLATION.md) · [User Guide](docs/USER_GUIDE.md) · [Features](docs/FEATURES.md) · [Docs](docs/)
 
----
-
-## Status
-
-This is an actively developed toolkit. The identical source **builds cleanly**
-against **three firmware families**, each against its own SDK:
-
-| Firmware | Built with | API | Artifact |
-|----------|-----------|-----|----------|
-| Official | ufbt `release` (fw 1.4.3) | 87.1 | `dist/release/official/radiogeddon-official.fap` |
-| Unleashed | ufbt `unlshd-093` | 88.9 | `dist/release/unleashed/radiogeddon-unleashed.fap` |
-| RogueMaster | RogueMaster fw source + `fbt` | 88.16 | `dist/release/roguemaster/radiogeddon-roguemaster.fap` |
-
-The firmware-independent signal-processing and analysis logic is covered by
-host unit tests (55 checks under ASan/UBSan).
-
-> **Hardware testing:** The code targets real hardware via the public
-> `subghz_devices_*` / `furi_hal_subghz` APIs and performs no simulated
-> reception or fabricated analysis. It has **not** yet been verified on a
-> physical Flipper Zero. On-device validation is tracked in
-> [`docs/HARDWARE_CHECKLIST.md`](docs/HARDWARE_CHECKLIST.md) and the current
-> evidence-backed status is in [`docs/VERIFICATION.md`](docs/VERIFICATION.md).
-
-See [`docs/CAPABILITIES.md`](docs/CAPABILITIES.md) for the precise list of
-implemented vs. unimplemented features, and
-[`docs/FIRMWARE_COMPATIBILITY.md`](docs/FIRMWARE_COMPATIBILITY.md) for how the
-per-firmware builds work and which radio differences were checked.
+</div>
 
 ---
+
+> [!WARNING]
+> **Public beta.** Every feature is implemented and the builds pass all
+> automated checks (lint, 55 host-test checks, three firmware builds with
+> API/manifest verification), but **the app has not yet been run on a physical
+> Flipper Zero.** Expect rough edges, and see
+> [VERIFICATION.md](docs/VERIFICATION.md) for exactly what has and hasn't been
+> tested. Testing on real hardware is the single most useful thing you can
+> contribute — the [hardware checklist](docs/HARDWARE_CHECKLIST.md) shows how.
+
+## What is it?
+
+RadioGeddon turns a Flipper Zero into a self-contained Sub-GHz workbench. It
+reuses the firmware's own radio drivers and protocol decoders — so
+identification matches the stock Sub-GHz app — and adds a layer of analysis on
+top: per-frequency signal-strength scanning, a frequency hopper, RAW capture,
+pulse-timing and line-encoding analysis for unknown protocols, constant-vs-
+changing field maps across repeated presses, side-by-side comparison, a
+static-vs-rolling classifier, an on-SD-card signal database, and authorized
+replay. Everything runs on the device; recordings are plain `.sub` files.
+
+It is an **analysis and authorized-testing** tool. It does **not** recover keys,
+decrypt payloads, predict rolling codes, or replay rolling-code remotes — those
+are deliberate non-goals.
+
+## ⬇ Download
+
+Grab the build that matches your firmware from the
+[**latest release**](https://github.com/mrSlime-man/RADIOGEDDON/releases/latest),
+then copy it to `apps/Sub-GHz/` on the SD card (full steps in
+[Installation](docs/INSTALLATION.md)).
+
+| Your firmware | Download this file |
+|---------------|--------------------|
+| **Official** (flipperzero.one) | [`radiogeddon-official.fap`](https://github.com/mrSlime-man/RADIOGEDDON/releases/latest) |
+| **Unleashed** | [`radiogeddon-unleashed.fap`](https://github.com/mrSlime-man/RADIOGEDDON/releases/latest) |
+| **RogueMaster** | [`radiogeddon-roguemaster.fap`](https://github.com/mrSlime-man/RADIOGEDDON/releases/latest) |
+
+Each firmware family has its own SDK API version, so **install the file for
+your firmware** — the wrong one is safely refused with an "Outdated App /
+Firmware" message rather than loading. Not sure which you have, or using another
+fork? See [Firmware Compatibility](docs/FIRMWARE_COMPATIBILITY.md). Every
+release lists `SHA256SUMS` and ships signed build-provenance attestations.
 
 ## Features
 
 | Module | What it does |
-| --- | --- |
-| **Scanner** | Sweeps common Sub-GHz frequencies and shows live per-frequency RSSI bars read from the radio. Select a frequency to jump straight into receive. |
-| **Frequency Hopper** | Continuously cycles a short list of common bands, pausing to decode whenever activity (RSSI above the noise floor) is detected. |
-| **Receive & Record** | Live-decodes known protocols using the firmware's decoders, shows an RSSI meter and a decoded-signal list, and can capture the raw timing stream to a `.sub` file. |
-| **Signal Analyzer** | Inspects pulse timing (clustered symbol widths, estimated base `Te`, edge counts) for RAW captures, or bit/field structure for decoded protocols. |
-| **Unknown Protocol Analysis** | Runs the signal engine over a RAW capture to infer the line encoding (PWM/PPM/Manchester) with a confidence score, segment frames, detect repeated presses, extract bits, and — across repeats — separate constant fields (a likely device ID) from changing fields (a rolling counter). Every inference is labelled `[HYPOTHESIS]`; no key is recovered. |
-| **Crypto Analyzer** | Classifies signals as fixed (static) vs. rolling-code/dynamic (encrypted hop code) and reports key-byte variety — **without** claiming key recovery. |
-| **Comparator** | Compares two recordings field-by-field and highlights constant vs. changing fields (e.g. a rolling counter increment). |
-| **Database** | Browses, opens and deletes recordings stored on the SD card. |
-| **Replay** | Transmits compatible, non-protected signals for authorized testing. Rolling-code/dynamic protocols are intentionally not transmitted; regional transmit limits are enforced by the firmware. |
+|--------|--------------|
+| **Sub-GHz Scanner** | Live per-frequency RSSI across 19 common bands; pick one to receive on. |
+| **Frequency Hopper** | Cycles 315 / 390 / 433.92 / 868.35 MHz and holds on a band when activity appears so a decode can complete. |
+| **RAW Signal Capture** | Records the raw on/off timing stream to a standard RAW `.sub` file. |
+| **Protocol Identification** | Live decoding with the firmware's own decoders (Princeton, CAME, Nice FLO, Holtek, KeeLoq-family, …) — marked `[CONFIRMED]`. |
+| **Signal Analyzer** | Pulse-width groups and base time unit for RAW; bit/field breakdown for decoded protocols. |
+| **Unknown Protocol Analysis** | Infers line encoding (PWM/PPM/Manchester) with a confidence score, frames, repeats and extracted bits for signals the firmware can't decode — all `[HYPOTHESIS]`. |
+| **Signal Comparison** | Field-by-field diff of two recordings, plus a timing-similarity score for RAW captures. |
+| **Device ID Candidate Detection** | Packs the bits that stay constant across repeated presses into a candidate device identifier. |
+| **Rolling Code Classification** | Flags static vs. dynamic (rolling-code) protocols, and highlights changing bits in unknown ones. |
+| **Cryptographic Structure Heuristics** | Key-byte variety and key-delta hints — never key recovery. |
+| **Signal Database** | Browse, analyse, compare, replay and delete recordings stored as `.sub` on the SD card. |
+| **Authorized Signal Replay** | Transmits RAW and static-protocol captures where the firmware's region rules allow; refuses rolling-code and unknown-modulation files. |
 
-Every analysis result is explicitly labelled **`[CONFIRMED]`** (a firmware
-decoder matched the signal) or **`[HEURISTIC]`** (a guess derived from signal
-statistics), so confirmed identification is never confused with estimation.
+Every result is labelled **`[CONFIRMED]`** (a firmware decoder matched),
+**`[HEURISTIC]`** (a statistics-based guess) or **`[HYPOTHESIS]`** (an engine
+inference) — a guess is never dressed up as a decode. Full details, including
+verification state per feature, are in [Features](docs/FEATURES.md) and
+[Protocol Analysis](docs/PROTOCOL_ANALYSIS.md).
 
----
+## Install
 
-## Building
+1. Download the `.fap` for your firmware (above).
+2. Copy it to `SD Card/apps/Sub-GHz/` with qFlipper or a card reader.
+3. On the Flipper: **Apps → Sub-GHz → RadioGeddon**.
 
-Prerequisites: [`ufbt`](https://pypi.org/project/ufbt/) (the micro Flipper Build
-Tool).
+Step-by-step instructions, download verification and troubleshooting:
+[Installation](docs/INSTALLATION.md) · [Troubleshooting](docs/TROUBLESHOOTING.md).
 
-```bash
-pip install ufbt          # once
-ufbt                      # build -> dist/radiogeddon.fap
+## Usage
 
-# All packaged artifacts:
-./scripts/build_release.sh        # Official + Unleashed -> dist/release/
-./scripts/build_roguemaster.sh    # RogueMaster (clones RM fw, builds with fbt)
-```
+Physical buttons only: **Up/Down** move, **OK** selects, **Left/Right** change
+settings (and **Left** toggles RAW recording while receiving), **Back** returns.
 
-The compiled application artifact is produced at `dist/radiogeddon.fap`.
-
-### Running the unit tests
-
-The firmware-independent DSP/parsing logic has host-side tests:
-
-```bash
-make -C test check
-```
-
----
-
-## Installing on a Flipper Zero
-
-1. Build `dist/radiogeddon.fap` as above (or copy the prebuilt artifact).
-2. Copy it to the SD card under `apps/Sub-GHz/` using qFlipper, the mobile app,
-   or `ufbt launch` while the device is connected over USB:
-   ```bash
-   ufbt launch
-   ```
-3. On the device: **Apps → Sub-GHz → RadioGeddon**.
-
-Recordings and analysis are stored on the SD card under
-`/ext/apps_data/radiogeddon/signals`.
-
-### Firmware compatibility
-
-Targets the **official** Flipper Zero firmware. It uses only public,
-documented Sub-GHz APIs and should also build for RogueMaster and other
-forks that keep those APIs; where a fork diverges, see
-[`docs/LIMITATIONS.md`](docs/LIMITATIONS.md).
-
----
-
-## Controls
-
-- **Scanner:** Up/Down select a frequency, OK jumps into receive, Back exits.
-- **Frequency Hopper:** cycles bands automatically; Up/Down scroll decoded
-  signals, OK saves the highlighted decode, Back exits.
-- **Receive & Record:** Up/Down scroll decoded signals, OK saves the highlighted
-  decode, **Left toggles RAW recording**, Back exits.
-- **Database / menus:** Up/Down navigate, OK selects, Back returns.
-
----
-
-## Legal & responsible use
-
-RadioGeddon is intended for education, research, and testing of devices you own
-or are explicitly authorized to test. It does not break encryption, recover
-keys, or defeat rolling codes. Transmission respects the firmware's regional
-restrictions. You are responsible for complying with the radio regulations in
-your jurisdiction.
-
----
+A typical session: open the **Scanner** to find a device's frequency → press
+**OK** to receive there → watch it decode, or press **Left** to RAW-record →
+**OK**/save → open it from the **Database** to analyse, compare, or (where you
+are authorized) replay. The full walkthrough of every screen is in the
+[User Guide](docs/USER_GUIDE.md).
 
 ## Architecture
 
+```mermaid
+flowchart LR
+    CC1101["CC1101 radio"] <--> DEV["subghz_devices<br/>(portable radio API)"]
+    DEV --> RADIO["radiogeddon_subghz<br/>RX · RAW capture · hop · TX gate"]
+    RADIO --> DEC["firmware protocol<br/>decoders → [CONFIRMED]"]
+    RADIO --> ENG["rg_analyzer + dsp<br/>pure engine → [HYPOTHESIS]"]
+    RADIO --> STORE[("/ext/apps_data/<br/>radiogeddon/signals<br/>.sub files")]
+    STORE --> ENG
+    UI["scenes + views<br/>(ViewDispatcher + SceneManager)"] --> RADIO
+    UI --> STORE
 ```
-radiogeddon.c / .h         App context, ViewDispatcher + SceneManager wiring
-scenes/                    One file per screen (start, scanner, receiver, ...)
-views/                     Custom canvas views (scanner sweep, live receiver)
-helpers/
-  radiogeddon_subghz.*     Radio wrapper: device, decode, RAW capture, TX
-  radiogeddon_storage.*    SD-card layout and .sub parsing
-  radiogeddon_history.*    Volatile per-session decoded-signal list
-  radiogeddon_analysis.*   Describe / analyze / crypto / compare
-  radiogeddon_dsp.*        Pure, testable timing-parse & clustering logic
-test/                      Host unit tests for the DSP helpers
+
+The radio layer uses only the portable `subghz_devices` API — the same one the
+stock app uses — so a single source tree builds for all three firmware
+families. The analysis engine (`helpers/rg_analyzer.*`, `helpers/radiogeddon_dsp.*`)
+has no firmware dependencies, so it is unit-tested on a normal computer. Deeper
+dive: [Architecture](docs/ARCHITECTURE.md).
+
+## Building from source
+
+```bash
+git clone https://github.com/mrSlime-man/RADIOGEDDON.git
+cd RADIOGEDDON
+source scripts/firmware_pins.sh && pip install "ufbt==${UFBT_VERSION}"
+
+scripts/build_target.sh official      # -> dist/release/radiogeddon-official.fap (+ verified)
+scripts/build_target.sh unleashed
+scripts/build_target.sh roguemaster   # clones RogueMaster at a pinned commit (large)
+scripts/build_release.sh              # all three + SHA256SUMS + BUILD_INFO.txt
 ```
 
-The decoder/analysis layer is modular: adding support for another protocol is a
-matter of enabling it in the firmware protocol registry — no changes to the
-analysis UI are required.
+Each build downloads the exact SDK pinned in
+[`scripts/firmware_pins.sh`](scripts/firmware_pins.sh), verifies its SHA-256 and
+API version, compiles, and checks the resulting `.fap`'s manifest. More in
+[Contributing](CONTRIBUTING.md#development-setup).
 
-A future desktop companion could import these `.sub` recordings for heavier
-analysis; the on-device file format is kept standard to allow it. That
-companion is **not** part of this project.
+## Testing & verification
 
----
+```bash
+make -C test check               # 55 host checks, -Werror, AddressSanitizer + UBSan
+python3 scripts/check_links.py   # documentation links and anchors
+```
 
-## License
+CI runs the link check, the host tests, and all three firmware builds (with API
+and manifest verification plus lint) on every pull request and release tag.
+**CI cannot exercise the radio**, so on-device behaviour remains unverified —
+tracked honestly in [VERIFICATION.md](docs/VERIFICATION.md) with the test plan
+in [HARDWARE_CHECKLIST.md](docs/HARDWARE_CHECKLIST.md).
 
-MIT — see [`LICENSE`](LICENSE).
+## Roadmap
+
+Next up is hardware verification (the gate to a stable `1.0.0`), then persistent
+settings, saving analysis reports, external-radio support and a richer analysis
+engine. See the [Roadmap](docs/ROADMAP.md).
+
+## Contributing
+
+Contributions are welcome — especially **hardware test reports**. See
+[CONTRIBUTING.md](CONTRIBUTING.md), pick up an
+[issue](https://github.com/mrSlime-man/RADIOGEDDON/issues), and note the
+[Code of Conduct](CODE_OF_CONDUCT.md). Found a security problem? Report it
+privately per the [Security Policy](SECURITY.md).
+
+## License & responsible use
+
+RadioGeddon is released under the [MIT License](LICENSE).
+
+It is intended for education, research, and testing of devices you own or are
+explicitly authorized to test. Receiving and especially transmitting radio
+signals is regulated and the rules vary by country; the firmware's regional
+restrictions stay in force, but **you** are responsible for complying with the
+law where you are. RadioGeddon does not break encryption, recover keys, or
+defeat rolling codes.
+
+<div align="center">
+<sub>Built for the Flipper Zero community. Not affiliated with Flipper Devices Inc.</sub>
+</div>

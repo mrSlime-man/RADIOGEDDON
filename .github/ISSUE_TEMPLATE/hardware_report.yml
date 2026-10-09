@@ -1,0 +1,73 @@
+name: Hardware test report
+description: Report results from running the hardware checklist on a physical Flipper Zero.
+title: "[hardware] "
+labels: ["hardware-verification"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        RadioGeddon builds and passes its automated checks, but **its on-device behaviour
+        has not yet been verified on physical hardware**. Results from real devices are the
+        most valuable contribution you can make right now.
+
+        Work through [docs/HARDWARE_CHECKLIST.md](https://github.com/mrSlime-man/RADIOGEDDON/blob/main/docs/HARDWARE_CHECKLIST.md)
+        (any subset is useful) and report what you observed — failures just as much as passes.
+        Only test with transmitters you own or are authorized to use.
+  - type: dropdown
+    id: firmware
+    attributes:
+      label: Firmware family
+      options:
+        - Official
+        - Unleashed
+        - RogueMaster
+    validations:
+      required: true
+  - type: input
+    id: firmware-version
+    attributes:
+      label: Firmware version
+      placeholder: e.g. 1.4.3
+    validations:
+      required: true
+  - type: input
+    id: app-version
+    attributes:
+      label: RadioGeddon version (About screen)
+      placeholder: e.g. 1.0.0-beta.1
+    validations:
+      required: true
+  - type: input
+    id: region
+    attributes:
+      label: Device region / frequencies tested
+      description: The region your Flipper is provisioned for, and the frequencies you used.
+      placeholder: e.g. US, 315 MHz and 433.92 MHz
+  - type: textarea
+    id: results
+    attributes:
+      label: Checklist results
+      description: One line per checklist item, using the IDs from the checklist.
+      placeholder: |
+        H1 launch: PASS
+        R2 decode Princeton remote at 433.92 MHz: PASS (decoded as Princeton 24 bit)
+        T3 replay blocked on disallowed frequency: FAIL — transmitted anyway (log attached)
+    validations:
+      required: true
+  - type: textarea
+    id: transmitters
+    attributes:
+      label: Transmitters used
+      description: Make/model of remotes or the reference .sub files you used (no captures of devices you rely on).
+  - type: textarea
+    id: logs
+    attributes:
+      label: Device log (optional)
+      render: shell
+  - type: checkboxes
+    id: confirm
+    attributes:
+      label: Confirmation
+      options:
+        - label: All transmissions were made on devices I own or am authorized to test, within my region's rules.
+          required: true

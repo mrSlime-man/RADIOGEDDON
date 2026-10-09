@@ -4,9 +4,10 @@
 A .fap is an ELF32/ARM object whose ``.fapmeta`` section holds a packed
 ``FlipperApplicationManifestV1`` (see lib/flipper_application/
 application_manifest.h in the firmware SDK). The firmware refuses to load an
-app whose API *major* version differs from its own, or whose API *minor* is
-newer than its own, so every release artifact must carry exactly the API
-version of the SDK it was built against. This script checks that, plus the
+app whose API *major* version differs from its own, and an app built with a
+newer API *minor* may import functions an older firmware does not export, so
+every release artifact must carry exactly the API version of the SDK it was
+built against. This script checks that, plus the
 manifest magic, hardware target, application name and application version.
 
 Standard library only, so it runs on any CI runner without extra installs.

@@ -5,11 +5,11 @@
 # Sourced by scripts/build_target.sh (local builds) and by CI/release workflows,
 # so a release is always built against exactly these, integrity-checked SDKs.
 #
-# A .fap embeds the API version of the SDK it was compiled with. Firmware loads
-# an app only when the API *major* matches and the app's API *minor* is not
-# newer than the firmware's. Each artifact therefore targets one firmware
-# family; the *_API values below are asserted against both the SDK and the
-# built .fap.
+# A .fap embeds the API version of the SDK it was compiled with. Firmware
+# refuses an app whose API *major* differs from its own, and an app built with
+# a newer API *minor* may need functions an older firmware lacks. Each artifact
+# therefore targets one firmware family; the *_API values below are asserted
+# against both the SDK and the built .fap.
 #
 # To move to a newer firmware: update URL + SHA256 (+ API) here, rebuild, run
 # the hardware checklist, and note the change in CHANGELOG.md.
