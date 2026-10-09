@@ -36,7 +36,7 @@ jobs:
           GH_REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
-          python3 -c 'import json,sys; [print(f"{l[\"name\"]}\t{l[\"color\"]}\t{l[\"description\"]}") for l in json.load(open(".github/labels.json"))]' |
+          jq -r '.[] | [.name, .color, .description] | @tsv' .github/labels.json |
           while IFS=$'\t' read -r name color description; do
             gh label create "$name" --color "$color" --description "$description" --force
             echo "synced: $name"
