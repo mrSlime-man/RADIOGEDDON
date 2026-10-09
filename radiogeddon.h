@@ -28,6 +28,7 @@
 #include "helpers/radiogeddon_analysis.h"
 #include "helpers/radiogeddon_settings.h"
 #include "helpers/radiogeddon_scanner.h"
+#include "helpers/radiogeddon_hopper.h"
 #include "views/radiogeddon_scanner_view.h"
 #include "views/radiogeddon_receiver_view.h"
 
@@ -88,6 +89,8 @@ struct RadioGeddonApp {
     // Scanner results; allocated on first use of the scanner and kept until
     // the user returns to the main menu, so a trip to the receiver keeps them.
     RadioGeddonScanner* scanner;
+    // Hopper statistics and activity history; same lifetime rule as scanner.
+    RadioGeddonHopper* hopper;
 
     // Session configuration
     uint32_t frequency; // Hz

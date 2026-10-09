@@ -62,14 +62,16 @@ helpers/
   radiogeddon_subghz.*      Radio wrapper: device, decoders, RAW capture, hopper retune, TX
   radiogeddon_storage.*     SD-card layout, .sub parsing, RAW sample loading
   radiogeddon_scanner.*     Scanner sweep thread, results and CSV export
+  radiogeddon_hopper.*      Hopper thread, auto-recording, statistics report
   radiogeddon_settings.*    Settings persisted to the SD card
   radiogeddon_history.*     Per-session list of decoded signals (max 32, de-duplicated)
   radiogeddon_analysis.*    Text reports: info, analysis, crypto, compare, unknown-protocol
   radiogeddon_dsp.*         Pure RAW parsing / clustering helpers (no firmware headers)
   rg_analyzer.*             Pure signal-analysis engine (no firmware headers)
   rg_scan.*                 Pure scanner logic: noise floor, detection, peak hold
+  rg_hop.*                  Pure hopper state machine: dwell, hold, lock, history
 assets/                     10x10 launcher icon (compiled into the .fap)
-test/                       Host unit tests (86 checks) + reference .sub fixtures
+test/                       Host unit tests (128 checks) + reference .sub fixtures
 scripts/                    Pinned builds, manifest verification, packaging, link check
 tools/brand/                Generator for the logo, banner and social preview
 .github/workflows/          CI (ci.yml), shared build pipeline (build.yml), release.yml
@@ -139,10 +141,19 @@ radio session before the receiver can start.
 the scan options in a small Flipper Format file. Every field is validated on
 load and falls back to its default independently.
 
-**Frequency Hopper.** Uses the live receive session and retunes it without
-powering the radio down (stop worker and capture → set frequency → restart),
-cycling 315 / 390 / 433.92 / 868.35 MHz. When RSSI rises above −90 dBm it holds
-the current frequency for about two seconds so a decode can finish.
+**Frequency Hopper.** The scene starts the receive session, then a hopper
+thread (`helpers/radiogeddon_hopper.c`, 3 KB stack) drives it: every 10 ms it
+reads RSSI and feeds the pure `rg_hop` state machine, which keeps a `rg_scan`
+noise floor per frequency, holds on floor-relative activity or on a decode
+(reported from the worker thread), extends the hold while activity continues,
+and asks for a retune when a quiet frequency's dwell is over. Retunes use the
+live session without powering the radio down (stop worker and capture → set
+frequency → restart). With auto-record on, the thread starts a RAW capture
+when activity starts and stops and saves it when the hold ends or before any
+retune. On exit the scene stops the thread (saving any capture in progress)
+before stopping RX. Statistics and the activity ring buffer outlive the thread
+and are freed at the main menu. The scene logs free heap on entry and exit
+(`RadioGeddonHopperScene`) as a simple leak check.
 
 **Transmit.** Replay opens the saved `.sub`, refuses files it should not send
 (see [Features → Replay](FEATURES.md#authorized-signal-replay)), loads the

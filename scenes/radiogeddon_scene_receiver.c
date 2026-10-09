@@ -74,6 +74,7 @@ void radiogeddon_scene_receiver_on_enter(void* context) {
     radiogeddon_receiver_view_set_config(
         app->receiver_view, app->frequency, radiogeddon_presets[app->preset_index].label);
     radiogeddon_receiver_view_set_hopping(app->receiver_view, false);
+    radiogeddon_receiver_view_set_threshold(app->receiver_view, -127.0f);
     radiogeddon_scene_receiver_refresh_history(app);
     radiogeddon_receiver_view_set_recording(app->receiver_view, false, 0, false);
 

@@ -9,7 +9,7 @@ verified, and its known limits. For step-by-step use, see the
 **Every feature below is implemented, compiles for all three firmware
 families, and passes CI. None has yet been verified on a physical Flipper
 Zero.** "Unit-tested" means the feature's firmware-independent logic is covered
-by the host test suite (86 checks); radio behaviour can only be confirmed on a
+by the host test suite (128 checks); radio behaviour can only be confirmed on a
 device ([VERIFICATION.md](VERIFICATION.md)).
 
 | Feature | Implemented | Unit-tested logic | Verified on hardware |
@@ -53,12 +53,26 @@ not a wideband spectrum analyzer and cannot see the whole band at once.
 
 ## Frequency Hopper
 
-Continuous receive across **315.00, 390.00, 433.92 and 868.35 MHz**. It listens
-about 200 ms per band and, when RSSI reaches −90 dBm or more, holds that band
-for about two seconds so a decode can complete. Decoded signals are listed and
-saved exactly as in *Receive & Record*. Hopping retunes the running receiver
-without powering the radio down, using the same stop/retune/start sequence as
-the firmware's own hopper.
+Continuous receive while hopping across a list of frequencies (by default
+**315.00, 390.00, 433.92 and 868.35 MHz**), built to catch transmissions rather
+than to hop fast.
+
+- **Customizable hop list**: Common, All, a band, or any custom selection.
+- **Adjustable dwell** (100 ms to 1 s) and **activity hold** (1 to 10 s).
+- **Noise-floor-aware, adaptive detection**: each frequency learns its own
+  floor; activity is a rise of the Threshold above it (3 dB hysteresis). A
+  decoded parcel also counts as activity, so weak but decodable signals hold
+  the hopper too. RSSI is sampled every 10 ms.
+- **Hold** on activity, extended while the signal stays up or keeps decoding.
+- **Lock / unlock** (pause and resume hopping) and **step to next** by hand.
+- **Statistics**: per-frequency activity count, decodes, peak, floor and active
+  time, plus the last 16 activity periods.
+- **Optional automatic RAW recording** of each activity period, saved as its
+  own `.sub` without overwriting existing files.
+- Decoded signals are listed and saved exactly as in *Receive & Record*.
+- Runs on its own thread; retunes the running receiver without powering the
+  radio down, using the same stop/retune/start sequence as the firmware's own
+  hopper. A recording never spans a retune.
 
 ## RAW Signal Capture
 

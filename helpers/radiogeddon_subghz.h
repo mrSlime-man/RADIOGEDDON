@@ -130,6 +130,9 @@ bool radiogeddon_subghz_record_start(RadioGeddonSubGhz* instance, const char* fi
 void radiogeddon_subghz_record_stop(RadioGeddonSubGhz* instance);
 bool radiogeddon_subghz_is_recording(RadioGeddonSubGhz* instance);
 
+/** Drop a stopped capture and free its buffer without saving it. */
+void radiogeddon_subghz_record_discard(RadioGeddonSubGhz* instance);
+
 /** Number of RAW samples written so far in the active capture. */
 size_t radiogeddon_subghz_record_sample_count(RadioGeddonSubGhz* instance);
 

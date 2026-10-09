@@ -14,6 +14,13 @@ to follow [Semantic Versioning](https://semver.org/) (pre-1.0.0 releases use
   custom), configurable dwell, optional hold on the first active frequency,
   pause/resume, and CSV export of results to `apps_data/radiogeddon/scans/`.
   The sweep now runs on its own thread.
+- **Frequency Hopper 2.0**: configurable hop list, dwell and activity hold;
+  per-frequency noise floor with floor-relative detection (shared Threshold
+  setting); decodes also hold the hopper; lock/unlock and step-to-next
+  buttons; statistics screen (hold OK) with per-frequency counts and the last
+  16 activity periods; optional automatic RAW recording of each activity
+  period, saved without overwriting existing files. Runs on its own thread
+  and samples RSSI every 10 ms.
 - **Settings are saved** to `apps_data/radiogeddon/settings.txt` and restored
   at launch (frequency, modulation and scanner options).
 

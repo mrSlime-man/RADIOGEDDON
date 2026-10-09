@@ -129,6 +129,7 @@ void radiogeddon_app_free(RadioGeddonApp* app) {
     view_dispatcher_free(app->view_dispatcher);
 
     if(app->scanner) radiogeddon_scanner_free(app->scanner);
+    if(app->hopper) radiogeddon_hopper_free(app->hopper);
     radiogeddon_history_free(app->history);
     furi_mutex_free(app->history_mutex);
     radiogeddon_subghz_free(app->subghz);

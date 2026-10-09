@@ -22,6 +22,8 @@ typedef struct {
     size_t selected;
     char latest[22];
     bool hopping;
+    float threshold;
+    char status[26];
 } RadioGeddonReceiverModel;
 
 static void radiogeddon_receiver_view_draw(Canvas* canvas, void* model) {
@@ -50,6 +52,13 @@ static void radiogeddon_receiver_view_draw(Canvas* canvas, void* model) {
     canvas_draw_frame(canvas, 26, 14, 72, 8);
     int32_t fill = (int32_t)(norm * 70);
     if(fill > 0) canvas_draw_box(canvas, 27, 15, fill, 6);
+    if(m->threshold > -127.0f) {
+        float tn = (m->threshold - RSSI_FLOOR) / (RSSI_CEIL - RSSI_FLOOR);
+        if(tn < 0) tn = 0;
+        if(tn > 1) tn = 1;
+        int32_t tx = 27 + (int32_t)(tn * 70);
+        canvas_draw_line(canvas, tx, 13, tx, 22);
+    }
     char rssi_str[8];
     snprintf(rssi_str, sizeof(rssi_str), "%d", (int)m->rssi);
     canvas_draw_str_aligned(canvas, 126, 21, AlignRight, AlignBottom, rssi_str);
@@ -65,7 +74,7 @@ static void radiogeddon_receiver_view_draw(Canvas* canvas, void* model) {
         canvas_draw_str(canvas, 2, 33, rec);
         canvas_set_color(canvas, ColorBlack);
     } else if(m->hopping) {
-        canvas_draw_str(canvas, 2, 33, "Hopping frequencies...");
+        canvas_draw_str(canvas, 2, 33, m->status[0] ? m->status : "Hopping frequencies...");
     } else {
         canvas_draw_str(canvas, 2, 33, "Left: record RAW");
     }
@@ -113,18 +122,26 @@ static bool radiogeddon_receiver_view_input(InputEvent* event, void* context) {
             consumed = true;
             break;
         case InputKeyOk:
-            if(instance->callback)
+            if(event->type == InputTypeShort && instance->callback)
                 instance->callback(RadioGeddonReceiverEventSave, instance->context);
             consumed = true;
             break;
+        case InputKeyRight:
+            if(event->type == InputTypeShort && instance->callback)
+                instance->callback(RadioGeddonReceiverEventRight, instance->context);
+            consumed = true;
+            break;
         case InputKeyLeft:
-            if(instance->callback)
+            if(event->type == InputTypeShort && instance->callback)
                 instance->callback(RadioGeddonReceiverEventToggleRecord, instance->context);
             consumed = true;
             break;
         default:
             break;
         }
+    } else if(event->type == InputTypeLong && event->key == InputKeyOk) {
+        if(instance->callback) instance->callback(RadioGeddonReceiverEventMore, instance->context);
+        consumed = true;
     }
     return consumed;
 }
@@ -153,6 +170,8 @@ RadioGeddonReceiverView* radiogeddon_receiver_view_alloc(void) {
             m->selected = 0;
             m->latest[0] = '\0';
             m->hopping = false;
+            m->threshold = -127.0f;
+            m->status[0] = '\0';
         },
         true);
 
@@ -241,4 +260,19 @@ size_t radiogeddon_receiver_view_get_selected(RadioGeddonReceiverView* instance)
     size_t sel = 0;
     with_view_model(instance->view, RadioGeddonReceiverModel * m, { sel = m->selected; }, false);
     return sel;
+}
+
+void radiogeddon_receiver_view_set_threshold(RadioGeddonReceiverView* instance, float dbm) {
+    with_view_model(instance->view, RadioGeddonReceiverModel * m, { m->threshold = dbm; }, true);
+}
+
+void radiogeddon_receiver_view_set_status(RadioGeddonReceiverView* instance, const char* text) {
+    with_view_model(
+        instance->view,
+        RadioGeddonReceiverModel * m,
+        {
+            strncpy(m->status, text, sizeof(m->status) - 1);
+            m->status[sizeof(m->status) - 1] = '\0';
+        },
+        true);
 }
