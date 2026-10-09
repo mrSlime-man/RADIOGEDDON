@@ -4,9 +4,10 @@ Where RadioGeddon is headed. This is a plan, not a promise — priorities shift
 with what hardware testing finds and what contributors pick up. Dates are
 deliberately omitted.
 
-## Now — `1.0.0-beta.1`
+## Now — `1.0.0-beta.2`
 
-The full toolkit is implemented and builds for Official, Unleashed and
+`1.0.0-beta.2` fixes an out-of-memory crash on launch that made `1.0.0-beta.1`
+unusable on RogueMaster. The full toolkit is implemented and builds for Official, Unleashed and
 RogueMaster, with 55 host-test checks and a verified release pipeline. See
 [Features](FEATURES.md) for the complete list.
 
