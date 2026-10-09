@@ -27,10 +27,11 @@ per-frequency RSSI scanner and a frequency hopper.
 
 ### Is it finished?
 
-It is a **public beta** (`1.0.0-beta.2`). Every feature is implemented and the
-builds pass all automated checks. One tester has reported that the RogueMaster
-build launches and works on a physical Flipper Zero, but the hardware checklist
-has not yet been worked through and logged. See [VERIFICATION.md](VERIFICATION.md) for exactly
+It is a **public beta** (`1.0.0-beta.3`). Every feature is implemented and the
+builds pass all automated checks. One tester has reported that the beta 2
+RogueMaster build launches and works on a physical Flipper Zero; nothing in
+beta 3 has been tried on a device yet, and the hardware checklist has not been
+worked through and logged. See [VERIFICATION.md](VERIFICATION.md) for exactly
 what has and hasn't been tested, and consider helping with the
 [hardware checklist](HARDWARE_CHECKLIST.md).
 
