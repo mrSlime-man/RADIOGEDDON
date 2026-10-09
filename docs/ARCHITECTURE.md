@@ -103,6 +103,17 @@ pairs on a worker thread. RadioGeddon feeds every pair to two consumers:
    durations (positive = carrier on, negative = off), written to a standard
    RAW `.sub` file when you save.
 
+**Memory lifecycle.** Nothing radio-related beyond the device handle is
+allocated at app start. The protocol environment, manufacturer keystore,
+receiver (one decoder per registered protocol) and worker are created in
+`rx_start` and freed in `rx_stop`; a protocol replay creates an environment
+without the keystore for the duration of the transmission. The RAW buffer is
+allocated in `record_start`, sized from `memmgr_heap_get_max_free_block()`
+minus a 12 KB reserve (capped at 16,384 samples, refused below 1,024), and
+freed after a successful save. Allocating all of this at launch exceeded the
+free heap on RogueMaster and crashed the app before the main menu (fixed in
+`1.0.0-beta.2`).
+
 The start/stop order mirrors the firmware's own Sub-GHz subsystem
 (`start_async_rx` → start worker; stop worker → `stop_async_rx` → idle →
 sleep), and frequencies are validated before tuning because the HAL asserts on

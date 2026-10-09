@@ -57,6 +57,8 @@ the firmware can't decode — and saves it as a standard RAW `.sub` file
 
 - Up to **16,384** timing samples per recording, buffered in RAM and written to
   the SD card when you save; the screen shows `FULL` when the limit is reached.
+  The buffer is allocated when recording starts and sized to the free heap, so
+  it can be smaller on a busy device; it is released once the capture is saved.
 - Uses the frequency and modulation chosen in **Settings**.
 
 ## Protocol Identification

@@ -43,7 +43,7 @@ region's rules.
 | F3 | Crypto Analysis on a static protocol vs a rolling-code (KeeLoq-family) capture. | Static → `[CONFIRMED] Static code`; rolling → `[CONFIRMED] Dynamic code` and an explicit "no key recovery" note. |
 | F4 | Unknown Protocol Analysis across several presses in one RAW capture. | Same fixed remote → 0 changing bits; rolling-code remote → a changing suffix with a device-ID candidate; all `[HYPOTHESIS]`. |
 | F5 | History: send rapid repeated transmissions. | No crash; identical consecutive parcels listed once; list caps at 32. |
-| F6 | RAW capture of a long/continuous signal. | `FULL` indicator at the 16,384-sample cap; no crash. |
+| F6 | RAW capture of a long/continuous signal. | `FULL` indicator at the cap (16,384 samples, or less when memory is short); no crash. |
 | F7 | Custom-preset replay: a stock-app RAW `.sub` saved with a custom preset. | Replays on the correct modulation, or is cleanly refused (`Unsupported file`) — never sent on the wrong modulation. |
 | F8 | Delete: choose Delete on a saved file. | Confirmation shown; Cancel/Back keeps the file; Delete removes it. |
 | F9 | SD card removed mid-session. | Save/open fail gracefully with an error tone; no crash. |

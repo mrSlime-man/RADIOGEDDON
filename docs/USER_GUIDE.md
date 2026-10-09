@@ -103,8 +103,10 @@ name if you want to keep the earlier capture.
 
 - Up to 32 decoded signals are kept per session; identical consecutive repeats
   of the same parcel are listed once. Leaving to the main menu clears the list.
-- A RAW recording holds up to 16,384 timing samples (`FULL` after that). Stop it
-  soon after the transmission ends.
+- A RAW recording holds up to 16,384 timing samples (`FULL` after that), or
+  fewer if little memory is free when you start it. Stop it soon after the
+  transmission ends. If there is not enough free memory to record at all, the
+  LED blinks red and recording does not start.
 - Leaving the screen while recording discards the unsaved recording.
 - Stopping a recording that captured nothing simply returns to listening.
 
