@@ -3,6 +3,7 @@
 typedef enum {
     StartIndexScanner,
     StartIndexReceiver,
+    StartIndexHopper,
     StartIndexDatabase,
     StartIndexSettings,
     StartIndexAbout,
@@ -25,6 +26,12 @@ void radiogeddon_scene_start_on_enter(void* context) {
         submenu,
         "Receive & Record",
         StartIndexReceiver,
+        radiogeddon_scene_start_submenu_callback,
+        app);
+    submenu_add_item(
+        submenu,
+        "Frequency Hopper",
+        StartIndexHopper,
         radiogeddon_scene_start_submenu_callback,
         app);
     submenu_add_item(
@@ -52,6 +59,9 @@ bool radiogeddon_scene_start_on_event(void* context, SceneManagerEvent event) {
             break;
         case StartIndexReceiver:
             scene_manager_next_scene(app->scene_manager, RadioGeddonSceneReceiver);
+            break;
+        case StartIndexHopper:
+            scene_manager_next_scene(app->scene_manager, RadioGeddonSceneHopper);
             break;
         case StartIndexDatabase:
             scene_manager_next_scene(app->scene_manager, RadioGeddonSceneSavedList);

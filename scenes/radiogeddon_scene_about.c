@@ -1,6 +1,6 @@
 #include "radiogeddon_scene.h"
 
-#define RADIOGEDDON_VERSION_STR "0.2"
+#define RADIOGEDDON_VERSION_STR "0.3"
 
 void radiogeddon_scene_about_on_enter(void* context) {
     RadioGeddonApp* app = context;
@@ -17,6 +17,7 @@ void radiogeddon_scene_about_on_enter(void* context) {
         "Standalone Sub-GHz\nanalysis toolkit.\n\n"
         "Modules:\n"
         "- Scanner (live RSSI)\n"
+        "- Frequency hopper\n"
         "- Receive & decode\n"
         "- RAW recorder\n"
         "- Signal analyzer\n"

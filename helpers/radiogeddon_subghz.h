@@ -35,6 +35,10 @@ extern const size_t radiogeddon_presets_count;
 extern const uint32_t radiogeddon_frequencies[];
 extern const size_t radiogeddon_frequencies_count;
 
+/** Smaller frequency set cycled by the Frequency Hopper. */
+extern const uint32_t radiogeddon_hopper_frequencies[];
+extern const size_t radiogeddon_hopper_frequencies_count;
+
 typedef struct RadioGeddonSubGhz RadioGeddonSubGhz;
 
 /**
@@ -80,6 +84,13 @@ void radiogeddon_subghz_rx_start(
 
 void radiogeddon_subghz_rx_stop(RadioGeddonSubGhz* instance);
 bool radiogeddon_subghz_is_rx_running(RadioGeddonSubGhz* instance);
+
+/**
+ * Retune an already-running RX session to a new frequency without powering the
+ * radio down (used by the Frequency Hopper). The decode callback stays active.
+ * Invalid (out-of-band) frequencies are ignored. No-op if RX is not running.
+ */
+void radiogeddon_subghz_rx_retune(RadioGeddonSubGhz* instance, uint32_t frequency);
 
 /** Instantaneous RSSI in dBm for the current frequency (valid while RX runs). */
 float radiogeddon_subghz_get_rssi(RadioGeddonSubGhz* instance);

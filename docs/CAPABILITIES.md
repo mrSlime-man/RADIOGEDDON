@@ -24,6 +24,9 @@ physical device), see [`VERIFICATION.md`](VERIFICATION.md) and the test plan in
 ### Radio modules
 - [x] **Scanner** — real per-frequency RSSI read from the CC1101 across a table
       of common Sub-GHz frequencies, with a live bar display.
+- [x] **Frequency Hopper** — cycles a short band list, retuning the live RX
+      session (no power-down) and holding on a frequency when activity is
+      detected so decoding can complete.
 - [x] **Receiver** — live decoding of all firmware-supported "decodable"
       protocols (Princeton, CAME, NICE, KeeLoq-family, Holtek, etc.), live RSSI
       meter, de-duplicated decoded-signal history.
@@ -55,7 +58,6 @@ physical device), see [`VERIFICATION.md`](VERIFICATION.md) and the test plan in
 
 - [ ] **On-device hardware verification.** The milestone flow has not yet been
       confirmed on a physical Flipper (see `LIMITATIONS.md`).
-- [ ] Frequency hopper (continuous multi-frequency receive).
 - [ ] External CC1101 module auto-selection UI (code paths use the generic
       device API but only the internal radio is wired into the menus).
 - [ ] Editing/renaming saved signals in place.

@@ -29,6 +29,9 @@ void radiogeddon_receiver_view_set_config(
     uint32_t frequency,
     const char* preset_label);
 
+/** Switch the status hint between fixed-RX (record) and hopping modes. */
+void radiogeddon_receiver_view_set_hopping(RadioGeddonReceiverView* instance, bool hopping);
+
 void radiogeddon_receiver_view_set_rssi(RadioGeddonReceiverView* instance, float rssi);
 
 void radiogeddon_receiver_view_set_recording(

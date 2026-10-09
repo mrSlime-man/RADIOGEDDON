@@ -37,6 +37,7 @@ implemented vs. unimplemented features, and
 | Module | What it does |
 | --- | --- |
 | **Scanner** | Sweeps common Sub-GHz frequencies and shows live per-frequency RSSI bars read from the radio. Select a frequency to jump straight into receive. |
+| **Frequency Hopper** | Continuously cycles a short list of common bands, pausing to decode whenever activity (RSSI above the noise floor) is detected. |
 | **Receive & Record** | Live-decodes known protocols using the firmware's decoders, shows an RSSI meter and a decoded-signal list, and can capture the raw timing stream to a `.sub` file. |
 | **Signal Analyzer** | Inspects pulse timing (clustered symbol widths, estimated base `Te`, edge counts) for RAW captures, or bit/field structure for decoded protocols. |
 | **Crypto Analyzer** | Classifies signals as fixed (static) vs. rolling-code/dynamic (encrypted hop code) and reports key-byte variety — **without** claiming key recovery. |
@@ -97,6 +98,8 @@ forks that keep those APIs; where a fork diverges, see
 ## Controls
 
 - **Scanner:** Up/Down select a frequency, OK jumps into receive, Back exits.
+- **Frequency Hopper:** cycles bands automatically; Up/Down scroll decoded
+  signals, OK saves the highlighted decode, Back exits.
 - **Receive & Record:** Up/Down scroll decoded signals, OK saves the highlighted
   decode, **Left toggles RAW recording**, Back exits.
 - **Database / menus:** Up/Down navigate, OK selects, Back returns.

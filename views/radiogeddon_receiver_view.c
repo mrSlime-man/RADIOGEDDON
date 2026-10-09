@@ -21,6 +21,7 @@ typedef struct {
     size_t history_count;
     size_t selected;
     char latest[22];
+    bool hopping;
 } RadioGeddonReceiverModel;
 
 static void radiogeddon_receiver_view_draw(Canvas* canvas, void* model) {
@@ -67,6 +68,8 @@ static void radiogeddon_receiver_view_draw(Canvas* canvas, void* model) {
             m->overflow ? " FULL" : "");
         canvas_draw_str(canvas, 2, 33, rec);
         canvas_set_color(canvas, ColorBlack);
+    } else if(m->hopping) {
+        canvas_draw_str(canvas, 2, 33, "Hopping frequencies...");
     } else {
         canvas_draw_str(canvas, 2, 33, "Left: record RAW");
     }
@@ -154,6 +157,7 @@ RadioGeddonReceiverView* radiogeddon_receiver_view_alloc(void) {
             m->history_count = 0;
             m->selected = 0;
             m->latest[0] = '\0';
+            m->hopping = false;
         },
         true);
 
@@ -195,6 +199,11 @@ void radiogeddon_receiver_view_set_config(
 
 void radiogeddon_receiver_view_set_rssi(RadioGeddonReceiverView* instance, float rssi) {
     with_view_model(instance->view, RadioGeddonReceiverModel * m, { m->rssi = rssi; }, true);
+}
+
+void radiogeddon_receiver_view_set_hopping(RadioGeddonReceiverView* instance, bool hopping) {
+    with_view_model(
+        instance->view, RadioGeddonReceiverModel * m, { m->hopping = hopping; }, true);
 }
 
 void radiogeddon_receiver_view_set_recording(

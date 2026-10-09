@@ -50,6 +50,10 @@ like. Record results in the table at the bottom.
 
 - [ ] Scanner sweeps the frequency table; bars update; selecting a frequency with
       OK opens the receiver tuned to it.
+- [ ] Frequency Hopper cycles 315 / 390 / 433.92 / 868.35 MHz; the displayed
+      frequency changes as it hops; when a transmission starts on one of those
+      bands it holds there and decodes it; OK saves a decode; Back exits cleanly
+      with the radio released.
 - [ ] Crypto Analysis on a static protocol says `[CONFIRMED] Static code`; on a
       KeeLoq-family capture says `[CONFIRMED] Dynamic code` and explicitly states
       no key recovery.

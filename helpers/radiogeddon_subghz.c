@@ -37,6 +37,17 @@ const uint32_t radiogeddon_frequencies[] = {
 const size_t radiogeddon_frequencies_count =
     sizeof(radiogeddon_frequencies) / sizeof(radiogeddon_frequencies[0]);
 
+// The Frequency Hopper cycles a short list of the most common OOK bands so each
+// dwell is long enough to catch and decode a transmission.
+const uint32_t radiogeddon_hopper_frequencies[] = {
+    315000000,
+    390000000,
+    433920000,
+    868350000,
+};
+const size_t radiogeddon_hopper_frequencies_count =
+    sizeof(radiogeddon_hopper_frequencies) / sizeof(radiogeddon_hopper_frequencies[0]);
+
 typedef enum {
     RadioGeddonTxModeNone,
     RadioGeddonTxModeProtocol,
@@ -316,6 +327,25 @@ void radiogeddon_subghz_rx_stop(RadioGeddonSubGhz* instance) {
 
 bool radiogeddon_subghz_is_rx_running(RadioGeddonSubGhz* instance) {
     return instance->rx_running;
+}
+
+void radiogeddon_subghz_rx_retune(RadioGeddonSubGhz* instance, uint32_t frequency) {
+    if(!instance->rx_running || !instance->device) return;
+    if(!subghz_devices_is_frequency_valid(instance->device, frequency)) return;
+    if(frequency == instance->frequency) return;
+
+    // Same stop/retune/start dance as the firmware hopper: the device stays
+    // powered (begun); only the async capture + worker cycle and the decoder
+    // state is reset so timing from the old frequency cannot bleed across.
+    if(subghz_worker_is_running(instance->worker)) subghz_worker_stop(instance->worker);
+    subghz_devices_stop_async_rx(instance->device);
+    subghz_devices_idle(instance->device);
+    instance->frequency = subghz_devices_set_frequency(instance->device, frequency);
+    subghz_devices_flush_rx(instance->device);
+    subghz_receiver_reset(instance->receiver);
+    subghz_devices_start_async_rx(
+        instance->device, subghz_worker_rx_callback, instance->worker);
+    subghz_worker_start(instance->worker);
 }
 
 float radiogeddon_subghz_get_rssi(RadioGeddonSubGhz* instance) {

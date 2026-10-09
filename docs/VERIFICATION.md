@@ -51,6 +51,15 @@ is marked hardware-verified without evidence from a physical device.
 10. **Empty filename** rejected via a minimum input length; **replay result
     popup** auto-returns via a proper callback.
 
+## Frequency Hopper (new in v0.3)
+
+Implemented after stabilization. It reuses the live receive path and the new
+`radiogeddon_subghz_rx_retune()` primitive, which retunes without powering the
+radio down — the same stop/retune/start cycle the firmware hopper uses. It holds
+on a frequency when RSSI rises above the noise floor so a decode can complete.
+Build- and static-analysis-verified; its over-the-air behaviour is an item in
+the hardware checklist and is **unverified** until run on a device.
+
 ## NOT yet verified (requires physical hardware)
 
 The complete end-to-end workflow (launch → receive → display → save → reopen →

@@ -6,8 +6,8 @@ App(
     stack_size=4 * 1024,
     fap_category="Sub-GHz",
     fap_author="Georgii",
-    fap_version="0.2",
-    fap_description="Standalone Sub-GHz radio analysis toolkit: scan, record, decode, analyze, compare and replay signals on-device.",
+    fap_version="0.3",
+    fap_description="Standalone Sub-GHz radio analysis toolkit: scan, hop, record, decode, analyze, compare and replay signals on-device.",
     fap_icon="assets/icon_10px.png",
     fap_icon_assets="assets",
     # Each entry is matched recursively from the app root, so they must not
