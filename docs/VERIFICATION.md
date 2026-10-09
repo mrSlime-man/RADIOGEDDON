@@ -182,9 +182,9 @@ our hardware. The suite covers:
   failed write leaving no damaged file, the default name, missing files;
 - 100 saves and loads returning every byte and file handle.
 
-It found that RAW files with a comma after each value (as in 2 of the
-firmware's test files) read as empty; fixed, with unit tests in `test_raw` and
-`test_dsp`.
+It found that RAW files with a comma after each value (as in the firmware's
+`hormann_hsm_raw.sub` test file) read as empty; fixed, with unit tests in
+`test_raw` and `test_dsp`. Hardware check F4f covers it on a device.
 
 It also measures the analyzer on real captures, without treating its output
 as verified. For the 33 RAW files that have a decoded file of the same

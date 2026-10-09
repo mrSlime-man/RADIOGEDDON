@@ -140,8 +140,8 @@ to follow [Semantic Versioning](https://semver.org/) (pre-1.0.0 releases use
   damaged or hand-edited file has one): it counts as the longest duration,
   as in the analyzer, instead of overflowing. Found by the fuzz tests.
 - RAW files with a comma after each value (`RAW_Data: 1718, -32700, ...`,
-  which the firmware's RAW player accepts and some of its own test files
-  use) are now read in full. Before, Unknown Protocol Analysis, Pulse
+  which the firmware's RAW player accepts and one of its own test files
+  uses) are now read in full. Before, Unknown Protocol Analysis, Pulse
   Timeline and Compare found no samples in them and Signal Info counted one
   value a line. Found by the format tests.
 
