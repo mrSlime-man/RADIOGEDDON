@@ -42,11 +42,19 @@ GCC_ONLY = {"-mword-relocations", "-Wa,-gdwarf-sections", "-fsingle-precision-co
 FINDING = re.compile(r"^(\S+?):(\d+):(\d+): (warning|error): ", re.M)
 
 
+def is_app_source(path):
+    """The app's own sources: inside the repository, but not in build/ or a
+    dot-directory such as an SDK home kept in the checkout (.ufbt-official in
+    CI), where ufbt writes generated code like the icon tables."""
+    rel = os.path.relpath(os.path.realpath(path), ROOT)
+    top = rel.split(os.sep)[0]
+    return not rel.startswith("..") and top != "build" and not top.startswith(".")
+
+
 def app_entries():
     with open(CDB) as f:
         entries = json.load(f)
-    inside = [e for e in entries if os.path.realpath(e["file"]).startswith(ROOT + os.sep)]
-    inside = [e for e in inside if not os.path.realpath(e["file"]).startswith(os.path.join(ROOT, "build") + os.sep)]
+    inside = [e for e in entries if is_app_source(os.path.join(e["directory"], e["file"]))]
     if not inside:
         sys.exit("no app sources in " + CDB)
     return inside
