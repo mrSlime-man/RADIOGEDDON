@@ -29,11 +29,12 @@ locally.
 | Scanner-logic unit tests | `make -C test check` → `test_scan` | Pass — 31 checks |
 | Hopper-logic unit tests | `make -C test check` → `test_hop` | Pass — 42 checks |
 | RAW-reader unit tests | `make -C test check` → `test_raw` | Pass — 29 checks |
+| Timeline-maths unit tests | `make -C test check` → `test_timeline` | Pass — 42 checks |
 | Memory safety of tested code | tests built `-Werror` under `-fsanitize=address,undefined` | Pass — no ASan/UBSan reports |
 | Documentation links | `scripts/check_links.py` (offline link + anchor check) | Pass |
 | `.fap` metadata | `scripts/verify_fap.py` parses `.fapmeta` and asserts magic, API, target, name, version, icon | Pass for all three artifacts |
 
-Host-test total: **222 checks, 0 failures.** What the suite covers (synthetic
+Host-test total: **264 checks, 0 failures.** What the suite covers (synthetic
 signals, not real captures):
 
 - `test_dsp` — RAW `RAW_Data` parsing (incl. whitespace, signs, out-of-range),
@@ -62,6 +63,11 @@ signals, not real captures):
   3,000-value line (bounded checkpoint table, seeking to any time resumes with
   the right samples, rewind), and `test/fixtures/raw_ref.sub` read end to end
   through the analyzer.
+- `test_timeline` — pulse timeline maths: rasterising samples into columns
+  (both levels in one column, data outside the window, a screen edge inside a
+  pulse, times near 2^32 µs), duration labels only for wide, fully visible
+  pulses, pan and zoom limits with the centre kept, the initial zoom choice,
+  window coverage, and next/previous frame navigation at both ends.
 
 ## Release-pipeline integrity
 

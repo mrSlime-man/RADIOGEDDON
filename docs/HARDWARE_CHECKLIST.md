@@ -55,6 +55,8 @@ region's rules.
 | F4a | Unknown Protocol Analysis on a capture of a fixed-code remote whose code is known (for example one the stock Sub-GHz app decodes as Princeton). | Encoding `PWM`; the pattern's hex matches the stock app's key; several frames grouped as identical repeats. |
 | F4b | A long RAW capture (30 s or more, several presses with noise between them). | The analysis finishes without a crash or *Not enough free memory*; the frame list shows noise frames between the presses; note how long it took. |
 | F4c | Compare two separate RAW captures of the same button, one started early and one started late. | `RAW timing match` may be low, but the `[HYPOTHESIS] patterns` part says *Same frame pattern*. |
+| F4d | Pulse Timeline on a RAW capture with several presses: OK a few times, hold OK, Up/Down, hold Left/Right. | Opens on the first frame; OK steps frame by frame (`Fr n/m` counts up), hold OK goes back; zooming keeps the centre; panning past the loaded part shows `Loading...` briefly and the waveform continues; the end of the recording shows a dotted line. |
+| F4e | Pulse Timeline on a long capture (30 s or more), then Back, repeated five times, with a device log open. | No crash; scrolling stays responsive; free heap returns to the same level after leaving. |
 | F5 | History: send rapid repeated transmissions. | No crash; identical consecutive parcels listed once; list caps at 32. |
 | F6 | RAW capture of a long/continuous signal. | `FULL` indicator at the cap (16,384 samples, or less when memory is short); no crash. |
 | F7 | Custom-preset replay: a stock-app RAW `.sub` saved with a custom preset. | Replays on the correct modulation, or is cleanly refused (`Unsupported file`) — never sent on the wrong modulation. |

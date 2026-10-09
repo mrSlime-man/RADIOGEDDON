@@ -21,6 +21,7 @@ void radiogeddon_scene_about_on_enter(void* context) {
         "- RAW recorder\n"
         "- Signal analyzer\n"
         "- Unknown protocol\n  analysis\n"
+        "- Pulse timeline\n"
         "- Crypto characteristics\n"
         "- Comparator\n"
         "- SD-card database\n"

@@ -31,6 +31,7 @@
 #include "helpers/radiogeddon_hopper.h"
 #include "views/radiogeddon_scanner_view.h"
 #include "views/radiogeddon_receiver_view.h"
+#include "views/radiogeddon_timeline_view.h"
 
 #define RADIOGEDDON_TEXT_INPUT_BUFFER_SIZE 64
 #define RADIOGEDDON_TAG                    "RadioGeddon"
@@ -45,6 +46,7 @@ typedef enum {
     RadioGeddonViewTextBox,
     RadioGeddonViewScanner,
     RadioGeddonViewReceiver,
+    RadioGeddonViewTimeline, // added only while the Pulse Timeline is open
 } RadioGeddonView;
 
 typedef struct RadioGeddonApp RadioGeddonApp;
@@ -68,6 +70,9 @@ struct RadioGeddonApp {
     // Custom live views
     RadioGeddonScannerView* scanner_view;
     RadioGeddonReceiverView* receiver_view;
+    // Pulse Timeline: view and open file exist only while that scene runs.
+    RadioGeddonTimelineView* timeline_view;
+    RadioGeddonRawFile* timeline_file;
 
     // Radio subsystem wrapper
     RadioGeddonSubGhz* subghz;

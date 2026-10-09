@@ -9,7 +9,7 @@ verified, and its known limits. For step-by-step use, see the
 **Every feature below is implemented, compiles for all three firmware
 families, and passes CI. None has yet been verified on a physical Flipper
 Zero.** "Unit-tested" means the feature's firmware-independent logic is covered
-by the host test suite (222 checks); radio behaviour can only be confirmed on a
+by the host test suite (264 checks); radio behaviour can only be confirmed on a
 device ([VERIFICATION.md](VERIFICATION.md)).
 
 | Feature | Implemented | Unit-tested logic | Verified on hardware |
@@ -20,6 +20,7 @@ device ([VERIFICATION.md](VERIFICATION.md)).
 | [Protocol Identification](#protocol-identification) | ✅ | — (firmware decoders) | ⏳ pending |
 | [Signal Analyzer](#signal-analyzer) | ✅ | ✅ parsing, clustering | ⏳ pending |
 | [Unknown Protocol Analysis](#unknown-protocol-analysis) | ✅ | ✅ PWM/PPM/Manchester, noise, alignment, streaming | ⏳ pending |
+| [Pulse Timeline](#pulse-timeline) | ✅ | ✅ layout, pan/zoom, frame navigation | ⏳ pending |
 | [Signal Comparison](#signal-comparison) | ✅ | ✅ RAW similarity, pattern alignment | ⏳ pending |
 | [Device ID Candidate Detection](#device-id-candidate-detection) | ✅ | ✅ constant/changing fields | ⏳ pending |
 | [Rolling Code Classification](#rolling-code-classification) | ✅ | ✅ field-map logic | ⏳ pending |
@@ -130,6 +131,16 @@ Unit tests cover PWM, PPM and Manchester identification, noise and jitter
 robustness, cut-off frames, several patterns in one file and chunked
 streaming, all on synthetic signals. Details:
 [Protocol Analysis](PROTOCOL_ANALYSIS.md#unknown-protocol-analysis--observed-and-hypothesis).
+
+## Pulse Timeline
+
+A graphical view of a RAW capture: the waveform with frame-start markers,
+pulse durations, an overview bar and the current frame and sample index.
+Left/Right pan, Up/Down zoom between 5 µs and 5 ms per pixel, OK and hold OK
+step between frames. Only a window of about a thousand samples is in memory;
+the rest is streamed from the SD card as you move, using seek checkpoints
+recorded while the file is first read. Details:
+[User Guide](USER_GUIDE.md#pulse-timeline).
 
 ## Signal Comparison
 

@@ -261,18 +261,11 @@ void radiogeddon_analysis_compare(
 /* Free heap kept back beyond the analyzer itself, for the GUI and storage. */
 #define RG_ANALYSIS_HEAP_SPARE (6u * 1024u)
 
-RgAnalyzer* radiogeddon_analysis_run_file(
-    Storage* storage,
-    const char* path,
-    RadioGeddonAnalysisStatus* status) {
+RgAnalyzer*
+    radiogeddon_analysis_run_raw(RadioGeddonRawFile* file, RadioGeddonAnalysisStatus* status) {
     *status = RadioGeddonAnalysisOk;
     if(memmgr_heap_get_max_free_block() < sizeof(RgAnalyzer) + RG_ANALYSIS_HEAP_SPARE) {
         *status = RadioGeddonAnalysisNoMemory;
-        return NULL;
-    }
-    RadioGeddonRawFile* file = radiogeddon_storage_raw_open(storage, path);
-    if(!file) {
-        *status = RadioGeddonAnalysisOpenFailed;
         return NULL;
     }
     RgAnalyzer* a = malloc(sizeof(RgAnalyzer));
@@ -291,6 +284,19 @@ RgAnalyzer* radiogeddon_analysis_run_file(
         free(a);
         a = NULL;
     }
+    return a;
+}
+
+RgAnalyzer* radiogeddon_analysis_run_file(
+    Storage* storage,
+    const char* path,
+    RadioGeddonAnalysisStatus* status) {
+    RadioGeddonRawFile* file = radiogeddon_storage_raw_open(storage, path);
+    if(!file) {
+        *status = RadioGeddonAnalysisOpenFailed;
+        return NULL;
+    }
+    RgAnalyzer* a = radiogeddon_analysis_run_raw(file, status);
     radiogeddon_storage_raw_close(file);
     return a;
 }
@@ -336,7 +342,7 @@ static char radiogeddon_group_letter(uint8_t group) {
     return group < RG_ANALYZER_MAX_GROUPS ? (char)('A' + group) : '?';
 }
 
-static void radiogeddon_cat_status(FuriString* out, RadioGeddonAnalysisStatus status) {
+void radiogeddon_analysis_cat_status(FuriString* out, RadioGeddonAnalysisStatus status) {
     switch(status) {
     case RadioGeddonAnalysisNoMemory:
         furi_string_cat_str(
@@ -510,7 +516,7 @@ void radiogeddon_analysis_unknown(Storage* storage, const char* path, FuriString
     RadioGeddonAnalysisStatus status;
     RgAnalyzer* a = radiogeddon_analysis_run_file(storage, path, &status);
     if(!a) {
-        radiogeddon_cat_status(out, status);
+        radiogeddon_analysis_cat_status(out, status);
         return;
     }
     const RgAnalysis* r = &a->result;
@@ -518,7 +524,7 @@ void radiogeddon_analysis_unknown(Storage* storage, const char* path, FuriString
     furi_string_cat_str(
         out,
         "OBSERVED = measured in\nthe file. HYPOTHESIS =\ninferred, may be wrong.\nOnly firmware decoders\n(Receive) confirm a\nprotocol.\n");
-    if(status == RadioGeddonAnalysisCorrupt) radiogeddon_cat_status(out, status);
+    if(status == RadioGeddonAnalysisCorrupt) radiogeddon_analysis_cat_status(out, status);
     furi_string_cat_str(out, "----------------\n");
     radiogeddon_report_observed(r, out);
     furi_string_cat_str(out, "----------------\n");
