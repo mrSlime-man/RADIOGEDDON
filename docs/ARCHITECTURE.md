@@ -358,9 +358,16 @@ results are labelled.
   device code with the exact build flags, on the Official and Unleashed SDKs),
   link checks and lint, for every pull request (`ci.yml`) and every release
   tag (`release.yml`).
-- Releases are created only from tags, after all builds pass; assets are
-  staged in a draft, re-downloaded and checksum-verified before publishing, and
-  each `.fap` gets a signed build-provenance attestation.
+- `scripts/release_meta.py` checks that the version, release notes,
+  CHANGELOG, the API listed for each `.fap` and the download links agree; CI
+  runs it on every pull request and the release workflow on the tag.
+- Releases (`release.yml`, from a tag or Run workflow) are built through the
+  same pipeline; assets are staged in a draft, re-downloaded and
+  checksum-verified before publishing, and each `.fap` gets a signed
+  build-provenance attestation that is verified before upload.
+- `scripts/firmware_watch.py` (`firmware-watch.yml`, weekly) compares the pins
+  with the newest Official, Unleashed and RogueMaster releases and builds the
+  app against any newer Official or Unleashed SDK.
 
 ## Design principles
 

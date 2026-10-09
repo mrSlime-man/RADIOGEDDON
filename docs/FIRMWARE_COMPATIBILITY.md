@@ -71,6 +71,22 @@ Other forks (Momentum, Xtreme and others) are not built or tested. They may load
 one of these files if their API version satisfies the rule above; otherwise build
 from source against that fork's SDK.
 
+## Newer firmware
+
+The **Firmware watch** workflow checks every week for firmware newer than the
+pinned SDKs, with its API version, and builds the app against every newer
+Official or Unleashed SDK. State on 2026-10-09:
+
+- **Official 1.5.1-rc** (release candidate) moves to API **88.2**, so
+  `radiogeddon-official.fap` (API 87.1) will be refused on it. No release
+  targets it yet. The app builds against the 1.5.1-rc SDK (compile, `APPCHK`
+  and manifest check pass), but nothing has been tested on a device with it.
+  If you run the release candidate, build from source as below with
+  `ufbt update --hw-target f7 --channel rc`. The Official pin moves to 1.5.1
+  once it is released and the hardware checklist has been run on it.
+- Unleashed unlshd-093 and RogueMaster `38d7ae9` are still the newest of their
+  families.
+
 ## Building for your exact firmware
 
 ```bash

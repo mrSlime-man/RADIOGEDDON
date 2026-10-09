@@ -158,9 +158,11 @@ make -C test formats             # the firmware's file code and its 85 Sub-GHz t
 python3 scripts/check_links.py   # documentation links and anchors
 ```
 
-CI runs the link check, the host and format tests, the fuzzers, static analysis
-(GCC `-fanalyzer` and clang-tidy) and all three firmware builds (with API and
-manifest verification plus lint) on every pull request and release tag.
+CI runs the link check, the release metadata check, the host and format
+tests, the fuzzers, static analysis (GCC `-fanalyzer` and clang-tidy) and all
+three firmware builds (with API and manifest verification plus lint) on every
+pull request and release. A weekly firmware watch builds the app against
+newer firmware SDKs as they appear.
 **CI cannot exercise the radio**, so on-device behaviour remains unverified —
 tracked honestly in [VERIFICATION.md](docs/VERIFICATION.md) with the test plan
 in [HARDWARE_CHECKLIST.md](docs/HARDWARE_CHECKLIST.md).

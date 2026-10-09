@@ -64,12 +64,16 @@ still needs.
       cost with a refusal before starting when it no longer fits, Database
       and recorder lifecycle tests; hardware checks F15–F15c pending).
 - [ ] **9. Testing per feature**: unit, real-format, malformed-input and
-      low-memory tests, static analysis, all three builds in CI (in progress:
-      fuzz targets for the RAW reader, analyzer, Pulse Timeline, Database
+      low-memory tests, static analysis, all three builds in CI (implemented;
+      hardware check F4f pending: fuzz targets for the RAW reader, analyzer, Pulse Timeline, Database
       index and Signal Info parser, with their corpus replayed by every test
       run; GCC `-fanalyzer` and clang-tidy on the device code; format tests
       that build the firmware's own FlipperFormat code and load its 85
       Sub-GHz test files, settings and saving included).
+- [ ] **10. Release management**: correct builds, checksums and provenance
+      for every beta (in progress: release metadata check in CI, provenance
+      verified before upload, weekly firmware watch with canary builds;
+      `1.0.0-beta.3` with milestones 1–9 next).
 
 ## Toward a stable 1.0.0
 
