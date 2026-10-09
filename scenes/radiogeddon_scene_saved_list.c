@@ -4,8 +4,12 @@
 // a file or the options opened from it are shown; it is rebuilt after files
 // change (db_dirty) and freed on returning to the main menu.
 
+/* Show "Opening..." for RAW files larger than this. */
+#define SAVED_LIST_BUSY_BYTES (32u * 1024u)
+
 typedef enum {
     SavedListEventOpen = 400,
+    SavedListEventDetails,
     SavedListEventSort,
     SavedListEventOptions,
     SavedListEventNoMemory,
@@ -13,9 +17,10 @@ typedef enum {
 
 static void radiogeddon_scene_saved_list_view_cb(RadioGeddonDbViewEvent event, void* context) {
     RadioGeddonApp* app = context;
-    uint32_t out = event == RadioGeddonDbViewEventOpen ? SavedListEventOpen :
-                   event == RadioGeddonDbViewEventSort ? SavedListEventSort :
-                                                         SavedListEventOptions;
+    uint32_t out = event == RadioGeddonDbViewEventOpen    ? SavedListEventOpen :
+                   event == RadioGeddonDbViewEventDetails ? SavedListEventDetails :
+                   event == RadioGeddonDbViewEventSort    ? SavedListEventSort :
+                                                            SavedListEventOptions;
     view_dispatcher_send_custom_event(app->view_dispatcher, out);
 }
 
@@ -33,7 +38,7 @@ static bool radiogeddon_scene_saved_list_find(RadioGeddonDb* db, const char* nam
 /* (Re)build the index, keeping the query and the highlighted file: the same
  * name, else the file just renamed, else the same position. */
 static bool radiogeddon_scene_saved_list_load(RadioGeddonApp* app) {
-    RgDbQuery query = {.sort = RgDbSortDate, .show = RgDbShowAll};
+    RgDbQuery query = {.sort = (RgDbSort)app->settings.db_sort, .show = RgDbShowAll};
     size_t selected = 0;
     FuriString* keep = furi_string_alloc();
     if(app->db) {
@@ -42,7 +47,7 @@ static bool radiogeddon_scene_saved_list_load(RadioGeddonApp* app) {
         const RgDbEntry* e = radiogeddon_db_at(app->db, selected);
         if(e) furi_string_set(keep, rg_db_name(&app->db->db, e));
     }
-    radiogeddon_scene_show_busy(app, "Loading...");
+    radiogeddon_scene_show_progress(app, "Reading files...");
     // Detach before freeing so the list never draws a freed index.
     radiogeddon_db_view_set_db(app->db_view, NULL);
     radiogeddon_db_free(app->db);
@@ -50,7 +55,8 @@ static bool radiogeddon_scene_saved_list_load(RadioGeddonApp* app) {
     app->db_dirty = false;
 
     RadioGeddonDbStatus status;
-    app->db = radiogeddon_db_load(app->storage, &status);
+    app->db = radiogeddon_db_load(app->storage, &status, radiogeddon_scene_progress, app);
+    radiogeddon_scene_progress_end(app);
     if(app->db) {
         app->db->query = query;
         radiogeddon_db_apply(app->db);
@@ -90,11 +96,14 @@ void radiogeddon_scene_saved_list_on_enter(void* context) {
     view_dispatcher_switch_to_view(app->view_dispatcher, RadioGeddonViewDb);
 }
 
-static void radiogeddon_scene_saved_list_open(RadioGeddonApp* app) {
+static void radiogeddon_scene_saved_list_open(RadioGeddonApp* app, uint32_t scene) {
     const RgDbEntry* e =
         radiogeddon_db_at(app->db, radiogeddon_db_view_get_selected(app->db_view));
     if(!e) return;
     radiogeddon_db_path(app->db, e, app->file_path);
+    // Opening reads a RAW capture through once to count its samples.
+    if(e->kind == RgDbKindRaw && e->size > SAVED_LIST_BUSY_BYTES)
+        radiogeddon_scene_show_busy(app, "Opening...");
     radiogeddon_loaded_signal_reset(&app->loaded);
     radiogeddon_loaded_signal_init(&app->loaded);
     bool loaded =
@@ -105,7 +114,7 @@ static void radiogeddon_scene_saved_list_open(RadioGeddonApp* app) {
     app->db_keep = true;
     // A new file: its menu starts at the top.
     scene_manager_set_scene_state(app->scene_manager, RadioGeddonSceneSavedInfo, 0);
-    scene_manager_next_scene(app->scene_manager, RadioGeddonSceneSavedInfo);
+    scene_manager_next_scene(app->scene_manager, scene);
 }
 
 bool radiogeddon_scene_saved_list_on_event(void* context, SceneManagerEvent event) {
@@ -115,7 +124,11 @@ bool radiogeddon_scene_saved_list_on_event(void* context, SceneManagerEvent even
     if(event.type == SceneManagerEventTypeCustom) {
         switch(event.event) {
         case SavedListEventOpen:
-            radiogeddon_scene_saved_list_open(app);
+            radiogeddon_scene_saved_list_open(app, RadioGeddonSceneSavedInfo);
+            consumed = true;
+            break;
+        case SavedListEventDetails:
+            radiogeddon_scene_saved_list_open(app, RadioGeddonSceneFileDetails);
             consumed = true;
             break;
         case SavedListEventSort: {
@@ -149,5 +162,11 @@ bool radiogeddon_scene_saved_list_on_event(void* context, SceneManagerEvent even
 void radiogeddon_scene_saved_list_on_exit(void* context) {
     RadioGeddonApp* app = context;
     popup_reset(app->popup);
-    if(!app->db_keep) radiogeddon_scene_db_release(app);
+    if(app->db_keep) return;
+    // Leaving the Database: keep its sort order for next time.
+    if(app->db && app->db->query.sort != app->settings.db_sort) {
+        app->settings.db_sort = (uint8_t)app->db->query.sort;
+        radiogeddon_app_save_settings(app);
+    }
+    radiogeddon_scene_db_release(app);
 }

@@ -14,6 +14,7 @@
 #include <furi.h>
 #include <storage/storage.h>
 #include "rg_db.h"
+#include "radiogeddon_progress.h"
 
 typedef enum {
     RadioGeddonDbOk,
@@ -29,8 +30,15 @@ typedef struct {
     bool truncated; /* not all of them fit in memory */
 } RadioGeddonDb;
 
-/** Index the signals folder. NULL (with RadioGeddonDbNoMemory) if nothing fits. */
-RadioGeddonDb* radiogeddon_db_load(Storage* storage, RadioGeddonDbStatus* status);
+/**
+ * Index the signals folder. NULL (with RadioGeddonDbNoMemory) if nothing fits.
+ * @p progress (may be NULL) is told how many files have been read.
+ */
+RadioGeddonDb* radiogeddon_db_load(
+    Storage* storage,
+    RadioGeddonDbStatus* status,
+    RadioGeddonProgressCallback progress,
+    void* context);
 
 void radiogeddon_db_free(RadioGeddonDb* db);
 

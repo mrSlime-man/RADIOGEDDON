@@ -195,7 +195,10 @@ static bool radiogeddon_db_view_input(InputEvent* event, void* context) {
             consumed = true;
         }
     }
-    if(event->type == InputTypeShort) {
+    if(event->type == InputTypeLong && event->key == InputKeyOk) {
+        out = RadioGeddonDbViewEventDetails;
+        fire = true;
+    } else if(event->type == InputTypeShort) {
         if(event->key == InputKeyOk) {
             out = RadioGeddonDbViewEventOpen;
             fire = true;

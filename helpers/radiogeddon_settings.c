@@ -1,5 +1,6 @@
 #include "radiogeddon_settings.h"
 #include "radiogeddon_subghz.h"
+#include "rg_db.h"
 
 #include <lib/flipper_format/flipper_format.h>
 
@@ -23,6 +24,7 @@ void radiogeddon_settings_default(RadioGeddonSettings* settings) {
     settings->hop_dwell_ms = 200;
     settings->hop_hold_ms = 2000;
     settings->hop_auto_record = false;
+    settings->db_sort = RgDbSortDate;
 }
 
 uint32_t radiogeddon_settings_default_hop_mask(void) {
@@ -91,6 +93,9 @@ void radiogeddon_settings_load(Storage* storage, RadioGeddonSettings* settings) 
             settings->hop_hold_ms = (uint16_t)v;
         flipper_format_rewind(ff);
         if(flipper_format_read_bool(ff, "Hop_auto_record", &b, 1)) settings->hop_auto_record = b;
+        flipper_format_rewind(ff);
+        if(flipper_format_read_uint32(ff, "Db_sort", &v, 1) && v < RgDbSortCount)
+            settings->db_sort = (uint8_t)v;
     } while(false);
 
     furi_string_free(type);
@@ -123,6 +128,8 @@ bool radiogeddon_settings_save(Storage* storage, const RadioGeddonSettings* sett
         if(!flipper_format_write_uint32(ff, "Hop_hold_ms", &v, 1)) break;
         b = settings->hop_auto_record;
         if(!flipper_format_write_bool(ff, "Hop_auto_record", &b, 1)) break;
+        v = settings->db_sort;
+        if(!flipper_format_write_uint32(ff, "Db_sort", &v, 1)) break;
         ok = true;
     } while(false);
     flipper_format_free(ff);

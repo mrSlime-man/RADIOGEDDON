@@ -24,6 +24,7 @@ typedef struct {
     uint16_t hop_dwell_ms; // time on a quiet frequency before hopping on
     uint16_t hop_hold_ms; // time to stay after activity was last seen
     bool hop_auto_record; // record RAW while holding on activity, save automatically
+    uint8_t db_sort; // Database sort order (RgDbSort), kept from the last visit
 } RadioGeddonSettings;
 
 /** Default hopper list: the frequencies in radiogeddon_hopper_frequencies. */

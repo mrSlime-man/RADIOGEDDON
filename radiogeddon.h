@@ -96,6 +96,15 @@ struct RadioGeddonApp {
     FuriString* file_path; // currently selected / loaded .sub path
     FuriString* file_path_b; // second file for comparison
     FuriString* temp_str; // scratch for info rendering
+    // Percentage under a busy popup (radiogeddon_scene_show_progress): two
+    // buffers, so the one on screen is never rewritten while it is drawn.
+    char progress_text[2][8];
+    // Message scene (radiogeddon_scene_show_message): static strings only.
+    const char* message_header;
+    const char* message_text;
+    uint8_t progress_slot;
+    uint8_t progress_pct;
+    uint32_t progress_tick;
 
     // Persisted settings (frequency/preset are mirrored in the fields below)
     RadioGeddonSettings settings;

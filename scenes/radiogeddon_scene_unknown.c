@@ -9,8 +9,8 @@
 void radiogeddon_scene_unknown_on_enter(void* context) {
     RadioGeddonApp* app = context;
 
-    // The engine reads the file three times; show progress meanwhile.
-    radiogeddon_scene_show_busy(app, "Analyzing...");
+    // The engine reads the file up to three times; show progress meanwhile.
+    radiogeddon_scene_show_progress(app, "Analyzing...");
 
     furi_string_reset(app->temp_str);
     furi_string_cat_printf(
@@ -19,6 +19,7 @@ void radiogeddon_scene_unknown_on_enter(void* context) {
         furi_string_get_cstr(app->loaded.name));
     radiogeddon_analysis_unknown(
         app->storage, furi_string_get_cstr(app->file_path), app->temp_str);
+    radiogeddon_scene_progress_end(app);
 
     text_box_reset(app->text_box);
     text_box_set_font(app->text_box, TextBoxFontText);

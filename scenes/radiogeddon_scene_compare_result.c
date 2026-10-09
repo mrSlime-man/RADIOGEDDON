@@ -14,13 +14,14 @@ void radiogeddon_scene_compare_result_on_enter(void* context) {
     // For two RAW captures, add timing similarity and a frame-pattern comparison.
     if(app->loaded.kind == RadioGeddonSignalKindRaw &&
        app->loaded_b.kind == RadioGeddonSignalKindRaw) {
-        radiogeddon_scene_show_busy(app, "Comparing...");
+        radiogeddon_scene_show_progress(app, "Comparing...");
         furi_string_cat_str(app->temp_str, "----------------\n");
         radiogeddon_analysis_raw_similarity(
             app->storage,
             furi_string_get_cstr(app->file_path),
             furi_string_get_cstr(app->file_path_b),
             app->temp_str);
+        radiogeddon_scene_progress_end(app);
     }
 
     text_box_reset(app->text_box);

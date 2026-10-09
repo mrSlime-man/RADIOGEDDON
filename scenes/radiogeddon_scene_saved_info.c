@@ -184,7 +184,8 @@ bool radiogeddon_scene_saved_info_on_event(void* context, SceneManagerEvent even
                     furi_string_set(app->file_path_b, sel);
                     scene_manager_next_scene(app->scene_manager, RadioGeddonSceneCompareResult);
                 } else {
-                    notification_message(app->notifications, &sequence_error);
+                    radiogeddon_scene_show_message(
+                        app, "Cannot compare", "That file is not a\nreadable .sub file.");
                 }
             }
             furi_string_free(sel);

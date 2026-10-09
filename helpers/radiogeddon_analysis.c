@@ -257,9 +257,31 @@ void radiogeddon_analysis_compare(
 
 /* ---- Unknown / RAW structural analysis (signal engine) ----------------- */
 
-#define RG_ANALYSIS_CHUNK      64u
+#define RG_ANALYSIS_CHUNK           64u
 /* Free heap kept back beyond the analyzer itself, for the GUI and storage. */
-#define RG_ANALYSIS_HEAP_SPARE (6u * 1024u)
+#define RG_ANALYSIS_HEAP_SPARE      (6u * 1024u)
+/* Report progress every this many chunks (about 1,000 samples). */
+#define RG_ANALYSIS_PROGRESS_CHUNKS 16u
+#define RG_ANALYSIS_PASSES          3u
+
+static RadioGeddonProgressCallback radiogeddon_analysis_progress_cb;
+static void* radiogeddon_analysis_progress_ctx;
+
+void radiogeddon_analysis_set_progress(RadioGeddonProgressCallback callback, void* context) {
+    radiogeddon_analysis_progress_cb = callback;
+    radiogeddon_analysis_progress_ctx = context;
+}
+
+/* Progress in kilobytes over all passes; passes the engine skips just jump. */
+static void radiogeddon_analysis_progress(RadioGeddonRawFile* file, int pass) {
+    if(!radiogeddon_analysis_progress_cb) return;
+    uint64_t size = stream_size(file->stream);
+    uint64_t pos = stream_tell(file->stream);
+    if(pos > size) pos = size;
+    uint32_t done = (uint32_t)(((uint64_t)(pass - 1) * size + pos) / 1024u);
+    uint32_t total = (uint32_t)(RG_ANALYSIS_PASSES * size / 1024u);
+    radiogeddon_analysis_progress_cb(radiogeddon_analysis_progress_ctx, done, total);
+}
 
 RgAnalyzer*
     radiogeddon_analysis_run_raw(RadioGeddonRawFile* file, RadioGeddonAnalysisStatus* status) {
@@ -274,8 +296,12 @@ RgAnalyzer*
     do {
         rg_raw_reader_rewind(&file->reader);
         size_t n;
-        while((n = rg_raw_reader_read(&file->reader, chunk, RG_ANALYSIS_CHUNK)) > 0)
+        uint32_t chunks = 0;
+        while((n = rg_raw_reader_read(&file->reader, chunk, RG_ANALYSIS_CHUNK)) > 0) {
             rg_analyzer_feed(a, chunk, n);
+            if(++chunks % RG_ANALYSIS_PROGRESS_CHUNKS == 0)
+                radiogeddon_analysis_progress(file, a->pass);
+        }
     } while(rg_analyzer_next_pass(a));
 
     if(file->reader.corrupt) *status = RadioGeddonAnalysisCorrupt;

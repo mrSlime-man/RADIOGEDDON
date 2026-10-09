@@ -71,6 +71,14 @@ to follow [Semantic Versioning](https://semver.org/) (pre-1.0.0 releases use
   replacing an existing report.
 
 ### Changed
+- **Progress percentages** for long SD-card work: reading the Database
+  (`Reading files...`), Unknown Protocol Analysis, Pulse Timeline indexing,
+  RAW comparison and report writing. Opening a large RAW capture shows
+  `Opening...`.
+- The Database remembers its sort order across launches (saved with the
+  settings), and **holding OK** on a file opens its details directly.
+- Picking an unreadable file in `Compare with...` shows `Cannot compare`
+  instead of only an error tone.
 - A damaged `.sub` in the Database now opens with File details, Rename and
   Delete instead of only an error tone.
 - The file menu keeps its highlighted item when you come back from a report.

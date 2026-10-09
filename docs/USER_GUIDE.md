@@ -215,9 +215,10 @@ The modulation comes from **Settings**.
 
 ## Database
 
-Lists the `.sub` files in `/ext/apps_data/radiogeddon/signals`, newest first.
-It shows `Loading...` while it reads the start of each file (and, for RAW
-captures of exactly the same size, the whole file to check for copies).
+Lists the `.sub` files in `/ext/apps_data/radiogeddon/signals`, newest first
+(or in the sort order you used last time). It shows `Reading files...` with a
+percentage while it reads the start of each file (and, for RAW captures of
+exactly the same size, the whole file to check for copies).
 
 ```
 Signals              Date 12/14
@@ -244,6 +245,7 @@ old_capture                 BAD
 |-----|--------|
 | **Up / Down** | Move (hold to scroll; wraps around) |
 | **OK** | Open the file's action menu |
+| **Hold OK** | Show the file's details straight away |
 | **Left** | Next sort order: Date (newest first), Name, Freq, Protocol |
 | **Right** | Options |
 | **Back** | Main menu |
@@ -258,7 +260,9 @@ old_capture                 BAD
 | `Reload from SD` | OK re-reads the folder (after copying files in with qFlipper, for example) |
 | `Files indexed` | How many files are listed. When memory is short only part of a very large folder is indexed, and this shows `N of M` |
 
-The sort, filter and search last until you return to the main menu. After a
+The filter and search last until you return to the main menu; the sort order
+is saved with the settings and used the next time. Opening a large RAW
+capture shows `Opening...` while the app counts its samples. After a
 rename or delete the list is re-read and keeps your place. Choose a file to
 open its action menu (titled with the file name; it opens where you left it
 when you come back from a report):
@@ -266,14 +270,14 @@ when you come back from a report):
 | Action | What you get |
 |--------|--------------|
 | `Signal Info & Analysis` | Summary (protocol, frequency, preset, bits/key or samples) and timing or bit analysis |
-| `Unknown Protocol Analysis` | For RAW captures: measured timing, noise and frames, then the likely encoding, bit patterns, a frame-by-frame comparison, a constant-vs-changing field map and a device-ID candidate. Shows `Analyzing...` while it reads the whole file |
+| `Unknown Protocol Analysis` | For RAW captures: measured timing, noise and frames, then the likely encoding, bit patterns, a frame-by-frame comparison, a constant-vs-changing field map and a device-ID candidate. Shows `Analyzing...` and a percentage while it reads the whole file |
 | `Pulse Timeline` | RAW captures only: the recording as a zoomable waveform (see below) |
 | `Crypto Analysis` | Static vs. rolling-code classification and key-byte statistics for decoded protocols |
-| `Compare with...` | Pick a second file and see what is the same (`=`) and what differs (`~`); for two RAW captures, a timing-match score and a comparison of their frame patterns |
+| `Compare with...` | Pick a second file and see what is the same (`=`) and what differs (`~`); for two RAW captures, a timing-match score and a comparison of their frame patterns (`Comparing...` with a percentage meanwhile). Picking a file that can't be read shows `Cannot compare` |
 | `Replay (TX)` | Transmit the recording, where permitted |
 | `File details` | File name, size, date modified, type, frequency, preset, sample count or bits, and the names of its duplicates |
 | `Rename` | Type a new name (`.sub` is added). Names the SD card can't store (`< > : " / \ | ? *`, or a `.` or space at the start or end) and names already used are refused, so renaming never replaces another file. The SD card ignores letter case, so a name that differs only in case counts as used |
-| `Save report to SD` | Writes *Signal Info & Analysis*, plus *Unknown Protocol Analysis* for a RAW capture or *Crypto Analysis* for a decoded signal, to `apps_data/radiogeddon/reports/<name>.txt`. Shows `Writing report...`, then the file name. An existing report is never replaced: the new one gets `_2`, `_3` and so on |
+| `Save report to SD` | Writes *Signal Info & Analysis*, plus *Unknown Protocol Analysis* for a RAW capture or *Crypto Analysis* for a decoded signal, to `apps_data/radiogeddon/reports/<name>.txt`. Shows `Writing report...` (with a percentage while a RAW capture is analysed), then the file name. An existing report is never replaced: the new one gets `_2`, `_3` and so on |
 | `Delete` | Delete the file (asks for confirmation) |
 
 A **damaged file** (`BAD` in the list) opens with only `File details` (which
@@ -287,7 +291,7 @@ return to the action menu. Every result is labelled `[CONFIRMED]`,
 ### Pulse Timeline
 
 Shows a RAW capture as a waveform: carrier-on pulses on the upper line,
-carrier-off gaps on the lower one. It shows `Indexing...` while it reads the
+carrier-off gaps on the lower one. It shows `Indexing...` and a percentage while it reads the
 file once, then opens on the first decodable frame.
 
 | Button | Action |
