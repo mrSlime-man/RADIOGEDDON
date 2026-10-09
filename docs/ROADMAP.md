@@ -55,7 +55,9 @@ still needs.
       (progress percentages, messages, Database shortcuts and saved sort
       implemented; hardware checks F13–F13b pending; memory thresholds for
       the radio screens wait for the measurements in milestone 8).
-- [ ] **7. Optional external CC1101** through the firmware's device layer.
+- [ ] **7. Optional external CC1101** through the firmware's device layer
+      (implemented: selection, detection, 5 V control, status, region check;
+      hardware checks F14–F14e pending).
 - [ ] **8. Performance and reliability**: memory diagnostics, lifecycle tests.
 
 ## Toward a stable 1.0.0
@@ -67,8 +69,6 @@ still needs.
 
 ## Later
 
-- [ ] External CC1101 module support surfaced in the UI (the radio layer
-      already uses the portable device API).
 - [ ] Custom frequency entry and a custom modulation/preset editor.
 - [ ] Richer analysis: more encodings, CRC/checksum guesses, bit-field views,
       running the firmware's decoders over a RAW capture.

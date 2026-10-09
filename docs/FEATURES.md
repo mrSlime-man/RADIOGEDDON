@@ -272,7 +272,6 @@ Regional rules are enforced by the firmware itself
 | Item | Status |
 |------|--------|
 | On-device verification of all features | Next milestone — [hardware checklist](HARDWARE_CHECKLIST.md) |
-| External CC1101 module selection | Planned ([Roadmap](ROADMAP.md)) |
 | Custom frequency entry, custom modulation entry | Planned — currently a fixed table and four presets |
 | Decoders beyond the firmware's own library | Not planned for now — identification relies on the firmware |
 | Desktop companion application | Deferred; files stay standard `.sub` so one can be built later |
@@ -284,7 +283,9 @@ Regional rules are enforced by the firmware itself
 - **RAW capture length** — limited by the SD card. A slow card with very noisy
   input can fall behind and lose samples; they are counted and reported, not
   hidden. Analysis and similarity read the whole file.
-- **Internal radio only** — the app uses the built-in CC1101.
+- **External radio** — only CC1101 modules through the firmware's
+  `cc1101_ext` driver (a plugin on the SD card, installed with the firmware);
+  untested on hardware so far.
 - **Scanner and hopper sampling** — the radio hears one frequency at a time, so
   a transmission on a frequency the sweep is not currently on can be missed.
 - **Firmware coupling** — each `.fap` only loads on firmware with the matching

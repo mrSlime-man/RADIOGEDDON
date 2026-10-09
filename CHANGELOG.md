@@ -70,6 +70,12 @@ to follow [Semantic Versioning](https://semver.org/) (pre-1.0.0 releases use
   and a legend, to `apps_data/radiogeddon/reports/<name>.txt`, never
   replacing an existing report.
 
+- **External CC1101 module** (Settings → `Radio`): uses the firmware's
+  `cc1101_ext` driver only when a module answers, with optional 5 V on GPIO
+  pin 1 (`Ext radio 5V`), an `EXT` marker on the radio screens, the radio
+  named in About, and the choice saved. Transmitting through it is also
+  checked against the region table and re-probes the module first.
+
 ### Changed
 - **Progress percentages** for long SD-card work: reading the Database
   (`Reading files...`), Unknown Protocol Analysis, Pulse Timeline indexing,

@@ -174,6 +174,11 @@ Everything about on-device radio behaviour, and the end-to-end workflow. See the
   damaged-file handling on the device (F12–F12d). The report writer and the
   rename checks against existing files use the SD card and are not covered by
   host tests.
+- External CC1101 support: detection, the 5 V pin, receiving and the region
+  check when transmitting through a real module (checklist F14–F14e). It was
+  written against the official firmware's `cc1101_ext` driver source (1.4.3);
+  Unleashed and RogueMaster builds compile against their own SDKs, but their
+  drivers' behaviour is unverified.
 - The internal-radio presence fix (defect 1) actually resolving "No radio" on a
   device.
 - The analysis engine's inferences against real captured signals (host tests use

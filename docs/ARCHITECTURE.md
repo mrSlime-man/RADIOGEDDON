@@ -111,6 +111,17 @@ All radio access goes through `helpers/radiogeddon_subghz.c`, which uses only
 the portable `subghz_devices_*` API — the same layer the stock Sub-GHz app
 uses — so RadioGeddon builds unchanged for Official, Unleashed and RogueMaster.
 
+**Radio selection.** `radiogeddon_subghz_set_radio()` picks `cc1101_int` or
+the firmware's `cc1101_ext` plugin, and only while nothing is receiving or
+transmitting. External is used only if `subghz_devices_is_connect()` on it
+succeeds; that call probes the chip over SPI without keeping it initialised.
+As in the stock app, the 5 V pin (OTG) is switched on for the module when the
+`Ext radio 5V` setting allows it and it wasn't already on. RadioGeddon
+switches it off again only if it switched it on. Before a transmission
+through the external module the module is probed again and the frequency is
+checked against the firmware's region table (`furi_hal_region_is_frequency_allowed`),
+in addition to the driver's own check in `subghz_devices_set_tx()`.
+
 **Receive.** The CC1101 is configured with a standard preset (AM270, AM650,
 FM238 or FM476) and frequency, then put into asynchronous capture. The
 firmware's `SubGhzWorker` turns the captured timings into (level, duration)

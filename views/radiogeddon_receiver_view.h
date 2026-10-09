@@ -35,6 +35,9 @@ void radiogeddon_receiver_view_set_config(
 /** Switch the status hint between fixed-RX (record) and hopping modes. */
 void radiogeddon_receiver_view_set_hopping(RadioGeddonReceiverView* instance, bool hopping);
 
+/** Mark the header "EXT" while the external CC1101 module is in use. */
+void radiogeddon_receiver_view_set_external(RadioGeddonReceiverView* instance, bool external);
+
 void radiogeddon_receiver_view_set_rssi(RadioGeddonReceiverView* instance, float rssi);
 
 /** Show a detection-threshold mark on the RSSI bar (pass -127 or lower to hide). */

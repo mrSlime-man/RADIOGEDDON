@@ -46,6 +46,14 @@ RadioGeddonApp* radiogeddon_app_alloc(void) {
     radiogeddon_loaded_signal_init(&app->loaded_b);
 
     app->subghz = radiogeddon_subghz_alloc();
+    // An external module is used only if it answers now; otherwise the
+    // internal radio is used and Settings shows that.
+    if(app->settings.radio_external) {
+        app->settings.radio_external =
+            radiogeddon_subghz_set_radio(
+                app->subghz, RadioGeddonRadioExternal, app->settings.ext_power) ==
+            RadioGeddonRadioExternal;
+    }
     radiogeddon_subghz_set_frequency(app->subghz, app->frequency);
     radiogeddon_subghz_set_preset(app->subghz, app->preset_index);
     app->history = radiogeddon_history_alloc();

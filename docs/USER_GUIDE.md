@@ -48,6 +48,8 @@ Buttons work the same way everywhere:
 | `Hop dwell` | `100`, **`200`**, `300`, `500`, `1000` ms per frequency | 200 ms |
 | `Activity hold` | `1`, **`2`**, `3`, `5`, `10` s after activity was last seen | 2 s |
 | `Hop auto-rec` | **`Off`**, `On` | Off |
+| `Radio` | **`Internal`**, `External` (a CC1101 module on the GPIO pins; see below) | Internal |
+| `Ext radio 5V` | `Off`, **`On`**: power the external module from GPIO pin 1 | On |
 
 Use **Left / Right** to change a value and **Back** to apply it. The
 frequency is used by *Receive & Record*; the modulation is used by the
@@ -59,6 +61,29 @@ settings and `Activity hold` to the Hopper.
 Settings are saved to `apps_data/radiogeddon/settings.txt` on the SD card when
 you leave the Settings screen, and are restored the next time the app starts.
 A missing or damaged file just means the defaults are used.
+
+### External CC1101 module
+
+RadioGeddon can use a CC1101 module connected to the GPIO pins, through the
+firmware's own external-radio driver, wired the same way the stock Sub-GHz app
+expects. Set `Radio` to `External`:
+
+- The app checks that a module answers before using it. If none does, you see
+  `No external radio` and the internal radio stays in use.
+- With `Ext radio 5V` on, the 5 V pin is switched on while the module is in
+  use, as the stock app does, and switched off when you leave the app (unless
+  it was already on). Turn it off if your module is powered another way.
+- The Scanner header reads `RSSI EXT`, and *Receive & Record* and the
+  *Frequency Hopper* show `EXT` at the top right; *About* names the radio.
+- The choice is saved. At the next start the external module is used again if
+  it answers; otherwise the app quietly uses the internal radio and Settings
+  shows `Internal`.
+- Transmitting through the module is checked against your Flipper's region
+  settings exactly like the internal radio, and the module is checked again
+  just before it transmits.
+
+This has not yet been tested with a real module (see the
+[hardware checklist](HARDWARE_CHECKLIST.md)).
 
 Most remotes and doorbells use `AM 650` (on-off keying). Some sensors use
 `AM 270`; FSK devices need one of the `FM` presets.
