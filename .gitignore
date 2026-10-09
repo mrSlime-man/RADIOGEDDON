@@ -1,0 +1,15 @@
+# ufbt SDK homes created by scripts/build_release.sh
+.ufbt/
+.ufbt-*/
+
+# Build caches / IDE
+__pycache__/
+*.pyc
+.vscode/
+
+# Debug ELF (not shipped); release .fap artifacts under dist/release ARE tracked
+dist/debug/
+*_d.elf
+
+# ufbt single-target scratch output (use dist/release/ for packaged artifacts)
+dist/radiogeddon.fap

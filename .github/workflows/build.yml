@@ -1,0 +1,62 @@
+name: Build FAP
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: official
+            update_args: "--channel release"
+          - target: unleashed
+            update_args: "--index-url https://up.unleashedflip.com/directory.json"
+          # RogueMaster: add once a reachable SDK index URL is configured.
+          # - target: roguemaster
+          #   update_args: "--index-url https://<roguemaster-sdk-index>/directory.json"
+    name: build (${{ matrix.target }})
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install ufbt
+        run: pip install --upgrade ufbt
+
+      - name: Deploy SDK (${{ matrix.target }})
+        env:
+          UFBT_HOME: ${{ github.workspace }}/.ufbt-${{ matrix.target }}
+        run: ufbt update ${{ matrix.update_args }}
+
+      - name: Build FAP
+        env:
+          UFBT_HOME: ${{ github.workspace }}/.ufbt-${{ matrix.target }}
+        run: ufbt
+
+      - name: Lint
+        env:
+          UFBT_HOME: ${{ github.workspace }}/.ufbt-${{ matrix.target }}
+        run: ufbt lint
+
+      - name: Collect artifact
+        env:
+          UFBT_HOME: ${{ github.workspace }}/.ufbt-${{ matrix.target }}
+        run: |
+          mkdir -p out
+          cp dist/radiogeddon.fap "out/radiogeddon-${{ matrix.target }}.fap"
+          api=$(grep -m1 '^Version,' "$UFBT_HOME/current/sdk_headers/f7_sdk/targets/f7/api_symbols.csv" | cut -d, -f3)
+          echo "radiogeddon-${{ matrix.target }}.fap target=f7 api=$api" | tee "out/BUILD_INFO-${{ matrix.target }}.txt"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: radiogeddon-${{ matrix.target }}
+          path: out/*

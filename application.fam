@@ -1,0 +1,33 @@
+# RadioGeddon - Sub-GHz radio analysis toolkit for Flipper Zero
+#
+# This manifest is intentionally minimal and standard. The API version the
+# FAP is built against is embedded by the build tool (ufbt/fbt) from the SDK
+# in use. We NEVER override or falsify that metadata to force-load on an
+# incompatible firmware - build against the matching SDK instead
+# (see docs/FIRMWARE_COMPATIBILITY.md).
+
+App(
+    appid="radiogeddon",
+    name="RadioGeddon",
+    apptype=FlipperAppType.EXTERNAL,
+    entry_point="radiogeddon_app",
+    # 8 KiB: comfortable headroom for scene string-building and the file
+    # browser callbacks; comparison/decoding use heap buffers, not the stack.
+    stack_size=8 * 1024,
+    fap_category="Sub-GHz",
+    fap_icon="images/radiogeddon_10px.png",
+    fap_icon_assets="images",
+    fap_version="1.0",
+    fap_author="Georgii",
+    fap_weburl="https://github.com/mrslime-man/radiogeddon",
+    fap_description="Standalone Sub-GHz scan, capture, decode, compare and replay toolkit.",
+    # Services/libraries used by the app. These are resolved against the SDK
+    # at build time; a mismatch is reported by the build tool rather than
+    # silently ignored.
+    requires=[
+        "gui",
+        "dialogs",
+        "storage",
+        "notification",
+    ],
+)
