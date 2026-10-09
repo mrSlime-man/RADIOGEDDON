@@ -7,6 +7,13 @@ to follow [Semantic Versioning](https://semver.org/) (pre-1.0.0 releases use
 
 ## [Unreleased]
 
+_Nothing yet._
+
+## [1.0.0-beta.2] - 2026-10-09
+
+Corrected beta. `1.0.0-beta.1` crashes on launch on RogueMaster with "Out of
+memory"; this release fixes that and is the recommended download.
+
 ### Fixed
 - **Out-of-memory crash on launch** (seen on RogueMaster): the app no longer
   allocates the 64 KB RAW capture buffer, the Sub-GHz protocol environment,
@@ -17,6 +24,9 @@ to follow [Semantic Versioning](https://semver.org/) (pre-1.0.0 releases use
   little memory is free to record, the LED blinks red instead of crashing.
 
 ## [1.0.0-beta.1] - 2026-10-09
+
+> **Known crash:** on RogueMaster this build crashes on launch with "Out of
+> memory" before the main menu. Use `1.0.0-beta.2` or later.
 
 First public beta: the two development lines are unified into one standalone
 Sub-GHz analysis toolkit, published with multi-firmware builds, documentation
@@ -60,5 +70,6 @@ on physical hardware** — see `docs/VERIFICATION.md`.
 - Settings are not persisted across launches; internal radio only; RAW capture
   capped at 16,384 samples (engine analysis uses the first 4,096).
 
-[Unreleased]: https://github.com/mrSlime-man/RADIOGEDDON/compare/v1.0.0-beta.1...HEAD
+[Unreleased]: https://github.com/mrSlime-man/RADIOGEDDON/compare/v1.0.0-beta.2...HEAD
+[1.0.0-beta.2]: https://github.com/mrSlime-man/RADIOGEDDON/compare/v1.0.0-beta.1...v1.0.0-beta.2
 [1.0.0-beta.1]: https://github.com/mrSlime-man/RADIOGEDDON/releases/tag/v1.0.0-beta.1

@@ -183,7 +183,7 @@ frames, like a single button press.
 
 ## About
 
-Shows the version (`Version: 1.0.0-beta.1`), the radio device, the list of
+Shows the version (`Version: 1.0.0-beta.2`), the radio device, the list of
 modules, the meaning of the analysis labels, where recordings are stored, and
 the project address.
 

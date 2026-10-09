@@ -9,4 +9,4 @@
  * limit) and must match the first two components. Both rules are enforced by
  * .github/workflows/release.yml before anything is built or published.
  */
-#define RADIOGEDDON_VERSION "1.0.0-beta.1"
+#define RADIOGEDDON_VERSION "1.0.0-beta.2"

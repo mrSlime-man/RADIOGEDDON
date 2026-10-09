@@ -6,7 +6,7 @@ firmware's `subghz` protocol library — so it needs no firmware patches. Becaus
 each firmware family publishes its own SDK API version, **each family gets its
 own `.fap`**.
 
-## Supported firmware (v1.0.0-beta.1)
+## Supported firmware (v1.0.0-beta.2)
 
 | Firmware | Built against | SDK API | Download |
 |----------|---------------|---------|----------|
@@ -16,8 +16,9 @@ own `.fap`**.
 
 All three are built from the same source tree by CI. "Supported" here means the
 build compiles cleanly, passes the SDK's API-compatibility check (`APPCHK`), and
-carries a verified manifest — **on-device behaviour is not yet verified on any
-firmware** (see [VERIFICATION.md](VERIFICATION.md)).
+carries a verified manifest. On-device behaviour is not yet independently
+verified on any firmware; a tester has reported that the RogueMaster build
+launches and works (see [VERIFICATION.md](VERIFICATION.md)).
 
 The exact SDK URLs, SHA-256 checksums and the RogueMaster commit are pinned in
 [`scripts/firmware_pins.sh`](../scripts/firmware_pins.sh); every release lists
