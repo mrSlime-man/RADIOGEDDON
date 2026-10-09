@@ -95,12 +95,89 @@ static void test_key_stats(void) {
     CHECK(dist == 1, "repeated byte key: 1 distinct value");
 }
 
+static void test_parse_whitespace(void) {
+    printf("test_parse_whitespace\n");
+    size_t count = 0;
+    uint32_t min_us = 0, max_us = 0;
+    // Tabs, multiple spaces and leading/trailing space must all parse.
+    size_t n = radiogeddon_dsp_parse_line(
+        "  350\t-700   1050  ", &count, &min_us, &max_us, NULL, NULL, 0);
+    CHECK(n == 3, "whitespace-separated -> 3 samples");
+    CHECK(min_us == 350 && max_us == 1050, "min/max across whitespace");
+}
+
+static void test_parse_garbage_tail(void) {
+    printf("test_parse_garbage_tail\n");
+    size_t count = 0;
+    uint32_t min_us = 0, max_us = 0;
+    // strtol stops at the first non-numeric token; we should keep what parsed.
+    size_t n = radiogeddon_dsp_parse_line(
+        "350 -350 xyz 700", &count, &min_us, &max_us, NULL, NULL, 0);
+    CHECK(n == 2, "parsing stops at non-numeric token");
+    CHECK(max_us == 350, "only pre-garbage values counted");
+}
+
+static void test_parse_clamped_large(void) {
+    printf("test_parse_clamped_large\n");
+    size_t count = 0;
+    uint32_t min_us = 0, max_us = 0;
+    // A very large but valid duration is taken as-is (abs value).
+    size_t n = radiogeddon_dsp_parse_line(
+        "100 -2000000000", &count, &min_us, &max_us, NULL, NULL, 0);
+    CHECK(n == 2, "two samples");
+    CHECK(min_us == 100, "min 100");
+    CHECK(max_us == 2000000000u, "large magnitude preserved");
+}
+
+// Emit an int32 timing array exactly as radiogeddon_subghz_record_flush_to_file
+// does (chunked, space-separated), then parse it back and verify no data loss.
+static void test_raw_roundtrip(void) {
+    printf("test_raw_roundtrip\n");
+    enum { N = 1000, LINE = 512 };
+    static int32_t samples[N];
+    for(int i = 0; i < N; i++) {
+        int32_t mag = (i % 50 == 49) ? 8000 : 350; // periodic long gap
+        samples[i] = (i & 1) ? -mag : mag;
+    }
+
+    size_t count = 0;
+    uint32_t min_us = 0, max_us = 0;
+    RadioGeddonCluster clusters[RADIOGEDDON_MAX_CLUSTERS] = {0};
+    size_t cn = 0;
+
+    char line[LINE * 12];
+    int written = 0;
+    while(written < N) {
+        int chunk = (N - written) > LINE ? LINE : (N - written);
+        int pos = 0;
+        for(int i = 0; i < chunk; i++) {
+            pos += snprintf(
+                line + pos,
+                sizeof(line) - pos,
+                (i == 0) ? "%ld" : " %ld",
+                (long)samples[written + i]);
+        }
+        radiogeddon_dsp_parse_line(
+            line, &count, &min_us, &max_us, clusters, &cn, RADIOGEDDON_MAX_CLUSTERS);
+        written += chunk;
+    }
+
+    CHECK(count == N, "round-trip preserves all samples");
+    CHECK(min_us == 350, "round-trip min 350");
+    CHECK(max_us == 8000, "round-trip max 8000 (gap)");
+    CHECK(cn == 2, "round-trip yields two timing groups (350 and 8000)");
+}
+
 int main(void) {
     test_parse_basic();
     test_parse_zero_skipped();
     test_parse_empty();
+    test_parse_whitespace();
+    test_parse_garbage_tail();
+    test_parse_clamped_large();
     test_clustering();
     test_cluster_cap();
+    test_raw_roundtrip();
     test_key_stats();
 
     printf("\n%d checks, %d failures\n", g_checks, g_failures);

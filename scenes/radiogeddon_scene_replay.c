@@ -3,6 +3,7 @@
 typedef enum {
     ReplayCustomSend = 300,
     ReplayCustomComplete,
+    ReplayCustomClosePopup,
 } ReplayCustomEvent;
 
 typedef enum {
@@ -24,6 +25,12 @@ static void radiogeddon_scene_replay_button_cb(
 static void radiogeddon_scene_replay_tx_complete(void* context) {
     RadioGeddonApp* app = context;
     view_dispatcher_send_custom_event(app->view_dispatcher, ReplayCustomComplete);
+}
+
+// Result popup timed out: return to the signal's action menu.
+static void radiogeddon_scene_replay_popup_cb(void* context) {
+    RadioGeddonApp* app = context;
+    view_dispatcher_send_custom_event(app->view_dispatcher, ReplayCustomClosePopup);
 }
 
 static void radiogeddon_scene_replay_show_idle(RadioGeddonApp* app) {
@@ -64,8 +71,9 @@ static void radiogeddon_scene_replay_finish(RadioGeddonApp* app, const char* msg
     popup_reset(app->popup);
     popup_set_header(app->popup, success ? "Done" : "Error", 64, 18, AlignCenter, AlignCenter);
     popup_set_text(app->popup, msg, 64, 38, AlignCenter, AlignCenter);
-    popup_set_timeout(app->popup, 1500);
     popup_set_context(app->popup, app);
+    popup_set_callback(app->popup, radiogeddon_scene_replay_popup_cb);
+    popup_set_timeout(app->popup, 1500);
     popup_enable_timeout(app->popup);
     view_dispatcher_switch_to_view(app->view_dispatcher, RadioGeddonViewPopup);
 }
@@ -118,8 +126,16 @@ bool radiogeddon_scene_replay_on_event(void* context, SceneManagerEvent event) {
             }
             consumed = true;
         } else if(event.event == ReplayCustomComplete) {
-            notification_message(app->notifications, &sequence_blink_stop);
-            radiogeddon_scene_replay_finish(app, "Signal sent", true);
+            // Guard against a double-finish: the RAW end-callback and the tick
+            // poll can both signal completion.
+            if(scene_manager_get_scene_state(app->scene_manager, RadioGeddonSceneReplay) ==
+               ReplayStateTransmitting) {
+                notification_message(app->notifications, &sequence_blink_stop);
+                radiogeddon_scene_replay_finish(app, "Signal sent", true);
+            }
+            consumed = true;
+        } else if(event.event == ReplayCustomClosePopup) {
+            scene_manager_previous_scene(app->scene_manager);
             consumed = true;
         }
     } else if(event.type == SceneManagerEventTypeTick) {
@@ -139,8 +155,7 @@ bool radiogeddon_scene_replay_on_event(void* context, SceneManagerEvent event) {
 void radiogeddon_scene_replay_on_exit(void* context) {
     RadioGeddonApp* app = context;
     notification_message(app->notifications, &sequence_blink_stop);
-    if(radiogeddon_subghz_is_tx_running(app->subghz)) radiogeddon_subghz_tx_stop(app->subghz);
-    radiogeddon_subghz_tx_stop(app->subghz);
+    radiogeddon_subghz_tx_stop(app->subghz); // idempotent; ensures radio is released
     widget_reset(app->widget);
     popup_reset(app->popup);
 }

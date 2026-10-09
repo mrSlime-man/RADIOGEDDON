@@ -23,9 +23,21 @@ void radiogeddon_scene_scanner_on_enter(void* context) {
     if(radiogeddon_subghz_is_device_present(app->subghz)) {
         radiogeddon_subghz_set_preset(app->subghz, app->preset_index);
         radiogeddon_subghz_scan_begin(app->subghz);
+        app->scanner_running = true;
+        view_dispatcher_switch_to_view(app->view_dispatcher, RadioGeddonViewScanner);
+    } else {
+        app->scanner_running = false;
+        popup_reset(app->popup);
+        popup_set_header(app->popup, "No radio", 64, 20, AlignCenter, AlignCenter);
+        popup_set_text(
+            app->popup,
+            "Sub-GHz device not\nfound or not responding.",
+            64,
+            38,
+            AlignCenter,
+            AlignCenter);
+        view_dispatcher_switch_to_view(app->view_dispatcher, RadioGeddonViewPopup);
     }
-
-    view_dispatcher_switch_to_view(app->view_dispatcher, RadioGeddonViewScanner);
 }
 
 bool radiogeddon_scene_scanner_on_event(void* context, SceneManagerEvent event) {
@@ -33,6 +45,7 @@ bool radiogeddon_scene_scanner_on_event(void* context, SceneManagerEvent event) 
     bool consumed = false;
 
     if(event.type == SceneManagerEventTypeTick) {
+        if(!app->scanner_running) return true;
         // Sweep one frequency per tick for a responsive, low-jitter display.
         uint32_t cursor =
             scene_manager_get_scene_state(app->scene_manager, RadioGeddonSceneScanner);
@@ -60,5 +73,6 @@ bool radiogeddon_scene_scanner_on_event(void* context, SceneManagerEvent event) 
 
 void radiogeddon_scene_scanner_on_exit(void* context) {
     RadioGeddonApp* app = context;
+    app->scanner_running = false;
     radiogeddon_subghz_scan_end(app->subghz);
 }

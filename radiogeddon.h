@@ -90,6 +90,11 @@ struct RadioGeddonApp {
 
     // Pending save: true if saving a RAW capture, false if saving a decoded signal
     bool save_is_raw;
+    // Set when leaving the receiver for the save screen, so returning to the
+    // receiver keeps the session's decoded-signal list instead of clearing it.
+    bool receiver_preserve_history;
+    // True while the scanner sweep is actively probing a present radio.
+    bool scanner_running;
 };
 
 /** Allocate and free the full application context. */

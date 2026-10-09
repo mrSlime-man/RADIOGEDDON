@@ -262,6 +262,12 @@ void radiogeddon_subghz_rx_start(
     if(instance->rx_running) return;
     if(!instance->device) return;
 
+    // Guard against an out-of-band frequency: set_frequency asserts on invalid
+    // values, so fall back to the default rather than crash.
+    if(!subghz_devices_is_frequency_valid(instance->device, instance->frequency)) {
+        instance->frequency = RADIOGEDDON_FREQUENCY_DEFAULT;
+    }
+
     instance->decode_cb = decode_callback;
     instance->decode_ctx = context;
 
@@ -274,11 +280,14 @@ void radiogeddon_subghz_rx_start(
     subghz_devices_load_preset(
         instance->device, radiogeddon_subghz_current_preset(instance), NULL);
     instance->frequency = subghz_devices_set_frequency(instance->device, instance->frequency);
+    subghz_devices_flush_rx(instance->device);
 
-    subghz_worker_start(instance->worker);
+    // Order matches the firmware Sub-GHz subsystem: begin async capture first,
+    // then start the worker that drains it. The device enters RX inside
+    // start_async_rx — never call set_rx after it (that is for FIFO/sync mode).
     subghz_devices_start_async_rx(
         instance->device, subghz_worker_rx_callback, instance->worker);
-    subghz_devices_set_rx(instance->device);
+    subghz_worker_start(instance->worker);
 
     instance->rx_running = true;
 }
@@ -289,8 +298,10 @@ void radiogeddon_subghz_rx_stop(RadioGeddonSubGhz* instance) {
 
     if(instance->recording) radiogeddon_subghz_record_stop(instance);
 
-    subghz_devices_stop_async_rx(instance->device);
+    // Stop the worker before the async capture (reverse of start order), so no
+    // pair callback fires into a half-torn-down device.
     if(subghz_worker_is_running(instance->worker)) subghz_worker_stop(instance->worker);
+    subghz_devices_stop_async_rx(instance->device);
     subghz_devices_idle(instance->device);
     subghz_devices_sleep(instance->device);
     if(instance->device_begun) {
@@ -331,6 +342,8 @@ void radiogeddon_subghz_scan_end(RadioGeddonSubGhz* instance) {
 
 float radiogeddon_subghz_probe_rssi(RadioGeddonSubGhz* instance, uint32_t frequency) {
     if(!instance->device) return -127.0f;
+    // set_frequency asserts on out-of-band values — never probe an invalid one.
+    if(!subghz_devices_is_frequency_valid(instance->device, frequency)) return -127.0f;
     bool temp_session = !instance->device_begun;
     if(temp_session) {
         subghz_devices_begin(instance->device);
@@ -401,22 +414,18 @@ bool radiogeddon_subghz_record_flush_to_file(RadioGeddonSubGhz* instance, const 
             break;
         if(!flipper_format_write_string_cstr(ff, "Protocol", "RAW")) break;
 
+        // Emit RAW_Data in chunks, exactly as the firmware does
+        // (flipper_format_write_int32 array writer -> space-separated ints).
         size_t total = instance->raw_count;
         size_t written = 0;
-        FuriString* line = furi_string_alloc();
         bool line_ok = true;
         while(written < total && line_ok) {
             size_t chunk = total - written;
             if(chunk > RADIOGEDDON_RAW_LINE_VALUES) chunk = RADIOGEDDON_RAW_LINE_VALUES;
-            furi_string_reset(line);
-            for(size_t i = 0; i < chunk; i++) {
-                furi_string_cat_printf(
-                    line, (i == 0) ? "%ld" : " %ld", (long)instance->raw_buffer[written + i]);
-            }
-            line_ok = flipper_format_write_string_cstr(ff, "RAW_Data", furi_string_get_cstr(line));
+            line_ok = flipper_format_write_int32(
+                ff, "RAW_Data", &instance->raw_buffer[written], chunk);
             written += chunk;
         }
-        furi_string_free(line);
         ok = line_ok;
     } while(false);
 
@@ -515,6 +524,14 @@ RadioGeddonTxResult radiogeddon_subghz_tx_start(
                 break;
             }
             furi_delay_ms(100); // let the worker prime its buffer
+            // Region gate: set_tx returns false when TX is forbidden here.
+            if(!subghz_devices_set_tx(instance->device)) {
+                subghz_file_encoder_worker_stop(instance->file_encoder);
+                subghz_file_encoder_worker_free(instance->file_encoder);
+                instance->file_encoder = NULL;
+                result = RadioGeddonTxErrorRegion;
+                break;
+            }
             if(!subghz_devices_start_async_tx(
                    instance->device,
                    subghz_file_encoder_worker_get_level_duration,
@@ -528,14 +545,38 @@ RadioGeddonTxResult radiogeddon_subghz_tx_start(
             instance->tx_mode = RadioGeddonTxModeRaw;
             result = RadioGeddonTxOk;
         } else {
+            // Work on an in-memory copy so the saved .sub file is never
+            // mutated. Ensure a bounded "Repeat" so a single press-worth of
+            // frames is emitted even if the file omits it.
+            FlipperFormat* mem_ff = flipper_format_string_alloc();
+            Stream* src = flipper_format_get_raw_stream(ff);
+            Stream* dst = flipper_format_get_raw_stream(mem_ff);
             flipper_format_rewind(ff);
+            stream_rewind(src);
+            stream_copy_full(src, dst);
+            uint32_t repeat = 10;
+            flipper_format_rewind(mem_ff);
+            flipper_format_insert_or_update_uint32(mem_ff, "Repeat", &repeat, 1);
+            flipper_format_rewind(mem_ff);
+
             instance->transmitter =
                 subghz_transmitter_alloc_init(instance->environment, furi_string_get_cstr(temp_str));
-            if(!instance->transmitter) break;
-            if(subghz_transmitter_deserialize(instance->transmitter, ff) !=
-               SubGhzProtocolStatusOk) {
+            if(!instance->transmitter) {
+                flipper_format_free(mem_ff);
+                break;
+            }
+            SubGhzProtocolStatus ds =
+                subghz_transmitter_deserialize(instance->transmitter, mem_ff);
+            flipper_format_free(mem_ff);
+            if(ds != SubGhzProtocolStatusOk) {
                 subghz_transmitter_free(instance->transmitter);
                 instance->transmitter = NULL;
+                break;
+            }
+            if(!subghz_devices_set_tx(instance->device)) {
+                subghz_transmitter_free(instance->transmitter);
+                instance->transmitter = NULL;
+                result = RadioGeddonTxErrorRegion;
                 break;
             }
             if(!subghz_devices_start_async_tx(

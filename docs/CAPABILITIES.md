@@ -1,7 +1,11 @@
 # Implemented and Unimplemented Capabilities
 
 This document tracks exactly what RadioGeddon does and does not do, to avoid
-overstating functionality. Last updated for v0.2.
+overstating functionality. Last updated for v0.2 (post-stabilization pass).
+
+For the exact verification status (what is build/test-verified vs. what needs a
+physical device), see [`VERIFICATION.md`](VERIFICATION.md) and the test plan in
+[`HARDWARE_CHECKLIST.md`](HARDWARE_CHECKLIST.md).
 
 ## Implemented
 

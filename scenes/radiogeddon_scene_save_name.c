@@ -26,6 +26,8 @@ void radiogeddon_scene_save_name_on_enter(void* context) {
         app->text_store,
         sizeof(app->text_store),
         false);
+    // Reject an empty file name.
+    text_input_set_minimum_length(text_input, 1);
 
     view_dispatcher_switch_to_view(app->view_dispatcher, RadioGeddonViewTextInput);
 }
