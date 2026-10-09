@@ -69,7 +69,8 @@ void radiogeddon_dsp_sort_clusters(RadioGeddonCluster* clusters, size_t n) {
 
 void radiogeddon_dsp_key_stats(uint64_t key, int* nonzero, int* distinct) {
     uint8_t bytes[8];
-    for(size_t i = 0; i < 8; i++) bytes[i] = (uint8_t)(key >> (8 * (7 - i)));
+    for(size_t i = 0; i < 8; i++)
+        bytes[i] = (uint8_t)(key >> (8 * (7 - i)));
     int nz = 0, dist = 0;
     for(size_t i = 0; i < 8; i++) {
         if(bytes[i]) nz++;

@@ -86,8 +86,7 @@ RadioGeddonApp* radiogeddon_app_alloc(void) {
         RadioGeddonViewReceiver,
         radiogeddon_receiver_view_get_view(app->receiver_view));
 
-    view_dispatcher_attach_to_gui(
-        app->view_dispatcher, app->gui, ViewDispatcherTypeFullscreen);
+    view_dispatcher_attach_to_gui(app->view_dispatcher, app->gui, ViewDispatcherTypeFullscreen);
 
     return app;
 }

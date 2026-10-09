@@ -11,10 +11,8 @@ typedef enum {
     ReplayStateTransmitting = 1,
 } ReplayState;
 
-static void radiogeddon_scene_replay_button_cb(
-    GuiButtonType result,
-    InputType type,
-    void* context) {
+static void
+    radiogeddon_scene_replay_button_cb(GuiButtonType result, InputType type, void* context) {
     RadioGeddonApp* app = context;
     if(result == GuiButtonTypeCenter && type == InputTypeShort) {
         view_dispatcher_send_custom_event(app->view_dispatcher, ReplayCustomSend);
@@ -49,8 +47,7 @@ static void radiogeddon_scene_replay_show_idle(RadioGeddonApp* app) {
         furi_string_get_cstr(app->loaded.protocol),
         (unsigned long)(app->loaded.frequency / 1000000),
         (unsigned long)((app->loaded.frequency % 1000000) / 10000));
-    widget_add_text_scroll_element(
-        widget, 0, 14, 128, 38, furi_string_get_cstr(app->temp_str));
+    widget_add_text_scroll_element(widget, 0, 14, 128, 38, furi_string_get_cstr(app->temp_str));
     widget_add_button_element(
         widget, GuiButtonTypeCenter, "Send", radiogeddon_scene_replay_button_cb, app);
 
@@ -66,8 +63,7 @@ void radiogeddon_scene_replay_on_enter(void* context) {
 static void radiogeddon_scene_replay_finish(RadioGeddonApp* app, const char* msg, bool success) {
     radiogeddon_subghz_tx_stop(app->subghz);
     scene_manager_set_scene_state(app->scene_manager, RadioGeddonSceneReplay, ReplayStateIdle);
-    notification_message(
-        app->notifications, success ? &sequence_success : &sequence_error);
+    notification_message(app->notifications, success ? &sequence_success : &sequence_error);
     popup_reset(app->popup);
     popup_set_header(app->popup, success ? "Done" : "Error", 64, 18, AlignCenter, AlignCenter);
     popup_set_text(app->popup, msg, 64, 38, AlignCenter, AlignCenter);
@@ -93,8 +89,7 @@ bool radiogeddon_scene_replay_on_event(void* context, SceneManagerEvent event) {
                 scene_manager_set_scene_state(
                     app->scene_manager, RadioGeddonSceneReplay, ReplayStateTransmitting);
                 popup_reset(app->popup);
-                popup_set_header(
-                    app->popup, "Transmitting", 64, 26, AlignCenter, AlignCenter);
+                popup_set_header(app->popup, "Transmitting", 64, 26, AlignCenter, AlignCenter);
                 popup_set_text(app->popup, "Sending signal...", 64, 42, AlignCenter, AlignCenter);
                 view_dispatcher_switch_to_view(app->view_dispatcher, RadioGeddonViewPopup);
                 notification_message(app->notifications, &sequence_blink_start_magenta);
@@ -139,8 +134,7 @@ bool radiogeddon_scene_replay_on_event(void* context, SceneManagerEvent event) {
             consumed = true;
         }
     } else if(event.type == SceneManagerEventTypeTick) {
-        uint32_t state =
-            scene_manager_get_scene_state(app->scene_manager, RadioGeddonSceneReplay);
+        uint32_t state = scene_manager_get_scene_state(app->scene_manager, RadioGeddonSceneReplay);
         if(state == ReplayStateTransmitting) {
             if(!radiogeddon_subghz_is_tx_running(app->subghz)) {
                 notification_message(app->notifications, &sequence_blink_stop);

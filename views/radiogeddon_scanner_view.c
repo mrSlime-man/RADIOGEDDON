@@ -122,8 +122,7 @@ RadioGeddonScannerView* radiogeddon_scanner_view_alloc(void) {
     instance->callback = NULL;
     instance->context = NULL;
     view_set_context(instance->view, instance);
-    view_allocate_model(
-        instance->view, ViewModelTypeLocking, sizeof(RadioGeddonScannerModel));
+    view_allocate_model(instance->view, ViewModelTypeLocking, sizeof(RadioGeddonScannerModel));
     view_set_draw_callback(instance->view, radiogeddon_scanner_view_draw);
     view_set_input_callback(instance->view, radiogeddon_scanner_view_input);
 
@@ -135,7 +134,8 @@ RadioGeddonScannerView* radiogeddon_scanner_view_alloc(void) {
             m->count = 0;
             m->selected = 0;
             m->top = 0;
-            for(size_t i = 0; i < RADIOGEDDON_SCANNER_MAX; i++) m->rssi[i] = RSSI_FLOOR;
+            for(size_t i = 0; i < RADIOGEDDON_SCANNER_MAX; i++)
+                m->rssi[i] = RSSI_FLOOR;
         },
         true);
 
@@ -177,18 +177,13 @@ void radiogeddon_scanner_view_set_frequencies(
         true);
 }
 
-void radiogeddon_scanner_view_set_rssi(
-    RadioGeddonScannerView* instance,
-    size_t index,
-    float rssi) {
+void radiogeddon_scanner_view_set_rssi(RadioGeddonScannerView* instance, size_t index, float rssi) {
     if(index >= RADIOGEDDON_SCANNER_MAX) return;
-    with_view_model(
-        instance->view, RadioGeddonScannerModel * m, { m->rssi[index] = rssi; }, true);
+    with_view_model(instance->view, RadioGeddonScannerModel * m, { m->rssi[index] = rssi; }, true);
 }
 
 size_t radiogeddon_scanner_view_get_selected(RadioGeddonScannerView* instance) {
     size_t sel = 0;
-    with_view_model(
-        instance->view, RadioGeddonScannerModel * m, { sel = m->selected; }, false);
+    with_view_model(instance->view, RadioGeddonScannerModel * m, { sel = m->selected; }, false);
     return sel;
 }

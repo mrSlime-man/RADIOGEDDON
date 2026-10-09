@@ -1,9 +1,9 @@
 #include "radiogeddon_scene.h"
 
 // Hopping cadence/behaviour (in 100 ms UI ticks).
-#define HOPPER_DWELL_TICKS      2 // ~200 ms listening per frequency when idle
-#define HOPPER_HOLD_TICKS       20 // ~2 s dwell once activity is detected
-#define HOPPER_RSSI_THRESHOLD   (-90.0f) // dBm above noise floor => "activity"
+#define HOPPER_DWELL_TICKS    2 // ~200 ms listening per frequency when idle
+#define HOPPER_HOLD_TICKS     20 // ~2 s dwell once activity is detected
+#define HOPPER_RSSI_THRESHOLD (-90.0f) // dBm above noise floor => "activity"
 
 typedef enum {
     HopperCustomDecoded = 500,

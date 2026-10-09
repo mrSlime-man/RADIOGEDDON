@@ -29,7 +29,8 @@ void radiogeddon_storage_default_name(FuriString* out) {
 }
 
 void radiogeddon_storage_make_path(FuriString* out, const char* name) {
-    furi_string_printf(out, "%s/%s%s", RADIOGEDDON_SIGNALS_FOLDER, name, RADIOGEDDON_SUB_EXTENSION);
+    furi_string_printf(
+        out, "%s/%s%s", RADIOGEDDON_SIGNALS_FOLDER, name, RADIOGEDDON_SUB_EXTENSION);
 }
 
 bool radiogeddon_storage_write_serialized(
@@ -135,4 +136,37 @@ bool radiogeddon_storage_load(Storage* storage, const char* path, RadioGeddonLoa
     furi_string_free(value);
     flipper_format_free(ff);
     return ok;
+}
+
+size_t radiogeddon_storage_load_raw_samples(
+    Storage* storage,
+    const char* path,
+    int32_t* buf,
+    size_t cap) {
+    if(!buf || cap == 0) return 0;
+    FlipperFormat* ff = flipper_format_file_alloc(storage);
+    FuriString* type = furi_string_alloc();
+    FuriString* value = furi_string_alloc();
+    uint32_t version = 0;
+    size_t total = 0;
+
+    do {
+        if(!flipper_format_file_open_existing(ff, path)) break;
+        if(!flipper_format_read_header(ff, type, &version)) break;
+        while(total < cap && flipper_format_read_string(ff, "RAW_Data", value)) {
+            const char* p = furi_string_get_cstr(value);
+            char* end = NULL;
+            while(*p && total < cap) {
+                long v = strtol(p, &end, 10);
+                if(end == p) break;
+                p = end;
+                if(v != 0) buf[total++] = (int32_t)v;
+            }
+        }
+    } while(false);
+
+    furi_string_free(type);
+    furi_string_free(value);
+    flipper_format_free(ff);
+    return total;
 }

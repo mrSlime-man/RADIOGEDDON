@@ -69,8 +69,7 @@ void radiogeddon_scene_receiver_on_enter(void* context) {
     radiogeddon_subghz_set_preset(app->subghz, app->preset_index);
 
     if(radiogeddon_subghz_is_device_present(app->subghz)) {
-        radiogeddon_subghz_rx_start(
-            app->subghz, radiogeddon_scene_receiver_decode_cb, app);
+        radiogeddon_subghz_rx_start(app->subghz, radiogeddon_scene_receiver_decode_cb, app);
     } else {
         // No radio: show a clear message instead of pretending to receive.
         popup_reset(app->popup);

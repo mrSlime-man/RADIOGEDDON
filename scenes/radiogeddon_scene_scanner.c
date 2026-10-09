@@ -50,8 +50,8 @@ bool radiogeddon_scene_scanner_on_event(void* context, SceneManagerEvent event) 
         uint32_t cursor =
             scene_manager_get_scene_state(app->scene_manager, RadioGeddonSceneScanner);
         if(cursor < radiogeddon_frequencies_count) {
-            float rssi = radiogeddon_subghz_probe_rssi(
-                app->subghz, radiogeddon_frequencies[cursor]);
+            float rssi =
+                radiogeddon_subghz_probe_rssi(app->subghz, radiogeddon_frequencies[cursor]);
             radiogeddon_scanner_view_set_rssi(app->scanner_view, cursor, rssi);
         }
         cursor = (cursor + 1) % radiogeddon_frequencies_count;

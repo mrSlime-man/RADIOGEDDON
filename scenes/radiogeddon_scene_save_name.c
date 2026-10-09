@@ -17,8 +17,7 @@ void radiogeddon_scene_save_name_on_enter(void* context) {
     furi_string_free(def);
 
     text_input_reset(text_input);
-    text_input_set_header_text(
-        text_input, app->save_is_raw ? "Name RAW capture" : "Name signal");
+    text_input_set_header_text(text_input, app->save_is_raw ? "Name RAW capture" : "Name signal");
     text_input_set_result_callback(
         text_input,
         radiogeddon_scene_save_name_cb,
@@ -42,8 +41,7 @@ bool radiogeddon_scene_save_name_on_event(void* context, SceneManagerEvent event
 
         bool ok;
         if(app->save_is_raw) {
-            ok = radiogeddon_subghz_record_flush_to_file(
-                app->subghz, furi_string_get_cstr(path));
+            ok = radiogeddon_subghz_record_flush_to_file(app->subghz, furi_string_get_cstr(path));
         } else {
             ok = radiogeddon_storage_write_serialized(
                 app->storage, furi_string_get_cstr(path), app->temp_str);

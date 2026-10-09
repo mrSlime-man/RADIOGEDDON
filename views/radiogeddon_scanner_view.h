@@ -34,10 +34,7 @@ void radiogeddon_scanner_view_set_frequencies(
     size_t count);
 
 /** Update the RSSI (dBm) sampled for a given frequency index. */
-void radiogeddon_scanner_view_set_rssi(
-    RadioGeddonScannerView* instance,
-    size_t index,
-    float rssi);
+void radiogeddon_scanner_view_set_rssi(RadioGeddonScannerView* instance, size_t index, float rssi);
 
 /** Index currently highlighted by the user. */
 size_t radiogeddon_scanner_view_get_selected(RadioGeddonScannerView* instance);

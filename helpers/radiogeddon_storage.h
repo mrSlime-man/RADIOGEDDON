@@ -16,8 +16,8 @@
 #define RADIOGEDDON_SUB_EXTENSION  ".sub"
 
 // .sub file identification (firmware-compatible).
-#define RADIOGEDDON_SUB_FILE_TYPE    "Flipper SubGhz Key File"
-#define RADIOGEDDON_SUB_FILE_VERSION 1
+#define RADIOGEDDON_SUB_FILE_TYPE     "Flipper SubGhz Key File"
+#define RADIOGEDDON_SUB_FILE_VERSION  1
 #define RADIOGEDDON_RAW_FILE_TYPE_STR "Flipper SubGhz RAW File"
 
 /** Classification of a loaded .sub file. */
@@ -59,6 +59,17 @@ bool radiogeddon_storage_write_serialized(
 
 /** Parse a .sub file into @p out. Returns false on open/parse failure. */
 bool radiogeddon_storage_load(Storage* storage, const char* path, RadioGeddonLoadedSignal* out);
+
+/**
+ * Load the RAW timing samples (signed microsecond durations) from a RAW .sub
+ * file into @p buf, up to @p cap values. Returns the number of samples read
+ * (0 if the file is not RAW or has no samples). Used by the analysis engine.
+ */
+size_t radiogeddon_storage_load_raw_samples(
+    Storage* storage,
+    const char* path,
+    int32_t* buf,
+    size_t cap);
 
 /** Initialize an empty loaded-signal struct (allocates strings). */
 void radiogeddon_loaded_signal_init(RadioGeddonLoadedSignal* sig);

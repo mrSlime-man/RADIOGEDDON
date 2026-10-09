@@ -11,8 +11,8 @@
 #include <stdint.h>
 #include <stddef.h>
 
-#define RADIOGEDDON_MAX_CLUSTERS  8
-#define RADIOGEDDON_CLUSTER_TOL   20 // default grouping tolerance, percent
+#define RADIOGEDDON_MAX_CLUSTERS 8
+#define RADIOGEDDON_CLUSTER_TOL  20 // default grouping tolerance, percent
 
 typedef struct {
     uint32_t center; // representative duration (us)

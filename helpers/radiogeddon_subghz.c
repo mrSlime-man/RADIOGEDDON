@@ -14,7 +14,7 @@
 #define TAG "RadioGeddonSubGhz"
 
 /** Maximum RAW samples buffered per capture (level-signed durations). */
-#define RADIOGEDDON_RAW_CAPACITY (16384u)
+#define RADIOGEDDON_RAW_CAPACITY    (16384u)
 /** How many RAW values to emit per RAW_Data line in the saved file. */
 #define RADIOGEDDON_RAW_LINE_VALUES (512u)
 
@@ -29,10 +29,9 @@ const size_t radiogeddon_presets_count =
 
 // Common Sub-GHz frequencies (Hz). Region validity is checked before use.
 const uint32_t radiogeddon_frequencies[] = {
-    300000000, 303875000, 304250000, 310000000, 315000000, 318000000,
-    390000000, 418000000, 433075000, 433420000, 433920000, 434420000,
-    434775000, 438900000, 464000000, 779000000, 868350000, 915000000,
-    925000000,
+    300000000, 303875000, 304250000, 310000000, 315000000, 318000000, 390000000,
+    418000000, 433075000, 433420000, 433920000, 434420000, 434775000, 438900000,
+    464000000, 779000000, 868350000, 915000000, 925000000,
 };
 const size_t radiogeddon_frequencies_count =
     sizeof(radiogeddon_frequencies) / sizeof(radiogeddon_frequencies[0]);
@@ -171,8 +170,7 @@ static void radiogeddon_subghz_receiver_callback(
                            "Unknown";
 
     if(instance->decode_cb && (have_text || have_sub)) {
-        instance->decode_cb(
-            name, hash, text, have_sub ? serialized : NULL, instance->decode_ctx);
+        instance->decode_cb(name, hash, text, have_sub ? serialized : NULL, instance->decode_ctx);
     }
 
     furi_string_free(text);
@@ -209,8 +207,7 @@ RadioGeddonSubGhz* radiogeddon_subghz_alloc(void) {
         instance->receiver, radiogeddon_subghz_receiver_callback, instance);
 
     instance->worker = subghz_worker_alloc();
-    subghz_worker_set_overrun_callback(
-        instance->worker, radiogeddon_subghz_overrun_callback);
+    subghz_worker_set_overrun_callback(instance->worker, radiogeddon_subghz_overrun_callback);
     subghz_worker_set_pair_callback(instance->worker, radiogeddon_subghz_pair_callback);
     subghz_worker_set_context(instance->worker, instance);
 
@@ -233,9 +230,15 @@ void radiogeddon_subghz_free(RadioGeddonSubGhz* instance) {
 
 bool radiogeddon_subghz_is_device_present(RadioGeddonSubGhz* instance) {
     if(!instance->device) return false;
-    bool begun = subghz_devices_begin(instance->device);
-    bool connected = begun && subghz_devices_is_connect(instance->device);
-    if(begun) subghz_devices_end(instance->device);
+    // NOTE: subghz_devices_begin() returns the device's interconnect begin()
+    // result, which is NULL (=> false) for the INTERNAL cc1101 because it needs
+    // no power-up step. Gating presence on that return value therefore reports
+    // the built-in radio as "absent" on every real device. Presence is instead
+    // is_connect() after an (ignored-return) begin; for external modules begin
+    // powers them up so is_connect() can probe the SPI link.
+    subghz_devices_begin(instance->device);
+    bool connected = subghz_devices_is_connect(instance->device);
+    subghz_devices_end(instance->device);
     return connected;
 }
 
@@ -296,8 +299,7 @@ void radiogeddon_subghz_rx_start(
     // Order matches the firmware Sub-GHz subsystem: begin async capture first,
     // then start the worker that drains it. The device enters RX inside
     // start_async_rx — never call set_rx after it (that is for FIFO/sync mode).
-    subghz_devices_start_async_rx(
-        instance->device, subghz_worker_rx_callback, instance->worker);
+    subghz_devices_start_async_rx(instance->device, subghz_worker_rx_callback, instance->worker);
     subghz_worker_start(instance->worker);
 
     instance->rx_running = true;
@@ -343,8 +345,7 @@ void radiogeddon_subghz_rx_retune(RadioGeddonSubGhz* instance, uint32_t frequenc
     instance->frequency = subghz_devices_set_frequency(instance->device, frequency);
     subghz_devices_flush_rx(instance->device);
     subghz_receiver_reset(instance->receiver);
-    subghz_devices_start_async_rx(
-        instance->device, subghz_worker_rx_callback, instance->worker);
+    subghz_devices_start_async_rx(instance->device, subghz_worker_rx_callback, instance->worker);
     subghz_worker_start(instance->worker);
 }
 
@@ -452,8 +453,8 @@ bool radiogeddon_subghz_record_flush_to_file(RadioGeddonSubGhz* instance, const 
         while(written < total && line_ok) {
             size_t chunk = total - written;
             if(chunk > RADIOGEDDON_RAW_LINE_VALUES) chunk = RADIOGEDDON_RAW_LINE_VALUES;
-            line_ok = flipper_format_write_int32(
-                ff, "RAW_Data", &instance->raw_buffer[written], chunk);
+            line_ok =
+                flipper_format_write_int32(ff, "RAW_Data", &instance->raw_buffer[written], chunk);
             written += chunk;
         }
         ok = line_ok;
@@ -488,6 +489,7 @@ RadioGeddonTxResult radiogeddon_subghz_tx_start(
     uint32_t frequency = instance->frequency;
     RadioGeddonTxResult result = RadioGeddonTxErrorParse;
     bool is_raw = false;
+    uint8_t* custom_preset_data = NULL; // register array for a FuriHalSubGhzPresetCustom file
 
     do {
         if(!flipper_format_file_open_existing(ff, file_path)) {
@@ -502,16 +504,45 @@ RadioGeddonTxResult radiogeddon_subghz_tx_start(
             result = RadioGeddonTxErrorRegion;
             break;
         }
-        // Read preset so the correct modulation is loaded.
-        FuriHalSubGhzPreset preset_enum = radiogeddon_subghz_current_preset(instance);
+        // Read the preset so the EXACT modulation the signal was captured on is
+        // reproduced. Transmitting a capture on the wrong modulation would emit
+        // nothing usable, so an unrecognised preset is refused rather than
+        // silently sent on a default modulation.
+        FuriHalSubGhzPreset preset_enum = FuriHalSubGhzPresetIDLE;
+        bool preset_known = false;
         if(flipper_format_read_string(ff, "Preset", temp_str)) {
             for(size_t i = 0; i < radiogeddon_presets_count; i++) {
                 if(furi_string_equal_str(temp_str, radiogeddon_presets[i].file_name)) {
                     preset_enum = radiogeddon_presets[i].preset;
+                    preset_known = true;
                     break;
                 }
             }
+            if(!preset_known && furi_string_equal_str(temp_str, "FuriHalSubGhzPresetCustom")) {
+                // Custom preset: load the raw CC1101 register array from the file
+                // (as stock-app .sub captures commonly store it).
+                uint32_t count = 0;
+                flipper_format_rewind(ff);
+                if(flipper_format_get_value_count(ff, "Custom_preset_data", &count) && count > 0 &&
+                   count <= 512) {
+                    custom_preset_data = malloc(count);
+                    flipper_format_rewind(ff);
+                    if(flipper_format_read_hex(
+                           ff, "Custom_preset_data", custom_preset_data, (uint16_t)count)) {
+                        preset_enum = FuriHalSubGhzPresetCustom;
+                        preset_known = true;
+                    } else {
+                        free(custom_preset_data);
+                        custom_preset_data = NULL;
+                    }
+                }
+            }
         }
+        if(!preset_known) {
+            result = RadioGeddonTxErrorParse; // unknown/missing modulation -> refuse
+            break;
+        }
+        flipper_format_rewind(ff);
         if(!flipper_format_read_string(ff, "Protocol", temp_str)) break;
 
         if(furi_string_equal_str(temp_str, "RAW")) {
@@ -535,7 +566,7 @@ RadioGeddonTxResult radiogeddon_subghz_tx_start(
         instance->device_begun = true;
         subghz_devices_reset(instance->device);
         subghz_devices_idle(instance->device);
-        subghz_devices_load_preset(instance->device, preset_enum, NULL);
+        subghz_devices_load_preset(instance->device, preset_enum, custom_preset_data);
         frequency = subghz_devices_set_frequency(instance->device, frequency);
 
         instance->tx_complete_cb = complete_cb;
@@ -546,9 +577,7 @@ RadioGeddonTxResult radiogeddon_subghz_tx_start(
             subghz_file_encoder_worker_callback_end(
                 instance->file_encoder, radiogeddon_subghz_file_encoder_end, instance);
             if(!subghz_file_encoder_worker_start(
-                   instance->file_encoder,
-                   file_path,
-                   subghz_devices_get_name(instance->device))) {
+                   instance->file_encoder, file_path, subghz_devices_get_name(instance->device))) {
                 subghz_file_encoder_worker_free(instance->file_encoder);
                 instance->file_encoder = NULL;
                 break;
@@ -589,8 +618,8 @@ RadioGeddonTxResult radiogeddon_subghz_tx_start(
             flipper_format_insert_or_update_uint32(mem_ff, "Repeat", &repeat, 1);
             flipper_format_rewind(mem_ff);
 
-            instance->transmitter =
-                subghz_transmitter_alloc_init(instance->environment, furi_string_get_cstr(temp_str));
+            instance->transmitter = subghz_transmitter_alloc_init(
+                instance->environment, furi_string_get_cstr(temp_str));
             if(!instance->transmitter) {
                 flipper_format_free(mem_ff);
                 break;
@@ -622,12 +651,14 @@ RadioGeddonTxResult radiogeddon_subghz_tx_start(
         instance->frequency = frequency;
     } while(false);
 
-    if(result != RadioGeddonTxOk && instance->device_begun && instance->tx_mode == RadioGeddonTxModeNone) {
+    if(result != RadioGeddonTxOk && instance->device_begun &&
+       instance->tx_mode == RadioGeddonTxModeNone) {
         subghz_devices_sleep(instance->device);
         subghz_devices_end(instance->device);
         instance->device_begun = false;
     }
 
+    if(custom_preset_data) free(custom_preset_data); // consumed by load_preset already
     furi_string_free(temp_str);
     flipper_format_free(ff);
     furi_record_close(RECORD_STORAGE);

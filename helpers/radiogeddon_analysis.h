@@ -36,3 +36,22 @@ void radiogeddon_analysis_compare(
     const RadioGeddonLoadedSignal* a,
     const RadioGeddonLoadedSignal* b,
     FuriString* out);
+
+/**
+ * Deep structural analysis of an unknown/RAW capture using the signal engine:
+ * base Te, encoding hypothesis + confidence, framing, repeated-frame and
+ * constant/changing-field inference, best-effort bit extraction and a
+ * device-ID candidate. Every inference is labelled [HYPOTHESIS]; nothing is
+ * presented as a verified decode and no key is recovered.
+ */
+void radiogeddon_analysis_unknown(Storage* storage, const char* path, FuriString* out);
+
+/**
+ * RAW-vs-RAW timing similarity (0-100) between two files, or -1 if either is
+ * not a readable RAW capture. Appends a short explanation line to @p out.
+ */
+int radiogeddon_analysis_raw_similarity(
+    Storage* storage,
+    const char* path_a,
+    const char* path_b,
+    FuriString* out);

@@ -10,13 +10,13 @@
 static int g_failures = 0;
 static int g_checks = 0;
 
-#define CHECK(cond, msg)                                       \
-    do {                                                       \
-        g_checks++;                                            \
-        if(!(cond)) {                                          \
-            g_failures++;                                      \
+#define CHECK(cond, msg)                                             \
+    do {                                                             \
+        g_checks++;                                                  \
+        if(!(cond)) {                                                \
+            g_failures++;                                            \
             printf("  FAIL: %s (%s:%d)\n", msg, __FILE__, __LINE__); \
-        }                                                      \
+        }                                                            \
     } while(0)
 
 static void test_parse_basic(void) {
@@ -35,8 +35,8 @@ static void test_parse_zero_skipped(void) {
     printf("test_parse_zero_skipped\n");
     size_t count = 0;
     uint32_t min_us = 0, max_us = 0;
-    size_t n = radiogeddon_dsp_parse_line(
-        "0 100 0 -200 0", &count, &min_us, &max_us, NULL, NULL, 0);
+    size_t n =
+        radiogeddon_dsp_parse_line("0 100 0 -200 0", &count, &min_us, &max_us, NULL, NULL, 0);
     CHECK(n == 2, "zero values skipped -> 2 samples");
     CHECK(min_us == 100, "min 100");
     CHECK(max_us == 200, "max 200 from abs(-200)");
@@ -74,7 +74,8 @@ static void test_cluster_cap(void) {
     size_t cn = 0;
     // Many well-separated values: should cap at RADIOGEDDON_MAX_CLUSTERS.
     for(uint32_t v = 100; v <= 100 + 200 * 20; v += 200) {
-        radiogeddon_dsp_cluster_add(clusters, &cn, RADIOGEDDON_MAX_CLUSTERS, v, RADIOGEDDON_CLUSTER_TOL);
+        radiogeddon_dsp_cluster_add(
+            clusters, &cn, RADIOGEDDON_MAX_CLUSTERS, v, RADIOGEDDON_CLUSTER_TOL);
     }
     CHECK(cn == RADIOGEDDON_MAX_CLUSTERS, "cluster count capped at max");
 }
@@ -111,8 +112,8 @@ static void test_parse_garbage_tail(void) {
     size_t count = 0;
     uint32_t min_us = 0, max_us = 0;
     // strtol stops at the first non-numeric token; we should keep what parsed.
-    size_t n = radiogeddon_dsp_parse_line(
-        "350 -350 xyz 700", &count, &min_us, &max_us, NULL, NULL, 0);
+    size_t n =
+        radiogeddon_dsp_parse_line("350 -350 xyz 700", &count, &min_us, &max_us, NULL, NULL, 0);
     CHECK(n == 2, "parsing stops at non-numeric token");
     CHECK(max_us == 350, "only pre-garbage values counted");
 }
@@ -122,8 +123,8 @@ static void test_parse_clamped_large(void) {
     size_t count = 0;
     uint32_t min_us = 0, max_us = 0;
     // A very large but valid duration is taken as-is (abs value).
-    size_t n = radiogeddon_dsp_parse_line(
-        "100 -2000000000", &count, &min_us, &max_us, NULL, NULL, 0);
+    size_t n =
+        radiogeddon_dsp_parse_line("100 -2000000000", &count, &min_us, &max_us, NULL, NULL, 0);
     CHECK(n == 2, "two samples");
     CHECK(min_us == 100, "min 100");
     CHECK(max_us == 2000000000u, "large magnitude preserved");
@@ -133,7 +134,10 @@ static void test_parse_clamped_large(void) {
 // does (chunked, space-separated), then parse it back and verify no data loss.
 static void test_raw_roundtrip(void) {
     printf("test_raw_roundtrip\n");
-    enum { N = 1000, LINE = 512 };
+    enum {
+        N = 1000,
+        LINE = 512
+    };
     static int32_t samples[N];
     for(int i = 0; i < N; i++) {
         int32_t mag = (i % 50 == 49) ? 8000 : 350; // periodic long gap

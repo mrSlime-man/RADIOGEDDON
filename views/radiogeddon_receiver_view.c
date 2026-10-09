@@ -61,11 +61,7 @@ static void radiogeddon_receiver_view_draw(Canvas* canvas, void* model) {
         canvas_set_color(canvas, ColorWhite);
         char rec[28];
         snprintf(
-            rec,
-            sizeof(rec),
-            "REC %u smp%s",
-            (unsigned)m->samples,
-            m->overflow ? " FULL" : "");
+            rec, sizeof(rec), "REC %u smp%s", (unsigned)m->samples, m->overflow ? " FULL" : "");
         canvas_draw_str(canvas, 2, 33, rec);
         canvas_set_color(canvas, ColorBlack);
     } else if(m->hopping) {
@@ -82,8 +78,7 @@ static void radiogeddon_receiver_view_draw(Canvas* canvas, void* model) {
 
     if(m->history_count > 0) {
         char sel[28];
-        snprintf(
-            sel, sizeof(sel), "[%u] %s", (unsigned)(m->selected + 1), m->latest);
+        snprintf(sel, sizeof(sel), "[%u] %s", (unsigned)(m->selected + 1), m->latest);
         canvas_draw_str(canvas, 2, 56, sel);
         elements_button_center(canvas, "Save");
     } else {
@@ -118,7 +113,8 @@ static bool radiogeddon_receiver_view_input(InputEvent* event, void* context) {
             consumed = true;
             break;
         case InputKeyOk:
-            if(instance->callback) instance->callback(RadioGeddonReceiverEventSave, instance->context);
+            if(instance->callback)
+                instance->callback(RadioGeddonReceiverEventSave, instance->context);
             consumed = true;
             break;
         case InputKeyLeft:
@@ -139,8 +135,7 @@ RadioGeddonReceiverView* radiogeddon_receiver_view_alloc(void) {
     instance->callback = NULL;
     instance->context = NULL;
     view_set_context(instance->view, instance);
-    view_allocate_model(
-        instance->view, ViewModelTypeLocking, sizeof(RadioGeddonReceiverModel));
+    view_allocate_model(instance->view, ViewModelTypeLocking, sizeof(RadioGeddonReceiverModel));
     view_set_draw_callback(instance->view, radiogeddon_receiver_view_draw);
     view_set_input_callback(instance->view, radiogeddon_receiver_view_input);
 
@@ -202,8 +197,7 @@ void radiogeddon_receiver_view_set_rssi(RadioGeddonReceiverView* instance, float
 }
 
 void radiogeddon_receiver_view_set_hopping(RadioGeddonReceiverView* instance, bool hopping) {
-    with_view_model(
-        instance->view, RadioGeddonReceiverModel * m, { m->hopping = hopping; }, true);
+    with_view_model(instance->view, RadioGeddonReceiverModel * m, { m->hopping = hopping; }, true);
 }
 
 void radiogeddon_receiver_view_set_recording(
@@ -245,7 +239,6 @@ void radiogeddon_receiver_view_set_history(
 
 size_t radiogeddon_receiver_view_get_selected(RadioGeddonReceiverView* instance) {
     size_t sel = 0;
-    with_view_model(
-        instance->view, RadioGeddonReceiverModel * m, { sel = m->selected; }, false);
+    with_view_model(instance->view, RadioGeddonReceiverModel * m, { sel = m->selected; }, false);
     return sel;
 }

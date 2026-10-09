@@ -22,8 +22,7 @@ void radiogeddon_scene_saved_list_on_enter(void* context) {
     if(chosen) {
         radiogeddon_loaded_signal_reset(&app->loaded);
         radiogeddon_loaded_signal_init(&app->loaded);
-        if(radiogeddon_storage_load(
-               app->storage, furi_string_get_cstr(selected), &app->loaded)) {
+        if(radiogeddon_storage_load(app->storage, furi_string_get_cstr(selected), &app->loaded)) {
             furi_string_set(app->file_path, selected);
             app->have_loaded_signal = true;
             opened = true;
