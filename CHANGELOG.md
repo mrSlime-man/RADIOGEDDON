@@ -7,7 +7,14 @@ to follow [Semantic Versioning](https://semver.org/) (pre-1.0.0 releases use
 
 ## [Unreleased]
 
-_Nothing yet._
+### Fixed
+- **Out-of-memory crash on launch** (seen on RogueMaster): the app no longer
+  allocates the 64 KB RAW capture buffer, the Sub-GHz protocol environment,
+  the manufacturer keystore or the per-protocol decoders at startup. The
+  decoders and keystore are now created when Receive/Hopper starts and freed
+  when it stops; the RAW buffer is created when recording starts, sized to the
+  free heap (up to 16384 samples), and freed once the capture is saved. If too
+  little memory is free to record, the LED blinks red instead of crashing.
 
 ## [1.0.0-beta.1] - 2026-10-09
 

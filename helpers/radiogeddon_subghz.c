@@ -14,9 +14,13 @@
 #define TAG "RadioGeddonSubGhz"
 
 /** Maximum RAW samples buffered per capture (level-signed durations). */
-#define RADIOGEDDON_RAW_CAPACITY    (16384u)
+#define RADIOGEDDON_RAW_CAPACITY     (16384u)
+/** Smallest RAW buffer worth recording into; below this, recording is refused. */
+#define RADIOGEDDON_RAW_MIN_CAPACITY (1024u)
+/** Heap left untouched when sizing the RAW buffer, so the UI/worker keep running. */
+#define RADIOGEDDON_RAW_HEAP_RESERVE (12u * 1024u)
 /** How many RAW values to emit per RAW_Data line in the saved file. */
-#define RADIOGEDDON_RAW_LINE_VALUES (512u)
+#define RADIOGEDDON_RAW_LINE_VALUES  (512u)
 
 const RadioGeddonPreset radiogeddon_presets[] = {
     {"AM 270", "FuriHalSubGhzPresetOok270Async", FuriHalSubGhzPresetOok270Async},
@@ -72,7 +76,8 @@ struct RadioGeddonSubGhz {
     // Own RAW capture buffer (populated from the worker thread)
     bool recording;
     bool record_overflow;
-    int32_t* raw_buffer;
+    int32_t* raw_buffer; // allocated on demand by record_start, freed after flush
+    size_t raw_capacity;
     volatile size_t raw_count;
 
     // TX
@@ -116,7 +121,7 @@ static void radiogeddon_subghz_pair_callback(void* context, bool level, uint32_t
     // Append to our RAW capture buffer if recording.
     if(instance->recording) {
         size_t idx = instance->raw_count;
-        if(idx < RADIOGEDDON_RAW_CAPACITY) {
+        if(idx < instance->raw_capacity) {
             uint32_t d = duration;
             if(d > (uint32_t)INT32_MAX) d = (uint32_t)INT32_MAX;
             instance->raw_buffer[idx] = level ? (int32_t)d : -(int32_t)d;
@@ -181,25 +186,35 @@ static void radiogeddon_subghz_receiver_callback(
 
 /* ---- Lifecycle --------------------------------------------------------- */
 
-RadioGeddonSubGhz* radiogeddon_subghz_alloc(void) {
-    RadioGeddonSubGhz* instance = malloc(sizeof(RadioGeddonSubGhz));
-    memset(instance, 0, sizeof(RadioGeddonSubGhz));
-
-    instance->frequency = RADIOGEDDON_FREQUENCY_DEFAULT;
-    instance->preset_index = 1; // AM 650 — a sensible general default
-    instance->raw_buffer = malloc(sizeof(int32_t) * RADIOGEDDON_RAW_CAPACITY);
-
-    subghz_devices_init();
-    instance->device = subghz_devices_get_by_name(SUBGHZ_DEVICE_CC1101_INT_NAME);
-
+// The protocol environment (keystore + registry) and the receiver (one decoder
+// instance per registered protocol) are by far the largest allocations this
+// toolkit makes; on firmwares with big protocol sets and keystores they alone
+// can exhaust the heap. They are therefore only alive while a receive or
+// transmit session actually needs them, never at application start.
+static void radiogeddon_subghz_environment_acquire(RadioGeddonSubGhz* instance, bool keystore) {
+    if(instance->environment) return;
     instance->environment = subghz_environment_alloc();
     subghz_environment_set_protocol_registry(
         instance->environment, (void*)&subghz_protocol_registry);
     // Best-effort keystore load improves KeeLoq manufacturer identification.
-    subghz_environment_load_keystore(instance->environment, SUBGHZ_KEYSTORE_DIR_NAME);
+    // Only needed for decoding; transmitting static protocols never uses it.
+    if(keystore) {
+        subghz_environment_load_keystore(instance->environment, SUBGHZ_KEYSTORE_DIR_NAME);
+    }
     subghz_environment_set_came_atomo_rainbow_table_file_name(instance->environment, NULL);
     subghz_environment_set_alutech_at_4n_rainbow_table_file_name(instance->environment, NULL);
     subghz_environment_set_nice_flor_s_rainbow_table_file_name(instance->environment, NULL);
+}
+
+static void radiogeddon_subghz_environment_release(RadioGeddonSubGhz* instance) {
+    if(!instance->environment) return;
+    if(instance->rx_running || instance->transmitter) return; // still in use
+    subghz_environment_free(instance->environment);
+    instance->environment = NULL;
+}
+
+static void radiogeddon_subghz_decoders_alloc(RadioGeddonSubGhz* instance) {
+    radiogeddon_subghz_environment_acquire(instance, true);
 
     instance->receiver = subghz_receiver_alloc_init(instance->environment);
     subghz_receiver_set_filter(instance->receiver, SubGhzProtocolFlag_Decodable);
@@ -210,6 +225,37 @@ RadioGeddonSubGhz* radiogeddon_subghz_alloc(void) {
     subghz_worker_set_overrun_callback(instance->worker, radiogeddon_subghz_overrun_callback);
     subghz_worker_set_pair_callback(instance->worker, radiogeddon_subghz_pair_callback);
     subghz_worker_set_context(instance->worker, instance);
+}
+
+static void radiogeddon_subghz_decoders_free(RadioGeddonSubGhz* instance) {
+    if(instance->worker) {
+        subghz_worker_free(instance->worker);
+        instance->worker = NULL;
+    }
+    if(instance->receiver) {
+        subghz_receiver_free(instance->receiver);
+        instance->receiver = NULL;
+    }
+    radiogeddon_subghz_environment_release(instance);
+}
+
+static void radiogeddon_subghz_raw_buffer_free(RadioGeddonSubGhz* instance) {
+    if(instance->raw_buffer) free(instance->raw_buffer);
+    instance->raw_buffer = NULL;
+    instance->raw_capacity = 0;
+    instance->raw_count = 0;
+    instance->record_overflow = false;
+}
+
+RadioGeddonSubGhz* radiogeddon_subghz_alloc(void) {
+    RadioGeddonSubGhz* instance = malloc(sizeof(RadioGeddonSubGhz));
+    memset(instance, 0, sizeof(RadioGeddonSubGhz));
+
+    instance->frequency = RADIOGEDDON_FREQUENCY_DEFAULT;
+    instance->preset_index = 1; // AM 650 — a sensible general default
+
+    subghz_devices_init();
+    instance->device = subghz_devices_get_by_name(SUBGHZ_DEVICE_CC1101_INT_NAME);
 
     return instance;
 }
@@ -219,12 +265,11 @@ void radiogeddon_subghz_free(RadioGeddonSubGhz* instance) {
     if(instance->rx_running) radiogeddon_subghz_rx_stop(instance);
     if(instance->tx_mode != RadioGeddonTxModeNone) radiogeddon_subghz_tx_stop(instance);
 
-    subghz_worker_free(instance->worker);
-    subghz_receiver_free(instance->receiver);
-    subghz_environment_free(instance->environment);
+    radiogeddon_subghz_decoders_free(instance);
+    radiogeddon_subghz_environment_release(instance);
     subghz_devices_deinit();
 
-    free(instance->raw_buffer);
+    radiogeddon_subghz_raw_buffer_free(instance);
     free(instance);
 }
 
@@ -285,6 +330,10 @@ void radiogeddon_subghz_rx_start(
     instance->decode_cb = decode_callback;
     instance->decode_ctx = context;
 
+    // A new session starts clean: any capture from a previous session was
+    // either flushed already or abandoned, so give its buffer back first.
+    radiogeddon_subghz_raw_buffer_free(instance);
+    radiogeddon_subghz_decoders_alloc(instance);
     subghz_receiver_reset(instance->receiver);
 
     subghz_devices_begin(instance->device);
@@ -325,6 +374,8 @@ void radiogeddon_subghz_rx_stop(RadioGeddonSubGhz* instance) {
     instance->rx_running = false;
     instance->decode_cb = NULL;
     instance->decode_ctx = NULL;
+
+    radiogeddon_subghz_decoders_free(instance);
 }
 
 bool radiogeddon_subghz_is_rx_running(RadioGeddonSubGhz* instance) {
@@ -401,6 +452,18 @@ bool radiogeddon_subghz_record_start(RadioGeddonSubGhz* instance, const char* fi
     UNUSED(file_path); // path is used at stop time when flushing
     if(!instance->rx_running) return false;
     if(instance->recording) return false;
+
+    // Size the capture buffer to what the heap can actually spare right now
+    // (malloc failure is fatal on Flipper), capped at the full capacity.
+    radiogeddon_subghz_raw_buffer_free(instance);
+    size_t avail = memmgr_heap_get_max_free_block();
+    if(avail <= RADIOGEDDON_RAW_HEAP_RESERVE) return false;
+    size_t capacity = (avail - RADIOGEDDON_RAW_HEAP_RESERVE) / sizeof(int32_t);
+    if(capacity > RADIOGEDDON_RAW_CAPACITY) capacity = RADIOGEDDON_RAW_CAPACITY;
+    if(capacity < RADIOGEDDON_RAW_MIN_CAPACITY) return false;
+    instance->raw_buffer = malloc(sizeof(int32_t) * capacity);
+    instance->raw_capacity = capacity;
+
     instance->raw_count = 0;
     instance->record_overflow = false;
     instance->recording = true;
@@ -430,7 +493,7 @@ void radiogeddon_subghz_record_stop(RadioGeddonSubGhz* instance) {
  * buffer lives.
  */
 bool radiogeddon_subghz_record_flush_to_file(RadioGeddonSubGhz* instance, const char* file_path) {
-    if(instance->raw_count == 0) return false;
+    if(!instance->raw_buffer || instance->raw_count == 0) return false;
 
     Storage* storage = furi_record_open(RECORD_STORAGE);
     FlipperFormat* ff = flipper_format_file_alloc(storage);
@@ -462,6 +525,7 @@ bool radiogeddon_subghz_record_flush_to_file(RadioGeddonSubGhz* instance, const 
 
     flipper_format_free(ff);
     furi_record_close(RECORD_STORAGE);
+    if(ok) radiogeddon_subghz_raw_buffer_free(instance);
     return ok;
 }
 
@@ -618,6 +682,7 @@ RadioGeddonTxResult radiogeddon_subghz_tx_start(
             flipper_format_insert_or_update_uint32(mem_ff, "Repeat", &repeat, 1);
             flipper_format_rewind(mem_ff);
 
+            radiogeddon_subghz_environment_acquire(instance, false);
             instance->transmitter = subghz_transmitter_alloc_init(
                 instance->environment, furi_string_get_cstr(temp_str));
             if(!instance->transmitter) {
@@ -658,6 +723,8 @@ RadioGeddonTxResult radiogeddon_subghz_tx_start(
         instance->device_begun = false;
     }
 
+    if(result != RadioGeddonTxOk) radiogeddon_subghz_environment_release(instance);
+
     if(custom_preset_data) free(custom_preset_data); // consumed by load_preset already
     furi_string_free(temp_str);
     flipper_format_free(ff);
@@ -685,6 +752,7 @@ void radiogeddon_subghz_tx_stop(RadioGeddonSubGhz* instance) {
         subghz_transmitter_free(instance->transmitter);
         instance->transmitter = NULL;
     }
+    radiogeddon_subghz_environment_release(instance);
 
     subghz_devices_idle(instance->device);
     subghz_devices_sleep(instance->device);
