@@ -1,5 +1,6 @@
 ADD_SCENE(radiogeddon, start, Start)
 ADD_SCENE(radiogeddon, config, Config)
+ADD_SCENE(radiogeddon, scan_list, ScanList)
 ADD_SCENE(radiogeddon, scanner, Scanner)
 ADD_SCENE(radiogeddon, receiver, Receiver)
 ADD_SCENE(radiogeddon, hopper, Hopper)

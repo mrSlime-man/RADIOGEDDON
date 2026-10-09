@@ -8,7 +8,7 @@ deliberately omitted.
 
 `1.0.0-beta.2` fixes an out-of-memory crash on launch that made `1.0.0-beta.1`
 unusable on RogueMaster. The full toolkit is implemented and builds for Official, Unleashed and
-RogueMaster, with 55 host-test checks and a verified release pipeline. See
+RogueMaster, with 86 host-test checks and a verified release pipeline. See
 [Features](FEATURES.md) for the complete list.
 
 ## Next: hardware verification (the gating milestone)
@@ -27,10 +27,32 @@ all three firmware families and record evidence in
 
 This is where help is most valuable — see [Contributing](../CONTRIBUTING.md).
 
+## Development milestones
+
+Work proceeds one milestone at a time, each through focused pull requests with
+host tests, all three firmware builds, and a list of the hardware checks it
+still needs.
+
+- [x] **0. Working baseline**: launch out-of-memory crash fixed, `1.0.0-beta.2`.
+- [ ] **1. Advanced radio scanner**: noise floor, thresholds, peak hold,
+      activity counts, scan lists, dwell, hold on hit, CSV export
+      (implemented; hardware checks F1a–F1e pending).
+- [ ] **2. Frequency Hopper 2.0**: custom lists, dwell, adaptive thresholds,
+      pause/lock, detection history, optional auto-recording.
+- [ ] **3. Signal Analyzer 2.0**: better inference and confidence, pulse
+      timeline view, multi-frame comparison without loading whole files.
+- [ ] **4. Streaming RAW recording**: bounded RAM, writes to SD while
+      recording, overrun reporting.
+- [ ] **5. Signal Database 2.0**: rename, sort, filter, metadata, duplicates,
+      report export, corrupted-file handling.
+- [ ] **6. Interface pass**: consistent layout, status, errors, shortcuts.
+- [ ] **7. Optional external CC1101** through the firmware's device layer.
+- [ ] **8. Performance and reliability**: memory diagnostics, lifecycle tests.
+
 ## Toward a stable 1.0.0
 
 - [ ] Fix whatever hardware testing surfaces.
-- [ ] Persist Settings (frequency, modulation) across launches.
+- [x] Persist Settings (frequency, modulation, scanner options) across launches.
 - [ ] Save analysis reports to the SD card as text.
 - [ ] Rename recordings from the Database screen.
 

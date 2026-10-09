@@ -13,6 +13,7 @@
 
 #define RADIOGEDDON_APP_FOLDER     EXT_PATH("apps_data/radiogeddon")
 #define RADIOGEDDON_SIGNALS_FOLDER RADIOGEDDON_APP_FOLDER "/signals"
+#define RADIOGEDDON_SCANS_FOLDER   RADIOGEDDON_APP_FOLDER "/scans"
 #define RADIOGEDDON_SUB_EXTENSION  ".sub"
 
 // .sub file identification (firmware-compatible).
@@ -76,3 +77,6 @@ void radiogeddon_loaded_signal_init(RadioGeddonLoadedSignal* sig);
 
 /** Release a loaded-signal struct (frees strings). */
 void radiogeddon_loaded_signal_reset(RadioGeddonLoadedSignal* sig);
+
+/** Build a timestamped scan-results path, e.g. ".../scans/SCAN_20261009_163500.csv". */
+void radiogeddon_storage_make_scan_path(FuriString* out);

@@ -61,12 +61,15 @@ views/                      Custom canvas views: scanner sweep, live receiver
 helpers/
   radiogeddon_subghz.*      Radio wrapper: device, decoders, RAW capture, hopper retune, TX
   radiogeddon_storage.*     SD-card layout, .sub parsing, RAW sample loading
+  radiogeddon_scanner.*     Scanner sweep thread, results and CSV export
+  radiogeddon_settings.*    Settings persisted to the SD card
   radiogeddon_history.*     Per-session list of decoded signals (max 32, de-duplicated)
   radiogeddon_analysis.*    Text reports: info, analysis, crypto, compare, unknown-protocol
   radiogeddon_dsp.*         Pure RAW parsing / clustering helpers (no firmware headers)
   rg_analyzer.*             Pure signal-analysis engine (no firmware headers)
+  rg_scan.*                 Pure scanner logic: noise floor, detection, peak hold
 assets/                     10x10 launcher icon (compiled into the .fap)
-test/                       Host unit tests (55 checks) + reference .sub fixtures
+test/                       Host unit tests (86 checks) + reference .sub fixtures
 scripts/                    Pinned builds, manifest verification, packaging, link check
 tools/brand/                Generator for the logo, banner and social preview
 .github/workflows/          CI (ci.yml), shared build pipeline (build.yml), release.yml
@@ -119,9 +122,22 @@ The start/stop order mirrors the firmware's own Sub-GHz subsystem
 sleep), and frequencies are validated before tuning because the HAL asserts on
 out-of-band values.
 
-**Scanner.** A light session keeps the radio powered; every UI tick the
-scanner retunes to the next frequency, waits briefly for the AGC, and reads
-RSSI.
+**Scanner.** A worker thread (`helpers/radiogeddon_scanner.c`, 1.5 KB stack)
+owns the radio while the Scanner screen is open. It keeps a light session
+powered and, for each frequency in the scan list, retunes, waits 3 ms for the
+AGC and then samples RSSI every millisecond for the dwell time, keeping the
+strongest reading. That reading goes into the pure `rg_scan` logic: a noise
+floor that falls quickly and rises slowly on quiet readings (frozen while
+active), threshold detection with 3 dB hysteresis, a peak hold and a burst
+counter. The GUI thread copies a snapshot under a mutex on every 100 ms tick,
+and the thread posts a custom event for each new burst. The results object is
+allocated on first use and freed when the user returns to the main menu; the
+thread exists only while the Scanner screen is open, and stopping it ends the
+radio session before the receiver can start.
+
+**Settings.** `helpers/radiogeddon_settings.c` stores frequency, modulation and
+the scan options in a small Flipper Format file. Every field is validated on
+load and falls back to its default independently.
 
 **Frequency Hopper.** Uses the live receive session and retunes it without
 powering the radio down (stop worker and capture → set frequency → restart),

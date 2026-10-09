@@ -23,7 +23,7 @@ Sub-GHz signals — entirely on the device, with no computer, phone or network.
 
 > [!WARNING]
 > **Public beta.** Every feature is implemented and the builds pass all
-> automated checks (lint, 55 host-test checks, three firmware builds with
+> automated checks (lint, 86 host-test checks, three firmware builds with
 > API/manifest verification). On physical hardware, so far there is only one
 > tester report (RogueMaster: launches and works); **nothing is independently
 > verified on a device yet.** Expect rough edges, and see
@@ -71,7 +71,7 @@ release lists `SHA256SUMS` and ships signed build-provenance attestations.
 
 | Module | What it does |
 |--------|--------------|
-| **Sub-GHz Scanner** | Live per-frequency RSSI across 19 common bands; pick one to receive on. |
+| **Sub-GHz Scanner** | Narrowband RSSI sweep over a configurable list of 19 common frequencies: noise floor, activity detection, peak hold, burst counts, CSV export; pick one to receive on. |
 | **Frequency Hopper** | Cycles 315 / 390 / 433.92 / 868.35 MHz and holds on a band when activity appears so a decode can complete. |
 | **RAW Signal Capture** | Records the raw on/off timing stream to a standard RAW `.sub` file. |
 | **Protocol Identification** | Live decoding with the firmware's own decoders (Princeton, CAME, Nice FLO, Holtek, KeeLoq-family, …) — marked `[CONFIRMED]`. |
@@ -152,7 +152,7 @@ API version, compiles, and checks the resulting `.fap`'s manifest. More in
 ## Testing & verification
 
 ```bash
-make -C test check               # 55 host checks, -Werror, AddressSanitizer + UBSan
+make -C test check               # 86 host checks, -Werror, AddressSanitizer + UBSan
 python3 scripts/check_links.py   # documentation links and anchors
 ```
 
@@ -164,9 +164,10 @@ in [HARDWARE_CHECKLIST.md](docs/HARDWARE_CHECKLIST.md).
 
 ## Roadmap
 
-Next up is hardware verification (the gate to a stable `1.0.0`), then persistent
-settings, saving analysis reports, external-radio support and a richer analysis
-engine. See the [Roadmap](docs/ROADMAP.md).
+Development runs through numbered milestones (scanner, hopper, analyzer,
+streaming recording, database, interface, external radio, reliability), with
+hardware verification as the gate to a stable `1.0.0`. See the
+[Roadmap](docs/ROADMAP.md).
 
 ## Contributing
 

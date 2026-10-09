@@ -7,7 +7,15 @@ to follow [Semantic Versioning](https://semver.org/) (pre-1.0.0 releases use
 
 ## [Unreleased]
 
-_Nothing yet._
+### Added
+- **Scanner upgrade** (narrowband RSSI scanner): per-frequency noise-floor
+  estimate and overall floor, activity detection with an adjustable threshold
+  and hysteresis, peak hold, burst counters, configurable scan list (bands or
+  custom), configurable dwell, optional hold on the first active frequency,
+  pause/resume, and CSV export of results to `apps_data/radiogeddon/scans/`.
+  The sweep now runs on its own thread.
+- **Settings are saved** to `apps_data/radiogeddon/settings.txt` and restored
+  at launch (frequency, modulation and scanner options).
 
 ## [1.0.0-beta.2] - 2026-10-09
 

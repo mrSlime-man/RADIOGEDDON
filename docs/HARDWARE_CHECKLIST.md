@@ -39,6 +39,11 @@ region's rules.
 | ID | Check | Pass when |
 |----|-------|-----------|
 | F1 | Scanner sweeps the table; bars update; OK on a frequency opens the receiver tuned to it. | Matches description; Back exits cleanly. |
+| F1a | Scanner noise floor and detection: leave it running with no transmitters nearby, then press a 433.92 MHz remote a few times. | Quiet frequencies show no dot and 0 counts; `NF` reads a plausible floor (around −90 to −105 dBm); 433.92 shows the dot while pressed and its count goes up by one per press. |
+| F1b | Scanner controls: Left (pause/resume), hold Left (counts and peaks clear), Right (save). | `PAUSED` shown while paused; a `SCAN_*.csv` file appears in `apps_data/radiogeddon/scans/` with one row per frequency. |
+| F1c | Hold on hit: enable it in Settings, open the Scanner and press a remote. | Header shows `HOLD`, the active frequency is highlighted, OK opens the receiver on it; back in the Scanner, Left resumes the sweep and earlier counts are still there. |
+| F1d | Scan list and dwell: choose `387-464`, then a custom list with two frequencies; try 5 ms and 100 ms dwell. | Only the chosen frequencies are listed; a pass is visibly faster at 5 ms. |
+| F1e | Settings persistence: change frequency, modulation and scan options, exit the app and reopen it. | The chosen values are restored. |
 | F2 | Frequency Hopper cycles 315 / 390 / 433.92 / 868.35 MHz. | Displayed frequency changes; it holds on a band carrying a transmission long enough to decode; OK saves; Back releases the radio. |
 | F3 | Crypto Analysis on a static protocol vs a rolling-code (KeeLoq-family) capture. | Static → `[CONFIRMED] Static code`; rolling → `[CONFIRMED] Dynamic code` and an explicit "no key recovery" note. |
 | F4 | Unknown Protocol Analysis across several presses in one RAW capture. | Same fixed remote → 0 changing bits; rolling-code remote → a changing suffix with a device-ID candidate; all `[HYPOTHESIS]`. |

@@ -26,6 +26,8 @@
 #include "helpers/radiogeddon_history.h"
 #include "helpers/radiogeddon_storage.h"
 #include "helpers/radiogeddon_analysis.h"
+#include "helpers/radiogeddon_settings.h"
+#include "helpers/radiogeddon_scanner.h"
 #include "views/radiogeddon_scanner_view.h"
 #include "views/radiogeddon_receiver_view.h"
 
@@ -80,6 +82,13 @@ struct RadioGeddonApp {
     FuriString* file_path_b; // second file for comparison
     FuriString* temp_str; // scratch for info rendering
 
+    // Persisted settings (frequency/preset are mirrored in the fields below)
+    RadioGeddonSettings settings;
+
+    // Scanner results; allocated on first use of the scanner and kept until
+    // the user returns to the main menu, so a trip to the receiver keeps them.
+    RadioGeddonScanner* scanner;
+
     // Session configuration
     uint32_t frequency; // Hz
     uint8_t preset_index; // index into radiogeddon_preset table
@@ -96,6 +105,9 @@ struct RadioGeddonApp {
     // True while the scanner sweep is actively probing a present radio.
     bool scanner_running;
 };
+
+/** Copy the session frequency/preset into settings and write them to the SD card. */
+void radiogeddon_app_save_settings(RadioGeddonApp* app);
 
 /** Allocate and free the full application context. */
 RadioGeddonApp* radiogeddon_app_alloc(void);

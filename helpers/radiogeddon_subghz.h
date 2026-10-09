@@ -111,6 +111,16 @@ void radiogeddon_subghz_scan_end(RadioGeddonSubGhz* instance);
 float radiogeddon_subghz_probe_rssi(RadioGeddonSubGhz* instance, uint32_t frequency);
 
 /**
+ * Like radiogeddon_subghz_probe_rssi(), but keeps sampling for @p dwell_ms
+ * after the AGC settles and returns the strongest reading. Blocks the caller
+ * for about 3 ms + dwell_ms.
+ */
+float radiogeddon_subghz_probe_rssi_dwell(
+    RadioGeddonSubGhz* instance,
+    uint32_t frequency,
+    uint32_t dwell_ms);
+
+/**
  * Start capturing the incoming raw timing stream to @p file_path (.sub RAW
  * format). Must be called while RX is running. Returns false on I/O failure.
  */

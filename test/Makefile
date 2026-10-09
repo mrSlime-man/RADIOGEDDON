@@ -8,11 +8,13 @@ SAN ?= -fsanitize=address,undefined -fno-sanitize-recover=all
 BUILD := build
 DSP_SRC := test_dsp.c ../helpers/radiogeddon_dsp.c
 ANALYZER_SRC := test_analyzer.c ../helpers/rg_analyzer.c
+SCAN_SRC := test_scan.c ../helpers/rg_scan.c
 
 .PHONY: check clean
-check: $(BUILD)/test_dsp $(BUILD)/test_analyzer
+check: $(BUILD)/test_dsp $(BUILD)/test_analyzer $(BUILD)/test_scan
 	$(BUILD)/test_dsp
 	$(BUILD)/test_analyzer
+	$(BUILD)/test_scan
 
 $(BUILD)/test_dsp: $(DSP_SRC) ../helpers/radiogeddon_dsp.h | $(BUILD)
 	$(CC) $(CFLAGS) $(SAN) -o $@ $(DSP_SRC)
@@ -20,8 +22,11 @@ $(BUILD)/test_dsp: $(DSP_SRC) ../helpers/radiogeddon_dsp.h | $(BUILD)
 $(BUILD)/test_analyzer: $(ANALYZER_SRC) ../helpers/rg_analyzer.h | $(BUILD)
 	$(CC) $(CFLAGS) $(SAN) -o $@ $(ANALYZER_SRC)
 
+$(BUILD)/test_scan: $(SCAN_SRC) ../helpers/rg_scan.h | $(BUILD)
+	$(CC) $(CFLAGS) $(SAN) -o $@ $(SCAN_SRC)
+
 $(BUILD):
 	mkdir -p $(BUILD)
 
 clean:
-	rm -rf $(BUILD) test_dsp test_analyzer
+	rm -rf $(BUILD) test_dsp test_analyzer test_scan

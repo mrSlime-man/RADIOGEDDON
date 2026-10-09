@@ -26,11 +26,12 @@ locally.
 | Lint | `ufbt lint` (clang-format) | Pass, no warnings |
 | DSP/parse unit tests | `make -C test check` → `test_dsp` | Pass — 31 checks |
 | Analysis-engine unit tests | `make -C test check` → `test_analyzer` | Pass — 24 checks |
+| Scanner-logic unit tests | `make -C test check` → `test_scan` | Pass — 31 checks |
 | Memory safety of tested code | tests built `-Werror` under `-fsanitize=address,undefined` | Pass — no ASan/UBSan reports |
 | Documentation links | `scripts/check_links.py` (offline link + anchor check) | Pass |
 | `.fap` metadata | `scripts/verify_fap.py` parses `.fapmeta` and asserts magic, API, target, name, version, icon | Pass for all three artifacts |
 
-Host-test total: **55 checks, 0 failures.** What the suite covers (synthetic
+Host-test total: **86 checks, 0 failures.** What the suite covers (synthetic
 signals, not real captures):
 
 - `test_dsp` — RAW `RAW_Data` parsing (incl. whitespace, signs, out-of-range),
@@ -40,6 +41,10 @@ signals, not real captures):
   frames, PPM-shaped input, frame segmentation and repeat detection,
   constant-vs-changing field maps for fixed and rolling-style presses, RAW
   similarity scoring, and degenerate/empty input safety.
+- `test_scan` — scanner logic on synthetic RSSI sequences: no false triggers
+  on noise, one count per burst, warm-up suppression, hysteresis, absolute
+  minimum, floor tracking up and down, peak/count reset, median noise floor,
+  band masks and CSV row formatting (including truncation).
 
 The Manchester encoding branch has no dedicated unit test yet.
 

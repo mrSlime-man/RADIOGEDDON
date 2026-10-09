@@ -1,19 +1,25 @@
 /**
  * @file radiogeddon_scanner_view.h
- * @brief Live frequency-sweep view with per-frequency RSSI bars.
+ * @brief Narrowband RSSI scanner view: one row per frequency.
  *
- * The owning scene drives the sweep (probing one frequency per tick) and pushes
- * results in with radiogeddon_scanner_view_set_rssi(). The view renders a
- * scrollable list and reports selection/activation back through its callback.
+ * Each row shows an activity dot, the frequency, a bar for the latest RSSI
+ * with a peak-hold tick and a threshold mark, the latest RSSI in dBm and the
+ * number of activity periods seen. The header shows the sweep state and the
+ * estimated noise floor. The owning scene copies results in with
+ * radiogeddon_scanner_view_update().
  */
 #pragma once
 
 #include <gui/view.h>
+#include "../helpers/radiogeddon_scanner.h"
 
 typedef struct RadioGeddonScannerView RadioGeddonScannerView;
 
 typedef enum {
-    RadioGeddonScannerEventSelect, // OK pressed on the highlighted frequency
+    RadioGeddonScannerEventSelect, // OK: open the receiver on the highlighted frequency
+    RadioGeddonScannerEventTogglePause, // Left: release a hold, else pause / resume
+    RadioGeddonScannerEventResetPeaks, // Long Left: clear peaks and counters
+    RadioGeddonScannerEventSave, // Right: save results to the SD card
 } RadioGeddonScannerEvent;
 
 typedef void (*RadioGeddonScannerCallback)(RadioGeddonScannerEvent event, void* context);
@@ -27,14 +33,11 @@ void radiogeddon_scanner_view_set_callback(
     RadioGeddonScannerCallback callback,
     void* context);
 
-/** Provide the frequency table the view will display (Hz values, not copied). */
-void radiogeddon_scanner_view_set_frequencies(
-    RadioGeddonScannerView* instance,
-    const uint32_t* frequencies,
-    size_t count);
+/** Refresh the displayed results from the scanner. */
+void radiogeddon_scanner_view_update(RadioGeddonScannerView* instance, RadioGeddonScanner* scanner);
 
-/** Update the RSSI (dBm) sampled for a given frequency index. */
-void radiogeddon_scanner_view_set_rssi(RadioGeddonScannerView* instance, size_t index, float rssi);
+/** Move the highlight to @p index (e.g. the frequency the sweep is holding on). */
+void radiogeddon_scanner_view_set_selected(RadioGeddonScannerView* instance, size_t index);
 
 /** Index currently highlighted by the user. */
 size_t radiogeddon_scanner_view_get_selected(RadioGeddonScannerView* instance);
