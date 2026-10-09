@@ -42,8 +42,7 @@ typedef struct {
     bool holding;
     uint32_t hold_left_ms;
     bool recording;
-    size_t record_samples;
-    bool record_overflow;
+    RadioGeddonRecordStats record; // valid while recording
 } RadioGeddonHopperStatus;
 
 RadioGeddonHopper* radiogeddon_hopper_alloc(RadioGeddonSubGhz* subghz);

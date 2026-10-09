@@ -125,8 +125,10 @@ The screen shows:
 
 - **Header** — frequency and modulation, e.g. `433.92 AM 650`.
 - **RSSI** — a live signal-strength bar and value.
-- **Status line** — `Left: record RAW`, or while recording
-  `REC <n> smp` (adds `FULL` when the recording buffer is full).
+- **Status line** — `Left: record RAW`, or while recording the elapsed time
+  and sample count, e.g. `REC 12.3s 4521`. On the right it shows `lost <n>`
+  if samples had to be dropped because the SD card fell behind, or
+  `buf <n>%` once the write buffer is at least half full.
 - **`Decoded: <n>`** — how many distinct signals were decoded, and the
   highlighted one as `[<i>] <protocol>` with a `Save` button. Before the first
   decode it shows `Listening...`.
@@ -135,28 +137,35 @@ The screen shows:
 |--------|--------|
 | Up / Down | Highlight a decoded signal (the newest is highlighted automatically) |
 | OK | Save the highlighted decoded signal |
-| Left | Start RAW recording; press again to stop and save it |
-| Back | Stop the radio and return |
+| Left | Start RAW recording; press again to stop and name it |
+| Back | While recording: stop and name it. Otherwise: stop the radio and return |
 
 The LED blinks green for each new decode and stays red while recording.
 
 **Saving.** Both save actions open a name screen (`Name signal` or
 `Name RAW capture`) pre-filled with a timestamp such as `RG_20261009_143005`.
-Confirm to write `<name>.sub` to `/ext/apps_data/radiogeddon/signals/`; you'll
-hear a success or error tone, and return to the receiver with your decoded list
-intact. A name that already exists is overwritten without warning, so edit the
-name if you want to keep the earlier capture.
+Confirm to save `<name>.sub` in `/ext/apps_data/radiogeddon/signals/`. If that
+name is taken, `_2`, `_3` and so on is added, so nothing is overwritten. A
+result screen shows the final name and, for RAW captures, the sample count,
+duration and any lost samples; you then return to the receiver with your
+decoded list intact. Press **Back** on the name screen to discard a RAW
+capture.
 
 **Good to know**
 
 - Up to 32 decoded signals are kept per session; identical consecutive repeats
   of the same parcel are listed once. Leaving to the main menu clears the list.
-- A RAW recording holds up to 16,384 timing samples (`FULL` after that), or
-  fewer if little memory is free when you start it. Stop it soon after the
-  transmission ends. If there is not enough free memory to record at all, the
-  LED blinks red and recording does not start.
-- Leaving the screen while recording discards the unsaved recording.
-- Stopping a recording that captured nothing simply returns to listening.
+- A RAW recording is written to the SD card as it runs, so it can be as long
+  as the card allows. Stopping takes a moment while the last samples are
+  written (`Writing to SD...`).
+- If the card cannot keep up (very noisy input on a slow card), some samples
+  are dropped: the line shows `lost <n>` and the saved file notes it. The
+  timing jumps where samples were lost, so record again if that matters.
+- If recording cannot start, the LED blinks red and the hint line says why
+  (`REC: Not enough memory` or `REC: Cannot create file`). If the card fails
+  while recording, it stops and shows `SD card write failed`.
+- Stopping a recording that captured nothing shows `Nothing captured` and
+  returns to listening.
 
 ## Frequency Hopper
 
@@ -174,7 +183,8 @@ current frequency's detection level. The status line shows:
 - `Hop 2/4  L:lock R:next` while hopping,
 - `HOLD 1.8s` while holding on activity (time left),
 - `LOCKED` when you locked the frequency,
-- `REC <samples>` while an automatic recording is running.
+- the REC line (time, samples, `lost` or `buf`) while an automatic recording
+  is running.
 
 | Button | Action |
 |--------|--------|
@@ -196,8 +206,10 @@ hopper also records RAW until the hold ends, then saves it as
 `HOP_<date>_<time>.sub` in the signals folder (a number is added rather than
 overwriting an existing file) with a success tone. Captures under 64 samples
 are discarded as noise. Recording starts when activity is *detected*, so the
-first few milliseconds of a transmission are not in the file. If there is not
-enough free memory to record, the hopper keeps working without recording.
+first few milliseconds of a transmission are not in the file. The capture is
+streamed to the SD card, so long activity is kept whole. If there is not
+enough free memory to record, the hopper keeps working without recording; if
+the card fails, you hear the error tone and the capture is not kept.
 
 The modulation comes from **Settings**.
 

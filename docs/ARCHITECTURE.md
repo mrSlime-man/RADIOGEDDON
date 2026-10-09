@@ -60,6 +60,7 @@ scenes/                     One file per screen; the scene list is generated fro
 views/                      Custom canvas views: scanner sweep, live receiver, pulse timeline
 helpers/
   radiogeddon_subghz.*      Radio wrapper: device, decoders, RAW capture, hopper retune, TX
+  radiogeddon_recorder.*    Streaming RAW recorder: lock-free ring + SD writer thread
   radiogeddon_storage.*     SD-card layout, .sub parsing, streaming RAW file access
   radiogeddon_scanner.*     Scanner sweep thread, results and CSV export
   radiogeddon_hopper.*      Hopper thread, auto-recording, statistics report
@@ -69,11 +70,13 @@ helpers/
   radiogeddon_dsp.*         Pure RAW parsing / clustering helpers (no firmware headers)
   rg_analyzer.*             Pure streaming signal-analysis engine (no firmware headers)
   rg_raw.*                  Pure streaming RAW_Data reader with seek checkpoints
+  rg_rawfmt.*               Pure RAW .sub writer: header, RAW_Data lines, lost-sample note
+  rg_ring.*                 Pure lock-free single-producer/single-consumer sample ring
   rg_timeline.*             Pure pulse-timeline maths: columns, labels, pan, zoom, frames
   rg_scan.*                 Pure scanner logic: noise floor, detection, peak hold
   rg_hop.*                  Pure hopper state machine: dwell, hold, lock, history
 assets/                     10x10 launcher icon (compiled into the .fap)
-test/                       Host unit tests (264 checks) + reference .sub fixtures
+test/                       Host unit tests (364 checks) + reference .sub fixtures
 scripts/                    Pinned builds, manifest verification, packaging, link check
 tools/brand/                Generator for the logo, banner and social preview
 .github/workflows/          CI (ci.yml), shared build pipeline (build.yml), release.yml
@@ -106,20 +109,60 @@ pairs on a worker thread. RadioGeddon feeds every pair to two consumers:
 1. A `SubGhzReceiver` holding all of the firmware's *decodable* protocol
    decoders. When one matches, the parcel is serialized to a complete,
    loadable `.sub` text in RAM and stored in the session history.
-2. When RAW recording is on, an in-RAM buffer of up to **16,384** signed
-   durations (positive = carrier on, negative = off), written to a standard
-   RAW `.sub` file when you save.
+2. When RAW recording is on, the streaming recorder: each signed duration
+   (positive = carrier on, negative = off) goes into a lock-free ring, and a
+   writer thread streams the ring to a RAW `.sub` file on the SD card (see
+   *Streaming RAW recording* below).
 
 **Memory lifecycle.** Nothing radio-related beyond the device handle is
 allocated at app start. The protocol environment, manufacturer keystore,
 receiver (one decoder per registered protocol) and worker are created in
 `rx_start` and freed in `rx_stop`; a protocol replay creates an environment
-without the keystore for the duration of the transmission. The RAW buffer is
-allocated in `record_start`, sized from `memmgr_heap_get_max_free_block()`
-minus a 12 KB reserve (capped at 16,384 samples, refused below 1,024), and
-freed after a successful save. Allocating all of this at launch exceeded the
-free heap on RogueMaster and crashed the app before the main menu (fixed in
-`1.0.0-beta.2`).
+without the keystore for the duration of the transmission. The recorder is
+allocated in `record_start`, with its ring sized from
+`memmgr_heap_get_max_free_block()` (largest power of two from 1,024 to 8,192
+samples that leaves 12 KB free beyond it, the 2 KB write buffer and the
+writer's stack; refused below 1,024), and freed when recording stops.
+Allocating the radio state at launch exceeded the free heap on RogueMaster and
+crashed the app before the main menu (fixed in `1.0.0-beta.2`).
+
+### Streaming RAW recording
+
+```mermaid
+flowchart LR
+    W["Sub-GHz worker<br/>pair callback"] -- "push, never waits" --> R["rg_ring<br/>1,024–8,192 samples"]
+    R -- "pop 64 at a time" --> T["writer thread<br/>rg_rawfmt → 2 KB buffer"]
+    T -- "storage_file_write" --> F["apps_data/radiogeddon/recording.tmp"]
+    F -- "rename on save" --> S["signals/NAME.sub"]
+```
+
+- **The radio thread never touches the filesystem.** The pair callback runs on
+  the Sub-GHz worker thread, alongside the protocol decoders. It only appends
+  to `rg_ring`, a single-producer/single-consumer ring with acquire/release
+  indices; a push into a full ring is refused at once and counted.
+- **Losses are measured, not hidden.** Refused samples are counted, together
+  with the number of gaps (runs of refusals) and where the first one was.
+  They are shown live, written as a final `# Lost: …` comment (FlipperFormat
+  ignores comments; the firmware's file encoder stops at the first non-RAW line,
+  which is the end anyway), and read back by `rg_raw` into the analysis report.
+  The samples around a gap are kept as they are, so timing jumps there; no
+  filler is invented.
+- **Writer.** Pops 64 samples at a time, formats them without `snprintf`
+  (`rg_rawfmt`), and writes 2 KB at a time; when idle it writes whatever is
+  buffered every 250 ms. It polls every 20 ms and is woken at once on stop.
+- **Start and stop.** The ring is attached to the worker before the file is
+  created, so the start of a transmission is not lost to file-open latency.
+  To stop, the recorder pointer is cleared and the stopping thread waits until
+  the worker is out of its push (a two-flag handshake with sequentially
+  consistent atomics), then the writer drains the ring, the last line and the
+  loss note are written, and the file is closed.
+- **Saving.** The capture lives in `recording.tmp` until it is saved: Save
+  renames it to a name that does not exist yet; Back, a failed save, an empty
+  capture or a write error deletes it.
+- Ring, formatter and loss accounting are host-tested, the ring with a real
+  producer thread, and the recorder end to end against stub Furi/Storage
+  layers that can make the "card" slow or fail (see
+  [Verification](VERIFICATION.md)).
 
 The start/stop order mirrors the firmware's own Sub-GHz subsystem
 (`start_async_rx` → start worker; stop worker → `stop_async_rx` → idle →
@@ -169,7 +212,10 @@ decoded static protocols are re-encoded by the matching firmware encoder.
 | Thread | Runs | Rule |
 |--------|------|------|
 | GUI / event loop | scenes, views, ticks, file I/O, analysis | the only thread that touches views |
-| Sub-GHz worker | pair callback → decoders, RAW buffer | records into mutex-protected history, then posts a custom event |
+| Sub-GHz worker | pair callback → decoders, recorder ring | records into mutex-protected history, then posts a custom event; never touches the filesystem |
+| RAW writer | drains the recorder ring to the SD card | runs only while recording; never touches views |
+| Scanner | RSSI sweep | results under a mutex; the scene reads them on the tick |
+| Hopper | RSSI sampling, retuning, auto-recording | state under a mutex; events posted to the scene |
 | File encoder worker | RAW replay streaming | signals completion with a custom event |
 
 ## Storage
@@ -180,7 +226,8 @@ interoperable with the stock Sub-GHz app and other tools:
 
 - decoded signals use `Filetype: Flipper SubGhz Key File`;
 - RAW captures use `Filetype: Flipper SubGhz RAW File` with `RAW_Data` lines
-  of up to 512 values.
+  of up to 512 values, plus a final `# Lost: …` comment only if samples were
+  dropped while recording.
 
 The database screen uses the firmware's file browser filtered to `.sub`.
 

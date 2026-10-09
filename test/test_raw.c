@@ -212,11 +212,44 @@ static void test_fixture_end_to_end(void) {
     CHECK(strcmp(a.result.bits, "001011000101") == 0, "fixture bits");
 }
 
+static void test_lost_comment(void) {
+    printf("test_lost_comment\n");
+    static RgRawReader r;
+    int32_t out[16];
+    const char* f = "Protocol: RAW\n"
+                    "# a note\n"
+                    "RAW_Data: 100 -200\n"
+                    "RAW_Data: 300 -400\n"
+                    "# Lost: 37 samples in 2 gaps, first after sample 2\n";
+    MemSource m = {f, strlen(f), 0, 3, 0};
+    rg_raw_reader_init(&r, mem_source(&m));
+    size_t n = read_all(&r, out, 16, 16);
+    CHECK(n == 4 && out[3] == -400, "comments do not disturb the samples");
+    CHECK(r.lost == 37, "lost count read from the trailing comment");
+    CHECK(!r.corrupt, "comments are not corruption");
+    rg_raw_reader_rewind(&r);
+    read_all(&r, out, 16, 16);
+    CHECK(r.lost == 37, "a second pass reads the same count, not double");
+
+    const char* eof = "RAW_Data: 5\n# Lost: 1200";
+    MemSource e = {eof, strlen(eof), 0, 0, 0};
+    rg_raw_reader_init(&r, mem_source(&e));
+    read_all(&r, out, 16, 16);
+    CHECK(r.lost == 1200, "count at end of file without a newline");
+
+    const char* near = "#Lost: 5\n# Lostx: 6\n# Lost:\nRAW_Data: 9 -9\n# Lost: x7\n";
+    MemSource q = {near, strlen(near), 0, 0, 0};
+    rg_raw_reader_init(&r, mem_source(&q));
+    n = read_all(&r, out, 16, 16);
+    CHECK(n == 2 && r.lost == 0, "only an exact \"# Lost: N\" counts");
+}
+
 int main(void) {
     test_basic_parse();
     test_corrupt_and_non_raw();
     test_checkpoints_and_seek();
     test_fixture_end_to_end();
+    test_lost_comment();
 
     printf("\n%d checks, %d failures\n", g_checks, g_failures);
     if(g_failures) {

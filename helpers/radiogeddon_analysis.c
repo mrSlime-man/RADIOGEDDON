@@ -279,6 +279,7 @@ RgAnalyzer*
     } while(rg_analyzer_next_pass(a));
 
     if(file->reader.corrupt) *status = RadioGeddonAnalysisCorrupt;
+    a->result.lost_samples = file->reader.lost;
     if(a->result.sample_count == 0) {
         *status = file->reader.corrupt ? RadioGeddonAnalysisCorrupt : RadioGeddonAnalysisNoRaw;
         free(a);
@@ -385,6 +386,12 @@ static void radiogeddon_report_observed(const RgAnalysis* r, FuriString* out) {
         (unsigned)r->frame_count);
     if(r->burst_count) furi_string_cat_printf(out, " (+%u bursts)", (unsigned)r->burst_count);
     furi_string_cat_str(out, "\n");
+    if(r->lost_samples) {
+        furi_string_cat_printf(
+            out,
+            "Lost while recording: %lu\nsamples (SD too slow);\ntiming jumps at gaps\n",
+            (unsigned long)r->lost_samples);
+    }
 }
 
 static void radiogeddon_report_fields(const RgAnalysis* r, FuriString* out) {

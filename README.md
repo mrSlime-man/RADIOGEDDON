@@ -23,7 +23,7 @@ Sub-GHz signals — entirely on the device, with no computer, phone or network.
 
 > [!WARNING]
 > **Public beta.** Every feature is implemented and the builds pass all
-> automated checks (lint, 264 host-test checks, three firmware builds with
+> automated checks (lint, 364 host-test checks, three firmware builds with
 > API/manifest verification). On physical hardware, so far there is only one
 > tester report (RogueMaster: launches and works); **nothing is independently
 > verified on a device yet.** Expect rough edges, and see
@@ -73,7 +73,7 @@ release lists `SHA256SUMS` and ships signed build-provenance attestations.
 |--------|--------------|
 | **Sub-GHz Scanner** | Narrowband RSSI sweep over a configurable list of 19 common frequencies: noise floor, activity detection, peak hold, burst counts, CSV export; pick one to receive on. |
 | **Frequency Hopper** | Hops a configurable list (default 315 / 390 / 433.92 / 868.35 MHz), holds on noise-floor-relative activity or decodes, lock/next, statistics, optional auto RAW recording. |
-| **RAW Signal Capture** | Records the raw on/off timing stream to a standard RAW `.sub` file. |
+| **RAW Signal Capture** | Streams the raw on/off timing to a standard RAW `.sub` file on the SD card while recording, so length is limited by the card, not RAM; shows time, samples and any samples lost to a slow card. |
 | **Protocol Identification** | Live decoding with the firmware's own decoders (Princeton, CAME, Nice FLO, Holtek, KeeLoq-family, …) — marked `[CONFIRMED]`. |
 | **Signal Analyzer** | Pulse-width groups and base time unit for RAW; bit/field breakdown for decoded protocols. |
 | **Unknown Protocol Analysis** | Streams a whole RAW capture: measured timing, noise and frames (`[OBSERVED]`), then the encoding (PWM/PPM/Manchester) with a confidence score, bit patterns, frame-by-frame comparison and field map (`[HYPOTHESIS]`). |
@@ -153,7 +153,7 @@ API version, compiles, and checks the resulting `.fap`'s manifest. More in
 ## Testing & verification
 
 ```bash
-make -C test check               # 264 host checks, -Werror, AddressSanitizer + UBSan
+make -C test check               # 364 host checks, -Werror, AddressSanitizer + UBSan
 python3 scripts/check_links.py   # documentation links and anchors
 ```
 

@@ -17,6 +17,8 @@
 #define RADIOGEDDON_SIGNALS_FOLDER RADIOGEDDON_APP_FOLDER "/signals"
 #define RADIOGEDDON_SCANS_FOLDER   RADIOGEDDON_APP_FOLDER "/scans"
 #define RADIOGEDDON_SUB_EXTENSION  ".sub"
+/* A RAW capture is streamed here, then renamed when the user saves it. */
+#define RADIOGEDDON_RECORD_TEMP    RADIOGEDDON_APP_FOLDER "/recording.tmp"
 
 // .sub file identification (firmware-compatible).
 #define RADIOGEDDON_SUB_FILE_TYPE     "Flipper SubGhz Key File"

@@ -130,8 +130,8 @@ static void test_parse_clamped_large(void) {
     CHECK(max_us == 2000000000u, "large magnitude preserved");
 }
 
-// Emit an int32 timing array exactly as radiogeddon_subghz_record_flush_to_file
-// does (chunked, space-separated), then parse it back and verify no data loss.
+// Emit an int32 timing array as the RAW writer does
+// (chunked, space-separated), then parse it back and verify no data loss.
 static void test_raw_roundtrip(void) {
     printf("test_raw_roundtrip\n");
     enum {

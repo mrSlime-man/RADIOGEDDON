@@ -118,8 +118,7 @@ static void radiogeddon_scene_hopper_refresh_status(RadioGeddonApp* app) {
         app->receiver_view, st.frequency, radiogeddon_presets[app->preset_index].label);
     radiogeddon_receiver_view_set_rssi(app->receiver_view, st.rssi);
     radiogeddon_receiver_view_set_threshold(app->receiver_view, st.threshold_dbm);
-    radiogeddon_receiver_view_set_recording(
-        app->receiver_view, st.recording, st.record_samples, st.record_overflow);
+    radiogeddon_receiver_view_set_recording(app->receiver_view, st.recording, &st.record);
 
     char status[26];
     if(st.locked && st.holding) {
@@ -159,7 +158,7 @@ void radiogeddon_scene_hopper_on_enter(void* context) {
     radiogeddon_receiver_view_set_callback(
         app->receiver_view, radiogeddon_scene_hopper_view_cb, app);
     radiogeddon_receiver_view_set_hopping(app->receiver_view, true);
-    radiogeddon_receiver_view_set_recording(app->receiver_view, false, 0, false);
+    radiogeddon_receiver_view_set_recording(app->receiver_view, false, NULL);
     radiogeddon_receiver_view_set_status(app->receiver_view, "");
     radiogeddon_scene_hopper_refresh_history(app);
 
