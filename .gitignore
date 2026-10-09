@@ -14,6 +14,6 @@ __pycache__/
 # host test binaries
 test/build/
 
-# ufbt single-target scratch output. Packaged, per-firmware artifacts live in
-# dist/release/ and ARE tracked.
-dist/radiogeddon.fap
+# Build output. Release binaries are published as GitHub Release assets by
+# .github/workflows/release.yml (built from the tag), never committed.
+dist/

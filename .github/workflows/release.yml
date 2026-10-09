@@ -1,0 +1,185 @@
+# Publishes a GitHub Release from a version tag.
+#
+#   git tag -a v1.0.0-beta.1 -m "RadioGeddon v1.0.0 Beta 1" && git push origin v1.0.0-beta.1
+#
+# Flow: validate the tag against radiogeddon_version.h / application.fam and
+# require docs/releases/<tag>.md -> rebuild all three .fap files from the tagged
+# commit through the shared pipeline (build.yml) -> package + re-verify, write
+# SHA256SUMS -> attest build provenance -> create a DRAFT release with every
+# asset -> download the assets back and check them -> publish. Any failure
+# deletes the draft, so a partial or broken release is never made public.
+# Tags with a pre-release suffix (e.g. -beta.1) are published as pre-releases.
+#
+# workflow_dispatch exists only as a fallback for environments that cannot push
+# tags: it builds the selected branch head and lets the release create the tag
+# on that exact commit when it is published.
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Tag to create on the selected branch head (e.g. v1.0.0-beta.1)
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  prepare:
+    name: Prepare
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      tag: ${{ steps.meta.outputs.tag }}
+      sha: ${{ steps.meta.outputs.sha }}
+      title: ${{ steps.meta.outputs.title }}
+      prerelease: ${{ steps.meta.outputs.prerelease }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Validate tag, versions and release notes
+        id: meta
+        env:
+          EVENT: ${{ github.event_name }}
+          REF_NAME: ${{ github.ref_name }}
+          INPUT_TAG: ${{ inputs.tag }}
+        run: |
+          set -euo pipefail
+          if [ "$EVENT" = "push" ]; then tag="$REF_NAME"; else tag="$INPUT_TAG"; fi
+          if [[ ! "$tag" =~ ^v([0-9]+)\.([0-9]+)\.([0-9]+)(-[0-9A-Za-z.]+)?$ ]]; then
+            echo "::error::'$tag' is not a vMAJOR.MINOR.PATCH[-prerelease] tag"; exit 1
+          fi
+          major_minor="${BASH_REMATCH[1]}.${BASH_REMATCH[2]}"
+          version="${tag#v}"
+
+          code_version="$(sed -n 's/^#define RADIOGEDDON_VERSION "\(.*\)"$/\1/p' radiogeddon_version.h)"
+          if [ "$code_version" != "$version" ]; then
+            echo "::error::radiogeddon_version.h says '$code_version' but the tag is '$tag'"; exit 1
+          fi
+          fap_version="$(sed -n 's/^[[:space:]]*fap_version="\([0-9.]*\)".*/\1/p' application.fam)"
+          if [ "$fap_version" != "$major_minor" ]; then
+            echo "::error::application.fam fap_version '$fap_version' != '$major_minor' from tag"; exit 1
+          fi
+
+          notes="docs/releases/${tag}.md"
+          if [ ! -f "$notes" ]; then echo "::error::missing release notes $notes"; exit 1; fi
+          title="$(head -n 1 "$notes" | sed 's/^#[[:space:]]*//')"
+
+          if [ "$EVENT" != "push" ] && [ -n "$(git ls-remote --tags origin "refs/tags/$tag")" ]; then
+            echo "::error::tag $tag already exists; push-triggered runs build existing tags"; exit 1
+          fi
+
+          prerelease=false
+          [[ "$version" == *-* ]] && prerelease=true
+          {
+            echo "tag=$tag"
+            echo "sha=$(git rev-parse HEAD)"
+            echo "title=$title"
+            echo "prerelease=$prerelease"
+          } >> "$GITHUB_OUTPUT"
+          echo "Releasing $tag ($title) from $(git rev-parse HEAD), prerelease=$prerelease"
+
+  build:
+    name: Build
+    needs: prepare
+    uses: ./.github/workflows/build.yml
+    with:
+      ref: ${{ needs.prepare.outputs.sha }}
+
+  publish:
+    name: Publish
+    needs: [prepare, build]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      TAG: ${{ needs.prepare.outputs.tag }}
+      SHA: ${{ needs.prepare.outputs.sha }}
+      TITLE: ${{ needs.prepare.outputs.title }}
+      PRERELEASE: ${{ needs.prepare.outputs.prerelease }}
+      EVENT: ${{ github.event_name }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ needs.prepare.outputs.sha }}
+          persist-credentials: false
+
+      - uses: actions/download-artifact@v7
+        with:
+          pattern: fap-*
+          path: release
+          merge-multiple: true
+
+      - name: Package and verify artifacts
+        run: scripts/package_release.sh release
+
+      - name: Attest build provenance
+        if: ${{ !github.event.repository.private }}
+        uses: actions/attest-build-provenance@v3
+        with:
+          subject-path: release/radiogeddon-*.fap
+
+      - name: Refuse to overwrite an existing release
+        run: |
+          if gh release view "$TAG" > /dev/null 2>&1; then
+            echo "::error::a release for $TAG already exists; delete it first or use a new tag"; exit 1
+          fi
+
+      - name: Create draft release with all assets
+        run: |
+          set -euo pipefail
+          tail -n +2 "docs/releases/${TAG}.md" > "$RUNNER_TEMP/notes.md"
+          args=(--draft --title "$TITLE" --notes-file "$RUNNER_TEMP/notes.md" --target "$SHA")
+          if [ "$PRERELEASE" = "true" ]; then args+=(--prerelease); else args+=(--latest); fi
+          if [ "$EVENT" = "push" ]; then args+=(--verify-tag); fi
+          gh release create "$TAG" "${args[@]}" \
+            release/radiogeddon-official.fap \
+            release/radiogeddon-unleashed.fap \
+            release/radiogeddon-roguemaster.fap \
+            release/SHA256SUMS \
+            release/BUILD_INFO.txt
+
+      - name: Verify uploaded assets
+        run: |
+          set -euo pipefail
+          mkdir "$RUNNER_TEMP/check"
+          gh release download "$TAG" --dir "$RUNNER_TEMP/check"
+          count="$(find "$RUNNER_TEMP/check" -type f | wc -l)"
+          [ "$count" -eq 5 ] || { echo "::error::expected 5 assets, found $count"; exit 1; }
+          (cd "$RUNNER_TEMP/check" && sha256sum -c SHA256SUMS)
+
+      - name: Publish release
+        run: gh release edit "$TAG" --draft=false
+
+      - name: Delete draft on failure
+        if: failure()
+        run: |
+          if [ "$(gh release view "$TAG" --json isDraft --jq .isDraft 2> /dev/null)" = "true" ]; then
+            gh release delete "$TAG" --yes
+            echo "Deleted incomplete draft release $TAG"
+          fi
+
+      - name: Summary
+        run: |
+          {
+            echo "### Published ${TITLE}"
+            echo "https://github.com/${GH_REPO}/releases/tag/${TAG}"
+            echo '```'
+            cat release/SHA256SUMS
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"

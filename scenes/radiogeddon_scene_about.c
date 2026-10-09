@@ -1,18 +1,17 @@
 #include "radiogeddon_scene.h"
-
-#define RADIOGEDDON_VERSION_STR "1.0"
+#include "../radiogeddon_version.h"
 
 void radiogeddon_scene_about_on_enter(void* context) {
     RadioGeddonApp* app = context;
     Widget* widget = app->widget;
     widget_reset(widget);
 
-    widget_add_string_element(
-        widget, 64, 2, AlignCenter, AlignTop, FontPrimary, "RadioGeddon " RADIOGEDDON_VERSION_STR);
+    widget_add_string_element(widget, 64, 2, AlignCenter, AlignTop, FontPrimary, "RadioGeddon");
 
     furi_string_reset(app->temp_str);
     furi_string_cat_printf(
         app->temp_str,
+        "Version: " RADIOGEDDON_VERSION "\n"
         "Device: %s\n\n"
         "Standalone Sub-GHz\nanalysis toolkit.\n\n"
         "Modules:\n"
@@ -21,14 +20,17 @@ void radiogeddon_scene_about_on_enter(void* context) {
         "- Receive & decode\n"
         "- RAW recorder\n"
         "- Signal analyzer\n"
+        "- Unknown protocol\n  analysis\n"
         "- Crypto characteristics\n"
         "- Comparator\n"
         "- SD-card database\n"
         "- Authorized replay\n\n"
-        "Labels: [CONFIRMED] =\ndecoder matched.\n[HEURISTIC] = guess from\nsignal statistics.\n\n"
+        "Labels: [CONFIRMED] =\ndecoder matched.\n[HEURISTIC] = guess from\nsignal statistics.\n"
+        "[HYPOTHESIS] = engine\ninference, unverified.\n\n"
         "No key recovery is\nperformed. Transmission\nrespects regional limits.\n"
         "Use only on devices you\nare authorized to test.\n\n"
-        "Signals stored under:\n/ext/apps_data/\n  radiogeddon/signals\n",
+        "Signals stored under:\n/ext/apps_data/\n  radiogeddon/signals\n\n"
+        "github.com/mrSlime-man/\n  RADIOGEDDON\n",
         radiogeddon_subghz_device_name(app->subghz));
 
     widget_add_text_scroll_element(widget, 0, 16, 128, 48, furi_string_get_cstr(app->temp_str));

@@ -1,107 +1,96 @@
-name: Build FAP
+# Reusable build + verification pipeline, shared by CI (ci.yml) and releases
+# (release.yml) so a release artifact passes exactly the same gates as a PR.
+#
+# Jobs:
+#   docs        offline Markdown link/anchor check
+#   host-tests  55 host unit-test checks under ASan/UBSan
+#   fap         one .fap per firmware family, built against the SDK pinned in
+#               scripts/firmware_pins.sh (checksum-verified), API asserted,
+#               manifest verified; clang-format lint on the official job
+name: Build
 
 on:
-  push:
-    branches: ["**"]
-  pull_request:
-  workflow_dispatch:
+  workflow_call:
+    inputs:
+      ref:
+        description: Commit, tag or branch to build (default - the triggering ref)
+        type: string
+        default: ""
+
+permissions:
+  contents: read
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
+  docs:
+    name: docs (links)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.ref }}
+          persist-credentials: false
+      - name: Check Markdown links and anchors
+        run: python3 scripts/check_links.py
+
+  host-tests:
+    name: host tests (ASan/UBSan)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.ref }}
+          persist-credentials: false
+      - name: Run unit tests
+        run: make -C test check
+
+  fap:
+    name: fap (${{ matrix.target }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - target: official
-            update_args: "--channel release"
-          - target: unleashed
-            update_args: "--index-url https://up.unleashedflip.com/directory.json"
-    name: build (${{ matrix.target }})
+        target: [official, unleashed, roguemaster]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.ref }}
+          persist-credentials: false
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
 
-      - name: Install ufbt
-        run: pip install --upgrade ufbt
+      - name: Install pinned ufbt
+        run: |
+          source scripts/firmware_pins.sh
+          python -m pip install --disable-pip-version-check "ufbt==${UFBT_VERSION}"
 
-      - name: Deploy SDK (${{ matrix.target }})
-        env:
-          UFBT_HOME: ${{ github.workspace }}/.ufbt-${{ matrix.target }}
-        run: ufbt update ${{ matrix.update_args }}
+      - name: Build and verify (${{ matrix.target }})
+        run: scripts/build_target.sh "${{ matrix.target }}" out
 
-      - name: Build FAP
+      - name: Lint (clang-format)
+        if: matrix.target == 'official'
         env:
-          UFBT_HOME: ${{ github.workspace }}/.ufbt-${{ matrix.target }}
-        run: ufbt
-
-      - name: Lint
-        env:
-          UFBT_HOME: ${{ github.workspace }}/.ufbt-${{ matrix.target }}
+          UFBT_HOME: ${{ github.workspace }}/.ufbt-official
         run: ufbt lint
 
-      - name: Collect artifact
-        env:
-          UFBT_HOME: ${{ github.workspace }}/.ufbt-${{ matrix.target }}
+      - name: Summary
         run: |
-          mkdir -p out
-          cp dist/radiogeddon.fap "out/radiogeddon-${{ matrix.target }}.fap"
-          api=$(grep -m1 '^Version,' "$UFBT_HOME/current/sdk_headers/f7_sdk/targets/f7/api_symbols.csv" | cut -d, -f3)
-          echo "radiogeddon-${{ matrix.target }}.fap target=f7 api=$api" | tee "out/BUILD_INFO-${{ matrix.target }}.txt"
+          {
+            echo "### radiogeddon-${{ matrix.target }}.fap"
+            echo '```'
+            cat "out/radiogeddon-${{ matrix.target }}.build-info"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
-          name: radiogeddon-${{ matrix.target }}
-          path: out/*
-
-  host-tests:
-    runs-on: ubuntu-latest
-    name: host tests (DSP + analysis engine)
-    steps:
-      - uses: actions/checkout@v4
-      - name: Run unit tests (ASan/UBSan)
-        run: make -C test check
-
-  roguemaster:
-    runs-on: ubuntu-latest
-    name: build (roguemaster)
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          path: radiogeddon
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      # A toolchain is needed for RogueMaster's fbt; reuse ufbt's deployed one.
-      - name: Provide ARM toolchain via ufbt
-        env:
-          UFBT_HOME: ${{ github.workspace }}/.ufbt
-        run: |
-          pip install --upgrade ufbt
-          ufbt update --channel release
-      - name: Checkout RogueMaster firmware
-        run: |
-          GIT_LFS_SKIP_SMUDGE=1 git clone --depth 1 \
-            https://github.com/RogueMaster/flipperzero-firmware-wPlugins rmfw
-          git -C rmfw submodule update --init --depth 1
-      - name: Build fap against RogueMaster SDK
-        env:
-          FBT_TOOLCHAIN_PATH: ${{ github.workspace }}/.ufbt
-          FBT_NO_SYNC: "1"
-        run: |
-          mkdir -p rmfw/applications_user/radiogeddon
-          cp -r radiogeddon/. rmfw/applications_user/radiogeddon/
-          ( cd rmfw && ./fbt fap_radiogeddon )
-          mkdir -p out
-          cp rmfw/build/f7-firmware-C/.extapps/radiogeddon.fap out/radiogeddon-roguemaster.fap
-          api=$(grep -m1 '^Version,' rmfw/targets/f7/api_symbols.csv | cut -d, -f3)
-          echo "radiogeddon-roguemaster.fap target=f7 api=$api" | tee out/BUILD_INFO-roguemaster.txt
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: radiogeddon-roguemaster
-          path: out/*
+          name: fap-${{ matrix.target }}
+          path: |
+            out/radiogeddon-${{ matrix.target }}.fap
+            out/radiogeddon-${{ matrix.target }}.build-info
+          if-no-files-found: error
+          retention-days: 30
