@@ -148,6 +148,25 @@ The field map compares frames within one recording, and a single press usually
 repeats the same frame. Record **several presses** in one RAW capture to see
 which bits change between presses.
 
+## `Not enough memory` when opening Receive or Hopper
+
+The screen reads, for example, `Radio needs ~27 KB, 15 KB free. Restart the
+Flipper and retry.` The first figure is what a receive session took the last
+time it was measured on this firmware, plus a 6 KB margin; the second is the
+free heap now. The app does not start the radio rather than risk an
+out-of-memory crash.
+
+- Go back to the main menu and try again: leaving the Scanner, Hopper and
+  Database frees what they held.
+- Restart the Flipper and open RadioGeddon before anything else.
+- About shows the current figures (`Free now`, `Largest block`,
+  `Radio session`); include them, and the log from
+  [Collecting a device log](#collecting-a-device-log), if you report it.
+
+The measurement is replaced after the next session that runs if it changed by
+more than 1 KB, and it is ignored after a firmware update until a session has
+run on the new firmware.
+
 ## *Unknown Protocol Analysis* says *Not enough free memory*
 
 The analysis needs about 8 KB of contiguous free heap plus a safety margin and

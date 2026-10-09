@@ -23,7 +23,7 @@ Sub-GHz signals — entirely on the device, with no computer, phone or network.
 
 > [!WARNING]
 > **Public beta.** Every feature is implemented and the builds pass all
-> automated checks (lint, 439 host-test checks, three firmware builds with
+> automated checks (lint, 519 host-test checks, three firmware builds with
 > API/manifest verification). On physical hardware, so far there is only one
 > tester report (RogueMaster: launches and works); **nothing is independently
 > verified on a device yet.** Expect rough edges, and see
@@ -153,7 +153,7 @@ API version, compiles, and checks the resulting `.fap`'s manifest. More in
 ## Testing & verification
 
 ```bash
-make -C test check               # 439 host checks, -Werror, AddressSanitizer + UBSan
+make -C test check               # 519 host checks, -Werror, AddressSanitizer + UBSan
 python3 scripts/check_links.py   # documentation links and anchors
 ```
 

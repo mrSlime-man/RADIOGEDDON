@@ -57,7 +57,8 @@ void radiogeddon_storage_default_name(FuriString* out);
 /** Build a full path under the signals folder for a bare @p name (adds .sub). */
 void radiogeddon_storage_make_path(FuriString* out, const char* name);
 
-/** Write a serialized .sub payload (already including header) to @p path. */
+/** Write a serialized .sub payload (already including header) to @p path.
+ * On a failed write the partial file is removed. */
 bool radiogeddon_storage_write_serialized(
     Storage* storage,
     const char* path,

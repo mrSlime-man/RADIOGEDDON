@@ -1,5 +1,6 @@
 #include "radiogeddon_subghz.h"
 #include "radiogeddon_storage.h"
+#include "rg_memstat.h"
 
 #include <furi_hal_subghz.h>
 #include <furi_hal_region.h>
@@ -65,6 +66,7 @@ struct RadioGeddonSubGhz {
     uint8_t preset_index;
 
     bool rx_running;
+    uint32_t session_cost; // heap the last receive session took to set up
     RadioGeddonSubGhzDecodeCallback decode_cb;
     void* decode_ctx;
 
@@ -387,6 +389,10 @@ void radiogeddon_subghz_rx_start(
     // A new session starts clean: a capture from a previous session was
     // either saved already or abandoned, so delete what is left of it.
     radiogeddon_subghz_record_discard(instance);
+
+    // Measure what the session takes: decoders, keystore, worker thread.
+    uint32_t free_before = memmgr_get_free_heap();
+    uint32_t low_before = memmgr_get_minimum_free_heap();
     radiogeddon_subghz_decoders_alloc(instance);
     subghz_receiver_reset(instance->receiver);
 
@@ -405,6 +411,9 @@ void radiogeddon_subghz_rx_start(
     subghz_devices_start_async_rx(instance->device, subghz_worker_rx_callback, instance->worker);
     subghz_worker_start(instance->worker);
 
+    instance->session_cost = rg_mem_session_cost(
+        free_before, low_before, memmgr_get_free_heap(), memmgr_get_minimum_free_heap());
+    FURI_LOG_I(TAG, "Receive session took %lu bytes", (unsigned long)instance->session_cost);
     instance->rx_running = true;
 }
 
@@ -435,6 +444,10 @@ void radiogeddon_subghz_rx_stop(RadioGeddonSubGhz* instance) {
 
 bool radiogeddon_subghz_is_rx_running(RadioGeddonSubGhz* instance) {
     return instance->rx_running;
+}
+
+uint32_t radiogeddon_subghz_session_cost(RadioGeddonSubGhz* instance) {
+    return instance->session_cost;
 }
 
 void radiogeddon_subghz_rx_retune(RadioGeddonSubGhz* instance, uint32_t frequency) {

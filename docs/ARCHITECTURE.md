@@ -68,6 +68,7 @@ helpers/
   radiogeddon_settings.*    Settings persisted to the SD card
   radiogeddon_db.*          Database index: lists the signals folder, reads file heads
   radiogeddon_report.*      Writes a file's analysis reports to reports/<name>.txt
+  radiogeddon_memdiag.*     Heap sampling and the About memory figures
   radiogeddon_history.*     Per-session list of decoded signals (max 32, de-duplicated)
   radiogeddon_analysis.*    Text reports: info, analysis, crypto, compare, unknown-protocol
   radiogeddon_dsp.*         Pure RAW parsing / clustering helpers (no firmware headers)
@@ -79,8 +80,9 @@ helpers/
   rg_scan.*                 Pure scanner logic: noise floor, detection, peak hold
   rg_hop.*                  Pure hopper state machine: dwell, hold, lock, history
   rg_db.*                   Pure database index: .sub header parsing, duplicates, query
+  rg_memstat.*              Pure memory bookkeeping: lowest/peak, session cost, fit check
 assets/                     10x10 launcher icon (compiled into the .fap)
-test/                       Host unit tests (439 checks) + reference .sub fixtures
+test/                       Host unit tests (519 checks) + reference .sub fixtures
 scripts/                    Pinned builds, manifest verification, packaging, link check
 tools/brand/                Generator for the logo, banner and social preview
 .github/workflows/          CI (ci.yml), shared build pipeline (build.yml), release.yml
@@ -146,6 +148,26 @@ samples that leaves 12 KB free beyond it, the 2 KB write buffer and the
 writer's stack; refused below 1,024), and freed when recording stops.
 Allocating the radio state at launch exceeded the free heap on RogueMaster and
 crashed the app before the main menu (fixed in `1.0.0-beta.2`).
+
+**Receive-session memory check.** `rx_start` reads the free heap and the
+firmware's low-water mark (`memmgr_get_minimum_free_heap()`) before
+allocating and again once the worker runs; the session's cost is the drop in
+free heap, or the drop to the new low-water mark if setup pushed it lower
+(`rg_mem_session_cost`). Receive and Hopper keep that figure in the settings
+file (`Radio_heap`) with a tag of the firmware it was measured on
+(`Radio_heap_fw`, from the firmware version and git hash), replacing it after a
+session when it changed by more than 1 KB. Before the next start,
+`radiogeddon_scene_radio_memory_ok()` refuses with `Not enough memory` when
+less than that cost plus 6 KB is free. With no measurement for the running
+firmware nothing is refused, so behaviour is unchanged until a session has run.
+
+**Memory diagnostics.** `helpers/radiogeddon_memdiag.c` keeps the free heap at
+app start and the lowest free heap seen (`rg_memstat`), sampled on every 100 ms
+tick, after the radio, recorder, Scanner and timeline allocations, and on
+every progress report of long SD-card work; each named sample labels the ones
+after it. Only the app thread samples, so it needs no lock, and a sample is one
+read of a firmware counter. About shows these figures with the largest free
+block and the low-water mark since boot, and the app logs a summary on exit.
 
 ### Streaming RAW recording
 
@@ -238,6 +260,10 @@ decoded static protocols are re-encoded by the matching firmware encoder.
 | Scanner | RSSI sweep | results under a mutex; the scene reads them on the tick |
 | Hopper | RSSI sampling, retuning, auto-recording | state under a mutex; events posted to the scene |
 | File encoder worker | RAW replay streaming | signals completion with a custom event |
+
+Memory diagnostics are sampled only on the GUI / event-loop thread (ticks,
+scenes and the work they run); the hopper's automatic recordings show up in
+the next tick's sample.
 
 ## Storage
 

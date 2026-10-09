@@ -27,6 +27,8 @@ void radiogeddon_settings_default(RadioGeddonSettings* settings) {
     settings->db_sort = RgDbSortDate;
     settings->radio_external = false;
     settings->ext_power = true; // as the firmware's Sub-GHz app does
+    settings->radio_heap = 0; // not measured yet
+    settings->radio_heap_fw = 0;
 }
 
 uint32_t radiogeddon_settings_default_hop_mask(void) {
@@ -102,6 +104,16 @@ void radiogeddon_settings_load(Storage* storage, RadioGeddonSettings* settings) 
         if(flipper_format_read_bool(ff, "Radio_external", &b, 1)) settings->radio_external = b;
         flipper_format_rewind(ff);
         if(flipper_format_read_bool(ff, "Ext_5V", &b, 1)) settings->ext_power = b;
+        // A measured session cost is only used together with its firmware tag.
+        uint32_t fw = 0;
+        flipper_format_rewind(ff);
+        if(flipper_format_read_uint32(ff, "Radio_heap", &v, 1) && v <= 256u * 1024u) {
+            flipper_format_rewind(ff);
+            if(flipper_format_read_uint32(ff, "Radio_heap_fw", &fw, 1) && fw != 0) {
+                settings->radio_heap = v;
+                settings->radio_heap_fw = fw;
+            }
+        }
     } while(false);
 
     furi_string_free(type);
@@ -140,6 +152,10 @@ bool radiogeddon_settings_save(Storage* storage, const RadioGeddonSettings* sett
         if(!flipper_format_write_bool(ff, "Radio_external", &b, 1)) break;
         b = settings->ext_power;
         if(!flipper_format_write_bool(ff, "Ext_5V", &b, 1)) break;
+        v = settings->radio_heap;
+        if(!flipper_format_write_uint32(ff, "Radio_heap", &v, 1)) break;
+        v = settings->radio_heap_fw;
+        if(!flipper_format_write_uint32(ff, "Radio_heap_fw", &v, 1)) break;
         ok = true;
     } while(false);
     flipper_format_free(ff);

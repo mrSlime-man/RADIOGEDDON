@@ -40,14 +40,16 @@ bool radiogeddon_storage_write_serialized(
     const char* path,
     FuriString* serialized) {
     FlipperFormat* ff = flipper_format_file_alloc(storage);
+    bool opened = flipper_format_file_open_always(ff, path);
     bool ok = false;
-    do {
-        if(!flipper_format_file_open_always(ff, path)) break;
+    if(opened) {
         Stream* stream = flipper_format_get_raw_stream(ff);
         size_t len = furi_string_size(serialized);
         ok = (stream_write_cstring(stream, furi_string_get_cstr(serialized)) == len);
-    } while(false);
+    }
     flipper_format_free(ff);
+    // A half-written file would only show up as damaged in the Database.
+    if(opened && !ok) storage_common_remove(storage, path);
     return ok;
 }
 

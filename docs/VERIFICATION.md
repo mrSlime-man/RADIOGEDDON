@@ -32,14 +32,16 @@ locally.
 | Timeline-maths unit tests | `make -C test check` → `test_timeline` | Pass — 42 checks |
 | Sample-ring unit tests | `make -C test check` → `test_ring` | Pass — 47 checks |
 | RAW-writer unit tests | `make -C test check` → `test_rawfmt` | Pass — 18 checks |
-| Recorder tests (stub Furi/Storage) | `make -C test check` → `test_recorder` | Pass — 29 checks |
+| Recorder tests (stub Furi/Storage) | `make -C test check` → `test_recorder` | Pass — 34 checks |
 | Database-index unit tests | `make -C test check` → `test_db` | Pass — 75 checks |
+| Memory-bookkeeping unit tests | `make -C test check` → `test_memstat` | Pass — 30 checks |
+| Database-loading tests (stub Furi/Storage) | `make -C test check` → `test_dbload` | Pass — 45 checks |
 | Thread safety of ring and recorder | `make -C test tsan` (ThreadSanitizer; optional, not in CI) | Pass — no reports |
 | Memory safety of tested code | tests built `-Werror` under `-fsanitize=address,undefined` | Pass — no ASan/UBSan reports |
 | Documentation links | `scripts/check_links.py` (offline link + anchor check) | Pass |
 | `.fap` metadata | `scripts/verify_fap.py` parses `.fapmeta` and asserts magic, API, target, name, version, icon | Pass for all three artifacts |
 
-Host-test total: **439 checks, 0 failures.** What the suite covers (synthetic
+Host-test total: **519 checks, 0 failures.** What the suite covers (synthetic
 signals, not real captures):
 
 - `test_dsp` — RAW `RAW_Data` parsing (incl. whitespace, signs, out-of-range),
@@ -89,7 +91,10 @@ signals, not real captures):
   counted gaps while the producer never waits, with the count read back from
   the file; samples pushed before the file opens; a quiet recording still
   reaching the card; open, memory and write failures (no further writes, error
-  reported). Host timing is not the Flipper's: this shows the logic, not the
+  reported); 40 back-to-back recordings alternating the largest and smallest
+  ring, each staying within the heap it was given minus the 12 KB spare and
+  returning every byte and file handle, and a refused recorder allocating
+  nothing. Host timing is not the Flipper's: this shows the logic, not the
   device's throughput.
 - `test_db` — the database index: decoded and RAW headers (frequency,
   protocol, bits, key hashed regardless of spacing or case), CRLF lines, a
@@ -102,6 +107,22 @@ signals, not real captures):
   its tie-breaks, the protocol list, finding a file by name, and Rename's
   name rules (empty, longest allowed, too long, each character FAT cannot
   store, a dot or space at either end, a typed `.sub` in any case).
+- `test_memstat` — memory bookkeeping: the lowest free heap and where, peak
+  use (a later rise does not hide it), the fit check (an unmeasured cost
+  never refuses, exactly cost plus margin fits, no overflow), when a new
+  measurement replaces the stored one (over 1 KB), the session cost from free
+  heap and low-water mark (steady cost, a transient dip, no underflow), and
+  the firmware tag (stable, changes with version or hash).
+- `test_dbload` — the Database loader (`radiogeddon_db.c`) on a real host
+  folder through the stub layer, with every allocation counted: a missing
+  folder; decoded, RAW, damaged (binary, empty) and duplicate files, `.SUB` in
+  capitals, and skipped hidden files, other extensions and folders; sizes,
+  times, filters and paths; progress once per file to 100 %; a sweep of the
+  available heap from the 24 KB spare up showing refusal, partial and full
+  indexes, the truncation flag matching, never fewer files with more memory,
+  and peak use within the heap minus the spare (plus about 1 KB of handles);
+  and 100 repeated loads with the same peak and nothing left allocated or
+  open.
 
 ## Release-pipeline integrity
 
@@ -186,7 +207,11 @@ Everything about on-device radio behaviour, and the end-to-end workflow. See the
   thresholds behave on real receiver noise, and how long a whole-file analysis
   of a large capture takes on the SD card.
 - Regional TX enforcement actually blocking disallowed frequencies on hardware.
-- Long-run memory stability and absence of radio-threading crashes.
+- Long-run memory stability and absence of radio-threading crashes. The
+  About memory figures, the measured receive-session cost and the
+  `Not enough memory` refusal are untested on a device (checklist F15–F15c);
+  the host tests check the bookkeeping and the Database and recorder
+  lifecycles, not the firmware's heap.
 - That each per-firmware `.fap` loads and runs on its matching firmware.
 
 ## How this file is updated

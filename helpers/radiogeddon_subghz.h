@@ -116,6 +116,12 @@ void radiogeddon_subghz_rx_stop(RadioGeddonSubGhz* instance);
 bool radiogeddon_subghz_is_rx_running(RadioGeddonSubGhz* instance);
 
 /**
+ * Heap the last receive session took to set up (decoders, keystore, worker),
+ * measured by rx_start from the firmware's heap counters; 0 before the first.
+ */
+uint32_t radiogeddon_subghz_session_cost(RadioGeddonSubGhz* instance);
+
+/**
  * Retune an already-running RX session to a new frequency without powering the
  * radio down (used by the Frequency Hopper). The decode callback stays active.
  * Invalid (out-of-band) frequencies are ignored. No-op if RX is not running.

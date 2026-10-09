@@ -75,6 +75,12 @@ to follow [Semantic Versioning](https://semver.org/) (pre-1.0.0 releases use
   pin 1 (`Ext radio 5V`), an `EXT` marker on the radio screens, the radio
   named in About, and the choice saved. Transmitting through it is also
   checked against the region table and re-probes the module first.
+- **Memory diagnostics** in About: free heap now, largest free block, free
+  heap at app start, the lowest the app saw (and the step before it), the
+  app's peak use, the lowest since boot, the total heap, and what a receive
+  session took when last measured. The app samples the heap on every screen
+  tick and after its large allocations, and writes a summary to the log when
+  it closes.
 
 ### Changed
 - **Progress percentages** for long SD-card work: reading the Database
@@ -99,6 +105,14 @@ to follow [Semantic Versioning](https://semver.org/) (pre-1.0.0 releases use
 - Analysis shows `Analyzing...` / `Comparing...` while it reads the file, and
   reports *Not enough free memory* instead of starting when the heap is short.
 - Encoding names in reports are now `PWM`, `PPM` and `Manchester`.
+- **Receive and Hopper check memory before starting the radio.** Each receive
+  session measures what its decoders, keystore and worker took, and the app
+  keeps that figure (per firmware) with the settings. When less than that
+  plus 6 KB is free, the screen shows `Not enough memory` with both figures
+  instead of starting and risking an out-of-memory crash. Until a session has
+  been measured on the running firmware, nothing is refused.
+- Saving a decoded signal that fails part-way now removes the partial file
+  instead of leaving a damaged `.sub` in the Database.
 
 ## [1.0.0-beta.2] - 2026-10-09
 

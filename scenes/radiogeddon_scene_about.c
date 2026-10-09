@@ -12,8 +12,16 @@ void radiogeddon_scene_about_on_enter(void* context) {
     furi_string_cat_printf(
         app->temp_str,
         "Version: " RADIOGEDDON_VERSION "\n"
-        "Radio: %s CC1101\n(%s)\n\n"
-        "Standalone Sub-GHz\nanalysis toolkit.\n\n"
+        "Radio: %s CC1101\n(%s)\n\n",
+        radiogeddon_subghz_get_radio(app->subghz) == RadioGeddonRadioExternal ? "external" :
+                                                                                "internal",
+        radiogeddon_subghz_device_name(app->subghz));
+    // Measured this run if a session ran, else as kept from an earlier run.
+    uint32_t cost = radiogeddon_subghz_session_cost(app->subghz);
+    radiogeddon_memdiag_report(app->temp_str, cost ? cost : radiogeddon_scene_radio_cost(app));
+    furi_string_cat_printf(
+        app->temp_str,
+        "\nStandalone Sub-GHz\nanalysis toolkit.\n\n"
         "Modules:\n"
         "- Scanner (live RSSI)\n"
         "- Frequency hopper\n"
@@ -32,10 +40,7 @@ void radiogeddon_scene_about_on_enter(void* context) {
         "No key recovery is\nperformed. Transmission\nrespects regional limits.\n"
         "Use only on devices you\nare authorized to test.\n\n"
         "Signals stored under:\n/ext/apps_data/\n  radiogeddon/signals\n\n"
-        "github.com/mrSlime-man/\n  RADIOGEDDON\n",
-        radiogeddon_subghz_get_radio(app->subghz) == RadioGeddonRadioExternal ? "external" :
-                                                                                "internal",
-        radiogeddon_subghz_device_name(app->subghz));
+        "github.com/mrSlime-man/\n  RADIOGEDDON\n");
 
     widget_add_text_scroll_element(widget, 0, 16, 128, 48, furi_string_get_cstr(app->temp_str));
 

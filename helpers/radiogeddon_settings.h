@@ -27,6 +27,8 @@ typedef struct {
     uint8_t db_sort; // Database sort order (RgDbSort), kept from the last visit
     bool radio_external; // use an external CC1101 module when one answers
     bool ext_power; // switch on 5 V (GPIO pin 1) for the external module
+    uint32_t radio_heap; // heap the last measured receive session took (0: none)
+    uint32_t radio_heap_fw; // firmware it was measured on (rg_mem_firmware_tag)
 } RadioGeddonSettings;
 
 /** Default hopper list: the frequencies in radiogeddon_hopper_frequencies. */

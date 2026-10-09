@@ -105,6 +105,7 @@ void radiogeddon_scene_scanner_on_enter(void* context) {
         radiogeddon_scanner_start(app->scanner);
         app->scanner_running = true;
     }
+    radiogeddon_memdiag_sample("Scanner");
     view_dispatcher_switch_to_view(app->view_dispatcher, RadioGeddonViewScanner);
 }
 

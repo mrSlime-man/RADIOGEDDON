@@ -8,8 +8,9 @@ deliberately omitted.
 
 `1.0.0-beta.2` fixes an out-of-memory crash on launch that made `1.0.0-beta.1`
 unusable on RogueMaster. The full toolkit is implemented and builds for Official, Unleashed and
-RogueMaster, with 439 host-test checks and a verified release pipeline. See
-[Features](FEATURES.md) for the complete list.
+RogueMaster, with a verified release pipeline. See [Features](FEATURES.md) for
+the complete list. The development milestones below build on it (519 host-test
+checks so far).
 
 ## Next: hardware verification (the gating milestone)
 
@@ -53,12 +54,15 @@ still needs.
       F11–F12d pending).
 - [ ] **6. Interface pass**: consistent layout, status, errors, shortcuts
       (progress percentages, messages, Database shortcuts and saved sort
-      implemented; hardware checks F13–F13b pending; memory thresholds for
-      the radio screens wait for the measurements in milestone 8).
+      implemented; hardware checks F13–F13b pending; the radio screens' memory
+      check came with milestone 8).
 - [ ] **7. Optional external CC1101** through the firmware's device layer
       (implemented: selection, detection, 5 V control, status, region check;
       hardware checks F14–F14e pending).
-- [ ] **8. Performance and reliability**: memory diagnostics, lifecycle tests.
+- [ ] **8. Performance and reliability**: memory diagnostics, lifecycle tests
+      (implemented: heap sampling and About figures, measured receive-session
+      cost with a refusal before starting when it no longer fits, Database
+      and recorder lifecycle tests; hardware checks F15–F15c pending).
 
 ## Toward a stable 1.0.0
 

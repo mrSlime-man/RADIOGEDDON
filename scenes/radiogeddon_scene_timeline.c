@@ -125,6 +125,7 @@ void radiogeddon_scene_timeline_on_enter(void* context) {
         app->view_dispatcher,
         RadioGeddonViewTimeline,
         radiogeddon_timeline_view_get_view(app->timeline_view));
+    radiogeddon_memdiag_sample("Timeline");
 
     // Start zoomed so about ten PWM bits (40 Te) fill the screen, with the
     // first frame on the frame marker.

@@ -48,3 +48,16 @@ void radiogeddon_scene_show_message(RadioGeddonApp* app, const char* header, con
 
 /** Free the Database index and list view, if they exist. */
 void radiogeddon_scene_db_release(RadioGeddonApp* app);
+
+/** Heap a receive session took when last measured on this firmware (0: never). */
+uint32_t radiogeddon_scene_radio_cost(RadioGeddonApp* app);
+
+/**
+ * Before starting a receive session: true if its measured cost (plus a margin)
+ * fits in the free heap, or if it was never measured. Otherwise shows "Not
+ * enough memory" with the figures on the popup and returns false.
+ */
+bool radiogeddon_scene_radio_memory_ok(RadioGeddonApp* app);
+
+/** After a receive session: keep its measured cost for the next check. */
+void radiogeddon_scene_radio_memory_learn(RadioGeddonApp* app);
