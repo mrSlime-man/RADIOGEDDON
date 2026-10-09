@@ -121,10 +121,12 @@ void radiogeddon_settings_load(Storage* storage, RadioGeddonSettings* settings) 
 }
 
 bool radiogeddon_settings_save(Storage* storage, const RadioGeddonSettings* settings) {
+    // Write a new file next to the old one and swap it in only when complete,
+    // so a failed write never leaves a cut-off settings file.
     FlipperFormat* ff = flipper_format_file_alloc(storage);
     bool ok = false;
     do {
-        if(!flipper_format_file_open_always(ff, RADIOGEDDON_SETTINGS_PATH)) break;
+        if(!flipper_format_file_open_always(ff, RADIOGEDDON_SETTINGS_TEMP)) break;
         if(!flipper_format_write_header_cstr(ff, SETTINGS_FILE_TYPE, SETTINGS_FILE_VERSION)) break;
         uint32_t v = settings->frequency;
         if(!flipper_format_write_uint32(ff, "Frequency", &v, 1)) break;
@@ -158,6 +160,19 @@ bool radiogeddon_settings_save(Storage* storage, const RadioGeddonSettings* sett
         if(!flipper_format_write_uint32(ff, "Radio_heap_fw", &v, 1)) break;
         ok = true;
     } while(false);
+    ok = flipper_format_file_close(ff) && ok;
     flipper_format_free(ff);
+    if(ok) {
+        FS_Error err =
+            storage_common_rename(storage, RADIOGEDDON_SETTINGS_TEMP, RADIOGEDDON_SETTINGS_PATH);
+        if(err == FSE_EXIST) {
+            // Firmware that does not replace on rename.
+            storage_common_remove(storage, RADIOGEDDON_SETTINGS_PATH);
+            err = storage_common_rename(
+                storage, RADIOGEDDON_SETTINGS_TEMP, RADIOGEDDON_SETTINGS_PATH);
+        }
+        ok = err == FSE_OK;
+    }
+    if(!ok) storage_common_remove(storage, RADIOGEDDON_SETTINGS_TEMP);
     return ok;
 }

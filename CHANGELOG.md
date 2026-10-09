@@ -112,7 +112,16 @@ to follow [Semantic Versioning](https://semver.org/) (pre-1.0.0 releases use
   instead of starting and risking an out-of-memory crash. Until a session has
   been measured on the running firmware, nothing is refused.
 - Saving a decoded signal that fails part-way now removes the partial file
-  instead of leaving a damaged `.sub` in the Database.
+  instead of leaving a damaged `.sub` in the Database; a failed Scanner CSV
+  export no longer leaves a cut-off file either.
+- Pressing OK to save a decode while recording now stops the recording and
+  asks for its name first (the decoded list is kept). Before, the RAW capture
+  was silently deleted when the receiver restarted.
+- Settings are written to a new file and swapped in only when complete, so a
+  card error while saving keeps the previous settings instead of a cut-off
+  file.
+- A temporary recording left on the card by a reboot or flat battery during
+  recording is removed when the app starts.
 
 ## [1.0.0-beta.2] - 2026-10-09
 

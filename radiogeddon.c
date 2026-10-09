@@ -39,6 +39,9 @@ RadioGeddonApp* radiogeddon_app_alloc(void) {
     app->storage = furi_record_open(RECORD_STORAGE);
 
     radiogeddon_storage_ensure_paths(app->storage);
+    // A capture cut off by a reboot or flat battery left its temporary file
+    // behind; nothing can name it any more.
+    storage_common_remove(app->storage, RADIOGEDDON_RECORD_TEMP);
 
     app->file_path = furi_string_alloc();
     app->file_path_b = furi_string_alloc();

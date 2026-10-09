@@ -199,6 +199,14 @@ bool radiogeddon_scene_receiver_on_event(void* context, SceneManagerEvent event)
             consumed = true;
             break;
         case ReceiverCustomSave: {
+            // Leaving for the name screen stops the radio, and starting it
+            // again would delete the capture: name the recording first. The
+            // decoded list is kept, so the decode can be saved afterwards.
+            if(radiogeddon_subghz_is_recording(app->subghz)) {
+                radiogeddon_scene_receiver_stop_recording(app);
+                consumed = true;
+                break;
+            }
             size_t sel = radiogeddon_receiver_view_get_selected(app->receiver_view);
             furi_mutex_acquire(app->history_mutex, FuriWaitForever);
             bool ok = radiogeddon_history_has_serialized(app->history, sel);

@@ -223,9 +223,11 @@ bool radiogeddon_scanner_save_csv(
 
     File* file = storage_file_alloc(storage);
     bool ok = false;
+    bool opened = false;
     char line[96];
     do {
         if(!storage_file_open(file, path, FSAM_WRITE, FSOM_CREATE_ALWAYS)) break;
+        opened = true;
         if(!radiogeddon_scanner_write_str(
                file,
                "# RadioGeddon narrowband RSSI scan (CC1101, one frequency at a time;\n"
@@ -256,6 +258,8 @@ bool radiogeddon_scanner_save_csv(
 
     storage_file_close(file);
     storage_file_free(file);
+    // A cut-off CSV is worse than none (the screen says the save failed).
+    if(opened && !ok) storage_common_remove(storage, path);
     free(snap);
     return ok;
 }

@@ -12,6 +12,7 @@
 #include <storage/storage.h>
 
 #define RADIOGEDDON_SETTINGS_PATH EXT_PATH("apps_data/radiogeddon/settings.txt")
+#define RADIOGEDDON_SETTINGS_TEMP EXT_PATH("apps_data/radiogeddon/settings.tmp")
 
 typedef struct {
     uint32_t frequency; // Hz, receiver / default frequency
@@ -40,5 +41,6 @@ void radiogeddon_settings_default(RadioGeddonSettings* settings);
 /** Load from the SD card. Missing or invalid fields keep their defaults. */
 void radiogeddon_settings_load(Storage* storage, RadioGeddonSettings* settings);
 
-/** Save to the SD card. Returns false on I/O failure. */
+/** Save to the SD card, replacing the file only once the new one is complete.
+ * Returns false on I/O failure (the previous file is then kept). */
 bool radiogeddon_settings_save(Storage* storage, const RadioGeddonSettings* settings);
