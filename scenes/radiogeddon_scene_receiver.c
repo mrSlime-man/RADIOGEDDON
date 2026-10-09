@@ -35,6 +35,18 @@ static void radiogeddon_scene_receiver_refresh_history(RadioGeddonApp* app) {
     furi_mutex_release(app->history_mutex);
 }
 
+// Keep the displayed protocol name in step with the highlighted entry, so the
+// name shown next to "[i]" is the one OK will actually save.
+static void radiogeddon_scene_receiver_show_selected(RadioGeddonApp* app) {
+    size_t sel = radiogeddon_receiver_view_get_selected(app->receiver_view);
+    furi_mutex_acquire(app->history_mutex, FuriWaitForever);
+    size_t count = radiogeddon_history_count(app->history);
+    const char* name = (count && sel < count) ? radiogeddon_history_get_name(app->history, sel) :
+                                                "";
+    radiogeddon_receiver_view_set_history(app->receiver_view, count, name);
+    furi_mutex_release(app->history_mutex);
+}
+
 // --- View input callback (UI thread) --------------------------------------
 static void radiogeddon_scene_receiver_view_cb(RadioGeddonReceiverEvent event, void* context) {
     RadioGeddonApp* app = context;
@@ -103,6 +115,7 @@ bool radiogeddon_scene_receiver_on_event(void* context, SceneManagerEvent event)
                     radiogeddon_subghz_record_sample_count(app->subghz),
                     radiogeddon_subghz_record_overflowed(app->subghz));
             }
+            radiogeddon_scene_receiver_show_selected(app);
         }
         consumed = true;
     } else if(event.type == SceneManagerEventTypeCustom) {

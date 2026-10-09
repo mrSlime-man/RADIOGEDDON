@@ -63,6 +63,10 @@ file:
 - *Est. base Te*: the shortest group's width — a first guess at the protocol's
   base time unit.
 
+(*Unknown Protocol Analysis* groups timings a little differently — 25 % vs. 20 %
+tolerance, and it ignores tiny groups — so it may report a slightly different Te
+for the same file.)
+
 On-off keyed (OOK) remotes typically show two or three dominant groups (for
 example ~400 µs and ~1200 µs, a 1:3 ratio). Many tight groups usually mean
 noise or several overlapping transmitters.
@@ -92,7 +96,11 @@ runs RadioGeddon's signal engine (`helpers/rg_analyzer.c`) over the **first
    | **Manchester** | ≥ 85 % of durations ≈ Te or 2 × Te (≥ 25 % ≈ Te and ≥ 15 % ≈ 2 Te) | 45 % + excess coverage; max 80 % |
    | **PWM / OOK (weak)** | none of the above | 25 % |
 
-   ("Dominant" = at least 10 % of the high or low durations.)
+   ("Dominant" = at least 10 % of the high or low durations.) In practice the
+   PWM/OOK branch is tried first and catches most on-off-keyed remotes; the
+   Manchester branch rarely fires, and noisy or non-OOK input usually lands on
+   the 25 % "weak PWM" fallback — treat a low confidence as "no clear
+   structure", and the extracted bits of a weak result as meaningless.
 5. **Bits (PWM only).** Starting at the first carrier-on pulse, each on/off pair
    becomes one bit: `1` if the on-time is at least as long as the off-time,
    otherwise `0`. Up to 256 bits. The polarity is a convention — some protocols
@@ -165,8 +173,12 @@ the same, `~` a field that differs.
 ## What RadioGeddon never does
 
 - Recover, guess or brute-force cryptographic keys.
-- Decrypt payloads or predict the next rolling code.
-- Replay dynamic (rolling-code) protocols.
+- Decrypt payloads or predict the next rolling code. (RadioGeddon performs no
+  decryption of its own. The firmware's KeeLoq-family decoders, whose text it
+  displays, may use the SD-card manufacturer keystore to identify a signal and
+  show its counter — that happens in the firmware.)
+- Replay *decoded* dynamic (rolling-code) protocols. (A RAW capture is replayed
+  as recorded, which only re-sends one already-used code.)
 - Present an engine inference as a confirmed decode.
 
 ## Trying it with reference captures

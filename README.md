@@ -41,9 +41,11 @@ changing field maps across repeated presses, side-by-side comparison, a
 static-vs-rolling classifier, an on-SD-card signal database, and authorized
 replay. Everything runs on the device; recordings are plain `.sub` files.
 
-It is an **analysis and authorized-testing** tool. It does **not** recover keys,
-decrypt payloads, predict rolling codes, or replay rolling-code remotes — those
-are deliberate non-goals.
+It is an **analysis and authorized-testing** tool. RadioGeddon itself does
+**not** recover keys, decrypt payloads, or predict rolling codes, and it refuses
+to replay decoded rolling-code protocols — those are deliberate non-goals. (It
+does display the firmware's own decoder output, which may use the SD-card
+keystore to identify KeeLoq-family signals.)
 
 ## ⬇ Download
 
@@ -79,11 +81,12 @@ release lists `SHA256SUMS` and ships signed build-provenance attestations.
 | **Rolling Code Classification** | Flags static vs. dynamic (rolling-code) protocols, and highlights changing bits in unknown ones. |
 | **Cryptographic Structure Heuristics** | Key-byte variety and key-delta hints — never key recovery. |
 | **Signal Database** | Browse, analyse, compare, replay and delete recordings stored as `.sub` on the SD card. |
-| **Authorized Signal Replay** | Transmits RAW and static-protocol captures where the firmware's region rules allow; refuses rolling-code and unknown-modulation files. |
+| **Authorized Signal Replay** | Transmits RAW and static-protocol captures where the firmware's region rules allow; refuses decoded rolling-code protocols and unrecognised modulations. A RAW capture is sent exactly as recorded. |
 
-Every result is labelled **`[CONFIRMED]`** (a firmware decoder matched),
-**`[HEURISTIC]`** (a statistics-based guess) or **`[HYPOTHESIS]`** (an engine
-inference) — a guess is never dressed up as a decode. Full details, including
+Analysis conclusions are labelled **`[CONFIRMED]`** (a firmware decoder
+matched), **`[HEURISTIC]`** (a statistics-based guess) or **`[HYPOTHESIS]`** (an
+engine inference) — a guess is never dressed up as a decode (plain summary and
+field lines carry no label). Full details, including
 verification state per feature, are in [Features](docs/FEATURES.md) and
 [Protocol Analysis](docs/PROTOCOL_ANALYSIS.md).
 
@@ -180,8 +183,8 @@ It is intended for education, research, and testing of devices you own or are
 explicitly authorized to test. Receiving and especially transmitting radio
 signals is regulated and the rules vary by country; the firmware's regional
 restrictions stay in force, but **you** are responsible for complying with the
-law where you are. RadioGeddon does not break encryption, recover keys, or
-defeat rolling codes.
+law where you are. RadioGeddon itself does not break encryption, recover keys,
+or defeat rolling codes.
 
 <div align="center">
 <sub>Built for the Flipper Zero community. Not affiliated with Flipper Devices Inc.</sub>

@@ -62,6 +62,8 @@ gh attestation verify radiogeddon-official.fap --repo mrSlime-man/RADIOGEDDON
 RadioGeddon is for education, research, and testing devices you own or are
 explicitly authorized to test. Receiving and transmitting radio signals is
 regulated; you are responsible for complying with the laws in your
-jurisdiction. The app does not decrypt payloads, recover keys, or defeat rolling
-codes, and its transmit path keeps the firmware's regional restrictions in
-force.
+jurisdiction. RadioGeddon itself does not decrypt payloads, recover keys, or
+defeat rolling codes (it does display the firmware's decoder output, which may
+use the SD-card keystore to identify KeeLoq-family signals), and its transmit
+path keeps the firmware's regional restrictions in force and refuses decoded
+rolling-code protocols.

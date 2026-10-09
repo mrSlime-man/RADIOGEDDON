@@ -69,7 +69,11 @@ void radiogeddon_subghz_set_frequency(RadioGeddonSubGhz* instance, uint32_t freq
 uint32_t radiogeddon_subghz_get_frequency(RadioGeddonSubGhz* instance);
 void radiogeddon_subghz_set_preset(RadioGeddonSubGhz* instance, uint8_t preset_index);
 
-/** True if the frequency is both hardware-valid and allowed in this region. */
+/**
+ * True if the frequency is valid for the radio hardware. This does NOT check
+ * the region policy — regional transmit permission is enforced separately by
+ * subghz_devices_set_tx() at transmit time.
+ */
 bool radiogeddon_subghz_is_frequency_allowed(RadioGeddonSubGhz* instance, uint32_t frequency);
 
 /**

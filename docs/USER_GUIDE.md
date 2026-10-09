@@ -96,7 +96,8 @@ The LED blinks green for each new decode and stays red while recording.
 `Name RAW capture`) pre-filled with a timestamp such as `RG_20261009_143005`.
 Confirm to write `<name>.sub` to `/ext/apps_data/radiogeddon/signals/`; you'll
 hear a success or error tone, and return to the receiver with your decoded list
-intact.
+intact. A name that already exists is overwritten without warning, so edit the
+name if you want to keep the earlier capture.
 
 **Good to know**
 
@@ -155,7 +156,8 @@ You can analyse `.sub` files from other sources (for example the stock app's
 Transmits a saved recording **only where you are authorized to do so**.
 
 The `Replay / Transmit` screen shows the protocol and frequency and reminds you
-that regional limits are enforced and rolling-code signals are not sent. Press
+that regional limits are enforced by the firmware, that decoded rolling-code
+protocols are refused, and that a RAW capture is sent exactly as recorded. Press
 **OK** (`Send`) to transmit.
 
 While sending, the screen shows `Transmitting` / `Sending signal...` and the LED

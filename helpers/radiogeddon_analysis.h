@@ -2,9 +2,11 @@
  * @file radiogeddon_analysis.h
  * @brief On-device signal analysis, crypto heuristics and comparison.
  *
- * All judgements are explicitly labelled as either CONFIRMED (a firmware
- * protocol decoder matched) or HEURISTIC (a guess from signal statistics).
- * No function here claims cryptographic key recovery.
+ * Judgements are labelled CONFIRMED (a firmware decoder or the protocol
+ * registry matched), HEURISTIC (a guess from signal statistics) or, in the
+ * unknown-protocol engine output, HYPOTHESIS. Plain summary and field lines
+ * (name, frequency, the compare =/~ rows) carry no label. No function here
+ * recovers keys, decrypts payloads, or predicts rolling codes.
  */
 #pragma once
 

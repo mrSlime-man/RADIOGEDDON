@@ -45,6 +45,17 @@ static void radiogeddon_scene_hopper_refresh_history(RadioGeddonApp* app) {
     furi_mutex_release(app->history_mutex);
 }
 
+// Keep the displayed name in step with the highlighted entry (see receiver).
+static void radiogeddon_scene_hopper_show_selected(RadioGeddonApp* app) {
+    size_t sel = radiogeddon_receiver_view_get_selected(app->receiver_view);
+    furi_mutex_acquire(app->history_mutex, FuriWaitForever);
+    size_t count = radiogeddon_history_count(app->history);
+    const char* name = (count && sel < count) ? radiogeddon_history_get_name(app->history, sel) :
+                                                "";
+    radiogeddon_receiver_view_set_history(app->receiver_view, count, name);
+    furi_mutex_release(app->history_mutex);
+}
+
 static void radiogeddon_scene_hopper_view_cb(RadioGeddonReceiverEvent event, void* context) {
     RadioGeddonApp* app = context;
     // Recording is not meaningful while hopping; only handle Save (OK).
@@ -109,6 +120,7 @@ bool radiogeddon_scene_hopper_on_event(void* context, SceneManagerEvent event) {
 
         float rssi = radiogeddon_subghz_get_rssi(app->subghz);
         radiogeddon_receiver_view_set_rssi(app->receiver_view, rssi);
+        radiogeddon_scene_hopper_show_selected(app);
 
         uint32_t s = scene_manager_get_scene_state(app->scene_manager, RadioGeddonSceneHopper);
         uint8_t index = hopper_index(s);

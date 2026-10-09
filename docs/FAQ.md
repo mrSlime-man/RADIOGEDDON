@@ -83,9 +83,13 @@ gh attestation verify radiogeddon-official.fap --repo mrSlime-man/RADIOGEDDON
 
 No. It is deliberately an analysis tool. It can tell you that a signal *looks
 like* a rolling-code or encrypted protocol, and show which bits change between
-presses, but it never recovers keys, predicts codes, decrypts payloads, or
-bypasses rolling-code protection — and it refuses to replay dynamic
-(rolling-code) protocols at all.
+presses, but RadioGeddon itself never recovers keys, predicts codes, decrypts
+payloads, or bypasses rolling-code protection, and it refuses to replay decoded
+dynamic (rolling-code) protocols. (A RAW capture of any remote is transmitted
+exactly as recorded; replaying a rolling-code capture just re-sends one code the
+receiver has already seen.) It does show the firmware's own decoder output,
+which may use the SD-card manufacturer keystore to identify KeeLoq-family
+signals — that identification happens in the firmware, not in RadioGeddon.
 
 ### What do `[CONFIRMED]`, `[HEURISTIC]` and `[HYPOTHESIS]` mean?
 
@@ -100,9 +104,12 @@ See [Protocol Analysis](PROTOCOL_ANALYSIS.md).
 
 ### Why won't it replay a signal I captured?
 
-Replay is refused when the signal is a dynamic/rolling-code protocol, when the
-firmware's region rules don't allow transmitting on that frequency, or when the
-file's modulation preset isn't recognised. These safeguards are intentional.
+Replay is refused when a **decoded** signal is a dynamic/rolling-code protocol,
+when the firmware's region rules don't allow transmitting on that frequency, or
+when the file's modulation preset isn't recognised. (A RAW capture skips the
+protocol check and is sent as recorded — so a RAW capture of a rolling-code
+remote is transmitted, but it only replays one already-used code.) These
+safeguards are intentional.
 See [Features → Replay](FEATURES.md#authorized-signal-replay).
 
 ### Which frequencies and modulations are supported?

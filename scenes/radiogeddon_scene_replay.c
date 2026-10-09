@@ -42,7 +42,7 @@ static void radiogeddon_scene_replay_show_idle(RadioGeddonApp* app) {
         app->temp_str,
         "%s @ %lu.%02lu MHz\n"
         "Legal/region limits are\nenforced by firmware.\n"
-        "Rolling-code signals are\nnot transmitted.\n"
+        "Rolling-code protocols are\nrefused; a RAW capture is\nsent exactly as recorded.\n"
         "Only transmit devices you\nare authorized to test.",
         furi_string_get_cstr(app->loaded.protocol),
         (unsigned long)(app->loaded.frequency / 1000000),
