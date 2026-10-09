@@ -22,6 +22,6 @@
 
 - [ ] Documentation updated where behaviour or UI text changed (`docs/`, `README.md`)
 - [ ] `CHANGELOG.md` updated under "Unreleased"
-- [ ] New analysis output is labelled `[CONFIRMED]`, `[HEURISTIC]` or `[HYPOTHESIS]` honestly — nothing heuristic is presented as a verified decode
+- [ ] New analysis output is labelled `[CONFIRMED]`, `[OBSERVED]`, `[HEURISTIC]` or `[HYPOTHESIS]` honestly — nothing heuristic is presented as a verified decode
 - [ ] No key recovery, rolling-code bypass, jamming, or weakening of the transmit safeguards
 - [ ] No secrets, personal captures, or build output committed

@@ -8,7 +8,7 @@ deliberately omitted.
 
 `1.0.0-beta.2` fixes an out-of-memory crash on launch that made `1.0.0-beta.1`
 unusable on RogueMaster. The full toolkit is implemented and builds for Official, Unleashed and
-RogueMaster, with 128 host-test checks and a verified release pipeline. See
+RogueMaster, with 222 host-test checks and a verified release pipeline. See
 [Features](FEATURES.md) for the complete list.
 
 ## Next: hardware verification (the gating milestone)
@@ -40,8 +40,10 @@ still needs.
 - [ ] **2. Frequency Hopper 2.0**: custom lists, dwell, adaptive thresholds,
       pause/lock, detection history, optional auto-recording
       (implemented; hardware checks F2a–F2e pending).
-- [ ] **3. Signal Analyzer 2.0**: better inference and confidence, pulse
-      timeline view, multi-frame comparison without loading whole files.
+- [ ] **3. Signal Analyzer 2.0**: whole-file streaming analysis, PWM/PPM/
+      Manchester trial decoding with confidence, noise and jitter, frame
+      grouping, alignment and comparison (implemented; hardware checks
+      F4a–F4c pending); pulse timeline view (next).
 - [ ] **4. Streaming RAW recording**: bounded RAM, writes to SD while
       recording, overrun reporting.
 - [ ] **5. Signal Database 2.0**: rename, sort, filter, metadata, duplicates,
@@ -62,7 +64,8 @@ still needs.
 - [ ] External CC1101 module support surfaced in the UI (the radio layer
       already uses the portable device API).
 - [ ] Custom frequency entry and a custom modulation/preset editor.
-- [ ] Richer analysis: more encodings, CRC/checksum guesses, bit-field views.
+- [ ] Richer analysis: more encodings, CRC/checksum guesses, bit-field views,
+      running the firmware's decoders over a RAW capture.
 - [ ] A larger library of reference captures for regression testing.
 - [ ] Localisation of on-screen text.
 

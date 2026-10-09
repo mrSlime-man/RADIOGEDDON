@@ -10,6 +10,8 @@
 
 #include <furi.h>
 #include <storage/storage.h>
+#include <lib/toolbox/stream/stream.h>
+#include "rg_raw.h"
 
 #define RADIOGEDDON_APP_FOLDER     EXT_PATH("apps_data/radiogeddon")
 #define RADIOGEDDON_SIGNALS_FOLDER RADIOGEDDON_APP_FOLDER "/signals"
@@ -62,15 +64,18 @@ bool radiogeddon_storage_write_serialized(
 bool radiogeddon_storage_load(Storage* storage, const char* path, RadioGeddonLoadedSignal* out);
 
 /**
- * Load the RAW timing samples (signed microsecond durations) from a RAW .sub
- * file into @p buf, up to @p cap values. Returns the number of samples read
- * (0 if the file is not RAW or has no samples). Used by the analysis engine.
+ * A RAW .sub opened for streaming: samples are read a chunk at a time through
+ * rg_raw.h, so analysis and the timeline never load the whole recording.
  */
-size_t radiogeddon_storage_load_raw_samples(
-    Storage* storage,
-    const char* path,
-    int32_t* buf,
-    size_t cap);
+typedef struct {
+    Stream* stream;
+    RgRawReader reader;
+} RadioGeddonRawFile;
+
+/** Open @p path for streaming RAW_Data. NULL if it cannot be opened. */
+RadioGeddonRawFile* radiogeddon_storage_raw_open(Storage* storage, const char* path);
+
+void radiogeddon_storage_raw_close(RadioGeddonRawFile* file);
 
 /** Initialize an empty loaded-signal struct (allocates strings). */
 void radiogeddon_loaded_signal_init(RadioGeddonLoadedSignal* sig);

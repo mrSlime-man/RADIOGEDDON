@@ -4,6 +4,7 @@
 #include <lib/flipper_format/flipper_format.h>
 #include <lib/flipper_format/flipper_format_i.h>
 #include <lib/toolbox/stream/stream.h>
+#include <lib/toolbox/stream/file_stream.h>
 #include <datetime/datetime.h>
 #include <furi_hal_rtc.h>
 #include <stdlib.h>
@@ -139,37 +140,33 @@ bool radiogeddon_storage_load(Storage* storage, const char* path, RadioGeddonLoa
     return ok;
 }
 
-size_t radiogeddon_storage_load_raw_samples(
-    Storage* storage,
-    const char* path,
-    int32_t* buf,
-    size_t cap) {
-    if(!buf || cap == 0) return 0;
-    FlipperFormat* ff = flipper_format_file_alloc(storage);
-    FuriString* type = furi_string_alloc();
-    FuriString* value = furi_string_alloc();
-    uint32_t version = 0;
-    size_t total = 0;
+static size_t radiogeddon_raw_stream_read(void* ctx, uint8_t* buf, size_t len) {
+    return stream_read((Stream*)ctx, buf, len);
+}
 
-    do {
-        if(!flipper_format_file_open_existing(ff, path)) break;
-        if(!flipper_format_read_header(ff, type, &version)) break;
-        while(total < cap && flipper_format_read_string(ff, "RAW_Data", value)) {
-            const char* p = furi_string_get_cstr(value);
-            char* end = NULL;
-            while(*p && total < cap) {
-                long v = strtol(p, &end, 10);
-                if(end == p) break;
-                p = end;
-                if(v != 0) buf[total++] = (int32_t)v;
-            }
-        }
-    } while(false);
+static bool radiogeddon_raw_stream_seek(void* ctx, uint32_t offset) {
+    return stream_seek((Stream*)ctx, (int32_t)offset, StreamOffsetFromStart);
+}
 
-    furi_string_free(type);
-    furi_string_free(value);
-    flipper_format_free(ff);
-    return total;
+RadioGeddonRawFile* radiogeddon_storage_raw_open(Storage* storage, const char* path) {
+    RadioGeddonRawFile* file = malloc(sizeof(RadioGeddonRawFile));
+    file->stream = file_stream_alloc(storage);
+    if(!file_stream_open(file->stream, path, FSAM_READ, FSOM_OPEN_EXISTING)) {
+        file_stream_close(file->stream);
+        stream_free(file->stream);
+        free(file);
+        return NULL;
+    }
+    RgRawSource src = {radiogeddon_raw_stream_read, radiogeddon_raw_stream_seek, file->stream};
+    rg_raw_reader_init(&file->reader, src);
+    return file;
+}
+
+void radiogeddon_storage_raw_close(RadioGeddonRawFile* file) {
+    if(!file) return;
+    file_stream_close(file->stream);
+    stream_free(file->stream);
+    free(file);
 }
 
 void radiogeddon_storage_make_scan_path(FuriString* out) {

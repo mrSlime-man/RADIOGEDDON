@@ -9,18 +9,18 @@ verified, and its known limits. For step-by-step use, see the
 **Every feature below is implemented, compiles for all three firmware
 families, and passes CI. None has yet been verified on a physical Flipper
 Zero.** "Unit-tested" means the feature's firmware-independent logic is covered
-by the host test suite (128 checks); radio behaviour can only be confirmed on a
+by the host test suite (222 checks); radio behaviour can only be confirmed on a
 device ([VERIFICATION.md](VERIFICATION.md)).
 
 | Feature | Implemented | Unit-tested logic | Verified on hardware |
 |---------|:-----------:|:-----------------:|:--------------------:|
-| [Sub-GHz Scanner](#sub-ghz-scanner) | ✅ | — | ⏳ pending |
-| [Frequency Hopper](#frequency-hopper) | ✅ | — | ⏳ pending |
+| [Sub-GHz Scanner](#sub-ghz-scanner) | ✅ | ✅ floor, activity, CSV rows | ⏳ pending |
+| [Frequency Hopper](#frequency-hopper) | ✅ | ✅ dwell, hold, lock, history | ⏳ pending |
 | [RAW Signal Capture](#raw-signal-capture) | ✅ | ✅ RAW file round-trip | ⏳ pending |
 | [Protocol Identification](#protocol-identification) | ✅ | — (firmware decoders) | ⏳ pending |
 | [Signal Analyzer](#signal-analyzer) | ✅ | ✅ parsing, clustering | ⏳ pending |
-| [Unknown Protocol Analysis](#unknown-protocol-analysis) | ✅ | ✅ PWM, PPM shape, framing, bits | ⏳ pending |
-| [Signal Comparison](#signal-comparison) | ✅ | ✅ RAW similarity | ⏳ pending |
+| [Unknown Protocol Analysis](#unknown-protocol-analysis) | ✅ | ✅ PWM/PPM/Manchester, noise, alignment, streaming | ⏳ pending |
+| [Signal Comparison](#signal-comparison) | ✅ | ✅ RAW similarity, pattern alignment | ⏳ pending |
 | [Device ID Candidate Detection](#device-id-candidate-detection) | ✅ | ✅ constant/changing fields | ⏳ pending |
 | [Rolling Code Classification](#rolling-code-classification) | ✅ | ✅ field-map logic | ⏳ pending |
 | [Cryptographic Structure Heuristics](#cryptographic-structure-heuristics) | ✅ | ✅ key-byte statistics | ⏳ pending |
@@ -113,39 +113,48 @@ Details: [Protocol Analysis](PROTOCOL_ANALYSIS.md#signal-info--analysis).
 
 ## Unknown Protocol Analysis
 
-Runs RadioGeddon's signal engine over a RAW capture (first 4,096 samples) and
-reports, all as `[HYPOTHESIS]`:
+Streams the whole RAW capture through RadioGeddon's signal engine (about 8 KB
+of RAM however long the file is) and reports in two labelled parts:
 
-- base Te and timing groups;
-- a line-encoding hypothesis — PWM/OOK, PPM (gap-coded) or Manchester — with a
-  confidence percentage;
-- frame count and repeated frames;
-- the extracted bit string (PWM only, up to 256 bits);
-- a constant-vs-changing field map across repeated frames.
+- `[OBSERVED]`: sample count and duration, high and low timing peaks, noise
+  share, jitter, a quality grade, and frames cut on long gaps;
+- `[HYPOTHESIS]`: base Te; the encoding (PWM, PPM or Manchester) chosen by
+  trial-decoding every frame, with a confidence and the runner-up; bit length;
+  repeated frame patterns in binary and hex, with frames that only match after
+  a shift (a cut-off first frame) aligned to their pattern; a
+  constant-vs-changing field map; and a device ID candidate.
 
-Unit tests cover PWM identification, PPM-shaped input, framing, bit extraction
-and field maps on synthetic signals; the Manchester branch has no dedicated
-test yet. Details: [Protocol Analysis](PROTOCOL_ANALYSIS.md#unknown-protocol-analysis--hypothesis).
+A frame list ends the report: each frame's start time, bit count and pattern.
+
+Unit tests cover PWM, PPM and Manchester identification, noise and jitter
+robustness, cut-off frames, several patterns in one file and chunked
+streaming, all on synthetic signals. Details:
+[Protocol Analysis](PROTOCOL_ANALYSIS.md#unknown-protocol-analysis--observed-and-hypothesis).
 
 ## Signal Comparison
 
 *Compare with…* puts two recordings side by side, marking each field as the
 same (`=`) or different (`~`): protocol, frequency, and the key for decoded
-protocols — with a `[HEURISTIC]` key-difference hint for same-protocol pairs.
-For two RAW captures it adds a **timing-match score (0–100 %)** with a verdict:
-near-identical (≥ 90), similar structure (≥ 60), or clearly different.
+protocols, with a `[HEURISTIC]` key-difference hint for same-protocol pairs.
+For two RAW captures it adds:
 
-The score compares captures sample by sample from their start without
-alignment, so captures that begin at different points score lower even for the
-same button.
+- a **timing-match score (0–100 %)** with a verdict: near-identical (≥ 90),
+  similar structure (≥ 60), or clearly different. It compares the captures
+  sample by sample from their start without alignment, so captures that begin
+  at different points score lower even for the same button;
+- a `[HYPOTHESIS]` **pattern comparison** of each file's dominant frame,
+  aligned by up to 4 bits, which does not depend on when recording started.
+
+Both stream the files, so long recordings are compared in full.
 
 ## Device ID Candidate Detection
 
-When a RAW capture contains repeated frames (from one or several button
-presses), *Unknown Protocol Analysis* packs the bit positions that never change
-into a hexadecimal **device ID candidate** (up to 64 bits). Fixed remote or
-device identifiers usually live in that constant part of the frame. It is a
-`[HYPOTHESIS]` — a candidate to investigate, not a verified serial number.
+When a RAW capture contains frames that differ in some bits (for example
+several presses of a rolling-code remote), *Unknown Protocol Analysis* offers
+the longest run of at least 8 constant bits as a hexadecimal **device ID
+candidate**. Fixed remote or device identifiers usually live in that constant
+part of the frame. It is a `[HYPOTHESIS]`: a candidate to investigate, not a
+verified serial number.
 
 ## Rolling Code Classification
 
@@ -155,8 +164,8 @@ Two complementary signals:
   classification: `[CONFIRMED] Static code`, `[CONFIRMED] Dynamic code`
   (rolling, KeeLoq-style) or `[CONFIRMED] Telemetry`.
 - **Unknown protocols** — *Unknown Protocol Analysis* marks bits that change
-  between repeated frames; changing bits alongside a constant block are
-  reported as resembling a rolling counter (`[HYPOTHESIS]`). Record several
+  between frames; changing bits are reported as a possible counter, button
+  code or encrypted data (`[HYPOTHESIS]`). Record several
   presses in one RAW capture to see this — frames within a single press are
   usually identical.
 

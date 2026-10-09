@@ -23,7 +23,7 @@ Sub-GHz signals — entirely on the device, with no computer, phone or network.
 
 > [!WARNING]
 > **Public beta.** Every feature is implemented and the builds pass all
-> automated checks (lint, 128 host-test checks, three firmware builds with
+> automated checks (lint, 222 host-test checks, three firmware builds with
 > API/manifest verification). On physical hardware, so far there is only one
 > tester report (RogueMaster: launches and works); **nothing is independently
 > verified on a device yet.** Expect rough edges, and see
@@ -76,17 +76,17 @@ release lists `SHA256SUMS` and ships signed build-provenance attestations.
 | **RAW Signal Capture** | Records the raw on/off timing stream to a standard RAW `.sub` file. |
 | **Protocol Identification** | Live decoding with the firmware's own decoders (Princeton, CAME, Nice FLO, Holtek, KeeLoq-family, …) — marked `[CONFIRMED]`. |
 | **Signal Analyzer** | Pulse-width groups and base time unit for RAW; bit/field breakdown for decoded protocols. |
-| **Unknown Protocol Analysis** | Infers line encoding (PWM/PPM/Manchester) with a confidence score, frames, repeats and extracted bits for signals the firmware can't decode — all `[HYPOTHESIS]`. |
-| **Signal Comparison** | Field-by-field diff of two recordings, plus a timing-similarity score for RAW captures. |
-| **Device ID Candidate Detection** | Packs the bits that stay constant across repeated presses into a candidate device identifier. |
+| **Unknown Protocol Analysis** | Streams a whole RAW capture: measured timing, noise and frames (`[OBSERVED]`), then the encoding (PWM/PPM/Manchester) with a confidence score, bit patterns, frame-by-frame comparison and field map (`[HYPOTHESIS]`). |
+| **Signal Comparison** | Field-by-field diff of two recordings; for RAW captures, a timing-similarity score and a frame-pattern comparison that does not depend on when recording started. |
+| **Device ID Candidate Detection** | Offers the longest run of bits that stay constant while others change as a candidate device identifier. |
 | **Rolling Code Classification** | Flags static vs. dynamic (rolling-code) protocols, and highlights changing bits in unknown ones. |
 | **Cryptographic Structure Heuristics** | Key-byte variety and key-delta hints — never key recovery. |
 | **Signal Database** | Browse, analyse, compare, replay and delete recordings stored as `.sub` on the SD card. |
 | **Authorized Signal Replay** | Transmits RAW and static-protocol captures where the firmware's region rules allow; refuses decoded rolling-code protocols and unrecognised modulations. A RAW capture is sent exactly as recorded. |
 
 Analysis conclusions are labelled **`[CONFIRMED]`** (a firmware decoder
-matched), **`[HEURISTIC]`** (a statistics-based guess) or **`[HYPOTHESIS]`** (an
-engine inference) — a guess is never dressed up as a decode (plain summary and
+matched), **`[OBSERVED]`** (measured from the timing), **`[HEURISTIC]`** (a
+statistics-based guess) or **`[HYPOTHESIS]`** (an engine inference) — a guess is never dressed up as a decode (plain summary and
 field lines carry no label). Full details, including
 verification state per feature, are in [Features](docs/FEATURES.md) and
 [Protocol Analysis](docs/PROTOCOL_ANALYSIS.md).
@@ -152,7 +152,7 @@ API version, compiles, and checks the resulting `.fap`'s manifest. More in
 ## Testing & verification
 
 ```bash
-make -C test check               # 128 host checks, -Werror, AddressSanitizer + UBSan
+make -C test check               # 222 host checks, -Werror, AddressSanitizer + UBSan
 python3 scripts/check_links.py   # documentation links and anchors
 ```
 

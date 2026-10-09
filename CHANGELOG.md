@@ -23,6 +23,27 @@ to follow [Semantic Versioning](https://semver.org/) (pre-1.0.0 releases use
   and samples RSSI every 10 ms.
 - **Settings are saved** to `apps_data/radiogeddon/settings.txt` and restored
   at launch (frequency, modulation and scanner options).
+- **Signal Analyzer 2.0** (*Unknown Protocol Analysis*): analyses the whole RAW
+  file instead of its first 4,096 samples, streaming it through about 8 KB of
+  RAM. Timing peaks come from log-spaced histograms, which keeps receiver noise
+  out of them; new noise share, jitter and quality grade. The encoding is now
+  chosen by trial-decoding every frame as PWM, PPM and Manchester (Manchester
+  and PPM bits are now extracted too), with the runner-up shown. Frames are
+  grouped into repeated patterns (binary and hex), cut-off frames are aligned
+  to their pattern, and a per-frame list shows each frame's time, length and
+  pattern. Bit-length estimate and an ID candidate from the longest constant
+  run.
+- **`[OBSERVED]` label** for direct measurements, separate from
+  `[HYPOTHESIS]` inferences and `[CONFIRMED]` firmware decodes.
+- **RAW comparison** adds a frame-pattern comparison that does not depend on
+  when each recording started.
+
+### Changed
+- RAW timing similarity now streams both files in full instead of loading the
+  first 4,096 samples of each (32 KB of RAM), so it uses a few hundred bytes.
+- Analysis shows `Analyzing...` / `Comparing...` while it reads the file, and
+  reports *Not enough free memory* instead of starting when the heap is short.
+- Encoding names in reports are now `PWM`, `PPM` and `Manchester`.
 
 ## [1.0.0-beta.2] - 2026-10-09
 
