@@ -6,7 +6,7 @@ App(
     stack_size=4 * 1024,
     fap_category="Sub-GHz",
     fap_author="Georgii",
-    fap_version="0.3",
+    fap_version="1.0",
     fap_description="Standalone Sub-GHz radio analysis toolkit: scan, hop, record, decode, analyze, compare and replay signals on-device.",
     fap_icon="assets/icon_10px.png",
     fap_icon_assets="assets",

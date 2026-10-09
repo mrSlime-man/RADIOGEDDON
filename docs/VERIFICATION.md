@@ -1,79 +1,70 @@
 # Verification Status
 
-This records exactly what has been verified and how, and what remains
-unverified. It is updated as verification progresses. Integrity rule: nothing
-is marked hardware-verified without evidence from a physical device.
+What has been verified and how, and what has not. Integrity rule: nothing is
+marked hardware-verified without evidence from a physical device.
 
 ## Environment at time of writing
 
-- No Flipper Zero connected (no USB device, no `/dev/ttyACM*`, `ufbt` reports no
-  device target). Hardware steps therefore could not be run.
+- No Flipper Zero connected (no USB device / `/dev/ttyACM*`). Hardware steps
+  could not be run and are all marked UNVERIFIED.
 
 ## Verified in this environment (evidence-backed)
 
 | Area | Method | Result |
 |------|--------|--------|
-| Compilation | `ufbt` against release SDK (fw 1.4.3, target f7, API 87.1) | **Pass**, zero warnings; `dist/radiogeddon.fap` produced (~50 KB) |
-| Clean rebuild | `rm -rf .ufbt/build && ufbt` | **Pass** |
-| DSP/parse unit tests | `make -C test check` | **Pass**, 31 checks, 0 failures |
-| `.sub` RAW serialize↔parse round-trip | host test `test_raw_roundtrip` | **Pass** — 1000-sample array survives chunked emit + reparse with correct count/min/max/clusters |
-| Static analysis | `cppcheck --enable=warning,style,performance,portability` | No real defects; only OOM-path false positives (Flipper `malloc` aborts, never returns NULL) and macro-parser noise |
-| Radio RX/TX sequencing | Cross-checked against official firmware `subghz_txrx.c` | Corrected to match (see below) |
+| Official build | ufbt `release` SDK (fw 1.4.3, f7, API 87.1) | **Pass**, no warnings, APPCHK + lint clean; `radiogeddon-official.fap` |
+| Unleashed build | ufbt index `up.unleashedflip.com` (`unlshd-093`, API 88.9) | **Pass**, APPCHK clean; `radiogeddon-unleashed.fap` |
+| RogueMaster build | RogueMaster firmware source, `./fbt fap_radiogeddon` (API 88.16) | **Pass**, APPCHK clean; `radiogeddon-roguemaster.fap` |
+| DSP/parse unit tests | `make -C test check` (`test_dsp`) | **Pass** — 31 checks |
+| Analysis-engine tests | `make -C test check` (`test_analyzer`) | **Pass** — 24 checks |
+| Memory safety of tests | built `-Werror` under `-fsanitize=address,undefined` | **Pass**, no ASan/UBSan reports |
+| RX/TX sequencing | cross-checked against OFW `subghz_txrx.c` and RM radio source | Matches firmware |
 
-## Bugs found and fixed during stabilization
+Total host coverage: **55 checks, 0 failures**.
 
-1. **RX started incorrectly.** Removed an erroneous `subghz_devices_set_rx()`
-   after `start_async_rx` (that call is for FIFO/sync mode and can disrupt
-   async timing capture); added `flush_rx`; reordered to `start_async_rx` →
-   `worker_start`, matching the firmware. RX stop reordered to
-   `worker_stop` → `stop_async_rx` → `idle`/`sleep`.
-2. **TX missing region gate.** Added `subghz_devices_set_tx()` with its
-   return-value check before `start_async_tx`, exactly as the firmware does, so
-   regional restrictions are enforced at the correct point for both RAW and
-   protocol transmit.
-3. **Replay mutated the saved file.** Protocol replay now deserializes from an
-   in-memory copy (with a bounded `Repeat`) instead of writing `Repeat` back
-   into the user's stored `.sub`.
-4. **Worker overrun callback** received the wrong context pointer (cast of
-   `subghz_receiver_reset`); replaced with a correct wrapper. (Fixed earlier.)
-5. **Cross-thread GUI writes.** The decoded-signal view is now updated only on
-   the UI thread; the radio worker thread merely records into a mutex-protected
-   history and posts a custom event.
-6. **Scanner/receiver with no radio** now show a clear message and the scanner
-   sweep is gated so it never probes a missing device.
-7. **Out-of-band frequency guard.** `set_frequency` asserts on invalid bands;
-   the probe and RX paths now validate first and fall back instead of crashing.
-8. **Saving no longer wipes the session list.** Returning from the save screen
-   preserves the receiver's decoded-signal history.
-9. **RAW save** now uses the firmware's `flipper_format_write_int32` array
-   writer and the exact `Flipper SubGhz RAW File` v1 header, guaranteeing
-   format compatibility.
-10. **Empty filename** rejected via a minimum input length; **replay result
-    popup** auto-returns via a proper callback.
+## Defects found and fixed (from firmware-source review of the merge)
 
-## Frequency Hopper (new in v0.3)
+1. **Internal radio reported absent on hardware (critical).**
+   `is_device_present()` returned `subghz_devices_begin() && is_connect()`, but
+   the internal cc1101's interconnect `begin` is `NULL`, so `subghz_devices_begin()`
+   returns `false` in both Official and RogueMaster. Every radio screen would
+   have shown "No radio" on a real device. Fixed to use `is_connect()` after an
+   ignored-return `begin()`. (Only firmware-source review caught this; it
+   compiles and passes host tests either way.)
+2. **Replay modulation fidelity.** Replay now reproduces the capture's exact
+   modulation, including loading a `FuriHalSubGhzPresetCustom` register array
+   from `Custom_preset_data`; an unrecognised preset is refused rather than
+   transmitted on a wrong/default modulation.
+3. **Destructive delete.** Deleting a saved recording now requires an explicit
+   confirmation.
+   (Earlier stabilization fixes from the analyzer branch are retained: RX
+   ordering, TX region gate, replay no longer mutating the stored file,
+   cross-thread GUI safety, invalid-frequency guards.)
 
-Implemented after stabilization. It reuses the live receive path and the new
-`radiogeddon_subghz_rx_retune()` primitive, which retunes without powering the
-radio down — the same stop/retune/start cycle the firmware hopper uses. It holds
-on a frequency when RSSI rises above the noise floor so a decode can complete.
-Build- and static-analysis-verified; its over-the-air behaviour is an item in
-the hardware checklist and is **unverified** until run on a device.
+## Signal analysis engine (new)
 
-## NOT yet verified (requires physical hardware)
+`helpers/rg_analyzer.c` is pure, firmware-independent and host-tested:
+clustering + base-Te estimate, encoding hypothesis (PWM/PPM/Manchester) with
+confidence, frame segmentation, repeated-frame detection, PWM bit extraction,
+constant-vs-changing field diff, device-ID candidate, and RAW similarity.
+Every result is labelled `[HYPOTHESIS]`; no key recovery or decryption is
+performed or claimed.
 
-The complete end-to-end workflow (launch → receive → display → save → reopen →
-analyze → compare → replay → exit) and all radio behaviour. See
-[`HARDWARE_CHECKLIST.md`](HARDWARE_CHECKLIST.md) for the full test plan. In
-particular, the following can only be confirmed on a device:
+## NOT verified (requires physical hardware)
 
-- Real reception and live protocol decoding from over-the-air signals.
+All radio behaviour and the end-to-end workflow. See
+[HARDWARE_CHECKLIST.md](HARDWARE_CHECKLIST.md). In particular:
+
+- Real over-the-air reception and live protocol decoding.
 - RAW capture fidelity and replay producing a working transmission.
+- The analysis engine's inferences against real captured signals (host tests
+  use synthetic waveforms).
 - Regional TX enforcement actually blocking disallowed frequencies.
 - Long-run memory stability and absence of radio-threading crashes.
+- That the three per-firmware `.fap`s load and run on their matching firmware.
 
 ## How to update this file
 
-After running `HARDWARE_CHECKLIST.md` on a device, move each confirmed item into
-the "Verified" table with the date, firmware version, and a one-line evidence
-note (log excerpt or observed behaviour).
+After running `HARDWARE_CHECKLIST.md` on a device, move each confirmed item
+into the "Verified" table with the date, firmware name + version, and a
+one-line evidence note (log excerpt or observed behaviour).

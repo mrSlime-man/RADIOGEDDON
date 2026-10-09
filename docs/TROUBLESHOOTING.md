@@ -76,7 +76,7 @@ score low. Rolling-code captures will differ every time by design.
 
 ## Where are my recordings?
 
-In `/ext/subghz` on the SD card, as standard `.sub` files, shared with the
+In `/ext/apps_data/radiogeddon/signals` on the SD card, as standard `.sub` files, shared with the
 stock Sub-GHz app. You can manage them there or from **Saved Signals** in the
 app.
 

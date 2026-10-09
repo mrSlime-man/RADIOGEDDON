@@ -15,20 +15,29 @@ with the firmware's own Sub-GHz app.
 
 ## Status
 
-This is an actively developed toolkit. It **builds cleanly** against the
-Flipper Zero release SDK (firmware 1.4.3, API 87.1) with `ufbt`, and the
-firmware-independent signal-processing logic is covered by host unit tests.
+This is an actively developed toolkit. The identical source **builds cleanly**
+against **three firmware families**, each against its own SDK:
 
-> **Hardware testing:** The code targets real hardware via the official
+| Firmware | Built with | API | Artifact |
+|----------|-----------|-----|----------|
+| Official | ufbt `release` (fw 1.4.3) | 87.1 | `dist/release/official/radiogeddon-official.fap` |
+| Unleashed | ufbt `unlshd-093` | 88.9 | `dist/release/unleashed/radiogeddon-unleashed.fap` |
+| RogueMaster | RogueMaster fw source + `fbt` | 88.16 | `dist/release/roguemaster/radiogeddon-roguemaster.fap` |
+
+The firmware-independent signal-processing and analysis logic is covered by
+host unit tests (55 checks under ASan/UBSan).
+
+> **Hardware testing:** The code targets real hardware via the public
 > `subghz_devices_*` / `furi_hal_subghz` APIs and performs no simulated
-> reception or fabricated analysis. However, it has **not** yet been verified on
-> a physical Flipper Zero in this development environment. On-device validation
-> of the milestone flow (receive → save → display → reopen) is the next step and
-> is tracked in [`docs/LIMITATIONS.md`](docs/LIMITATIONS.md).
+> reception or fabricated analysis. It has **not** yet been verified on a
+> physical Flipper Zero. On-device validation is tracked in
+> [`docs/HARDWARE_CHECKLIST.md`](docs/HARDWARE_CHECKLIST.md) and the current
+> evidence-backed status is in [`docs/VERIFICATION.md`](docs/VERIFICATION.md).
 
 See [`docs/CAPABILITIES.md`](docs/CAPABILITIES.md) for the precise list of
 implemented vs. unimplemented features, and
-[`docs/LIMITATIONS.md`](docs/LIMITATIONS.md) for hardware/API limitations.
+[`docs/FIRMWARE_COMPATIBILITY.md`](docs/FIRMWARE_COMPATIBILITY.md) for how the
+per-firmware builds work and which radio differences were checked.
 
 ---
 
@@ -40,6 +49,7 @@ implemented vs. unimplemented features, and
 | **Frequency Hopper** | Continuously cycles a short list of common bands, pausing to decode whenever activity (RSSI above the noise floor) is detected. |
 | **Receive & Record** | Live-decodes known protocols using the firmware's decoders, shows an RSSI meter and a decoded-signal list, and can capture the raw timing stream to a `.sub` file. |
 | **Signal Analyzer** | Inspects pulse timing (clustered symbol widths, estimated base `Te`, edge counts) for RAW captures, or bit/field structure for decoded protocols. |
+| **Unknown Protocol Analysis** | Runs the signal engine over a RAW capture to infer the line encoding (PWM/PPM/Manchester) with a confidence score, segment frames, detect repeated presses, extract bits, and — across repeats — separate constant fields (a likely device ID) from changing fields (a rolling counter). Every inference is labelled `[HYPOTHESIS]`; no key is recovered. |
 | **Crypto Analyzer** | Classifies signals as fixed (static) vs. rolling-code/dynamic (encrypted hop code) and reports key-byte variety — **without** claiming key recovery. |
 | **Comparator** | Compares two recordings field-by-field and highlights constant vs. changing fields (e.g. a rolling counter increment). |
 | **Database** | Browses, opens and deletes recordings stored on the SD card. |
@@ -59,6 +69,10 @@ Tool).
 ```bash
 pip install ufbt          # once
 ufbt                      # build -> dist/radiogeddon.fap
+
+# All packaged artifacts:
+./scripts/build_release.sh        # Official + Unleashed -> dist/release/
+./scripts/build_roguemaster.sh    # RogueMaster (clones RM fw, builds with fbt)
 ```
 
 The compiled application artifact is produced at `dist/radiogeddon.fap`.

@@ -66,6 +66,28 @@ like. Record results in the table at the bottom.
 - [ ] Memory: run several capture/save/open/replay cycles; free heap (via `log`
       or `free` in CLI) returns to baseline — no growth across cycles.
 
+- [ ] Unknown Protocol Analysis on a RAW capture reports base `Te`, an encoding
+      hypothesis with a confidence %, frame/repeat counts, extracted bits and —
+      across repeated presses — a constant-vs-changing field map and device-ID
+      candidate. Every line is labelled `[HYPOTHESIS]`; capturing the same
+      fixed-code remote twice should yield 0 changing bits, a rolling-code
+      remote should yield a changing suffix.
+- [ ] RAW-vs-RAW Compare shows a timing-similarity %: ~100% for two captures of
+      the same fixed button, low for different buttons.
+- [ ] Custom-preset replay: a stock-app RAW `.sub` saved with a custom preset
+      replays on the correct modulation (or is cleanly refused if its preset is
+      unknown) — never transmitted on the wrong modulation.
+- [ ] Delete asks for confirmation; Cancel/Back keeps the file, Delete removes it.
+
+## Per-firmware load check
+
+Each artifact must load on its matching firmware (install the wrong one and the
+Flipper should report an API mismatch rather than crash):
+
+- [ ] `radiogeddon-official.fap` on Official firmware — launches.
+- [ ] `radiogeddon-unleashed.fap` on Unleashed — launches.
+- [ ] `radiogeddon-roguemaster.fap` on RogueMaster — launches.
+
 ## Results log
 
 | Date | Firmware | Item | Pass/Fail | Notes |

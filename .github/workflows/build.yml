@@ -17,9 +17,6 @@ jobs:
             update_args: "--channel release"
           - target: unleashed
             update_args: "--index-url https://up.unleashedflip.com/directory.json"
-          # RogueMaster: add once a reachable SDK index URL is configured.
-          # - target: roguemaster
-          #   update_args: "--index-url https://<roguemaster-sdk-index>/directory.json"
     name: build (${{ matrix.target }})
     steps:
       - uses: actions/checkout@v4
@@ -59,4 +56,52 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: radiogeddon-${{ matrix.target }}
+          path: out/*
+
+  host-tests:
+    runs-on: ubuntu-latest
+    name: host tests (DSP + analysis engine)
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run unit tests (ASan/UBSan)
+        run: make -C test check
+
+  roguemaster:
+    runs-on: ubuntu-latest
+    name: build (roguemaster)
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: radiogeddon
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      # A toolchain is needed for RogueMaster's fbt; reuse ufbt's deployed one.
+      - name: Provide ARM toolchain via ufbt
+        env:
+          UFBT_HOME: ${{ github.workspace }}/.ufbt
+        run: |
+          pip install --upgrade ufbt
+          ufbt update --channel release
+      - name: Checkout RogueMaster firmware
+        run: |
+          GIT_LFS_SKIP_SMUDGE=1 git clone --depth 1 \
+            https://github.com/RogueMaster/flipperzero-firmware-wPlugins rmfw
+          git -C rmfw submodule update --init --depth 1
+      - name: Build fap against RogueMaster SDK
+        env:
+          FBT_TOOLCHAIN_PATH: ${{ github.workspace }}/.ufbt
+          FBT_NO_SYNC: "1"
+        run: |
+          mkdir -p rmfw/applications_user/radiogeddon
+          cp -r radiogeddon/. rmfw/applications_user/radiogeddon/
+          ( cd rmfw && ./fbt fap_radiogeddon )
+          mkdir -p out
+          cp rmfw/build/f7-firmware-C/.extapps/radiogeddon.fap out/radiogeddon-roguemaster.fap
+          api=$(grep -m1 '^Version,' rmfw/targets/f7/api_symbols.csv | cut -d, -f3)
+          echo "radiogeddon-roguemaster.fap target=f7 api=$api" | tee out/BUILD_INFO-roguemaster.txt
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: radiogeddon-roguemaster
           path: out/*

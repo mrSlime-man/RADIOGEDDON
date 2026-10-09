@@ -12,8 +12,9 @@ physical device), see [`VERIFICATION.md`](VERIFICATION.md) and the test plan in
 ### Core / platform
 - [x] Native Flipper Zero GUI (ViewDispatcher + SceneManager), physical-button
       navigation only.
-- [x] Builds as a `.fap` with `ufbt` against the official release SDK
-      (firmware 1.4.3, API 87.1), zero warnings.
+- [x] Builds as a `.fap` against **three** firmware families from one source
+      tree: Official (API 87.1), Unleashed (88.9) and RogueMaster (88.16), each
+      against its own SDK, zero warnings, lint clean.
 - [x] Persistent storage on the SD card under
       `/ext/apps_data/radiogeddon/signals`, using the standard `.sub` format.
 - [x] Graceful handling when no radio device is detected (clear message instead
@@ -45,14 +46,26 @@ physical device), see [`VERIFICATION.md`](VERIFICATION.md) and the test plan in
       heuristic. Clearly labelled; no key recovery.
 - [x] **Comparator** — field-by-field diff of two recordings (protocol,
       frequency, key, sample counts) with a rolling-counter delta hint.
+- [x] **Unknown Protocol Analysis** — pure signal engine (`rg_analyzer`) over a
+      RAW capture: base `Te`, encoding hypothesis (PWM/PPM/Manchester) with a
+      confidence score, frame segmentation, repeated-frame detection, PWM bit
+      extraction, constant-vs-changing field map, device-ID candidate.
+- [x] **RAW similarity** — timing-correlation score (0-100) added to the
+      comparator for two RAW captures.
 - [x] **Replay / TX** — transmits RAW and static-protocol `.sub` files for
-      authorized testing; refuses dynamic/rolling-code protocols; relies on
-      firmware region enforcement.
-- [x] Clear `[CONFIRMED]` vs `[HEURISTIC]` labelling throughout.
+      authorized testing; reproduces the capture's exact modulation (including a
+      file's custom-preset register array) and refuses an unrecognised preset
+      rather than sending on the wrong one; refuses dynamic/rolling-code
+      protocols; relies on firmware region enforcement.
+- [x] **Delete confirmation** — removing a saved recording requires an explicit
+      confirm so captured data is not lost to a mis-click.
+- [x] Clear `[CONFIRMED]` vs `[HEURISTIC]`/`[HYPOTHESIS]` labelling throughout;
+      no key recovery, decryption or rolling-code prediction is performed.
 
 ### Testing
 - [x] Host unit tests for the firmware-independent parsing/clustering/key-stat
-      logic (`test/`, run with `make -C test check`).
+      logic and the signal-analysis engine (`test/`, run with
+      `make -C test check`): 55 checks, built `-Werror` under ASan/UBSan.
 
 ## Not yet implemented / out of scope
 

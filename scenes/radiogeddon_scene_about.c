@@ -1,6 +1,6 @@
 #include "radiogeddon_scene.h"
 
-#define RADIOGEDDON_VERSION_STR "0.3"
+#define RADIOGEDDON_VERSION_STR "1.0"
 
 void radiogeddon_scene_about_on_enter(void* context) {
     RadioGeddonApp* app = context;
