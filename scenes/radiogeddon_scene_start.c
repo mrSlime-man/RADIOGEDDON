@@ -1,0 +1,76 @@
+#include "radiogeddon_scene.h"
+
+typedef enum {
+    StartIndexScanner,
+    StartIndexReceiver,
+    StartIndexDatabase,
+    StartIndexSettings,
+    StartIndexAbout,
+} StartIndex;
+
+static void radiogeddon_scene_start_submenu_callback(void* context, uint32_t index) {
+    RadioGeddonApp* app = context;
+    view_dispatcher_send_custom_event(app->view_dispatcher, index);
+}
+
+void radiogeddon_scene_start_on_enter(void* context) {
+    RadioGeddonApp* app = context;
+    Submenu* submenu = app->submenu;
+    submenu_reset(submenu);
+    submenu_set_header(submenu, "RadioGeddon");
+
+    submenu_add_item(
+        submenu, "Scanner", StartIndexScanner, radiogeddon_scene_start_submenu_callback, app);
+    submenu_add_item(
+        submenu,
+        "Receive & Record",
+        StartIndexReceiver,
+        radiogeddon_scene_start_submenu_callback,
+        app);
+    submenu_add_item(
+        submenu, "Database", StartIndexDatabase, radiogeddon_scene_start_submenu_callback, app);
+    submenu_add_item(
+        submenu, "Settings", StartIndexSettings, radiogeddon_scene_start_submenu_callback, app);
+    submenu_add_item(
+        submenu, "About", StartIndexAbout, radiogeddon_scene_start_submenu_callback, app);
+
+    submenu_set_selected_item(
+        submenu, scene_manager_get_scene_state(app->scene_manager, RadioGeddonSceneStart));
+
+    view_dispatcher_switch_to_view(app->view_dispatcher, RadioGeddonViewSubmenu);
+}
+
+bool radiogeddon_scene_start_on_event(void* context, SceneManagerEvent event) {
+    RadioGeddonApp* app = context;
+    bool consumed = false;
+
+    if(event.type == SceneManagerEventTypeCustom) {
+        scene_manager_set_scene_state(app->scene_manager, RadioGeddonSceneStart, event.event);
+        switch(event.event) {
+        case StartIndexScanner:
+            scene_manager_next_scene(app->scene_manager, RadioGeddonSceneScanner);
+            break;
+        case StartIndexReceiver:
+            scene_manager_next_scene(app->scene_manager, RadioGeddonSceneReceiver);
+            break;
+        case StartIndexDatabase:
+            scene_manager_next_scene(app->scene_manager, RadioGeddonSceneSavedList);
+            break;
+        case StartIndexSettings:
+            scene_manager_next_scene(app->scene_manager, RadioGeddonSceneConfig);
+            break;
+        case StartIndexAbout:
+            scene_manager_next_scene(app->scene_manager, RadioGeddonSceneAbout);
+            break;
+        default:
+            break;
+        }
+        consumed = true;
+    }
+    return consumed;
+}
+
+void radiogeddon_scene_start_on_exit(void* context) {
+    RadioGeddonApp* app = context;
+    submenu_reset(app->submenu);
+}

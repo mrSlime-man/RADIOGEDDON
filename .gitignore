@@ -1,0 +1,15 @@
+# ufbt / build artifacts
+.ufbt/
+dist/debug/
+*.o
+*.elf
+*.map
+
+# editor / IDE
+.vscode/
+
+# host test binary
+test/test_dsp
+
+# The delivered application artifact (dist/radiogeddon.fap) is committed
+# intentionally and is NOT ignored.
