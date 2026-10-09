@@ -1,23 +1,37 @@
-#include "../radiogeddon.h"
+#include "radiogeddon_scene.h"
+
+#define RADIOGEDDON_VERSION_STR "0.3"
 
 void radiogeddon_scene_about_on_enter(void* context) {
-    RadioGeddon* app = context;
+    RadioGeddonApp* app = context;
+    Widget* widget = app->widget;
+    widget_reset(widget);
 
-    FuriString* body = furi_string_alloc();
-    furi_string_printf(
-        body,
-        "RadioGeddon v%s\n\n"
-        "Standalone Sub-GHz analysis\ntoolkit for Flipper Zero.\n\n"
-        "Scan, capture RAW, decode &\nidentify protocols, compare\nsignals, hop frequencies and\nreplay authorized recordings.\n\n"
-        "Recordings are standard .sub\nfiles in /ext/subghz, shared\nwith the stock Sub-GHz app.\n\n"
-        "Only transmit signals you are\nlegally authorized to send.\n\n"
-        "License: MIT\n"
-        "github.com/mrslime-man/\nradiogeddon",
-        RG_VERSION_STRING);
+    widget_add_string_element(
+        widget, 64, 2, AlignCenter, AlignTop, FontPrimary, "RadioGeddon " RADIOGEDDON_VERSION_STR);
 
-    widget_reset(app->widget);
-    widget_add_text_scroll_element(app->widget, 0, 0, 128, 64, furi_string_get_cstr(body));
-    furi_string_free(body);
+    furi_string_reset(app->temp_str);
+    furi_string_cat_printf(
+        app->temp_str,
+        "Device: %s\n\n"
+        "Standalone Sub-GHz\nanalysis toolkit.\n\n"
+        "Modules:\n"
+        "- Scanner (live RSSI)\n"
+        "- Frequency hopper\n"
+        "- Receive & decode\n"
+        "- RAW recorder\n"
+        "- Signal analyzer\n"
+        "- Crypto characteristics\n"
+        "- Comparator\n"
+        "- SD-card database\n"
+        "- Authorized replay\n\n"
+        "Labels: [CONFIRMED] =\ndecoder matched.\n[HEURISTIC] = guess from\nsignal statistics.\n\n"
+        "No key recovery is\nperformed. Transmission\nrespects regional limits.\n"
+        "Use only on devices you\nare authorized to test.\n\n"
+        "Signals stored under:\n/ext/apps_data/\n  radiogeddon/signals\n",
+        radiogeddon_subghz_device_name(app->subghz));
+
+    widget_add_text_scroll_element(widget, 0, 16, 128, 48, furi_string_get_cstr(app->temp_str));
 
     view_dispatcher_switch_to_view(app->view_dispatcher, RadioGeddonViewWidget);
 }
@@ -29,6 +43,6 @@ bool radiogeddon_scene_about_on_event(void* context, SceneManagerEvent event) {
 }
 
 void radiogeddon_scene_about_on_exit(void* context) {
-    RadioGeddon* app = context;
+    RadioGeddonApp* app = context;
     widget_reset(app->widget);
 }

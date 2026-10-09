@@ -1,3 +1,11 @@
+/**
+ * @file radiogeddon.h
+ * @brief RadioGeddon — standalone Sub-GHz radio analysis toolkit for Flipper Zero.
+ *
+ * Central application context and shared type definitions. The application is
+ * built on the standard Flipper GUI stack (ViewDispatcher + SceneManager) and
+ * a thin wrapper around the firmware's Sub-GHz subsystem (helpers/radiogeddon_subghz).
+ */
 #pragma once
 
 #include <furi.h>
@@ -5,34 +13,40 @@
 #include <gui/view_dispatcher.h>
 #include <gui/scene_manager.h>
 #include <gui/modules/submenu.h>
-#include <gui/modules/variable_item_list.h>
 #include <gui/modules/widget.h>
+#include <gui/modules/variable_item_list.h>
 #include <gui/modules/popup.h>
 #include <gui/modules/text_input.h>
-#include <notification/notification.h>
-#include <notification/notification_messages.h>
+#include <gui/modules/text_box.h>
 #include <dialogs/dialogs.h>
+#include <notification/notification_messages.h>
 #include <storage/storage.h>
 
-#include "scenes/radiogeddon_scene.h"
-#include "views/receiver_view.h"
-#include "helpers/radio.h"
-#include "helpers/frequencies.h"
-#include "helpers/signal_storage.h"
+#include "helpers/radiogeddon_subghz.h"
+#include "helpers/radiogeddon_history.h"
+#include "helpers/radiogeddon_storage.h"
+#include "helpers/radiogeddon_analysis.h"
+#include "views/radiogeddon_scanner_view.h"
+#include "views/radiogeddon_receiver_view.h"
 
-#define RG_TEXT_STORE_SIZE 64
-#define RG_VERSION_STRING  "1.0"
+#define RADIOGEDDON_TEXT_INPUT_BUFFER_SIZE 64
+#define RADIOGEDDON_TAG                    "RadioGeddon"
 
+/** Views owned by the application, addressed through the ViewDispatcher. */
 typedef enum {
     RadioGeddonViewSubmenu,
-    RadioGeddonViewVariableItemList,
     RadioGeddonViewWidget,
+    RadioGeddonViewVarItemList,
     RadioGeddonViewPopup,
     RadioGeddonViewTextInput,
+    RadioGeddonViewTextBox,
+    RadioGeddonViewScanner,
     RadioGeddonViewReceiver,
 } RadioGeddonView;
 
-typedef struct {
+typedef struct RadioGeddonApp RadioGeddonApp;
+
+struct RadioGeddonApp {
     Gui* gui;
     ViewDispatcher* view_dispatcher;
     SceneManager* scene_manager;
@@ -40,30 +54,49 @@ typedef struct {
     DialogsApp* dialogs;
     Storage* storage;
 
-    /* View modules */
+    // Shared GUI modules
     Submenu* submenu;
-    VariableItemList* var_item_list;
     Widget* widget;
+    VariableItemList* var_item_list;
     Popup* popup;
     TextInput* text_input;
-    RgReceiverView* receiver_view;
+    TextBox* text_box;
 
-    /* Radio */
-    RgRadio* radio;
+    // Custom live views
+    RadioGeddonScannerView* scanner_view;
+    RadioGeddonReceiverView* receiver_view;
 
-    /* Shared state */
-    char text_store[RG_TEXT_STORE_SIZE];
-    FuriString* file_path; /* selected / last saved file */
-    FuriString* compare_a; /* first file chosen for comparison */
-    FuriString* compare_b; /* second file chosen for comparison */
-    size_t freq_index; /* index into rg_frequencies */
-    size_t preset_index; /* index into rg_radio_presets */
-    uint32_t detection_count; /* decoded signals this session */
-    bool have_last_save; /* a recording was saved this session */
-} RadioGeddon;
+    // Radio subsystem wrapper
+    RadioGeddonSubGhz* subghz;
 
-/* Shared helpers implemented in radiogeddon.c */
-void radiogeddon_notify(RadioGeddon* app, const NotificationSequence* sequence);
+    // Decoded-signal session history (volatile, cleared per receive session).
+    // Written from the radio worker thread, read from the UI thread — guarded.
+    RadioGeddonHistory* history;
+    FuriMutex* history_mutex;
 
-/* Tick period (ms) driving live RSSI/sample refresh. */
-#define RG_TICK_PERIOD_MS 200
+    // Text buffers / transient selection state
+    char text_store[RADIOGEDDON_TEXT_INPUT_BUFFER_SIZE];
+    FuriString* file_path; // currently selected / loaded .sub path
+    FuriString* file_path_b; // second file for comparison
+    FuriString* temp_str; // scratch for info rendering
+
+    // Session configuration
+    uint32_t frequency; // Hz
+    uint8_t preset_index; // index into radiogeddon_preset table
+    size_t selected_history_index;
+    bool have_loaded_signal; // a signal loaded from file is available for analysis
+    RadioGeddonLoadedSignal loaded; // parsed representation of a loaded .sub file
+    RadioGeddonLoadedSignal loaded_b; // second parsed signal (comparison)
+
+    // Pending save: true if saving a RAW capture, false if saving a decoded signal
+    bool save_is_raw;
+    // Set when leaving the receiver for the save screen, so returning to the
+    // receiver keeps the session's decoded-signal list instead of clearing it.
+    bool receiver_preserve_history;
+    // True while the scanner sweep is actively probing a present radio.
+    bool scanner_running;
+};
+
+/** Allocate and free the full application context. */
+RadioGeddonApp* radiogeddon_app_alloc(void);
+void radiogeddon_app_free(RadioGeddonApp* app);

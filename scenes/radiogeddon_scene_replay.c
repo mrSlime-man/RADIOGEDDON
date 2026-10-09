@@ -1,153 +1,150 @@
-#include "../radiogeddon.h"
-#include <toolbox/path.h>
+#include "radiogeddon_scene.h"
 
 typedef enum {
-    RadioGeddonReplayStateConfirm = 0,
-    RadioGeddonReplayStateTx = 1,
-} RadioGeddonReplayState;
+    ReplayCustomSend = 300,
+    ReplayCustomComplete,
+    ReplayCustomClosePopup,
+} ReplayCustomEvent;
 
 typedef enum {
-    RadioGeddonReplayEventSend = 400,
-    RadioGeddonReplayEventCancel = 401,
-    RadioGeddonReplayEventPopupDone = 402,
-} RadioGeddonReplayEvent;
+    ReplayStateIdle = 0,
+    ReplayStateTransmitting = 1,
+} ReplayState;
 
-static void
-    radiogeddon_replay_button_callback(GuiButtonType result, InputType type, void* context) {
-    RadioGeddon* app = context;
-    if(type != InputTypeShort) return;
-    if(result == GuiButtonTypeCenter) {
-        view_dispatcher_send_custom_event(app->view_dispatcher, RadioGeddonReplayEventSend);
-    } else if(result == GuiButtonTypeLeft) {
-        view_dispatcher_send_custom_event(app->view_dispatcher, RadioGeddonReplayEventCancel);
+static void radiogeddon_scene_replay_button_cb(
+    GuiButtonType result,
+    InputType type,
+    void* context) {
+    RadioGeddonApp* app = context;
+    if(result == GuiButtonTypeCenter && type == InputTypeShort) {
+        view_dispatcher_send_custom_event(app->view_dispatcher, ReplayCustomSend);
     }
 }
 
-static void radiogeddon_replay_popup_callback(void* context) {
-    RadioGeddon* app = context;
-    view_dispatcher_send_custom_event(app->view_dispatcher, RadioGeddonReplayEventPopupDone);
+// Fired from the file-encoder worker thread when a RAW transmission finishes.
+static void radiogeddon_scene_replay_tx_complete(void* context) {
+    RadioGeddonApp* app = context;
+    view_dispatcher_send_custom_event(app->view_dispatcher, ReplayCustomComplete);
 }
 
-static void radiogeddon_replay_show_confirm(RadioGeddon* app) {
-    FuriString* name = furi_string_alloc();
-    FuriString* info = furi_string_alloc();
-    path_extract_filename(app->file_path, name, true);
-    rg_storage_read_info(furi_string_get_cstr(app->file_path), info);
+// Result popup timed out: return to the signal's action menu.
+static void radiogeddon_scene_replay_popup_cb(void* context) {
+    RadioGeddonApp* app = context;
+    view_dispatcher_send_custom_event(app->view_dispatcher, ReplayCustomClosePopup);
+}
 
-    FuriString* body = furi_string_alloc();
-    furi_string_printf(
-        body,
-        "%s\n%s\n\n! Transmits on air !\nUse only on signals you\nare authorized to send.",
-        furi_string_get_cstr(name),
-        furi_string_get_cstr(info));
+static void radiogeddon_scene_replay_show_idle(RadioGeddonApp* app) {
+    Widget* widget = app->widget;
+    widget_reset(widget);
+    widget_add_string_element(
+        widget, 64, 2, AlignCenter, AlignTop, FontPrimary, "Replay / Transmit");
 
-    widget_reset(app->widget);
-    widget_add_text_scroll_element(app->widget, 0, 0, 128, 40, furi_string_get_cstr(body));
+    furi_string_reset(app->temp_str);
+    furi_string_cat_printf(
+        app->temp_str,
+        "%s @ %lu.%02lu MHz\n"
+        "Legal/region limits are\nenforced by firmware.\n"
+        "Rolling-code signals are\nnot transmitted.\n"
+        "Only transmit devices you\nare authorized to test.",
+        furi_string_get_cstr(app->loaded.protocol),
+        (unsigned long)(app->loaded.frequency / 1000000),
+        (unsigned long)((app->loaded.frequency % 1000000) / 10000));
+    widget_add_text_scroll_element(
+        widget, 0, 14, 128, 38, furi_string_get_cstr(app->temp_str));
     widget_add_button_element(
-        app->widget, GuiButtonTypeLeft, "Cancel", radiogeddon_replay_button_callback, app);
-    widget_add_button_element(
-        app->widget, GuiButtonTypeCenter, "Send", radiogeddon_replay_button_callback, app);
-
-    furi_string_free(name);
-    furi_string_free(info);
-    furi_string_free(body);
+        widget, GuiButtonTypeCenter, "Send", radiogeddon_scene_replay_button_cb, app);
 
     view_dispatcher_switch_to_view(app->view_dispatcher, RadioGeddonViewWidget);
 }
 
 void radiogeddon_scene_replay_on_enter(void* context) {
-    RadioGeddon* app = context;
+    RadioGeddonApp* app = context;
+    scene_manager_set_scene_state(app->scene_manager, RadioGeddonSceneReplay, ReplayStateIdle);
+    radiogeddon_scene_replay_show_idle(app);
+}
 
-    scene_manager_set_scene_state(
-        app->scene_manager, RadioGeddonSceneReplay, RadioGeddonReplayStateConfirm);
-
-    /* If entered directly from the menu, prompt for a file first. */
-    if(furi_string_empty(app->file_path)) {
-        FuriString* start_path = furi_string_alloc_set(RG_SUBGHZ_FOLDER);
-        DialogsFileBrowserOptions options;
-        dialog_file_browser_set_basic_options(&options, RG_SUBGHZ_EXTENSION, NULL);
-        options.base_path = RG_SUBGHZ_FOLDER;
-        options.hide_ext = true;
-        options.skip_assets = true;
-        bool chosen = dialog_file_browser_show(app->dialogs, app->file_path, start_path, &options);
-        furi_string_free(start_path);
-        if(!chosen) {
-            scene_manager_previous_scene(app->scene_manager);
-            return;
-        }
-    }
-
-    radiogeddon_replay_show_confirm(app);
+static void radiogeddon_scene_replay_finish(RadioGeddonApp* app, const char* msg, bool success) {
+    radiogeddon_subghz_tx_stop(app->subghz);
+    scene_manager_set_scene_state(app->scene_manager, RadioGeddonSceneReplay, ReplayStateIdle);
+    notification_message(
+        app->notifications, success ? &sequence_success : &sequence_error);
+    popup_reset(app->popup);
+    popup_set_header(app->popup, success ? "Done" : "Error", 64, 18, AlignCenter, AlignCenter);
+    popup_set_text(app->popup, msg, 64, 38, AlignCenter, AlignCenter);
+    popup_set_context(app->popup, app);
+    popup_set_callback(app->popup, radiogeddon_scene_replay_popup_cb);
+    popup_set_timeout(app->popup, 1500);
+    popup_enable_timeout(app->popup);
+    view_dispatcher_switch_to_view(app->view_dispatcher, RadioGeddonViewPopup);
 }
 
 bool radiogeddon_scene_replay_on_event(void* context, SceneManagerEvent event) {
-    RadioGeddon* app = context;
+    RadioGeddonApp* app = context;
     bool consumed = false;
 
     if(event.type == SceneManagerEventTypeCustom) {
-        switch(event.event) {
-        case RadioGeddonReplayEventCancel:
-            scene_manager_previous_scene(app->scene_manager);
-            consumed = true;
-            break;
-        case RadioGeddonReplayEventSend: {
-            FuriString* error = furi_string_alloc();
-            bool ok = rg_radio_begin(app->radio);
-            if(ok) {
-                ok = rg_radio_replay_file_start(
-                    app->radio, furi_string_get_cstr(app->file_path), error);
-            } else {
-                furi_string_set(error, "Radio not available");
-            }
-
-            if(ok) {
+        if(event.event == ReplayCustomSend) {
+            RadioGeddonTxResult res = radiogeddon_subghz_tx_start(
+                app->subghz,
+                furi_string_get_cstr(app->file_path),
+                radiogeddon_scene_replay_tx_complete,
+                app);
+            if(res == RadioGeddonTxOk) {
                 scene_manager_set_scene_state(
-                    app->scene_manager, RadioGeddonSceneReplay, RadioGeddonReplayStateTx);
-                radiogeddon_notify(app, &sequence_blink_start_magenta);
-                widget_reset(app->widget);
-                widget_add_string_element(
-                    app->widget, 64, 28, AlignCenter, AlignCenter, FontPrimary, "Transmitting...");
-                view_dispatcher_switch_to_view(app->view_dispatcher, RadioGeddonViewWidget);
-            } else {
-                radiogeddon_notify(app, &sequence_error);
+                    app->scene_manager, RadioGeddonSceneReplay, ReplayStateTransmitting);
                 popup_reset(app->popup);
-                popup_set_header(app->popup, "Cannot replay", 64, 12, AlignCenter, AlignTop);
-                popup_set_text(
-                    app->popup, furi_string_get_cstr(error), 64, 36, AlignCenter, AlignCenter);
-                popup_set_callback(app->popup, radiogeddon_replay_popup_callback);
-                popup_set_context(app->popup, app);
-                popup_set_timeout(app->popup, 2000);
-                popup_enable_timeout(app->popup);
+                popup_set_header(
+                    app->popup, "Transmitting", 64, 26, AlignCenter, AlignCenter);
+                popup_set_text(app->popup, "Sending signal...", 64, 42, AlignCenter, AlignCenter);
                 view_dispatcher_switch_to_view(app->view_dispatcher, RadioGeddonViewPopup);
+                notification_message(app->notifications, &sequence_blink_start_magenta);
+            } else {
+                const char* msg = "Cannot transmit";
+                switch(res) {
+                case RadioGeddonTxErrorRegion:
+                    msg = "Blocked by region";
+                    break;
+                case RadioGeddonTxErrorProtected:
+                    msg = "Protected/rolling code";
+                    break;
+                case RadioGeddonTxErrorNoDevice:
+                    msg = "No radio device";
+                    break;
+                case RadioGeddonTxErrorNoFile:
+                    msg = "File not found";
+                    break;
+                case RadioGeddonTxErrorParse:
+                    msg = "Unsupported file";
+                    break;
+                case RadioGeddonTxErrorBusy:
+                    msg = "Radio busy";
+                    break;
+                default:
+                    break;
+                }
+                radiogeddon_scene_replay_finish(app, msg, false);
             }
-            furi_string_free(error);
             consumed = true;
-            break;
-        }
-        case RadioGeddonReplayEventPopupDone:
+        } else if(event.event == ReplayCustomComplete) {
+            // Guard against a double-finish: the RAW end-callback and the tick
+            // poll can both signal completion.
+            if(scene_manager_get_scene_state(app->scene_manager, RadioGeddonSceneReplay) ==
+               ReplayStateTransmitting) {
+                notification_message(app->notifications, &sequence_blink_stop);
+                radiogeddon_scene_replay_finish(app, "Signal sent", true);
+            }
+            consumed = true;
+        } else if(event.event == ReplayCustomClosePopup) {
             scene_manager_previous_scene(app->scene_manager);
             consumed = true;
-            break;
-        default:
-            break;
         }
     } else if(event.type == SceneManagerEventTypeTick) {
-        uint32_t state = scene_manager_get_scene_state(app->scene_manager, RadioGeddonSceneReplay);
-        if(state == RadioGeddonReplayStateTx) {
-            if(!rg_radio_tx_is_running(app->radio)) {
-                rg_radio_stop_tx(app->radio);
-                radiogeddon_notify(app, &sequence_blink_stop);
-                radiogeddon_notify(app, &sequence_success);
-                scene_manager_set_scene_state(
-                    app->scene_manager, RadioGeddonSceneReplay, RadioGeddonReplayStateConfirm);
-
-                popup_reset(app->popup);
-                popup_set_header(app->popup, "Sent", 64, 20, AlignCenter, AlignCenter);
-                popup_set_callback(app->popup, radiogeddon_replay_popup_callback);
-                popup_set_context(app->popup, app);
-                popup_set_timeout(app->popup, 1200);
-                popup_enable_timeout(app->popup);
-                view_dispatcher_switch_to_view(app->view_dispatcher, RadioGeddonViewPopup);
+        uint32_t state =
+            scene_manager_get_scene_state(app->scene_manager, RadioGeddonSceneReplay);
+        if(state == ReplayStateTransmitting) {
+            if(!radiogeddon_subghz_is_tx_running(app->subghz)) {
+                notification_message(app->notifications, &sequence_blink_stop);
+                radiogeddon_scene_replay_finish(app, "Signal sent", true);
             }
         }
         consumed = true;
@@ -156,12 +153,9 @@ bool radiogeddon_scene_replay_on_event(void* context, SceneManagerEvent event) {
 }
 
 void radiogeddon_scene_replay_on_exit(void* context) {
-    RadioGeddon* app = context;
-    /* Always make sure TX is stopped when leaving, however we got here. */
-    if(rg_radio_get_state(app->radio) == RgRadioStateTx) {
-        rg_radio_stop_tx(app->radio);
-        radiogeddon_notify(app, &sequence_blink_stop);
-    }
+    RadioGeddonApp* app = context;
+    notification_message(app->notifications, &sequence_blink_stop);
+    radiogeddon_subghz_tx_stop(app->subghz); // idempotent; ensures radio is released
     widget_reset(app->widget);
     popup_reset(app->popup);
 }

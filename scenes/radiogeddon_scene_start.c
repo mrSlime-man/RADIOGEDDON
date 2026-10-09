@@ -1,71 +1,45 @@
-#include "../radiogeddon.h"
+#include "radiogeddon_scene.h"
 
 typedef enum {
-    RadioGeddonMenuReceiver,
-    RadioGeddonMenuRecord,
-    RadioGeddonMenuHopper,
-    RadioGeddonMenuSaved,
-    RadioGeddonMenuCompare,
-    RadioGeddonMenuReplay,
-    RadioGeddonMenuSettings,
-    RadioGeddonMenuAbout,
-} RadioGeddonMenuIndex;
+    StartIndexScanner,
+    StartIndexReceiver,
+    StartIndexHopper,
+    StartIndexDatabase,
+    StartIndexSettings,
+    StartIndexAbout,
+} StartIndex;
 
 static void radiogeddon_scene_start_submenu_callback(void* context, uint32_t index) {
-    RadioGeddon* app = context;
+    RadioGeddonApp* app = context;
     view_dispatcher_send_custom_event(app->view_dispatcher, index);
 }
 
 void radiogeddon_scene_start_on_enter(void* context) {
-    RadioGeddon* app = context;
+    RadioGeddonApp* app = context;
     Submenu* submenu = app->submenu;
-
     submenu_reset(submenu);
     submenu_set_header(submenu, "RadioGeddon");
+
+    submenu_add_item(
+        submenu, "Scanner", StartIndexScanner, radiogeddon_scene_start_submenu_callback, app);
     submenu_add_item(
         submenu,
-        "Receiver",
-        RadioGeddonMenuReceiver,
-        radiogeddon_scene_start_submenu_callback,
-        app);
-    submenu_add_item(
-        submenu,
-        "RAW Record",
-        RadioGeddonMenuRecord,
+        "Receive & Record",
+        StartIndexReceiver,
         radiogeddon_scene_start_submenu_callback,
         app);
     submenu_add_item(
         submenu,
         "Frequency Hopper",
-        RadioGeddonMenuHopper,
+        StartIndexHopper,
         radiogeddon_scene_start_submenu_callback,
         app);
     submenu_add_item(
-        submenu,
-        "Saved Signals",
-        RadioGeddonMenuSaved,
-        radiogeddon_scene_start_submenu_callback,
-        app);
+        submenu, "Database", StartIndexDatabase, radiogeddon_scene_start_submenu_callback, app);
     submenu_add_item(
-        submenu,
-        "Compare Signals",
-        RadioGeddonMenuCompare,
-        radiogeddon_scene_start_submenu_callback,
-        app);
+        submenu, "Settings", StartIndexSettings, radiogeddon_scene_start_submenu_callback, app);
     submenu_add_item(
-        submenu,
-        "Replay Signal",
-        RadioGeddonMenuReplay,
-        radiogeddon_scene_start_submenu_callback,
-        app);
-    submenu_add_item(
-        submenu,
-        "Settings",
-        RadioGeddonMenuSettings,
-        radiogeddon_scene_start_submenu_callback,
-        app);
-    submenu_add_item(
-        submenu, "About", RadioGeddonMenuAbout, radiogeddon_scene_start_submenu_callback, app);
+        submenu, "About", StartIndexAbout, radiogeddon_scene_start_submenu_callback, app);
 
     submenu_set_selected_item(
         submenu, scene_manager_get_scene_state(app->scene_manager, RadioGeddonSceneStart));
@@ -74,52 +48,39 @@ void radiogeddon_scene_start_on_enter(void* context) {
 }
 
 bool radiogeddon_scene_start_on_event(void* context, SceneManagerEvent event) {
-    RadioGeddon* app = context;
+    RadioGeddonApp* app = context;
     bool consumed = false;
 
     if(event.type == SceneManagerEventTypeCustom) {
         scene_manager_set_scene_state(app->scene_manager, RadioGeddonSceneStart, event.event);
-        consumed = true;
         switch(event.event) {
-        case RadioGeddonMenuReceiver:
+        case StartIndexScanner:
+            scene_manager_next_scene(app->scene_manager, RadioGeddonSceneScanner);
+            break;
+        case StartIndexReceiver:
             scene_manager_next_scene(app->scene_manager, RadioGeddonSceneReceiver);
             break;
-        case RadioGeddonMenuRecord:
-            scene_manager_next_scene(app->scene_manager, RadioGeddonSceneRecord);
-            break;
-        case RadioGeddonMenuHopper:
+        case StartIndexHopper:
             scene_manager_next_scene(app->scene_manager, RadioGeddonSceneHopper);
             break;
-        case RadioGeddonMenuSaved:
-            scene_manager_next_scene(app->scene_manager, RadioGeddonSceneSaved);
+        case StartIndexDatabase:
+            scene_manager_next_scene(app->scene_manager, RadioGeddonSceneSavedList);
             break;
-        case RadioGeddonMenuCompare:
-            /* Fresh comparison: let the Compare scene prompt for both files. */
-            furi_string_reset(app->compare_a);
-            furi_string_reset(app->compare_b);
-            scene_manager_next_scene(app->scene_manager, RadioGeddonSceneCompare);
+        case StartIndexSettings:
+            scene_manager_next_scene(app->scene_manager, RadioGeddonSceneConfig);
             break;
-        case RadioGeddonMenuReplay:
-            /* Entered from the menu -> force a file picker (don't reuse the
-             * last selection, which Saved -> Replay relies on). */
-            furi_string_reset(app->file_path);
-            scene_manager_next_scene(app->scene_manager, RadioGeddonSceneReplay);
-            break;
-        case RadioGeddonMenuSettings:
-            scene_manager_next_scene(app->scene_manager, RadioGeddonSceneSettings);
-            break;
-        case RadioGeddonMenuAbout:
+        case StartIndexAbout:
             scene_manager_next_scene(app->scene_manager, RadioGeddonSceneAbout);
             break;
         default:
-            consumed = false;
             break;
         }
+        consumed = true;
     }
     return consumed;
 }
 
 void radiogeddon_scene_start_on_exit(void* context) {
-    RadioGeddon* app = context;
+    RadioGeddonApp* app = context;
     submenu_reset(app->submenu);
 }

@@ -1,21 +1,20 @@
 #include "radiogeddon_scene.h"
 
+// Collect handler function pointers into the three tables.
 #define ADD_SCENE(prefix, name, id) prefix##_scene_##name##_on_enter,
-static void (*const radiogeddon_scene_on_enter_handlers[])(void*) = {
+void (*const radiogeddon_scene_on_enter_handlers[])(void*) = {
 #include "radiogeddon_scene_config.h"
 };
 #undef ADD_SCENE
 
 #define ADD_SCENE(prefix, name, id) prefix##_scene_##name##_on_event,
-static bool (*const radiogeddon_scene_on_event_handlers[])(
-    void* context,
-    SceneManagerEvent event) = {
+bool (*const radiogeddon_scene_on_event_handlers[])(void*, SceneManagerEvent) = {
 #include "radiogeddon_scene_config.h"
 };
 #undef ADD_SCENE
 
 #define ADD_SCENE(prefix, name, id) prefix##_scene_##name##_on_exit,
-static void (*const radiogeddon_scene_on_exit_handlers[])(void* context) = {
+void (*const radiogeddon_scene_on_exit_handlers[])(void*) = {
 #include "radiogeddon_scene_config.h"
 };
 #undef ADD_SCENE
