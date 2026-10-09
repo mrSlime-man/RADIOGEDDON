@@ -173,6 +173,8 @@ bool radiogeddon_scene_saved_info_on_event(void* context, SceneManagerEvent even
             storage_simply_remove(app->storage, furi_string_get_cstr(app->file_path));
             notification_message(app->notifications, &sequence_success);
             app->have_loaded_signal = false;
+            app->db_dirty = true; // the Database list re-indexes
+
             scene_manager_previous_scene(app->scene_manager);
             consumed = true;
             break;

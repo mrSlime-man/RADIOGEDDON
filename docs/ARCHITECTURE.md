@@ -57,7 +57,8 @@ radiogeddon_version.h       Release version string (checked against the release 
 application.fam             Flipper app manifest (appid, category, icon, sources)
 scenes/                     One file per screen; the scene list is generated from
                             radiogeddon_scene_config.h (X-macros)
-views/                      Custom canvas views: scanner sweep, live receiver, pulse timeline
+views/                      Custom canvas views: scanner sweep, live receiver, pulse timeline,
+                            database list
 helpers/
   radiogeddon_subghz.*      Radio wrapper: device, decoders, RAW capture, hopper retune, TX
   radiogeddon_recorder.*    Streaming RAW recorder: lock-free ring + SD writer thread
@@ -65,6 +66,7 @@ helpers/
   radiogeddon_scanner.*     Scanner sweep thread, results and CSV export
   radiogeddon_hopper.*      Hopper thread, auto-recording, statistics report
   radiogeddon_settings.*    Settings persisted to the SD card
+  radiogeddon_db.*          Database index: lists the signals folder, reads file heads
   radiogeddon_history.*     Per-session list of decoded signals (max 32, de-duplicated)
   radiogeddon_analysis.*    Text reports: info, analysis, crypto, compare, unknown-protocol
   radiogeddon_dsp.*         Pure RAW parsing / clustering helpers (no firmware headers)
@@ -75,8 +77,9 @@ helpers/
   rg_timeline.*             Pure pulse-timeline maths: columns, labels, pan, zoom, frames
   rg_scan.*                 Pure scanner logic: noise floor, detection, peak hold
   rg_hop.*                  Pure hopper state machine: dwell, hold, lock, history
+  rg_db.*                   Pure database index: .sub header parsing, duplicates, query
 assets/                     10x10 launcher icon (compiled into the .fap)
-test/                       Host unit tests (364 checks) + reference .sub fixtures
+test/                       Host unit tests (423 checks) + reference .sub fixtures
 scripts/                    Pinned builds, manifest verification, packaging, link check
 tools/brand/                Generator for the logo, banner and social preview
 .github/workflows/          CI (ci.yml), shared build pipeline (build.yml), release.yml
@@ -229,7 +232,28 @@ interoperable with the stock Sub-GHz app and other tools:
   of up to 512 values, plus a final `# Lost: …` comment only if samples were
   dropped while recording.
 
-The database screen uses the firmware's file browser filtered to `.sub`.
+### Signal Database
+
+`radiogeddon_db` builds an index when the Database opens, in passes that keep
+at most one file open:
+
+1. Count the `.sub` files and the bytes their names need.
+2. Size the index from that count, capped at 500 files and by the free heap
+   (24 KB is always left for the screens opened from the list). If not all
+   fit, the first ones are indexed and the list says `N of M`.
+3. List the folder again, storing each name in one shared pool and its size.
+4. With the folder closed, read each file's first 512 bytes; `rg_db` parses
+   `Filetype`, `Frequency`, `Protocol`, `Bit` and `Key` (hashed with FNV-1a)
+   and classifies the file as decoded, RAW, another `.sub` kind or damaged.
+5. Read whole RAW files only where two have the same size, to hash their
+   contents; then mark duplicates.
+
+Sorting, filtering and searching (`rg_db_select`) produce a list of entry
+numbers without touching the card. The list view (`radiogeddon_db_view`)
+draws from the index; the query is changed only between
+`radiogeddon_db_view_lock` and `_unlock`, so the view never draws while it
+changes. The index and view are freed on returning to the main menu, and
+rebuilt after a delete or `Reload from SD`.
 
 ## Analysis pipeline
 

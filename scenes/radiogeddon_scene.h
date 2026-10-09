@@ -30,3 +30,6 @@ extern const SceneManagerHandlers radiogeddon_scene_handlers;
  * analysis). The GUI redraws it while the app thread waits on the SD card.
  */
 void radiogeddon_scene_show_busy(RadioGeddonApp* app, const char* text);
+
+/** Free the Database index and list view, if they exist. */
+void radiogeddon_scene_db_release(RadioGeddonApp* app);
