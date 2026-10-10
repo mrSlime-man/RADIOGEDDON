@@ -163,7 +163,9 @@ A frame list ends the report: each frame's start time, bit count and pattern.
 
 Unit tests cover PWM, PPM and Manchester identification, noise and jitter
 robustness, cut-off frames, several patterns in one file and chunked
-streaming, all on synthetic signals. Details:
+streaming, all on synthetic signals. The capture tests also score it on the
+firmware's own 50 RAW test captures: Te right for 48, encoding family for 41,
+frame length within one bit for 29. Details:
 [Protocol Analysis](PROTOCOL_ANALYSIS.md#unknown-protocol-analysis--observed-and-hypothesis).
 
 ## Pulse Timeline

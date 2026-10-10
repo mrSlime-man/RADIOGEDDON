@@ -4,9 +4,11 @@ How RadioGeddon identifies and analyses signals, what every part of the
 on-screen reports means, and — just as important — what the analysis cannot
 tell you.
 
-> **Status:** the analysis code is covered by host unit-test checks (149 for
-> parsing, the RAW reader and the analysis engine) on synthetic signals. It has
-> **not** yet been validated against real captures on a physical Flipper Zero
+> **Status:** the analysis code is covered by host unit-test checks (181 for
+> parsing, the RAW reader and the analysis engine) on synthetic signals, and
+> scored on the firmware's own 50 RAW test captures, which others recorded
+> ([accuracy](#accuracy-on-the-firmwares-test-captures)). It has **not** yet
+> been checked on captures made with RadioGeddon on a physical Flipper Zero
 > ([VERIFICATION.md](VERIFICATION.md)).
 
 ## Confidence labels

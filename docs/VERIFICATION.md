@@ -345,10 +345,12 @@ Everything about on-device radio behaviour, and the end-to-end workflow. See the
   the keystore or the device's heap.
 - The internal-radio presence fix (defect 1) actually resolving "No radio" on a
   device.
-- The analysis engine's inferences against real captured signals (host tests use
-  synthetic waveforms only), including how its noise, jitter and peak
-  thresholds behave on real receiver noise, and how long a whole-file analysis
-  of a large capture takes on the SD card.
+- The analysis engine's inferences on signals captured with this app: the
+  host tests use synthetic waveforms and the firmware's 50 RAW test captures
+  (`test_fwanalyze`, recorded by others), not captures from a RadioGeddon
+  device. How its noise, jitter and peak thresholds behave on the device's
+  own receiver noise, and how long a whole-file analysis of a large capture
+  takes on the SD card, are unchecked.
 - Regional TX enforcement actually blocking disallowed frequencies on hardware.
 - Long-run memory stability and absence of radio-threading crashes. The
   About memory figures, the measured receive-session cost and the
