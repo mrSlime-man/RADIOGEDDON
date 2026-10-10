@@ -4,13 +4,16 @@ Where RadioGeddon is headed. This is a plan, not a promise — priorities shift
 with what hardware testing finds and what contributors pick up. Dates are
 deliberately omitted.
 
-## Now — `1.0.0-beta.2`
+## Now — `1.0.0-beta.3`
 
-`1.0.0-beta.2` fixes an out-of-memory crash on launch that made `1.0.0-beta.1`
-unusable on RogueMaster. The full toolkit is implemented and builds for Official, Unleashed and
-RogueMaster, with a verified release pipeline. See [Features](FEATURES.md) for
-the complete list. The development milestones below build on it (532 host-test
-checks so far, plus format tests, fuzzing and static analysis in CI).
+`1.0.0-beta.3` brings development milestones 1 to 9 below: the upgraded
+scanner and hopper, streaming recording, Analyzer 2.0 with the Pulse Timeline,
+Database 2.0, the interface pass, the optional external CC1101, memory
+diagnostics, and the testing behind them (532 host-test checks, format tests,
+fuzzing and static analysis in CI). It builds for Official, Unleashed and
+RogueMaster with a verified release pipeline. None of it is verified on
+hardware yet. `1.0.0-beta.2` fixed the out-of-memory crash on launch that
+made `1.0.0-beta.1` unusable on RogueMaster.
 
 ## Next: hardware verification (the gating milestone)
 
@@ -71,9 +74,9 @@ still needs.
       that build the firmware's own FlipperFormat code and load its 85
       Sub-GHz test files, settings and saving included).
 - [ ] **10. Release management**: correct builds, checksums and provenance
-      for every beta (in progress: release metadata check in CI, provenance
-      verified before upload, weekly firmware watch with canary builds;
-      `1.0.0-beta.3` with milestones 1–9 next).
+      for every beta (release metadata check in CI, provenance verified before
+      upload, weekly firmware watch with canary builds, `1.0.0-beta.3`
+      prepared; it is published once milestones 1–9 are merged).
 
 ## Toward a stable 1.0.0
 

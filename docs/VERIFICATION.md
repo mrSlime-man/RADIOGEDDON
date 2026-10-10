@@ -2,9 +2,9 @@
 
 What has been verified, how, and what has not. Integrity rule: nothing is
 marked hardware-verified without evidence from a physical device. As of
-`1.0.0-beta.2`, the only physical-hardware results are tester reports (see
-"Reported by users" below); no checklist item is independently verified, and
-the "Not verified" section stands open.
+`1.0.0-beta.3`, the only physical-hardware results are tester reports on
+earlier code (see "Reported by users" below); no checklist item is
+independently verified, and the "Not verified" section stands open.
 
 ## Environment
 

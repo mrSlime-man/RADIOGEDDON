@@ -7,6 +7,11 @@ to follow [Semantic Versioning](https://semver.org/) (pre-1.0.0 releases use
 
 ## [Unreleased]
 
+## [1.0.0-beta.3] - 2026-10-10
+
+Milestones 1 to 9: scanner, hopper, analyzer, streaming recording, database,
+interface, external radio, memory and testing. Not yet verified on hardware.
+
 ### Added
 - **Scanner upgrade** (narrowband RSSI scanner): per-frequency noise-floor
   estimate and overall floor, activity detection with an adjustable threshold
@@ -69,7 +74,6 @@ to follow [Semantic Versioning](https://semver.org/) (pre-1.0.0 releases use
 - **Save report to SD**: writes a file's analysis reports, with their labels
   and a legend, to `apps_data/radiogeddon/reports/<name>.txt`, never
   replacing an existing report.
-
 - **External CC1101 module** (Settings → `Radio`): uses the firmware's
   `cc1101_ext` driver only when a module answers, with optional 5 V on GPIO
   pin 1 (`Ext radio 5V`), an `EXT` marker on the radio screens, the radio
