@@ -4,9 +4,14 @@ Where RadioGeddon is headed. This is a plan, not a promise — priorities shift
 with what hardware testing finds and what contributors pick up. Dates are
 deliberately omitted.
 
-## Now — `1.0.0-beta.3`
+## Now — `1.0.0-beta.4`
 
-`1.0.0-beta.3` brings development milestones 1 to 9 below: the upgraded
+`1.0.0-beta.4` fixes a crash in Receive and the Hopper on Official firmware
+(CAME Atomo and Alutech AT-4N decodes) and adds *Decode with Firmware*, which
+runs the firmware's own decoders over a saved RAW capture. Neither is verified
+on hardware yet.
+
+`1.0.0-beta.3` brought development milestones 1 to 9 below: the upgraded
 scanner and hopper, streaming recording, Analyzer 2.0 with the Pulse Timeline,
 Database 2.0, the interface pass, the optional external CC1101, memory
 diagnostics, and the testing behind them (532 host-test checks, format tests,
@@ -80,9 +85,12 @@ still needs.
 
 ## After beta 3
 
-- [ ] **Decode with Firmware**: the firmware's own decoders run over a saved
+- [x] **Decode with Firmware**: the firmware's own decoders run over a saved
       RAW capture, listing each decode once with its count and times
-      (implemented; hardware check F4g pending).
+      (published in `1.0.0-beta.4`; hardware check F4g pending).
+- [x] **Decoder tests**: the firmware's own decoders built on the host and
+      run over its RAW test captures in CI. They found the Official-only
+      Receive crash fixed in `1.0.0-beta.4` (hardware check F5a pending).
 
 ## Toward a stable 1.0.0
 

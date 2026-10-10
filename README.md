@@ -26,8 +26,8 @@ Sub-GHz signals — entirely on the device, with no computer, phone or network.
 > automated checks (lint, 600 host-test checks, format tests, fuzzing, static
 > analysis, three firmware builds with API/manifest verification). On physical
 > hardware there is only one tester report so far, for the beta 2 code
-> (RogueMaster: launches and works); **nothing in beta 3 is verified on a
-> device yet.** Expect rough edges, and see
+> (RogueMaster: launches and works); **nothing in beta 3 or 4 is verified on
+> a device yet.** Expect rough edges, and see
 > [VERIFICATION.md](docs/VERIFICATION.md) for exactly what has and hasn't been
 > tested. Testing on real hardware is the single most useful thing you can
 > contribute — the [hardware checklist](docs/HARDWARE_CHECKLIST.md) shows how.
@@ -52,15 +52,15 @@ keystore to identify KeeLoq-family signals.)
 ## ⬇ Download
 
 Grab the build that matches your firmware from the
-[**v1.0.0-beta.3 release**](https://github.com/mrSlime-man/RADIOGEDDON/releases/tag/v1.0.0-beta.3),
+[**v1.0.0-beta.4 release**](https://github.com/mrSlime-man/RADIOGEDDON/releases/tag/v1.0.0-beta.4),
 then copy it to `apps/Sub-GHz/` on the SD card (full steps in
 [Installation](docs/INSTALLATION.md)).
 
 | Your firmware | Download this file |
 |---------------|--------------------|
-| **Official** (flipperzero.one) | [`radiogeddon-official.fap`](https://github.com/mrSlime-man/RADIOGEDDON/releases/tag/v1.0.0-beta.3) |
-| **Unleashed** | [`radiogeddon-unleashed.fap`](https://github.com/mrSlime-man/RADIOGEDDON/releases/tag/v1.0.0-beta.3) |
-| **RogueMaster** | [`radiogeddon-roguemaster.fap`](https://github.com/mrSlime-man/RADIOGEDDON/releases/tag/v1.0.0-beta.3) |
+| **Official** (flipperzero.one) | [`radiogeddon-official.fap`](https://github.com/mrSlime-man/RADIOGEDDON/releases/tag/v1.0.0-beta.4) |
+| **Unleashed** | [`radiogeddon-unleashed.fap`](https://github.com/mrSlime-man/RADIOGEDDON/releases/tag/v1.0.0-beta.4) |
+| **RogueMaster** | [`radiogeddon-roguemaster.fap`](https://github.com/mrSlime-man/RADIOGEDDON/releases/tag/v1.0.0-beta.4) |
 
 Each firmware family has its own SDK API version, so **install the file for
 your firmware** — the wrong one is safely refused with an "Outdated App /
