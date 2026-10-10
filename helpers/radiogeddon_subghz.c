@@ -2,6 +2,7 @@
 #include "radiogeddon_storage.h"
 #include "rg_memstat.h"
 #include "radiogeddon_decode_text.h"
+#include "rg_preset.h"
 
 #include <furi_hal_subghz.h>
 #include <furi_hal_region.h>
@@ -709,6 +710,23 @@ RadioGeddonTxResult radiogeddon_subghz_tx_start(
                         free(custom_preset_data);
                         custom_preset_data = NULL;
                     }
+                }
+                // The firmware loads the array without bounds and writes every
+                // address in it, so a damaged file reads past the buffer and a
+                // command strobe would be executed (0x35 is STX, before any
+                // region check): refuse those before the radio sees them.
+                uint8_t bad_reg = 0;
+                RgPresetResult check = custom_preset_data ?
+                                           rg_preset_check(custom_preset_data, count, &bad_reg) :
+                                           RgPresetOk;
+                if(check != RgPresetOk) {
+                    FURI_LOG_W(
+                        TAG,
+                        "Custom preset refused: %s (register 0x%02X)",
+                        rg_preset_result_text(check),
+                        bad_reg);
+                    result = RadioGeddonTxErrorPreset;
+                    break;
                 }
             }
         }

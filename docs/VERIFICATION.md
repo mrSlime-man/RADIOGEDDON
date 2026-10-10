@@ -38,9 +38,11 @@ locally.
 | Database-loading tests (stub Furi/Storage) | `make -C test check` → `test_dbload` | Pass — 45 checks |
 | RAW-to-decoder feeding tests | `make -C test check` → `test_decode` | Pass — 68 checks |
 | Frequency text and range tests | `make -C test check` → `test_freq` | Pass — 32 checks |
+| Custom preset check | `make -C test check` → `test_preset` | Pass — 20 checks |
 | Format tests (firmware code, real files) | `make -C test formats` → `test_formats`: the firmware's FlipperFormat and stream code and its 85 Sub-GHz test files, from the commit of Official 1.4.3 | Pass — 566 checks |
 | Analyzer on real captures | `make -C test captures` → `test_fwanalyze`: `rg_analyzer` on the firmware's 50 paired RAW test captures, scored against each protocol's decoder source | Pass — 354 checks; Te right for 48, encoding family for 41, frame length for 29 (see below) |
 | Decoder tests (firmware code, real captures) | `make -C test decoders` → `test_fwdecode`: the firmware's Sub-GHz receiver and all its protocol decoders, fed its 50 RAW test captures through `rg_decode` | Pass — 213 checks; all 50 decode and are described as the app describes them (see below) |
+| Preset check on the firmware's presets | `make -C test decoders` → `test_fwpreset`: `rg_preset_check` on the firmware's six built-in CC1101 presets and the custom presets in its example settings file | Pass — 26 checks; all eight pass and end where the firmware ends them |
 | Fuzz corpus replay | `make -C test check` → `replay_fuzz_raw`, `replay_fuzz_db`, `replay_fuzz_samples` | Pass — every committed input |
 | Fuzzing | `make -C test fuzz` (libFuzzer with ASan/UBSan; 60 s per target in CI) | Pass — no crash, sanitizer report or broken invariant |
 | Static analysis | `scripts/static_analysis.py`: GCC `-fanalyzer` and clang-tidy ([`.clang-tidy`](../.clang-tidy)) over the device code with the build flags, Official and Unleashed SDKs | Pass — 0 findings |
@@ -51,7 +53,7 @@ locally.
 | Newer firmware (canary) | `scripts/firmware_watch.py --build` (weekly in CI): Official 1.5.1-rc SDK, API 88.2 | Builds; `APPCHK` and manifest pass. No release targets it yet, not hardware-tested |
 | `.fap` metadata | `scripts/verify_fap.py` parses `.fapmeta` and asserts magic, API, target, name, version, icon | Pass for all three artifacts |
 
-Host-test total: **645 checks, 0 failures** (`make -C test check`; the format, capture and decoder tests are counted on their own). What the suite covers (synthetic
+Host-test total: **665 checks, 0 failures** (`make -C test check`; the format, capture and decoder tests are counted on their own). What the suite covers (synthetic
 signals, not real captures):
 
 - `test_dsp` — RAW `RAW_Data` parsing (incl. whitespace, signs, out-of-range
@@ -157,6 +159,15 @@ signals, not real captures):
   frequency. Whether the radio tunes a frequency is the firmware's check and
   is not tested on the host; `test_formats` checks that a custom frequency
   is kept in `settings.txt` and an out-of-range one is not.
+- `test_preset` — the custom preset check (`rg_preset.c`) that Replay runs
+  before the firmware loads a file's `Custom_preset_data`: a stock-shaped
+  preset, an empty register list and trailing bytes pass; no data, a list
+  cut before or inside its `00 00` end, and every cut inside the 8-byte PA
+  table are refused; every address above `0x2E` (strobes such as STX, the
+  PA table, the FIFO) is refused and every configuration register
+  `0x01`-`0x2E` allowed; a strobe-valued data byte, or PA bytes after the
+  end, are not taken for addresses. The presets are written for the test;
+  the firmware's own are `test_fwpreset`'s.
 
 The fuzz targets (`test/fuzz/`) feed arbitrary bytes to the code that reads
 files from the SD card and abort on any broken invariant, which libFuzzer and
@@ -253,6 +264,16 @@ Ending a capture with a quiet line changes no count. The decoded file next to
 a capture is compared for information only: 17 of 34 keys also decode from
 the capture; the others hold other codes (another button, counter or
 remote).
+
+`test_fwpreset` (also run by `make -C test decoders`) compiles the
+firmware's built-in CC1101 register arrays (`cc1101_configs.c`: AM 270,
+AM 650, FM 2.38k, FM 47.6k, MSK and GFSK) and reads the two example custom
+presets in its `setting_user.example`, and runs `rg_preset_check` on each:
+all pass, and each is exactly its registers, the `00 00` end and the 8-byte
+PA table, as the firmware loads it. So the check refuses nothing the firmware
+itself ships. Whether a refused preset would really have started a
+transmission on a device is not tested; the refusal happens before the
+radio is touched either way.
 
 `test_fwanalyze` (`make -C test captures`) runs the analyzer on the same 50
 captures, streamed and rewound for each pass as the app does, without telling
@@ -364,7 +385,8 @@ Everything about on-device radio behaviour, and the end-to-end workflow. See the
   device. How its noise, jitter and peak thresholds behave on the device's
   own receiver noise, and how long a whole-file analysis of a large capture
   takes on the SD card, are unchecked.
-- Regional TX enforcement actually blocking disallowed frequencies on hardware.
+- Regional TX enforcement actually blocking disallowed frequencies on hardware,
+  and Replay refusing a damaged custom preset on the device (checklist F7).
 - Long-run memory stability and absence of radio-threading crashes. The
   About memory figures, the measured receive-session cost and the
   `Not enough memory` refusal are untested on a device (checklist F15–F15c);

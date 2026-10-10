@@ -86,8 +86,9 @@ helpers/
   rg_db.*                   Pure database index: .sub header parsing, duplicates, query
   rg_memstat.*              Pure memory bookkeeping: lowest/peak, session cost, fit check
   rg_freq.*                 Pure frequency text (433.92 / 433.075) and range checks
+  rg_preset.*               Pure check of a file's custom CC1101 preset before Replay loads it
 assets/                     10x10 launcher icon (compiled into the .fap)
-test/                       Host unit tests (645 checks), format, decoder and capture tests, fuzz, fixtures
+test/                       Host unit tests (665 checks), format, decoder and capture tests, fuzz, fixtures
 scripts/                    Pinned builds, manifest verification, packaging, link check
 tools/brand/                Generator for the logo, banner and social preview
 .github/workflows/          CI (ci.yml), shared build pipeline (build.yml), release.yml

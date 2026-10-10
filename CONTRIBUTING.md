@@ -79,7 +79,7 @@ device; use `.ufbt-unleashed` for an Unleashed device.
 ```bash
 make -C test check                    # host tests + fuzz corpus, -Werror, ASan + UBSan
 make -C test formats                  # firmware FlipperFormat code + its .sub test files
-make -C test decoders                 # firmware Sub-GHz decoders on its RAW test captures
+make -C test decoders                 # firmware Sub-GHz decoders on its RAW captures, and its presets
 make -C test captures                 # the analyzer on those captures, scored against the decoders
 make -C test fuzz FUZZ_TIME=60        # fuzz each target under libFuzzer (needs clang)
 python3 scripts/check_links.py        # Markdown links and anchors

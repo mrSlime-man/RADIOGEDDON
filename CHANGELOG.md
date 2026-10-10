@@ -33,6 +33,16 @@ to follow [Semantic Versioning](https://semver.org/) (pre-1.0.0 releases use
   timing in the firmware's decoder source. A drop in any score fails the
   test.
 
+### Fixed
+- **Replay checks a file's custom preset before loading it.** A `.sub` file
+  can carry its own CC1101 register list (`Custom_preset_data`). The
+  firmware writes that list to the radio without bounds or checks, so a
+  damaged one made it read past the buffer, and an address above the
+  configuration registers would be run as a command: 0x35 (STX) would
+  start transmitting before any region check. Replay now refuses such a file
+  with `Bad custom preset` and writes nothing to the radio. Every preset the
+  firmware ships passes the check (`make -C test decoders`).
+
 ## [1.0.0-beta.4] - 2026-10-10
 
 Fixes a crash on Official firmware and adds Decode with Firmware. Not yet

@@ -186,6 +186,7 @@ typedef enum {
     RadioGeddonTxErrorProtected,
     RadioGeddonTxErrorNoDevice,
     RadioGeddonTxErrorBusy,
+    RadioGeddonTxErrorPreset, /* custom preset damaged or writing a command strobe */
 } RadioGeddonTxResult;
 
 typedef void (*RadioGeddonTxCompleteCallback)(void* context);

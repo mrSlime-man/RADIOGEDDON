@@ -122,6 +122,7 @@ then to the new spelling.
 | `Blocked by region` | Your Flipper's region settings forbid transmitting on this frequency. This is enforced by the firmware; only transmit where you are legally allowed to. |
 | `Protected/rolling code` | Rolling-code (dynamic) protocols and protocols the firmware can't encode are never replayed. This is intentional. |
 | `Unsupported file` | The file couldn't be read, or its modulation preset isn't one RadioGeddon recognises (standard AM/FM presets or a stored custom register set). |
+| `Bad custom preset` | The file stores its own CC1101 register list (`Custom_preset_data`) and it is cut short, has no `00 00` end, or names an address above `0x2E` (a radio command, not a setting). Re-save the recording from the app that made it; don't edit the list by hand. |
 | `File not found` | The file was moved or deleted; reopen it from the Database. |
 | `No radio device` / `Radio busy` | Go back, wait a moment and try again; reboot if it persists. |
 

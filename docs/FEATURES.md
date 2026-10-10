@@ -9,7 +9,7 @@ verified, and its known limits. For step-by-step use, see the
 **Every feature below is implemented, compiles for all three firmware
 families, and passes CI. None has yet been verified on a physical Flipper
 Zero.** "Unit-tested" means the feature's firmware-independent logic is covered
-by the host test suite (645 checks, plus format, decoder and capture tests on real files); radio behaviour can only be confirmed on a
+by the host test suite (665 checks, plus format, decoder and capture tests on real files); radio behaviour can only be confirmed on a
 device ([VERIFICATION.md](VERIFICATION.md)).
 
 | Feature | Implemented | Unit-tested logic | Verified on hardware |
@@ -289,9 +289,13 @@ Replay **refuses** to transmit when:
 | the protocol is dynamic (rolling code), not transmittable, or unknown to the firmware | `Protected/rolling code` |
 | the firmware's region settings forbid the frequency | `Blocked by region` |
 | the file is unreadable or its modulation preset isn't recognised | `Unsupported file` |
+| its custom preset is damaged (no end, PA table cut) or holds an address that is not a configuration register, such as a command strobe | `Bad custom preset` |
 
 Regional rules are enforced by the firmware itself
-(`subghz_devices_set_tx`), and RadioGeddon does not bypass them.
+(`subghz_devices_set_tx`), and RadioGeddon does not bypass them. A custom
+preset is checked first (`rg_preset_check`) because the firmware loads it
+unchecked: a command strobe in it, such as STX, would run before that
+region check.
 
 ## Memory diagnostics
 
