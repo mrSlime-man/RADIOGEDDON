@@ -81,6 +81,12 @@ to follow [Semantic Versioning](https://semver.org/) (pre-1.0.0 releases use
   session took when last measured. The app samples the heap on every screen
   tick and after its large allocations, and writes a summary to the log when
   it closes.
+- **Fuzz tests and static analysis** (development): libFuzzer targets for
+  the RAW reader with the analyzer, the analyzer and Pulse Timeline on raw
+  timing values, and the Database index with the Signal Info line parser.
+  Their corpus is replayed by every `make -C test check`, and CI fuzzes each
+  target for 60 s. CI also runs GCC's `-fanalyzer` and clang-tidy over the
+  device code with the exact build flags.
 
 ### Changed
 - **Progress percentages** for long SD-card work: reading the Database
@@ -122,6 +128,9 @@ to follow [Semantic Versioning](https://semver.org/) (pre-1.0.0 releases use
   file.
 - A temporary recording left on the card by a reboot or flat battery during
   recording is removed when the app starts.
+- Signal Info no longer misreads a RAW value beyond ±2,147,483,647 (only a
+  damaged or hand-edited file has one): it counts as the longest duration,
+  as in the analyzer, instead of overflowing. Found by the fuzz tests.
 
 ## [1.0.0-beta.2] - 2026-10-09
 

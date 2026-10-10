@@ -130,6 +130,25 @@ static void test_parse_clamped_large(void) {
     CHECK(max_us == 2000000000u, "large magnitude preserved");
 }
 
+// Values past int32 (found by fuzz/fuzz_db.c): strtol's overflow result used
+// to be negated, which is undefined. They now saturate like the RAW reader.
+static void test_parse_out_of_range(void) {
+    printf("test_parse_out_of_range\n");
+    size_t count = 0;
+    uint32_t min_us = 0, max_us = 0;
+    size_t n = radiogeddon_dsp_parse_line(
+        "-2147483648 99999999999999999999 -99999999999999999999 5",
+        &count,
+        &min_us,
+        &max_us,
+        NULL,
+        NULL,
+        0);
+    CHECK(n == 4 && count == 4, "four samples");
+    CHECK(max_us == 2147483647u, "saturated at INT32_MAX");
+    CHECK(min_us == 5, "small value unaffected");
+}
+
 // Emit an int32 timing array as the RAW writer does
 // (chunked, space-separated), then parse it back and verify no data loss.
 static void test_raw_roundtrip(void) {
@@ -179,6 +198,7 @@ int main(void) {
     test_parse_whitespace();
     test_parse_garbage_tail();
     test_parse_clamped_large();
+    test_parse_out_of_range();
     test_clustering();
     test_cluster_cap();
     test_raw_roundtrip();

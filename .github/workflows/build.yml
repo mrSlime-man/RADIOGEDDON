@@ -3,10 +3,12 @@
 #
 # Jobs:
 #   docs        offline Markdown link/anchor check
-#   host-tests  55 host unit-test checks under ASan/UBSan
+#   host-tests  host unit tests and the fuzz corpus replay under ASan/UBSan
+#   fuzz        the fuzz targets under libFuzzer for a fixed time each
 #   fap         one .fap per firmware family, built against the SDK pinned in
 #               scripts/firmware_pins.sh (checksum-verified), API asserted,
-#               manifest verified; clang-format lint on the official job
+#               manifest verified; clang-format lint on the official job;
+#               static analysis (GCC -fanalyzer, clang-tidy) on the ufbt SDKs
 name: Build
 
 on:
@@ -45,6 +47,33 @@ jobs:
       - name: Run unit tests
         run: make -C test check
 
+  fuzz:
+    name: fuzz (libFuzzer)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.ref }}
+          persist-credentials: false
+      - name: Install the libFuzzer runtime if missing
+        run: |
+          printf 'int LLVMFuzzerTestOneInput(const char*d,long n){(void)d;(void)n;return 0;}\n' > /tmp/probe.c
+          if ! clang-18 -fsanitize=fuzzer,address,undefined /tmp/probe.c -o /tmp/probe 2> /dev/null; then
+            sudo apt-get update -q
+            sudo apt-get install -y -q --no-install-recommends libclang-rt-18-dev
+          fi
+      - name: Fuzz each target for 60 s
+        run: make -C test fuzz FUZZ_CC=clang-18 FUZZ_TIME=60
+      - name: Keep failing inputs
+        if: failure()
+        uses: actions/upload-artifact@v6
+        with:
+          name: fuzz-failures
+          path: test/build/*-crash-*
+          if-no-files-found: ignore
+          retention-days: 30
+
   fap:
     name: fap (${{ matrix.target }})
     runs-on: ubuntu-24.04
@@ -76,6 +105,14 @@ jobs:
         env:
           UFBT_HOME: ${{ github.workspace }}/.ufbt-official
         run: ufbt lint
+
+      - name: Static analysis (GCC -fanalyzer, clang-tidy)
+        if: matrix.target != 'roguemaster'
+        env:
+          UFBT_HOME: ${{ github.workspace }}/.ufbt-${{ matrix.target }}
+        run: |
+          command -v clang-tidy-18 > /dev/null || sudo apt-get install -y -q --no-install-recommends clang-tidy-18
+          CLANG_TIDY=clang-tidy-18 python3 scripts/static_analysis.py
 
       - name: Summary
         run: |

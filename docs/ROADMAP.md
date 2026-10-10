@@ -9,8 +9,8 @@ deliberately omitted.
 `1.0.0-beta.2` fixes an out-of-memory crash on launch that made `1.0.0-beta.1`
 unusable on RogueMaster. The full toolkit is implemented and builds for Official, Unleashed and
 RogueMaster, with a verified release pipeline. See [Features](FEATURES.md) for
-the complete list. The development milestones below build on it (519 host-test
-checks so far).
+the complete list. The development milestones below build on it (522 host-test
+checks so far, plus fuzzing and static analysis in CI).
 
 ## Next: hardware verification (the gating milestone)
 
@@ -63,6 +63,12 @@ still needs.
       (implemented: heap sampling and About figures, measured receive-session
       cost with a refusal before starting when it no longer fits, Database
       and recorder lifecycle tests; hardware checks F15–F15c pending).
+- [ ] **9. Testing per feature**: unit, real-format, malformed-input and
+      low-memory tests, static analysis, all three builds in CI (in progress:
+      fuzz targets for the RAW reader, analyzer, Pulse Timeline, Database
+      index and Signal Info parser, with their corpus replayed by every test
+      run; GCC `-fanalyzer` and clang-tidy on the device code; real-format
+      tests next).
 
 ## Toward a stable 1.0.0
 

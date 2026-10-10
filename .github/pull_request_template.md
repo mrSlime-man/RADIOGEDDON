@@ -12,7 +12,7 @@
 
 ## How it was tested
 
-- [ ] `make -C test check` passes (host unit tests, ASan/UBSan)
+- [ ] `make -C test check` passes (host unit tests and fuzz corpus, ASan/UBSan)
 - [ ] `scripts/build_target.sh official` builds and verifies the .fap
 - [ ] `python3 scripts/check_links.py` reports no broken links
 - [ ] Tested on a physical Flipper Zero — firmware family/version: <!-- e.g. Official 1.4.3 -->

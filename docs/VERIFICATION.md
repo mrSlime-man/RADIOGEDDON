@@ -24,7 +24,7 @@ locally.
 | Unleashed build | SDK unlshd-093 pinned by SHA-256, API asserted 88.9, manifest verified | Pass — `radiogeddon-unleashed.fap` |
 | RogueMaster build | RogueMaster source at commit `38d7ae9`, built with its own `fbt`, API asserted 88.16, manifest verified | Pass — `radiogeddon-roguemaster.fap` |
 | Lint | `ufbt lint` (clang-format) | Pass, no warnings |
-| DSP/parse unit tests | `make -C test check` → `test_dsp` | Pass — 31 checks |
+| DSP/parse unit tests | `make -C test check` → `test_dsp` | Pass — 34 checks |
 | Analysis-engine unit tests | `make -C test check` → `test_analyzer` | Pass — 89 checks |
 | Scanner-logic unit tests | `make -C test check` → `test_scan` | Pass — 31 checks |
 | Hopper-logic unit tests | `make -C test check` → `test_hop` | Pass — 42 checks |
@@ -36,15 +36,19 @@ locally.
 | Database-index unit tests | `make -C test check` → `test_db` | Pass — 75 checks |
 | Memory-bookkeeping unit tests | `make -C test check` → `test_memstat` | Pass — 30 checks |
 | Database-loading tests (stub Furi/Storage) | `make -C test check` → `test_dbload` | Pass — 45 checks |
+| Fuzz corpus replay | `make -C test check` → `replay_fuzz_raw`, `replay_fuzz_db`, `replay_fuzz_samples` | Pass — every committed input |
+| Fuzzing | `make -C test fuzz` (libFuzzer with ASan/UBSan; 60 s per target in CI) | Pass — no crash, sanitizer report or broken invariant |
+| Static analysis | `scripts/static_analysis.py`: GCC `-fanalyzer` and clang-tidy ([`.clang-tidy`](../.clang-tidy)) over the device code with the build flags, Official and Unleashed SDKs | Pass — 0 findings |
 | Thread safety of ring and recorder | `make -C test tsan` (ThreadSanitizer; optional, not in CI) | Pass — no reports |
 | Memory safety of tested code | tests built `-Werror` under `-fsanitize=address,undefined` | Pass — no ASan/UBSan reports |
 | Documentation links | `scripts/check_links.py` (offline link + anchor check) | Pass |
 | `.fap` metadata | `scripts/verify_fap.py` parses `.fapmeta` and asserts magic, API, target, name, version, icon | Pass for all three artifacts |
 
-Host-test total: **519 checks, 0 failures.** What the suite covers (synthetic
+Host-test total: **522 checks, 0 failures.** What the suite covers (synthetic
 signals, not real captures):
 
-- `test_dsp` — RAW `RAW_Data` parsing (incl. whitespace, signs, out-of-range),
+- `test_dsp` — RAW `RAW_Data` parsing (incl. whitespace, signs, out-of-range
+  values saturating at 2,147,483,647),
   duration clustering, cluster sorting, and a RAW capture→file→reparse
   round-trip.
 - `test_analyzer` — PWM, PPM and Manchester identification with exact bit
@@ -123,6 +127,30 @@ signals, not real captures):
   and peak use within the heap minus the spare (plus about 1 KB of handles);
   and 100 repeated loads with the same peak and nothing left allocated or
   open.
+
+The fuzz targets (`test/fuzz/`) feed arbitrary bytes to the code that reads
+files from the SD card and abort on any broken invariant, which libFuzzer and
+the sanitizers then report:
+
+- `fuzz_raw` — a `.sub` file of any content through the RAW reader with random
+  read sizes, then the analyzer pass by pass: no zero samples, total time
+  equal to the samples' sum, the same samples whatever the read sizes and
+  after a rewind, seeks landing at or before the target with the right
+  samples, and analysis figures inside their documented ranges.
+- `fuzz_samples` — any int32 timing values (zeros and extremes included)
+  through the analyzer, RAW similarity and Pulse Timeline: scores 0–100,
+  frame bit strings matching their lengths, only the two level flags in
+  columns, labels on screen, and the view kept inside the recording after
+  clamp, pan and zoom.
+- `fuzz_db` — file names and file headers of any content through the
+  Database index, then every sort, filter and search, and one `RAW_Data` line
+  through Signal Info's parser: known kinds, terminated protocol names,
+  valid distinct indices of matching entries, "all" showing every file, and
+  consistent counts, minimum and maximum. It found that a value beyond the
+  int32 range was negated with undefined behaviour; fixed, with a unit test.
+
+The seed corpus is synthetic (the fixtures plus hand-made edge cases, written
+by `test/fuzz/make_seeds.py`) plus inputs the fuzzer found.
 
 ## Release-pipeline integrity
 
