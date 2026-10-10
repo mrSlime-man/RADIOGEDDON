@@ -210,6 +210,7 @@ files. Choose a file to open its action menu (titled with the file name):
 |--------|--------------|
 | `Signal Info & Analysis` | Summary (protocol, frequency, preset, bits/key or samples) and timing or bit analysis |
 | `Unknown Protocol Analysis` | For RAW captures: measured timing, noise and frames, then the likely encoding, bit patterns, a frame-by-frame comparison, a constant-vs-changing field map and a device-ID candidate. Shows `Analyzing...` while it reads the whole file |
+| `Pulse Timeline` | RAW captures only: the recording as a zoomable waveform (see below) |
 | `Crypto Analysis` | Static vs. rolling-code classification and key-byte statistics for decoded protocols |
 | `Compare with...` | Pick a second file and see what is the same (`=`) and what differs (`~`); for two RAW captures, a timing-match score and a comparison of their frame patterns |
 | `Replay (TX)` | Transmit the recording, where permitted |
@@ -219,6 +220,28 @@ Reports open in a scrolling text view: **Up / Down** to scroll, **Back** to
 return to the action menu. Every result is labelled `[CONFIRMED]`,
 `[OBSERVED]`, `[HEURISTIC]` or `[HYPOTHESIS]` — see
 [Protocol Analysis](PROTOCOL_ANALYSIS.md) for what each report means.
+
+### Pulse Timeline
+
+Shows a RAW capture as a waveform: carrier-on pulses on the upper line,
+carrier-off gaps on the lower one. It shows `Indexing...` while it reads the
+file once, then opens on the first decodable frame.
+
+| Button | Action |
+|--------|--------|
+| **Left / Right** | Pan a quarter screen (hold to keep moving) |
+| **Up / Down** | Zoom in / out, from 5 µs to 5 ms per pixel, keeping the centre |
+| **OK** | Jump to the next frame |
+| **Hold OK** | Jump to the previous frame |
+| **Back** | Return to the action menu |
+
+The top line shows the time at the left edge and the zoom (`50us/px`). Small
+triangles mark where frames start; pulses wide enough show their duration in
+µs. The bar under the waveform shows where the screen sits in the whole
+recording, and `Fr 3/12` / `#1240/9120` give the current frame and the sample
+index at the left edge. Only about a thousand samples are held at a time;
+moving beyond them shows `Loading...` for a moment. A dotted line marks the
+end of the recording.
 
 **Delete** shows `Delete recording?`, the file name and
 `This cannot be undone.` Press **Right** (`Delete`) to delete or **Left**

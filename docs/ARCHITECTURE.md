@@ -57,7 +57,7 @@ radiogeddon_version.h       Release version string (checked against the release 
 application.fam             Flipper app manifest (appid, category, icon, sources)
 scenes/                     One file per screen; the scene list is generated from
                             radiogeddon_scene_config.h (X-macros)
-views/                      Custom canvas views: scanner sweep, live receiver
+views/                      Custom canvas views: scanner sweep, live receiver, pulse timeline
 helpers/
   radiogeddon_subghz.*      Radio wrapper: device, decoders, RAW capture, hopper retune, TX
   radiogeddon_storage.*     SD-card layout, .sub parsing, streaming RAW file access
@@ -69,10 +69,11 @@ helpers/
   radiogeddon_dsp.*         Pure RAW parsing / clustering helpers (no firmware headers)
   rg_analyzer.*             Pure streaming signal-analysis engine (no firmware headers)
   rg_raw.*                  Pure streaming RAW_Data reader with seek checkpoints
+  rg_timeline.*             Pure pulse-timeline maths: columns, labels, pan, zoom, frames
   rg_scan.*                 Pure scanner logic: noise floor, detection, peak hold
   rg_hop.*                  Pure hopper state machine: dwell, hold, lock, history
 assets/                     10x10 launcher icon (compiled into the .fap)
-test/                       Host unit tests (222 checks) + reference .sub fixtures
+test/                       Host unit tests (264 checks) + reference .sub fixtures
 scripts/                    Pinned builds, manifest verification, packaging, link check
 tools/brand/                Generator for the logo, banner and social preview
 .github/workflows/          CI (ci.yml), shared build pipeline (build.yml), release.yml
@@ -199,6 +200,16 @@ The database screen uses the firmware's file browser filtered to `.sub`.
   is a fixed ~8 KB (`RgAnalyzer`) whatever the file length. The app allocates
   it only while a report is built, after checking the largest free heap block
   leaves a margin, and frees it before showing the report.
+
+The **Pulse Timeline** reuses both. On entry it opens the file, runs the
+analyzer once for frame starts and Te (which also fills the reader's seek
+checkpoints), frees the analyzer, and only then allocates its view
+(`views/radiogeddon_timeline_view`, a ~4.5 KB model holding a 1,024-sample
+window). The view and the open file exist only while that screen is shown;
+the view is added to the ViewDispatcher on entry and removed on exit. When
+panning or zooming leaves the window, the view posts a reload event and the
+scene seeks to the nearest checkpoint and streams a new window. The layout
+maths lives in the pure `rg_timeline` module.
 
 These are plain C with no firmware headers, so `test/` compiles and runs
 them on a normal computer under AddressSanitizer and UndefinedBehaviorSanitizer.

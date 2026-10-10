@@ -8,7 +8,7 @@ deliberately omitted.
 
 `1.0.0-beta.2` fixes an out-of-memory crash on launch that made `1.0.0-beta.1`
 unusable on RogueMaster. The full toolkit is implemented and builds for Official, Unleashed and
-RogueMaster, with 222 host-test checks and a verified release pipeline. See
+RogueMaster, with 264 host-test checks and a verified release pipeline. See
 [Features](FEATURES.md) for the complete list.
 
 ## Next: hardware verification (the gating milestone)
@@ -42,8 +42,8 @@ still needs.
       (implemented; hardware checks F2a–F2e pending).
 - [ ] **3. Signal Analyzer 2.0**: whole-file streaming analysis, PWM/PPM/
       Manchester trial decoding with confidence, noise and jitter, frame
-      grouping, alignment and comparison (implemented; hardware checks
-      F4a–F4c pending); pulse timeline view (next).
+      grouping, alignment and comparison, and a zoomable pulse timeline
+      (implemented; hardware checks F4a–F4e pending).
 - [ ] **4. Streaming RAW recording**: bounded RAM, writes to SD while
       recording, overrun reporting.
 - [ ] **5. Signal Database 2.0**: rename, sort, filter, metadata, duplicates,

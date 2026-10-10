@@ -23,7 +23,7 @@ Sub-GHz signals — entirely on the device, with no computer, phone or network.
 
 > [!WARNING]
 > **Public beta.** Every feature is implemented and the builds pass all
-> automated checks (lint, 222 host-test checks, three firmware builds with
+> automated checks (lint, 264 host-test checks, three firmware builds with
 > API/manifest verification). On physical hardware, so far there is only one
 > tester report (RogueMaster: launches and works); **nothing is independently
 > verified on a device yet.** Expect rough edges, and see
@@ -77,6 +77,7 @@ release lists `SHA256SUMS` and ships signed build-provenance attestations.
 | **Protocol Identification** | Live decoding with the firmware's own decoders (Princeton, CAME, Nice FLO, Holtek, KeeLoq-family, …) — marked `[CONFIRMED]`. |
 | **Signal Analyzer** | Pulse-width groups and base time unit for RAW; bit/field breakdown for decoded protocols. |
 | **Unknown Protocol Analysis** | Streams a whole RAW capture: measured timing, noise and frames (`[OBSERVED]`), then the encoding (PWM/PPM/Manchester) with a confidence score, bit patterns, frame-by-frame comparison and field map (`[HYPOTHESIS]`). |
+| **Pulse Timeline** | Zoomable, scrollable waveform of a RAW capture with frame markers and pulse durations, streamed from the SD card. |
 | **Signal Comparison** | Field-by-field diff of two recordings; for RAW captures, a timing-similarity score and a frame-pattern comparison that does not depend on when recording started. |
 | **Device ID Candidate Detection** | Offers the longest run of bits that stay constant while others change as a candidate device identifier. |
 | **Rolling Code Classification** | Flags static vs. dynamic (rolling-code) protocols, and highlights changing bits in unknown ones. |
@@ -152,7 +153,7 @@ API version, compiles, and checks the resulting `.fap`'s manifest. More in
 ## Testing & verification
 
 ```bash
-make -C test check               # 222 host checks, -Werror, AddressSanitizer + UBSan
+make -C test check               # 264 host checks, -Werror, AddressSanitizer + UBSan
 python3 scripts/check_links.py   # documentation links and anchors
 ```
 

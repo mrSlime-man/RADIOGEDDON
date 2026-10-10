@@ -59,6 +59,13 @@ RgAnalyzer* radiogeddon_analysis_run_file(
     const char* path,
     RadioGeddonAnalysisStatus* status);
 
+/** As above on an already open file (its reader keeps the seek checkpoints). */
+RgAnalyzer*
+    radiogeddon_analysis_run_raw(RadioGeddonRawFile* file, RadioGeddonAnalysisStatus* status);
+
+/** Append a short user-facing explanation of a non-Ok @p status. */
+void radiogeddon_analysis_cat_status(FuriString* out, RadioGeddonAnalysisStatus status);
+
 /**
  * Whole-file structural analysis of an unknown/RAW capture: OBSERVED timing
  * (peaks, noise, jitter, frames) and HYPOTHESIS structure (encoding with

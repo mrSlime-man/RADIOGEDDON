@@ -37,6 +37,11 @@ to follow [Semantic Versioning](https://semver.org/) (pre-1.0.0 releases use
   `[HYPOTHESIS]` inferences and `[CONFIRMED]` firmware decodes.
 - **RAW comparison** adds a frame-pattern comparison that does not depend on
   when each recording started.
+- **Pulse Timeline** (Database → RAW file → *Pulse Timeline*): the recording
+  as a zoomable, scrollable waveform with frame-start markers, pulse
+  durations, an overview bar and frame-by-frame navigation (OK / hold OK).
+  Only a 1,024-sample window is held in RAM; the rest streams from the SD card
+  through seek checkpoints.
 
 ### Changed
 - RAW timing similarity now streams both files in full instead of loading the

@@ -3,6 +3,7 @@
 typedef enum {
     SavedInfoIndexAnalyze,
     SavedInfoIndexUnknown,
+    SavedInfoIndexTimeline,
     SavedInfoIndexCrypto,
     SavedInfoIndexCompare,
     SavedInfoIndexReplay,
@@ -55,6 +56,14 @@ static void radiogeddon_scene_saved_info_show_menu(RadioGeddonApp* app) {
         SavedInfoIndexUnknown,
         radiogeddon_scene_saved_info_cb,
         app);
+    if(app->loaded.kind == RadioGeddonSignalKindRaw) {
+        submenu_add_item(
+            submenu,
+            "Pulse Timeline",
+            SavedInfoIndexTimeline,
+            radiogeddon_scene_saved_info_cb,
+            app);
+    }
     submenu_add_item(
         submenu, "Crypto Analysis", SavedInfoIndexCrypto, radiogeddon_scene_saved_info_cb, app);
     submenu_add_item(
@@ -116,6 +125,10 @@ bool radiogeddon_scene_saved_info_on_event(void* context, SceneManagerEvent even
             break;
         case SavedInfoIndexUnknown:
             scene_manager_next_scene(app->scene_manager, RadioGeddonSceneUnknown);
+            consumed = true;
+            break;
+        case SavedInfoIndexTimeline:
+            scene_manager_next_scene(app->scene_manager, RadioGeddonSceneTimeline);
             consumed = true;
             break;
         case SavedInfoIndexCrypto:
