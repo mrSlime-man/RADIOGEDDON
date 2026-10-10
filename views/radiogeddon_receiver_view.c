@@ -16,8 +16,10 @@ typedef struct {
     char preset_label[12];
     float rssi;
     bool recording;
-    bool overflow;
-    size_t samples;
+    uint32_t samples;
+    uint32_t elapsed_ms;
+    uint32_t lost;
+    uint8_t fill_pct;
     size_t history_count;
     size_t selected;
     char latest[22];
@@ -25,6 +27,15 @@ typedef struct {
     float threshold;
     char status[26];
 } RadioGeddonReceiverModel;
+
+/* "12345", or "123k" from 100000 up, so the REC line stays short. */
+static void radiogeddon_receiver_view_compact(char* out, size_t size, uint32_t v) {
+    if(v < 100000u) {
+        snprintf(out, size, "%lu", (unsigned long)v);
+    } else {
+        snprintf(out, size, "%luk", (unsigned long)(v / 1000u));
+    }
+}
 
 static void radiogeddon_receiver_view_draw(Canvas* canvas, void* model) {
     RadioGeddonReceiverModel* m = model;
@@ -63,20 +74,48 @@ static void radiogeddon_receiver_view_draw(Canvas* canvas, void* model) {
     snprintf(rssi_str, sizeof(rssi_str), "%d", (int)m->rssi);
     canvas_draw_str_aligned(canvas, 126, 21, AlignRight, AlignBottom, rssi_str);
 
-    // Recording status line
+    // Recording status line: time, samples, and losses or buffer fill.
     if(m->recording) {
         canvas_set_color(canvas, ColorBlack);
         canvas_draw_box(canvas, 0, 24, 128, 11);
         canvas_set_color(canvas, ColorWhite);
-        char rec[28];
-        snprintf(
-            rec, sizeof(rec), "REC %u smp%s", (unsigned)m->samples, m->overflow ? " FULL" : "");
+        char rec[40];
+        char num[12];
+        radiogeddon_receiver_view_compact(num, sizeof(num), m->samples);
+        uint32_t s10 = m->elapsed_ms / 100;
+        if(s10 < 1000) {
+            snprintf(
+                rec,
+                sizeof(rec),
+                "REC %lu.%lus %s",
+                (unsigned long)(s10 / 10),
+                (unsigned long)(s10 % 10),
+                num);
+        } else {
+            uint32_t sec = s10 / 10;
+            snprintf(
+                rec,
+                sizeof(rec),
+                "REC %lum%02lus %s",
+                (unsigned long)(sec / 60),
+                (unsigned long)(sec % 60),
+                num);
+        }
         canvas_draw_str(canvas, 2, 33, rec);
+        char right[24];
+        right[0] = '\0';
+        if(m->lost > 0) {
+            radiogeddon_receiver_view_compact(num, sizeof(num), m->lost);
+            snprintf(right, sizeof(right), "lost %s", num);
+        } else if(m->fill_pct >= 50) {
+            snprintf(right, sizeof(right), "buf %u%%", (unsigned)m->fill_pct);
+        }
+        if(right[0]) canvas_draw_str_aligned(canvas, 126, 33, AlignRight, AlignBottom, right);
         canvas_set_color(canvas, ColorBlack);
     } else if(m->hopping) {
         canvas_draw_str(canvas, 2, 33, m->status[0] ? m->status : "Hopping frequencies...");
     } else {
-        canvas_draw_str(canvas, 2, 33, "Left: record RAW");
+        canvas_draw_str(canvas, 2, 33, m->status[0] ? m->status : "Left: record RAW");
     }
     canvas_draw_line(canvas, 0, 36, 128, 36);
 
@@ -164,8 +203,10 @@ RadioGeddonReceiverView* radiogeddon_receiver_view_alloc(void) {
             strncpy(m->preset_label, "AM650", sizeof(m->preset_label) - 1);
             m->rssi = RSSI_FLOOR;
             m->recording = false;
-            m->overflow = false;
             m->samples = 0;
+            m->elapsed_ms = 0;
+            m->lost = 0;
+            m->fill_pct = 0;
             m->history_count = 0;
             m->selected = 0;
             m->latest[0] = '\0';
@@ -222,15 +263,16 @@ void radiogeddon_receiver_view_set_hopping(RadioGeddonReceiverView* instance, bo
 void radiogeddon_receiver_view_set_recording(
     RadioGeddonReceiverView* instance,
     bool recording,
-    size_t samples,
-    bool overflow) {
+    const RadioGeddonRecordStats* stats) {
     with_view_model(
         instance->view,
         RadioGeddonReceiverModel * m,
         {
             m->recording = recording;
-            m->samples = samples;
-            m->overflow = overflow;
+            m->samples = stats ? stats->samples : 0;
+            m->elapsed_ms = stats ? stats->elapsed_ms : 0;
+            m->lost = stats ? stats->lost : 0;
+            m->fill_pct = stats ? stats->fill_pct : 0;
         },
         true);
 }

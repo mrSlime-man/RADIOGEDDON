@@ -4,7 +4,9 @@
 
 static const char rg_raw_key[] = "RAW_Data:";
 #define RG_RAW_KEY_LEN (sizeof(rg_raw_key) - 1)
-#define RG_RAW_MAX_MAG 0x7FFFFFFFu
+static const char rg_raw_lost_key[] = "# Lost:";
+#define RG_RAW_LOST_KEY_LEN (sizeof(rg_raw_lost_key) - 1)
+#define RG_RAW_MAX_MAG      0x7FFFFFFFu
 
 static void rg_raw_lexer_reset(RgRawReader* r, RgRawLexState state) {
     r->state = state;
@@ -86,6 +88,7 @@ size_t rg_raw_reader_read(RgRawReader* r, int32_t* out, size_t max) {
             r->buf_pos = 0;
             if(r->buf_len == 0) {
                 r->eof = true;
+                if(r->state == RgRawLexLost && r->in_number) r->lost = r->magnitude;
                 int32_t v;
                 if(r->state == RgRawLexData && rg_raw_take(r, &v)) {
                     out[n++] = v;
@@ -101,6 +104,9 @@ size_t rg_raw_reader_read(RgRawReader* r, int32_t* out, size_t max) {
                 r->key_pos = 0;
             } else if(c == '\r') {
                 /* ignore */
+            } else if(r->key_pos == 0 && c == rg_raw_lost_key[0]) {
+                r->state = RgRawLexComment;
+                r->key_pos = 1;
             } else if(c == rg_raw_key[r->key_pos]) {
                 if(++r->key_pos == RG_RAW_KEY_LEN) {
                     r->state = RgRawLexData;
@@ -113,6 +119,30 @@ size_t rg_raw_reader_read(RgRawReader* r, int32_t* out, size_t max) {
         }
         if(r->state == RgRawLexSkip) {
             if(c == '\n') rg_raw_lexer_reset(r, RgRawLexLineStart);
+            continue;
+        }
+        if(r->state == RgRawLexComment) {
+            if(c == '\n') {
+                rg_raw_lexer_reset(r, RgRawLexLineStart);
+            } else if(c != rg_raw_lost_key[r->key_pos]) {
+                r->state = RgRawLexSkip;
+            } else if(++r->key_pos == RG_RAW_LOST_KEY_LEN) {
+                r->state = RgRawLexLost;
+                r->magnitude = 0;
+                r->in_number = false;
+            }
+            continue;
+        }
+        if(r->state == RgRawLexLost) {
+            if(c >= '0' && c <= '9') {
+                uint32_t d = (uint32_t)(c - '0');
+                r->magnitude = r->magnitude > (RG_RAW_MAX_MAG - d) / 10u ? RG_RAW_MAX_MAG :
+                                                                           r->magnitude * 10u + d;
+                r->in_number = true;
+            } else if(c != ' ' || r->in_number) {
+                if(r->in_number) r->lost = r->magnitude;
+                rg_raw_lexer_reset(r, c == '\n' ? RgRawLexLineStart : RgRawLexSkip);
+            }
             continue;
         }
 

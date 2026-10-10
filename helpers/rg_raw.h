@@ -6,7 +6,8 @@
  * at a time through a small byte buffer, so a recording of any length is
  * processed without holding it (or even one whole text line) in RAM. Lines
  * other than "RAW_Data:" are skipped; a malformed value marks the reader
- * corrupt and the rest of that line is ignored.
+ * corrupt and the rest of that line is ignored. A "# Lost: N" comment (see
+ * rg_rawfmt.h) reports samples the recorder dropped and is read into `lost`.
  *
  * While reading forward the reader records up to RG_RAW_CHECKPOINTS resume
  * points (byte offset, sample index, time), thinning them as the file grows,
@@ -39,6 +40,8 @@ typedef enum {
     RgRawLexLineStart = 0, /* matching the "RAW_Data:" key */
     RgRawLexData, /* inside the value list */
     RgRawLexSkip, /* rest of a non-RAW line */
+    RgRawLexComment, /* matching the "# Lost:" comment key */
+    RgRawLexLost, /* the lost-sample count after it */
 } RgRawLexState;
 
 typedef struct {
@@ -67,6 +70,7 @@ typedef struct {
     bool eof;
     bool corrupt; /* a non-numeric value was found */
     bool any_data; /* at least one RAW_Data line seen */
+    uint32_t lost; /* samples the recorder reported lost (0 = none) */
 
     RgRawCheckpoint cp[RG_RAW_CHECKPOINTS];
     size_t cp_count;

@@ -18,6 +18,7 @@
 #include <lib/subghz/devices/devices.h>
 #include <lib/subghz/devices/preset.h>
 #include <lib/subghz/protocols/raw.h>
+#include "radiogeddon_recorder.h"
 
 #define RADIOGEDDON_FREQUENCY_DEFAULT 433920000UL
 
@@ -120,31 +121,41 @@ float radiogeddon_subghz_probe_rssi_dwell(
     uint32_t frequency,
     uint32_t dwell_ms);
 
-/**
- * Start capturing the incoming raw timing stream to @p file_path (.sub RAW
- * format). Must be called while RX is running. Returns false on I/O failure.
- */
-bool radiogeddon_subghz_record_start(RadioGeddonSubGhz* instance, const char* file_path);
+/* ---- RAW recording ----------------------------------------------------- */
 
-/** Stop an in-progress RAW capture and flush the file. */
+/**
+ * Start streaming the incoming raw timing to a temporary RAW .sub file (see
+ * radiogeddon_recorder.h). Must be called while RX is running. Capture begins
+ * before the file is opened, so nothing at the start is missed. A stopped
+ * capture that was never saved is discarded first.
+ */
+RadioGeddonRecordError radiogeddon_subghz_record_start(RadioGeddonSubGhz* instance);
+
+/**
+ * Stop capturing and write out what is still buffered (blocks meanwhile).
+ * A capture with samples and no write error is then pending: save it with
+ * radiogeddon_subghz_record_save() or drop it with _discard().
+ */
 void radiogeddon_subghz_record_stop(RadioGeddonSubGhz* instance);
 bool radiogeddon_subghz_is_recording(RadioGeddonSubGhz* instance);
 
-/** Drop a stopped capture and free its buffer without saving it. */
-void radiogeddon_subghz_record_discard(RadioGeddonSubGhz* instance);
+/**
+ * Statistics of the capture in progress or, when stopped, of the last one
+ * (any thread). Returns whether a capture is in progress.
+ */
+bool radiogeddon_subghz_record_status(RadioGeddonSubGhz* instance, RadioGeddonRecordStats* out);
 
-/** Number of RAW samples written so far in the active capture. */
-size_t radiogeddon_subghz_record_sample_count(RadioGeddonSubGhz* instance);
-
-/** True if the RAW capture buffer filled up (capture truncated). */
-bool radiogeddon_subghz_record_overflowed(RadioGeddonSubGhz* instance);
+/** True while a stopped capture waits to be saved or discarded. */
+bool radiogeddon_subghz_record_pending(RadioGeddonSubGhz* instance);
 
 /**
- * Write the captured RAW buffer to @p file_path as a Flipper RAW .sub file.
- * Call after radiogeddon_subghz_record_stop(). Returns false if nothing was
- * captured or on I/O failure.
+ * Move the pending capture to @p path. The destination must not exist (it
+ * would be replaced); use radiogeddon_storage_make_unique_path().
  */
-bool radiogeddon_subghz_record_flush_to_file(RadioGeddonSubGhz* instance, const char* file_path);
+bool radiogeddon_subghz_record_save(RadioGeddonSubGhz* instance, const char* path);
+
+/** Delete the pending capture, if any. */
+void radiogeddon_subghz_record_discard(RadioGeddonSubGhz* instance);
 
 /* ---- Replay / transmit -------------------------------------------------- */
 

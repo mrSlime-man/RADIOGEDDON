@@ -58,7 +58,12 @@ region's rules.
 | F4d | Pulse Timeline on a RAW capture with several presses: OK a few times, hold OK, Up/Down, hold Left/Right. | Opens on the first frame; OK steps frame by frame (`Fr n/m` counts up), hold OK goes back; zooming keeps the centre; panning past the loaded part shows `Loading...` briefly and the waveform continues; the end of the recording shows a dotted line. |
 | F4e | Pulse Timeline on a long capture (30 s or more), then Back, repeated five times, with a device log open. | No crash; scrolling stays responsive; free heap returns to the same level after leaving. |
 | F5 | History: send rapid repeated transmissions. | No crash; identical consecutive parcels listed once; list caps at 32. |
-| F6 | RAW capture of a long/continuous signal. | `FULL` indicator at the cap (16,384 samples, or less when memory is short); no crash. |
+| F6 | RAW capture of a long signal: record for 2 minutes with presses now and then, then save. | REC time and sample count rise steadily past 16,384 samples; no `lost`; the result screen shows the samples and duration; the file opens in Database, analyses and opens in Pulse Timeline. |
+| F6a | Stock-app compatibility: open a RadioGeddon RAW capture in the firmware's Sub-GHz app (Saved) and send it. | The stock app lists and plays it like its own RAW files. |
+| F6b | Slow card / noisy input: record on AM 650 with no signal (pure noise) for 30 s, ideally on an old or nearly full card. | Note whether `buf` or `lost` appears. If `lost` appears, the saved file opens and its analysis shows `Lost while recording`. No crash or freeze; Left still stops promptly. |
+| F6c | Cancel: start recording, press Back, then Back on the name screen. | No file is added to the Database; recording again works. |
+| F6d | Card removed while recording. | The recording stops with `SD card write failed`; no crash; after reinserting the card, recording works again. |
+| F6e | Hopper auto-record with long activity (hold a remote for 10 s on a hop frequency). | One `HOP_*.sub` with all of it; the hopper resumes afterwards. |
 | F7 | Custom-preset replay: a stock-app RAW `.sub` saved with a custom preset. | Replays on the correct modulation, or is cleanly refused (`Unsupported file`) — never sent on the wrong modulation. |
 | F8 | Delete: choose Delete on a saved file. | Confirmation shown; Cancel/Back keeps the file; Delete removes it. |
 | F9 | SD card removed mid-session. | Save/open fail gracefully with an error tone; no crash. |

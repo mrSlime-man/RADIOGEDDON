@@ -101,6 +101,10 @@ The report opens with what the labels mean, then has three parts.
    > 50 %, jitter > 25 % or no peak was found, otherwise *fair*.
 6. **Frames.** A low at least **7 × Te** long (and at least 1 ms) ends a frame.
    Bursts of fewer than 8 pulses are counted as *bursts* (noise), not frames.
+7. **Lost while recording.** If the recorder had to drop samples because the
+   SD card fell behind, the file ends with a `# Lost: N` note and the report
+   says so. Timing is not continuous where samples are missing, so a frame
+   spanning a gap can decode wrongly.
 
 ### `[HYPOTHESIS]` structure
 

@@ -13,15 +13,6 @@
 
 #define TAG "RadioGeddonSubGhz"
 
-/** Maximum RAW samples buffered per capture (level-signed durations). */
-#define RADIOGEDDON_RAW_CAPACITY     (16384u)
-/** Smallest RAW buffer worth recording into; below this, recording is refused. */
-#define RADIOGEDDON_RAW_MIN_CAPACITY (1024u)
-/** Heap left untouched when sizing the RAW buffer, so the UI/worker keep running. */
-#define RADIOGEDDON_RAW_HEAP_RESERVE (12u * 1024u)
-/** How many RAW values to emit per RAW_Data line in the saved file. */
-#define RADIOGEDDON_RAW_LINE_VALUES  (512u)
-
 const RadioGeddonPreset radiogeddon_presets[] = {
     {"AM 270", "FuriHalSubGhzPresetOok270Async", FuriHalSubGhzPresetOok270Async},
     {"AM 650", "FuriHalSubGhzPresetOok650Async", FuriHalSubGhzPresetOok650Async},
@@ -73,12 +64,13 @@ struct RadioGeddonSubGhz {
     RadioGeddonSubGhzDecodeCallback decode_cb;
     void* decode_ctx;
 
-    // Own RAW capture buffer (populated from the worker thread)
-    bool recording;
-    bool record_overflow;
-    int32_t* raw_buffer; // allocated on demand by record_start, freed after flush
-    size_t raw_capacity;
-    volatile size_t raw_count;
+    // Streaming RAW capture. `recorder` is read by the worker thread; it is
+    // only changed under rec_mutex and freed after the rec_busy handshake.
+    RadioGeddonRecorder* recorder;
+    bool rec_busy; // the worker thread is inside a push
+    FuriMutex* rec_mutex; // recorder lifecycle vs. status readers
+    RadioGeddonRecordStats rec_last; // last capture's stats once detached
+    bool rec_pending; // a stopped capture waits in the temporary file
 
     // TX
     RadioGeddonTxMode tx_mode;
@@ -103,10 +95,36 @@ static SubGhzRadioPreset radiogeddon_subghz_build_radio_preset(RadioGeddonSubGhz
 
 /* ---- Worker / decode plumbing ------------------------------------------ */
 
+/*
+ * Hand one event to the recorder, if one is attached. Runs on the worker
+ * thread and never blocks: the recorder only appends to a lock-free ring.
+ * rec_busy brackets the access so that a stopping thread, after clearing
+ * `recorder`, can wait until no call still holds the old pointer (both sides
+ * use sequentially consistent order: store own flag, then load the other's).
+ */
+static void radiogeddon_subghz_record_event(
+    RadioGeddonSubGhz* instance,
+    bool overrun,
+    bool level,
+    uint32_t duration) {
+    if(!__atomic_load_n(&instance->recorder, __ATOMIC_RELAXED)) return;
+    __atomic_store_n(&instance->rec_busy, true, __ATOMIC_SEQ_CST);
+    RadioGeddonRecorder* rec = __atomic_load_n(&instance->recorder, __ATOMIC_SEQ_CST);
+    if(rec) {
+        if(overrun) {
+            radiogeddon_recorder_note_overrun(rec);
+        } else {
+            radiogeddon_recorder_push(rec, level, duration);
+        }
+    }
+    __atomic_store_n(&instance->rec_busy, false, __ATOMIC_SEQ_CST);
+}
+
 // Worker reports a capture buffer overrun: drop partial decode state.
 static void radiogeddon_subghz_overrun_callback(void* context) {
     RadioGeddonSubGhz* instance = context;
     if(instance->receiver) subghz_receiver_reset(instance->receiver);
+    radiogeddon_subghz_record_event(instance, true, false, 0);
 }
 
 // Called from the worker thread for every (level,duration) pair received.
@@ -118,18 +136,8 @@ static void radiogeddon_subghz_pair_callback(void* context, bool level, uint32_t
         subghz_receiver_decode(instance->receiver, level, duration);
     }
 
-    // Append to our RAW capture buffer if recording.
-    if(instance->recording) {
-        size_t idx = instance->raw_count;
-        if(idx < instance->raw_capacity) {
-            uint32_t d = duration;
-            if(d > (uint32_t)INT32_MAX) d = (uint32_t)INT32_MAX;
-            instance->raw_buffer[idx] = level ? (int32_t)d : -(int32_t)d;
-            instance->raw_count = idx + 1;
-        } else {
-            instance->record_overflow = true;
-        }
-    }
+    // Stream to the RAW recorder if one is attached (never touches the SD card).
+    radiogeddon_subghz_record_event(instance, false, level, duration);
 }
 
 // Called by the receiver when a protocol is fully decoded.
@@ -239,20 +247,13 @@ static void radiogeddon_subghz_decoders_free(RadioGeddonSubGhz* instance) {
     radiogeddon_subghz_environment_release(instance);
 }
 
-static void radiogeddon_subghz_raw_buffer_free(RadioGeddonSubGhz* instance) {
-    if(instance->raw_buffer) free(instance->raw_buffer);
-    instance->raw_buffer = NULL;
-    instance->raw_capacity = 0;
-    instance->raw_count = 0;
-    instance->record_overflow = false;
-}
-
 RadioGeddonSubGhz* radiogeddon_subghz_alloc(void) {
     RadioGeddonSubGhz* instance = malloc(sizeof(RadioGeddonSubGhz));
     memset(instance, 0, sizeof(RadioGeddonSubGhz));
 
     instance->frequency = RADIOGEDDON_FREQUENCY_DEFAULT;
     instance->preset_index = 1; // AM 650 — a sensible general default
+    instance->rec_mutex = furi_mutex_alloc(FuriMutexTypeNormal);
 
     subghz_devices_init();
     instance->device = subghz_devices_get_by_name(SUBGHZ_DEVICE_CC1101_INT_NAME);
@@ -269,7 +270,8 @@ void radiogeddon_subghz_free(RadioGeddonSubGhz* instance) {
     radiogeddon_subghz_environment_release(instance);
     subghz_devices_deinit();
 
-    radiogeddon_subghz_raw_buffer_free(instance);
+    radiogeddon_subghz_record_discard(instance);
+    furi_mutex_free(instance->rec_mutex);
     free(instance);
 }
 
@@ -330,9 +332,9 @@ void radiogeddon_subghz_rx_start(
     instance->decode_cb = decode_callback;
     instance->decode_ctx = context;
 
-    // A new session starts clean: any capture from a previous session was
-    // either flushed already or abandoned, so give its buffer back first.
-    radiogeddon_subghz_raw_buffer_free(instance);
+    // A new session starts clean: a capture from a previous session was
+    // either saved already or abandoned, so delete what is left of it.
+    radiogeddon_subghz_record_discard(instance);
     radiogeddon_subghz_decoders_alloc(instance);
     subghz_receiver_reset(instance->receiver);
 
@@ -358,7 +360,8 @@ void radiogeddon_subghz_rx_stop(RadioGeddonSubGhz* instance) {
     furi_assert(instance);
     if(!instance->rx_running) return;
 
-    if(instance->recording) radiogeddon_subghz_record_stop(instance);
+    // Write out an active capture; it stays pending for the save screen.
+    radiogeddon_subghz_record_stop(instance);
 
     // Stop the worker before the async capture (reverse of start order), so no
     // pair callback fires into a half-torn-down device.
@@ -461,92 +464,123 @@ float radiogeddon_subghz_probe_rssi_dwell(
     return rssi;
 }
 
-/* ---- RAW recording (own buffer) ---------------------------------------- */
+/* ---- RAW recording (streaming) ----------------------------------------- */
 
-bool radiogeddon_subghz_record_start(RadioGeddonSubGhz* instance, const char* file_path) {
-    UNUSED(file_path); // path is used at stop time when flushing
-    if(!instance->rx_running) return false;
-    if(instance->recording) return false;
-
-    // Size the capture buffer to what the heap can actually spare right now
-    // (malloc failure is fatal on Flipper), capped at the full capacity.
-    radiogeddon_subghz_raw_buffer_free(instance);
-    size_t avail = memmgr_heap_get_max_free_block();
-    if(avail <= RADIOGEDDON_RAW_HEAP_RESERVE) return false;
-    size_t capacity = (avail - RADIOGEDDON_RAW_HEAP_RESERVE) / sizeof(int32_t);
-    if(capacity > RADIOGEDDON_RAW_CAPACITY) capacity = RADIOGEDDON_RAW_CAPACITY;
-    if(capacity < RADIOGEDDON_RAW_MIN_CAPACITY) return false;
-    instance->raw_buffer = malloc(sizeof(int32_t) * capacity);
-    instance->raw_capacity = capacity;
-
-    instance->raw_count = 0;
-    instance->record_overflow = false;
-    instance->recording = true;
-    return true;
+// Detach the recorder from the worker thread and wait until no callback still
+// uses it. The stats at this moment stand in for readers until it finishes.
+static RadioGeddonRecorder* radiogeddon_subghz_record_detach(RadioGeddonSubGhz* instance) {
+    furi_mutex_acquire(instance->rec_mutex, FuriWaitForever);
+    RadioGeddonRecorder* rec = instance->recorder;
+    if(rec) {
+        radiogeddon_recorder_stats(rec, &instance->rec_last);
+        __atomic_store_n(&instance->recorder, NULL, __ATOMIC_SEQ_CST);
+    }
+    furi_mutex_release(instance->rec_mutex);
+    while(rec && __atomic_load_n(&instance->rec_busy, __ATOMIC_SEQ_CST)) {
+        furi_delay_tick(1);
+    }
+    return rec;
 }
 
-void radiogeddon_subghz_record_discard(RadioGeddonSubGhz* instance) {
-    if(instance->recording) return;
-    radiogeddon_subghz_raw_buffer_free(instance);
+static void radiogeddon_subghz_record_remove_temp(void) {
+    Storage* storage = furi_record_open(RECORD_STORAGE);
+    storage_common_remove(storage, RADIOGEDDON_RECORD_TEMP);
+    furi_record_close(RECORD_STORAGE);
 }
 
-bool radiogeddon_subghz_is_recording(RadioGeddonSubGhz* instance) {
-    return instance->recording;
-}
+RadioGeddonRecordError radiogeddon_subghz_record_start(RadioGeddonSubGhz* instance) {
+    if(!instance->rx_running || instance->recorder) return RadioGeddonRecordOpenFailed;
+    radiogeddon_subghz_record_discard(instance);
 
-size_t radiogeddon_subghz_record_sample_count(RadioGeddonSubGhz* instance) {
-    return instance->raw_count;
-}
+    RadioGeddonRecorder* rec = radiogeddon_recorder_alloc();
+    if(!rec) {
+        memset(&instance->rec_last, 0, sizeof(instance->rec_last));
+        instance->rec_last.error = RadioGeddonRecordNoMemory;
+        return RadioGeddonRecordNoMemory;
+    }
+    // Attach first: the ring takes samples while the file is being created.
+    furi_mutex_acquire(instance->rec_mutex, FuriWaitForever);
+    __atomic_store_n(&instance->recorder, rec, __ATOMIC_SEQ_CST);
+    furi_mutex_release(instance->rec_mutex);
 
-bool radiogeddon_subghz_record_overflowed(RadioGeddonSubGhz* instance) {
-    return instance->record_overflow;
+    Storage* storage = furi_record_open(RECORD_STORAGE);
+    RadioGeddonRecordError err = radiogeddon_recorder_open(
+        rec,
+        storage,
+        RADIOGEDDON_RECORD_TEMP,
+        instance->frequency,
+        radiogeddon_presets[instance->preset_index].file_name);
+    furi_record_close(RECORD_STORAGE);
+
+    if(err != RadioGeddonRecordOk) {
+        radiogeddon_subghz_record_detach(instance);
+        RadioGeddonRecordStats st;
+        radiogeddon_recorder_finish(rec, &st);
+        st.error = err;
+        furi_mutex_acquire(instance->rec_mutex, FuriWaitForever);
+        instance->rec_last = st;
+        furi_mutex_release(instance->rec_mutex);
+        radiogeddon_subghz_record_remove_temp();
+    }
+    return err;
 }
 
 void radiogeddon_subghz_record_stop(RadioGeddonSubGhz* instance) {
-    if(!instance->recording) return;
-    instance->recording = false;
+    RadioGeddonRecorder* rec = radiogeddon_subghz_record_detach(instance);
+    if(!rec) return;
+    RadioGeddonRecordStats st;
+    radiogeddon_recorder_finish(rec, &st);
+    // An empty or broken file is not offered for saving.
+    bool keep = st.samples > 0 && st.error == RadioGeddonRecordOk;
+    furi_mutex_acquire(instance->rec_mutex, FuriWaitForever);
+    instance->rec_last = st;
+    instance->rec_pending = keep;
+    furi_mutex_release(instance->rec_mutex);
+    if(!keep) radiogeddon_subghz_record_remove_temp();
 }
 
-/**
- * Flush the captured RAW buffer to a .sub file. Declared in storage helper so
- * scenes can call it after stopping the capture; implemented here where the
- * buffer lives.
- */
-bool radiogeddon_subghz_record_flush_to_file(RadioGeddonSubGhz* instance, const char* file_path) {
-    if(!instance->raw_buffer || instance->raw_count == 0) return false;
+bool radiogeddon_subghz_is_recording(RadioGeddonSubGhz* instance) {
+    return __atomic_load_n(&instance->recorder, __ATOMIC_ACQUIRE) != NULL;
+}
 
+bool radiogeddon_subghz_record_status(RadioGeddonSubGhz* instance, RadioGeddonRecordStats* out) {
+    furi_mutex_acquire(instance->rec_mutex, FuriWaitForever);
+    bool active = instance->recorder != NULL;
+    if(active) {
+        radiogeddon_recorder_stats(instance->recorder, out);
+    } else {
+        *out = instance->rec_last;
+    }
+    furi_mutex_release(instance->rec_mutex);
+    return active;
+}
+
+bool radiogeddon_subghz_record_pending(RadioGeddonSubGhz* instance) {
+    furi_mutex_acquire(instance->rec_mutex, FuriWaitForever);
+    bool pending = instance->rec_pending;
+    furi_mutex_release(instance->rec_mutex);
+    return pending;
+}
+
+bool radiogeddon_subghz_record_save(RadioGeddonSubGhz* instance, const char* path) {
+    if(!radiogeddon_subghz_record_pending(instance)) return false;
     Storage* storage = furi_record_open(RECORD_STORAGE);
-    FlipperFormat* ff = flipper_format_file_alloc(storage);
-    bool ok = false;
-    do {
-        if(!flipper_format_file_open_always(ff, file_path)) break;
-        if(!flipper_format_write_header_cstr(ff, RADIOGEDDON_RAW_FILE_TYPE_STR, 1)) break;
-        uint32_t freq = instance->frequency;
-        if(!flipper_format_write_uint32(ff, "Frequency", &freq, 1)) break;
-        if(!flipper_format_write_string_cstr(
-               ff, "Preset", radiogeddon_presets[instance->preset_index].file_name))
-            break;
-        if(!flipper_format_write_string_cstr(ff, "Protocol", "RAW")) break;
-
-        // Emit RAW_Data in chunks, exactly as the firmware does
-        // (flipper_format_write_int32 array writer -> space-separated ints).
-        size_t total = instance->raw_count;
-        size_t written = 0;
-        bool line_ok = true;
-        while(written < total && line_ok) {
-            size_t chunk = total - written;
-            if(chunk > RADIOGEDDON_RAW_LINE_VALUES) chunk = RADIOGEDDON_RAW_LINE_VALUES;
-            line_ok =
-                flipper_format_write_int32(ff, "RAW_Data", &instance->raw_buffer[written], chunk);
-            written += chunk;
-        }
-        ok = line_ok;
-    } while(false);
-
-    flipper_format_free(ff);
+    bool ok = storage_common_rename(storage, RADIOGEDDON_RECORD_TEMP, path) == FSE_OK;
     furi_record_close(RECORD_STORAGE);
-    if(ok) radiogeddon_subghz_raw_buffer_free(instance);
+    if(ok) {
+        furi_mutex_acquire(instance->rec_mutex, FuriWaitForever);
+        instance->rec_pending = false;
+        furi_mutex_release(instance->rec_mutex);
+    }
     return ok;
+}
+
+void radiogeddon_subghz_record_discard(RadioGeddonSubGhz* instance) {
+    if(!radiogeddon_subghz_record_pending(instance)) return;
+    radiogeddon_subghz_record_remove_temp();
+    furi_mutex_acquire(instance->rec_mutex, FuriWaitForever);
+    instance->rec_pending = false;
+    furi_mutex_release(instance->rec_mutex);
 }
 
 /* ---- Transmit / replay ------------------------------------------------- */

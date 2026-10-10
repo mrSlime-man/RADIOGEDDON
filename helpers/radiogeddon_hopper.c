@@ -100,9 +100,10 @@ static void radiogeddon_hopper_emit(RadioGeddonHopper* instance, RadioGeddonHopp
 
 static void radiogeddon_hopper_record_begin(RadioGeddonHopper* instance) {
     if(instance->recording) return;
-    instance->recording = radiogeddon_subghz_record_start(instance->subghz, NULL);
+    RadioGeddonRecordError err = radiogeddon_subghz_record_start(instance->subghz);
+    instance->recording = err == RadioGeddonRecordOk;
     if(!instance->recording) {
-        FURI_LOG_W(TAG, "Auto-record skipped: not enough free memory");
+        FURI_LOG_W(TAG, "Auto-record skipped: %s", radiogeddon_recorder_error_text(err));
     }
 }
 
@@ -110,7 +111,16 @@ static void radiogeddon_hopper_record_finish(RadioGeddonHopper* instance) {
     if(!instance->recording) return;
     instance->recording = false;
     radiogeddon_subghz_record_stop(instance->subghz);
-    if(radiogeddon_subghz_record_sample_count(instance->subghz) < HOPPER_MIN_RAW_SAVE) {
+    RadioGeddonRecordStats st;
+    radiogeddon_subghz_record_status(instance->subghz, &st);
+    if(!radiogeddon_subghz_record_pending(instance->subghz)) {
+        // Nothing captured, or the card failed (the file is already gone).
+        if(st.error != RadioGeddonRecordOk) {
+            radiogeddon_hopper_emit(instance, RadioGeddonHopperEventRecordFailed);
+        }
+        return;
+    }
+    if(st.samples < HOPPER_MIN_RAW_SAVE) {
         radiogeddon_subghz_record_discard(instance->subghz); // too short to be useful
         return;
     }
@@ -131,12 +141,11 @@ static void radiogeddon_hopper_record_finish(RadioGeddonHopper* instance) {
 
     Storage* storage = furi_record_open(RECORD_STORAGE);
     FuriString* path = furi_string_alloc();
-    bool ok =
-        radiogeddon_storage_make_unique_path(storage, path, name) &&
-        radiogeddon_subghz_record_flush_to_file(instance->subghz, furi_string_get_cstr(path));
+    bool ok = radiogeddon_storage_make_unique_path(storage, path, name) &&
+              radiogeddon_subghz_record_save(instance->subghz, furi_string_get_cstr(path));
     furi_string_free(path);
     furi_record_close(RECORD_STORAGE);
-    // A successful flush frees the buffer itself; give it back on failure too.
+    // A successful save moves the file; delete it on failure.
     if(!ok) radiogeddon_subghz_record_discard(instance->subghz);
 
     if(ok) {
@@ -262,10 +271,8 @@ void radiogeddon_hopper_status(RadioGeddonHopper* instance, RadioGeddonHopperSta
     out->hold_left_ms = rg_hop_hold_remaining(hop, now);
     out->recording = instance->recording;
     furi_mutex_release(instance->mutex);
-    out->record_samples =
-        out->recording ? radiogeddon_subghz_record_sample_count(instance->subghz) : 0;
-    out->record_overflow =
-        out->recording ? radiogeddon_subghz_record_overflowed(instance->subghz) : false;
+    bool active = radiogeddon_subghz_record_status(instance->subghz, &out->record);
+    out->recording = out->recording && active;
 }
 
 void radiogeddon_hopper_copy_state(RadioGeddonHopper* instance, RgHop* out, uint32_t* frequencies) {

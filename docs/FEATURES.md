@@ -9,14 +9,14 @@ verified, and its known limits. For step-by-step use, see the
 **Every feature below is implemented, compiles for all three firmware
 families, and passes CI. None has yet been verified on a physical Flipper
 Zero.** "Unit-tested" means the feature's firmware-independent logic is covered
-by the host test suite (264 checks); radio behaviour can only be confirmed on a
+by the host test suite (364 checks); radio behaviour can only be confirmed on a
 device ([VERIFICATION.md](VERIFICATION.md)).
 
 | Feature | Implemented | Unit-tested logic | Verified on hardware |
 |---------|:-----------:|:-----------------:|:--------------------:|
 | [Sub-GHz Scanner](#sub-ghz-scanner) | ✅ | ✅ floor, activity, CSV rows | ⏳ pending |
 | [Frequency Hopper](#frequency-hopper) | ✅ | ✅ dwell, hold, lock, history | ⏳ pending |
-| [RAW Signal Capture](#raw-signal-capture) | ✅ | ✅ RAW file round-trip | ⏳ pending |
+| [RAW Signal Capture](#raw-signal-capture) | ✅ | ✅ ring, file format, writer thread with slow/failing card | ⏳ pending |
 | [Protocol Identification](#protocol-identification) | ✅ | — (firmware decoders) | ⏳ pending |
 | [Signal Analyzer](#signal-analyzer) | ✅ | ✅ parsing, clustering | ⏳ pending |
 | [Unknown Protocol Analysis](#unknown-protocol-analysis) | ✅ | ✅ PWM/PPM/Manchester, noise, alignment, streaming | ⏳ pending |
@@ -81,10 +81,21 @@ Records the raw on/off timing stream of a transmission — useful for protocols
 the firmware can't decode — and saves it as a standard RAW `.sub` file
 (`Filetype: Flipper SubGhz RAW File`), readable by the stock Sub-GHz app.
 
-- Up to **16,384** timing samples per recording, buffered in RAM and written to
-  the SD card when you save; the screen shows `FULL` when the limit is reached.
-  The buffer is allocated when recording starts and sized to the free heap, so
-  it can be smaller on a busy device; it is released once the capture is saved.
+- **Streamed to the SD card while recording**, so a recording's length is
+  limited by the card, not by RAM. It is written to a temporary file and
+  renamed when you save it; Back on the name screen deletes it.
+- The radio thread never waits for the card: it appends each pulse to a
+  lock-free buffer (4 to 32 KB, sized to the free heap when recording starts)
+  and a writer thread empties it into `RAW_Data` lines.
+- If the card falls behind for longer than the buffer lasts, new samples are
+  dropped and counted. The REC line shows `lost <n>` (or `buf <n>%` once the
+  buffer is half full), the file ends with a `# Lost: …` comment that other
+  tools ignore, and Unknown Protocol Analysis reports the count.
+- The REC line shows the recording time and sample count; the result screen
+  after saving shows the file name, sample count, duration and losses.
+- A failed SD write stops the recording and is reported; it is not saved.
+- The file layout is the firmware's own, so the stock Sub-GHz app opens and
+  replays it.
 - Uses the frequency and modulation chosen in **Settings**.
 
 ## Protocol Identification
@@ -246,8 +257,9 @@ Regional rules are enforced by the firmware itself
 ## Known limitations
 
 - **Hardware verification pending** — see above.
-- **RAW capture length** — 16,384 samples per recording; engine-based analysis
-  and similarity use the first 4,096 samples of a file.
+- **RAW capture length** — limited by the SD card. A slow card with very noisy
+  input can fall behind and lose samples; they are counted and reported, not
+  hidden. Analysis and similarity read the whole file.
 - **Internal radio only** — the app uses the built-in CC1101.
 - **Scanner and hopper sampling** — the radio hears one frequency at a time, so
   a transmission on a frequency the sweep is not currently on can be missed.

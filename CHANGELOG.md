@@ -42,8 +42,26 @@ to follow [Semantic Versioning](https://semver.org/) (pre-1.0.0 releases use
   durations, an overview bar and frame-by-frame navigation (OK / hold OK).
   Only a 1,024-sample window is held in RAM; the rest streams from the SD card
   through seek checkpoints.
+- **Streaming RAW recording**: captures are written to the SD card while
+  recording, so their length is limited by the card, not by RAM (previously
+  16,384 samples). The radio thread only appends to a lock-free buffer of 4 to
+  32 KB (sized to the free heap) and never waits for the card; a separate
+  writer thread empties it. If the card falls behind for longer than the
+  buffer lasts, samples are dropped and counted: the REC line shows `lost N`
+  (or the buffer fill once it is half full), the saved file ends with a
+  `# Lost:` comment, and Unknown Protocol Analysis reports the count. The REC
+  line also shows the recording time. A failed SD write stops the recording
+  with `SD card write failed`.
+- **Save result screen**: after saving, a popup shows the file name and, for
+  RAW captures, the sample count, duration and any lost samples.
 
 ### Changed
+- Saving never overwrites an existing file: a name that is taken gets `_2`,
+  `_3` and so on (the result screen shows the final name).
+- Back while recording now stops the recording and opens the name screen;
+  Back there discards it. Previously leaving discarded it silently.
+- If recording cannot start, the hint line says why (`REC: Not enough
+  memory` or `REC: Cannot create file`) instead of only blinking the LED.
 - RAW timing similarity now streams both files in full instead of loading the
   first 4,096 samples of each (32 KB of RAM), so it uses a few hundred bytes.
 - Analysis shows `Analyzing...` / `Comparing...` while it reads the file, and

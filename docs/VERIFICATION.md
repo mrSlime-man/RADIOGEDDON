@@ -28,13 +28,17 @@ locally.
 | Analysis-engine unit tests | `make -C test check` → `test_analyzer` | Pass — 89 checks |
 | Scanner-logic unit tests | `make -C test check` → `test_scan` | Pass — 31 checks |
 | Hopper-logic unit tests | `make -C test check` → `test_hop` | Pass — 42 checks |
-| RAW-reader unit tests | `make -C test check` → `test_raw` | Pass — 29 checks |
+| RAW-reader unit tests | `make -C test check` → `test_raw` | Pass — 35 checks |
 | Timeline-maths unit tests | `make -C test check` → `test_timeline` | Pass — 42 checks |
+| Sample-ring unit tests | `make -C test check` → `test_ring` | Pass — 47 checks |
+| RAW-writer unit tests | `make -C test check` → `test_rawfmt` | Pass — 18 checks |
+| Recorder tests (stub Furi/Storage) | `make -C test check` → `test_recorder` | Pass — 29 checks |
+| Thread safety of ring and recorder | `make -C test tsan` (ThreadSanitizer; optional, not in CI) | Pass — no reports |
 | Memory safety of tested code | tests built `-Werror` under `-fsanitize=address,undefined` | Pass — no ASan/UBSan reports |
 | Documentation links | `scripts/check_links.py` (offline link + anchor check) | Pass |
 | `.fap` metadata | `scripts/verify_fap.py` parses `.fapmeta` and asserts magic, API, target, name, version, icon | Pass for all three artifacts |
 
-Host-test total: **264 checks, 0 failures.** What the suite covers (synthetic
+Host-test total: **364 checks, 0 failures.** What the suite covers (synthetic
 signals, not real captures):
 
 - `test_dsp` — RAW `RAW_Data` parsing (incl. whitespace, signs, out-of-range),
@@ -61,13 +65,31 @@ signals, not real captures):
   a missing final newline, reads split at 5- and 13-byte and one-sample
   boundaries, corrupt tokens and lone minus signs, non-RAW files, a 6,000-sample file with one
   3,000-value line (bounded checkpoint table, seeking to any time resumes with
-  the right samples, rewind), and `test/fixtures/raw_ref.sub` read end to end
-  through the analyzer.
+  the right samples, rewind), `test/fixtures/raw_ref.sub` read end to end
+  through the analyzer, and the recorder's `# Lost: N` note (read once per
+  pass, only in its exact form, also at end of file without a newline).
 - `test_timeline` — pulse timeline maths: rasterising samples into columns
   (both levels in one column, data outside the window, a screen edge inside a
   pulse, times near 2^32 µs), duration labels only for wide, fully visible
   pulses, pan and zoom limits with the centre kept, the initial zoom choice,
   window coverage, and next/previous frame navigation at both ends.
+- `test_ring` — the recorder's lock-free ring: capacity rules, order, refusal
+  when full with lost-sample, gap and first-gap accounting, peak fill, index
+  wrap at 2^32, heap-based sizing, and a two-thread run (2 million pushes
+  against a stalling consumer) checking that every accepted value arrives
+  once, in order and intact, and every other one is counted lost.
+- `test_rawfmt` — the RAW writer: header byte-for-byte as the firmware writes
+  it, 512 values a line with single spaces, zeros skipped, int32 extremes,
+  identical output whatever the buffer size (24 bytes to 2 KB), the lost-sample
+  note, and a 5,000-sample file read back exactly by the RAW reader.
+- `test_recorder` — the recorder and its writer thread on pthreads and host
+  files: a stream at the radio's top rate (about 32,000 samples/s) kept
+  complete and in order; a card slowed to 20 ms a write losing samples in
+  counted gaps while the producer never waits, with the count read back from
+  the file; samples pushed before the file opens; a quiet recording still
+  reaching the card; open, memory and write failures (no further writes, error
+  reported). Host timing is not the Flipper's: this shows the logic, not the
+  device's throughput.
 
 ## Release-pipeline integrity
 
@@ -130,6 +152,10 @@ Everything about on-device radio behaviour, and the end-to-end workflow. See the
 
 - Real over-the-air reception and live protocol decoding.
 - RAW capture fidelity, and replay producing a working transmission.
+- Streaming recording on a real SD card: sustained write rate, how often a
+  slow card loses samples on noisy input, behaviour when the card is removed
+  mid-recording, and that the stock Sub-GHz app opens and replays the files
+  (checklist F6–F6e).
 - The internal-radio presence fix (defect 1) actually resolving "No radio" on a
   device.
 - The analysis engine's inferences against real captured signals (host tests use

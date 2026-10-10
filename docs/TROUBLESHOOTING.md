@@ -58,16 +58,27 @@ the button is held) and is within a few metres. The bar's scale runs from
 −100 dBm (empty) to −30 dBm (full); background noise usually sits near the
 bottom.
 
-## A recording shows `FULL`
+## A recording shows `lost <n>`
 
-RAW recordings hold up to 16,384 timing samples, or fewer if little memory was
-free when recording started. Stop recording shortly after the transmission; for
-long or continuous signals, record a short section.
+The SD card could not keep up with the incoming pulses, so some were dropped.
+This happens mostly with very noisy input (a strong interferer, or AM with no
+signal) on a slow or nearly full card. The saved file still opens; it notes the
+loss, and the timing jumps where samples are missing. Record again closer to
+the transmitter, stop soon after the transmission, or try a faster card.
+`buf <n>%` on the same line is the write buffer filling up, an early warning.
 
 ## Recording doesn't start (red LED blinks)
 
-There was not enough free memory for a capture buffer. Close other apps or
-restart the Flipper, then try again.
+The hint line says why:
+
+- `REC: Not enough memory` — there was no room for even the smallest write
+  buffer. Close other apps or restart the Flipper, then try again.
+- `REC: Cannot create file` — the SD card is missing, read-only or full.
+
+## `SD card write failed` while recording
+
+The card refused a write (removed, full or faulty), so the recording stopped
+and was not kept. Check the card and record again.
 
 ## Saving fails (error tone)
 

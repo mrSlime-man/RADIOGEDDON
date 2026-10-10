@@ -5,6 +5,7 @@
 #pragma once
 
 #include <gui/view.h>
+#include "../helpers/radiogeddon_recorder.h"
 
 typedef struct RadioGeddonReceiverView RadioGeddonReceiverView;
 
@@ -39,14 +40,18 @@ void radiogeddon_receiver_view_set_rssi(RadioGeddonReceiverView* instance, float
 /** Show a detection-threshold mark on the RSSI bar (pass -127 or lower to hide). */
 void radiogeddon_receiver_view_set_threshold(RadioGeddonReceiverView* instance, float dbm);
 
-/** Status text shown in hopping mode instead of the default hint ("" for default). */
+/** Status text shown instead of the default hint ("" for default). */
 void radiogeddon_receiver_view_set_status(RadioGeddonReceiverView* instance, const char* text);
 
+/**
+ * Show the REC line (elapsed time, samples, and samples lost or, when it is
+ * at least half full, the buffer fill) while @p recording; @p stats may be
+ * NULL when not recording.
+ */
 void radiogeddon_receiver_view_set_recording(
     RadioGeddonReceiverView* instance,
     bool recording,
-    size_t samples,
-    bool overflow);
+    const RadioGeddonRecordStats* stats);
 
 /** Replace the decoded-signal list (count) and newest label. */
 void radiogeddon_receiver_view_set_history(

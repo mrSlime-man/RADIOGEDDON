@@ -126,6 +126,7 @@ typedef struct {
     size_t burst_count; /* bursts too short to be frames */
     size_t frames_kept; /* frames stored in frames[] */
     RgQuality quality;
+    uint32_t lost_samples; /* dropped while recording, per the file (set by the caller) */
 
     /* ---- HYPOTHESIS: depends on the encoding guess ---- */
     RgDecodeParams params; /* params.te_us is the base time unit estimate */

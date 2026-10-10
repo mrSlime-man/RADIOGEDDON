@@ -6,6 +6,9 @@ typedef enum {
     ReceiverCustomToggleRecord,
 } ReceiverCustomEvent;
 
+/* How long a note replaces the hint line, in 100 ms ticks. */
+#define RECEIVER_NOTE_TICKS 30
+
 // --- Radio decode callback (runs on the Sub-GHz worker thread) ------------
 // Only records into the (mutex-protected) history and signals the UI thread.
 // All GUI/view updates happen on the UI thread in the custom-event handler.
@@ -47,6 +50,53 @@ static void radiogeddon_scene_receiver_show_selected(RadioGeddonApp* app) {
     furi_mutex_release(app->history_mutex);
 }
 
+// Show a short note on the hint line; the tick handler clears it again.
+static void radiogeddon_scene_receiver_note(RadioGeddonApp* app, const char* text) {
+    radiogeddon_receiver_view_set_status(app->receiver_view, text);
+    scene_manager_set_scene_state(
+        app->scene_manager, RadioGeddonSceneReceiver, RECEIVER_NOTE_TICKS);
+}
+
+static void radiogeddon_scene_receiver_start_recording(RadioGeddonApp* app) {
+    RadioGeddonRecordError err = radiogeddon_subghz_record_start(app->subghz);
+    if(err == RadioGeddonRecordOk) {
+        notification_message(app->notifications, &sequence_set_only_red_255);
+        radiogeddon_receiver_view_set_status(app->receiver_view, "");
+        RadioGeddonRecordStats st;
+        radiogeddon_subghz_record_status(app->subghz, &st);
+        radiogeddon_receiver_view_set_recording(app->receiver_view, true, &st);
+    } else {
+        // Not enough memory or no file: refuse cleanly and say why.
+        notification_message(app->notifications, &sequence_blink_red_100);
+        char note[28];
+        snprintf(note, sizeof(note), "REC: %s", radiogeddon_recorder_error_text(err));
+        radiogeddon_scene_receiver_note(app, note);
+    }
+}
+
+// Stop capturing, let the writer empty its buffer, then offer to save.
+static void radiogeddon_scene_receiver_stop_recording(RadioGeddonApp* app) {
+    notification_message(app->notifications, &sequence_reset_red);
+    radiogeddon_scene_show_busy(app, "Writing to SD...");
+    radiogeddon_subghz_record_stop(app->subghz);
+    radiogeddon_receiver_view_set_recording(app->receiver_view, false, NULL);
+
+    if(radiogeddon_subghz_record_pending(app->subghz)) {
+        app->save_is_raw = true;
+        app->receiver_preserve_history = true;
+        scene_manager_next_scene(app->scene_manager, RadioGeddonSceneSaveName);
+        return;
+    }
+    RadioGeddonRecordStats st;
+    radiogeddon_subghz_record_status(app->subghz, &st);
+    notification_message(app->notifications, &sequence_blink_red_100);
+    radiogeddon_scene_receiver_note(
+        app,
+        st.error != RadioGeddonRecordOk ? radiogeddon_recorder_error_text(st.error) :
+                                          "Nothing captured");
+    view_dispatcher_switch_to_view(app->view_dispatcher, RadioGeddonViewReceiver);
+}
+
 // --- View input callback (UI thread) --------------------------------------
 static void radiogeddon_scene_receiver_view_cb(RadioGeddonReceiverEvent event, void* context) {
     RadioGeddonApp* app = context;
@@ -76,7 +126,9 @@ void radiogeddon_scene_receiver_on_enter(void* context) {
     radiogeddon_receiver_view_set_hopping(app->receiver_view, false);
     radiogeddon_receiver_view_set_threshold(app->receiver_view, -127.0f);
     radiogeddon_scene_receiver_refresh_history(app);
-    radiogeddon_receiver_view_set_recording(app->receiver_view, false, 0, false);
+    radiogeddon_receiver_view_set_recording(app->receiver_view, false, NULL);
+    radiogeddon_receiver_view_set_status(app->receiver_view, "");
+    scene_manager_set_scene_state(app->scene_manager, RadioGeddonSceneReceiver, 0);
 
     radiogeddon_subghz_set_frequency(app->subghz, app->frequency);
     radiogeddon_subghz_set_preset(app->subghz, app->preset_index);
@@ -106,19 +158,34 @@ bool radiogeddon_scene_receiver_on_event(void* context, SceneManagerEvent event)
     bool consumed = false;
 
     if(event.type == SceneManagerEventTypeTick) {
+        uint32_t note =
+            scene_manager_get_scene_state(app->scene_manager, RadioGeddonSceneReceiver);
+        if(note > 0) {
+            scene_manager_set_scene_state(app->scene_manager, RadioGeddonSceneReceiver, note - 1);
+            if(note == 1) radiogeddon_receiver_view_set_status(app->receiver_view, "");
+        }
         if(radiogeddon_subghz_is_rx_running(app->subghz)) {
             radiogeddon_receiver_view_set_rssi(
                 app->receiver_view, radiogeddon_subghz_get_rssi(app->subghz));
-            if(radiogeddon_subghz_is_recording(app->subghz)) {
-                radiogeddon_receiver_view_set_recording(
-                    app->receiver_view,
-                    true,
-                    radiogeddon_subghz_record_sample_count(app->subghz),
-                    radiogeddon_subghz_record_overflowed(app->subghz));
+            RadioGeddonRecordStats st;
+            if(radiogeddon_subghz_record_status(app->subghz, &st)) {
+                if(st.error != RadioGeddonRecordOk) {
+                    // The card refused a write: stop rather than keep losing data.
+                    radiogeddon_scene_receiver_stop_recording(app);
+                    return true;
+                }
+                radiogeddon_receiver_view_set_recording(app->receiver_view, true, &st);
             }
             radiogeddon_scene_receiver_show_selected(app);
         }
         consumed = true;
+    } else if(event.type == SceneManagerEventTypeBack) {
+        // Back while recording stops the capture and asks for a name; Back on
+        // the name screen then discards it.
+        if(radiogeddon_subghz_is_recording(app->subghz)) {
+            radiogeddon_scene_receiver_stop_recording(app);
+            consumed = true;
+        }
     } else if(event.type == SceneManagerEventTypeCustom) {
         switch(event.event) {
         case ReceiverCustomDecoded:
@@ -147,24 +214,9 @@ bool radiogeddon_scene_receiver_on_event(void* context, SceneManagerEvent event)
         }
         case ReceiverCustomToggleRecord:
             if(radiogeddon_subghz_is_recording(app->subghz)) {
-                radiogeddon_subghz_record_stop(app->subghz);
-                notification_message(app->notifications, &sequence_reset_red);
-                radiogeddon_receiver_view_set_recording(
-                    app->receiver_view,
-                    false,
-                    radiogeddon_subghz_record_sample_count(app->subghz),
-                    radiogeddon_subghz_record_overflowed(app->subghz));
-                // Hand off to the naming scene to persist the capture.
-                if(radiogeddon_subghz_record_sample_count(app->subghz) > 0) {
-                    app->save_is_raw = true;
-                    app->receiver_preserve_history = true;
-                    scene_manager_next_scene(app->scene_manager, RadioGeddonSceneSaveName);
-                }
-            } else if(radiogeddon_subghz_record_start(app->subghz, NULL)) {
-                notification_message(app->notifications, &sequence_set_only_red_255);
-            } else {
-                // Not enough free memory for a capture buffer: refuse cleanly.
-                notification_message(app->notifications, &sequence_blink_red_100);
+                radiogeddon_scene_receiver_stop_recording(app);
+            } else if(radiogeddon_subghz_is_rx_running(app->subghz)) {
+                radiogeddon_scene_receiver_start_recording(app);
             }
             consumed = true;
             break;
@@ -178,7 +230,8 @@ bool radiogeddon_scene_receiver_on_event(void* context, SceneManagerEvent event)
 void radiogeddon_scene_receiver_on_exit(void* context) {
     RadioGeddonApp* app = context;
     notification_message(app->notifications, &sequence_reset_red);
-    // Stop the radio. The RAW capture buffer is retained after stop, so the
-    // save-name scene can still flush it to disk.
+    // Stop the radio. A capture still running is written out and stays
+    // pending, so the save-name scene can still keep it.
     radiogeddon_subghz_rx_stop(app->subghz);
+    radiogeddon_receiver_view_set_status(app->receiver_view, "");
 }
