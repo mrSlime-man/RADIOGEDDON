@@ -11,9 +11,10 @@ void radiogeddon_scene_compare_result_on_enter(void* context) {
         furi_string_get_cstr(app->loaded_b.name));
     radiogeddon_analysis_compare(&app->loaded, &app->loaded_b, app->temp_str);
 
-    // For two RAW captures, add an engine-computed timing similarity score.
+    // For two RAW captures, add timing similarity and a frame-pattern comparison.
     if(app->loaded.kind == RadioGeddonSignalKindRaw &&
        app->loaded_b.kind == RadioGeddonSignalKindRaw) {
+        radiogeddon_scene_show_busy(app, "Comparing...");
         furi_string_cat_str(app->temp_str, "----------------\n");
         radiogeddon_analysis_raw_similarity(
             app->storage,

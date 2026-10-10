@@ -24,3 +24,9 @@ extern const SceneManagerHandlers radiogeddon_scene_handlers;
     void prefix##_scene_##name##_on_exit(void* context);
 #include "radiogeddon_scene_config.h"
 #undef ADD_SCENE
+
+/**
+ * Show a "please wait" popup before blocking work in a scene's on_enter (file
+ * analysis). The GUI redraws it while the app thread waits on the SD card.
+ */
+void radiogeddon_scene_show_busy(RadioGeddonApp* app, const char* text);

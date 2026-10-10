@@ -1,13 +1,16 @@
 #include "radiogeddon_scene.h"
 
 /*
- * Unknown Protocol Analysis: runs the structural signal engine over a RAW
- * capture and shows base Te, encoding hypothesis, framing, repeated-frame and
- * constant/changing-field inference, plus a device-ID candidate. Everything is
- * explicitly a [HYPOTHESIS]; no decode is claimed and no key is recovered.
+ * Unknown Protocol Analysis: streams the whole RAW capture through the signal
+ * engine (helpers/rg_analyzer.h) and shows measured timing as [OBSERVED] and
+ * the inferred encoding, bit patterns, frame comparison and field map as
+ * [HYPOTHESIS]. No decode is claimed and no key is recovered.
  */
 void radiogeddon_scene_unknown_on_enter(void* context) {
     RadioGeddonApp* app = context;
+
+    // The engine reads the file three times; show progress meanwhile.
+    radiogeddon_scene_show_busy(app, "Analyzing...");
 
     furi_string_reset(app->temp_str);
     furi_string_cat_printf(

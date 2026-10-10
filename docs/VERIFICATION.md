@@ -25,23 +25,28 @@ locally.
 | RogueMaster build | RogueMaster source at commit `38d7ae9`, built with its own `fbt`, API asserted 88.16, manifest verified | Pass — `radiogeddon-roguemaster.fap` |
 | Lint | `ufbt lint` (clang-format) | Pass, no warnings |
 | DSP/parse unit tests | `make -C test check` → `test_dsp` | Pass — 31 checks |
-| Analysis-engine unit tests | `make -C test check` → `test_analyzer` | Pass — 24 checks |
+| Analysis-engine unit tests | `make -C test check` → `test_analyzer` | Pass — 89 checks |
 | Scanner-logic unit tests | `make -C test check` → `test_scan` | Pass — 31 checks |
 | Hopper-logic unit tests | `make -C test check` → `test_hop` | Pass — 42 checks |
+| RAW-reader unit tests | `make -C test check` → `test_raw` | Pass — 29 checks |
 | Memory safety of tested code | tests built `-Werror` under `-fsanitize=address,undefined` | Pass — no ASan/UBSan reports |
 | Documentation links | `scripts/check_links.py` (offline link + anchor check) | Pass |
 | `.fap` metadata | `scripts/verify_fap.py` parses `.fapmeta` and asserts magic, API, target, name, version, icon | Pass for all three artifacts |
 
-Host-test total: **128 checks, 0 failures.** What the suite covers (synthetic
+Host-test total: **222 checks, 0 failures.** What the suite covers (synthetic
 signals, not real captures):
 
 - `test_dsp` — RAW `RAW_Data` parsing (incl. whitespace, signs, out-of-range),
   duration clustering, cluster sorting, and a RAW capture→file→reparse
   round-trip.
-- `test_analyzer` — PWM identification and bit extraction from Princeton-style
-  frames, PPM-shaped input, frame segmentation and repeat detection,
-  constant-vs-changing field maps for fixed and rolling-style presses, RAW
-  similarity scoring, and degenerate/empty input safety.
+- `test_analyzer` — PWM, PPM and Manchester identification with exact bit
+  recovery (both Manchester phases), Te estimation, timing peaks, noise share
+  and quality grade, robustness to receiver-like noise and ±12 % jitter, frame
+  grouping (identical repeats, two buttons, largest pattern first), alignment
+  of a cut-off first frame, bit-length estimation, constant-vs-changing field
+  maps and the ID candidate, identical results when fed in chunks with a split
+  pulse, the decode and align APIs, streamed and in-memory RAW similarity, and
+  degenerate input (empty, one pulse, one level only, pure noise).
 - `test_scan` — scanner logic on synthetic RSSI sequences: no false triggers
   on noise, one count per burst, warm-up suppression, hysteresis, absolute
   minimum, floor tracking up and down, peak/count reset, median noise floor,
@@ -51,8 +56,12 @@ signals, not real captures):
   expires, event history (channel, peak, duration), lock/unlock, decodes
   starting and extending holds, ring-buffer bounds, single/empty lists, and
   200 repeated hold/lock/retune cycles with no stuck state.
-
-The Manchester encoding branch has no dedicated unit test yet.
+- `test_raw` — the streaming `RAW_Data` reader: values, signs, zeros, CRLF and
+  a missing final newline, reads split at 5- and 13-byte and one-sample
+  boundaries, corrupt tokens and lone minus signs, non-RAW files, a 6,000-sample file with one
+  3,000-value line (bounded checkpoint table, seeking to any time resumes with
+  the right samples, rewind), and `test/fixtures/raw_ref.sub` read end to end
+  through the analyzer.
 
 ## Release-pipeline integrity
 
@@ -118,7 +127,9 @@ Everything about on-device radio behaviour, and the end-to-end workflow. See the
 - The internal-radio presence fix (defect 1) actually resolving "No radio" on a
   device.
 - The analysis engine's inferences against real captured signals (host tests use
-  synthetic waveforms only).
+  synthetic waveforms only), including how its noise, jitter and peak
+  thresholds behave on real receiver noise, and how long a whole-file analysis
+  of a large capture takes on the SD card.
 - Regional TX enforcement actually blocking disallowed frequencies on hardware.
 - Long-run memory stability and absence of radio-threading crashes.
 - That each per-firmware `.fap` loads and runs on its matching firmware.

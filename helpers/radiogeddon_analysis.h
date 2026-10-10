@@ -4,7 +4,8 @@
  *
  * Judgements are labelled CONFIRMED (a firmware decoder or the protocol
  * registry matched), HEURISTIC (a guess from signal statistics) or, in the
- * unknown-protocol engine output, HYPOTHESIS. Plain summary and field lines
+ * unknown-protocol engine output, OBSERVED (measured from the timing) and
+ * HYPOTHESIS (inferred). Plain summary and field lines
  * (name, frequency, the compare =/~ rows) carry no label. No function here
  * recovers keys, decrypts payloads, or predicts rolling codes.
  */
@@ -13,6 +14,7 @@
 #include <furi.h>
 #include <storage/storage.h>
 #include "radiogeddon_storage.h"
+#include "rg_analyzer.h"
 
 /** Append a concise human-readable summary of @p sig to @p out. */
 void radiogeddon_analysis_describe(const RadioGeddonLoadedSignal* sig, FuriString* out);
@@ -39,18 +41,37 @@ void radiogeddon_analysis_compare(
     const RadioGeddonLoadedSignal* b,
     FuriString* out);
 
+typedef enum {
+    RadioGeddonAnalysisOk,
+    RadioGeddonAnalysisNoMemory, /* not enough free heap to run safely */
+    RadioGeddonAnalysisOpenFailed,
+    RadioGeddonAnalysisNoRaw, /* the file holds no RAW_Data */
+    RadioGeddonAnalysisCorrupt, /* malformed RAW values were skipped */
+} RadioGeddonAnalysisStatus;
+
 /**
- * Deep structural analysis of an unknown/RAW capture using the signal engine:
- * base Te, encoding hypothesis + confidence, framing, repeated-frame and
- * constant/changing-field inference, best-effort bit extraction and a
- * device-ID candidate. Every inference is labelled [HYPOTHESIS]; nothing is
- * presented as a verified decode and no key is recovered.
+ * Stream a RAW .sub through the three analyzer passes without loading it.
+ * Returns the finished analyzer (caller frees) or NULL with @p status saying
+ * why. A non-NULL result may still carry RadioGeddonAnalysisCorrupt.
+ */
+RgAnalyzer* radiogeddon_analysis_run_file(
+    Storage* storage,
+    const char* path,
+    RadioGeddonAnalysisStatus* status);
+
+/**
+ * Whole-file structural analysis of an unknown/RAW capture: OBSERVED timing
+ * (peaks, noise, jitter, frames) and HYPOTHESIS structure (encoding with
+ * confidence and runner-up, bit length, repeated patterns, frame alignment,
+ * constant vs changing fields, ID candidate) plus a per-frame list. Nothing
+ * is presented as a verified decode and no key is recovered.
  */
 void radiogeddon_analysis_unknown(Storage* storage, const char* path, FuriString* out);
 
 /**
- * RAW-vs-RAW timing similarity (0-100) between two files, or -1 if either is
- * not a readable RAW capture. Appends a short explanation line to @p out.
+ * Compare two RAW captures: streamed sample-by-sample timing similarity
+ * (0-100, or -1 if either has no RAW data) plus a comparison of their
+ * dominant frame patterns, which does not depend on where recording started.
  */
 int radiogeddon_analysis_raw_similarity(
     Storage* storage,

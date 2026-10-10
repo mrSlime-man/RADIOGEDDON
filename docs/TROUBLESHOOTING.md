@@ -116,6 +116,20 @@ The field map compares frames within one recording, and a single press usually
 repeats the same frame. Record **several presses** in one RAW capture to see
 which bits change between presses.
 
+## *Unknown Protocol Analysis* says *Not enough free memory*
+
+The analysis needs about 8 KB of contiguous free heap plus a safety margin and
+checks before it starts rather than risk a crash. Go back to the main menu
+(which frees the scanner and hopper), close other apps, and try again.
+
+## *Unknown Protocol Analysis* says *No frame fits PWM, PPM or Manchester*
+
+The capture has timing peaks but no frame decodes cleanly in any of the three
+encodings. Common reasons: the capture is mostly noise (check the `Noise`
+percentage and the frame list), the signal is FSK rather than on-off keyed, or
+it uses more than two symbol widths. Record closer to the transmitter, and with
+the right modulation in **Settings**.
+
 ## Collecting a device log
 
 1. Connect the Flipper over USB.

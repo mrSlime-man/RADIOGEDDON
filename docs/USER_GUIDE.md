@@ -209,16 +209,16 @@ files. Choose a file to open its action menu (titled with the file name):
 | Action | What you get |
 |--------|--------------|
 | `Signal Info & Analysis` | Summary (protocol, frequency, preset, bits/key or samples) and timing or bit analysis |
-| `Unknown Protocol Analysis` | Encoding hypothesis, frames, bits, constant-vs-changing field map and a device-ID candidate for RAW captures |
+| `Unknown Protocol Analysis` | For RAW captures: measured timing, noise and frames, then the likely encoding, bit patterns, a frame-by-frame comparison, a constant-vs-changing field map and a device-ID candidate. Shows `Analyzing...` while it reads the whole file |
 | `Crypto Analysis` | Static vs. rolling-code classification and key-byte statistics for decoded protocols |
-| `Compare with...` | Pick a second file and see what is the same (`=`) and what differs (`~`), plus a timing-match score for two RAW captures |
+| `Compare with...` | Pick a second file and see what is the same (`=`) and what differs (`~`); for two RAW captures, a timing-match score and a comparison of their frame patterns |
 | `Replay (TX)` | Transmit the recording, where permitted |
 | `Delete` | Delete the file (asks for confirmation) |
 
 Reports open in a scrolling text view: **Up / Down** to scroll, **Back** to
 return to the action menu. Every result is labelled `[CONFIRMED]`,
-`[HEURISTIC]` or `[HYPOTHESIS]` — see [Protocol Analysis](PROTOCOL_ANALYSIS.md)
-for what each report means.
+`[OBSERVED]`, `[HEURISTIC]` or `[HYPOTHESIS]` — see
+[Protocol Analysis](PROTOCOL_ANALYSIS.md) for what each report means.
 
 **Delete** shows `Delete recording?`, the file name and
 `This cannot be undone.` Press **Right** (`Delete`) to delete or **Left**

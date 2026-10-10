@@ -1,9 +1,14 @@
 /**
  * Host-side unit tests for the firmware-independent analysis engine
  * (helpers/rg_analyzer.c). Build & run via `make -C test check`.
+ *
+ * Every signal here is SYNTHETIC: generated in code from a known bit pattern
+ * so the expected answer is exact. They show the engine recovers structure it
+ * was given; they are not evidence about real captures from a Flipper.
  */
 #include "../helpers/rg_analyzer.h"
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 static int g_failures = 0;
@@ -20,20 +25,78 @@ static int g_checks = 0;
 
 #define TE 350
 
-/* Emit a Princeton-style PWM frame for `bits` (LSB table order as given) into
- * buf at *pos: '0' = short-high/long-low, '1' = long-high/short-low, then a
- * long sync gap. Returns via *pos. */
-static void emit_princeton(int32_t* buf, size_t* pos, const char* bits) {
+static RgAnalysis g_a; /* large; keep off the stack */
+
+/* Deterministic pseudo-random source (LCG) for noise and jitter. */
+static uint32_t g_rng = 12345u;
+static uint32_t rng(void) {
+    g_rng = g_rng * 1103515245u + 12345u;
+    return (g_rng >> 16) & 0x7FFFu;
+}
+
+/* Princeton-style PWM: '0' = Te high / 3Te low, '1' = 3Te high / Te low, then
+ * a Te stop pulse and a 31 Te sync gap. jitter_pct > 0 perturbs each edge. */
+static void emit_pwm(int32_t* buf, size_t* pos, const char* bits, int jitter_pct) {
     for(const char* b = bits; *b; b++) {
-        if(*b == '1') {
-            buf[(*pos)++] = 3 * TE; /* high */
-            buf[(*pos)++] = -TE; /* low */
-        } else {
-            buf[(*pos)++] = TE; /* high */
-            buf[(*pos)++] = -3 * TE; /* low */
+        int32_t hi = (*b == '1') ? 3 * TE : TE;
+        int32_t lo = (*b == '1') ? TE : 3 * TE;
+        if(jitter_pct) {
+            hi +=
+                (int32_t)((int64_t)hi * ((int)(rng() % (2 * jitter_pct + 1)) - jitter_pct) / 100);
+            lo +=
+                (int32_t)((int64_t)lo * ((int)(rng() % (2 * jitter_pct + 1)) - jitter_pct) / 100);
+        }
+        buf[(*pos)++] = hi;
+        buf[(*pos)++] = -lo;
+    }
+    buf[(*pos)++] = TE;
+    buf[(*pos)++] = -31 * TE;
+}
+
+/* PPM: constant 500 us pulse, gap 1000 us = '0', 2000 us = '1', 12 ms frame gap. */
+static void emit_ppm(int32_t* buf, size_t* pos, const char* bits) {
+    for(const char* b = bits; *b; b++) {
+        buf[(*pos)++] = 500;
+        buf[(*pos)++] = (*b == '1') ? -2000 : -1000;
+    }
+    buf[(*pos)++] = 500;
+    buf[(*pos)++] = -12000;
+}
+
+/* Manchester (IEEE 802.3: '1' = low then high, '0' = high then low) with a
+ * 400 us half-bit, idle low before and a 10 ms gap after. Equal adjacent
+ * half-cells merge into one longer pulse, as a receiver sees them. */
+static void emit_manchester(int32_t* buf, size_t* pos, const char* bits) {
+    int level = 0; /* idle low */
+    int32_t run = 0;
+    for(const char* b = bits; *b; b++) {
+        int cells[2] = {(*b == '1') ? 0 : 1, (*b == '1') ? 1 : 0};
+        for(int c = 0; c < 2; c++) {
+            if(cells[c] == level) {
+                run += 400;
+            } else {
+                if(run) buf[(*pos)++] = level ? run : -run;
+                level = cells[c];
+                run = 400;
+            }
         }
     }
-    buf[(*pos)++] = -31 * TE; /* inter-frame sync gap */
+    if(level) {
+        buf[(*pos)++] = run;
+        buf[(*pos)++] = -10000;
+    } else {
+        buf[(*pos)++] = -(run + 10000);
+    }
+}
+
+/* Receiver noise: log-uniform durations 30..~1900 us, alternating level. */
+static void emit_noise(int32_t* buf, size_t* pos, size_t n) {
+    for(size_t i = 0; i < n; i++) {
+        uint32_t k = rng() % 600u;
+        uint32_t d = 30u << (k / 100u);
+        d += d * (k % 100u) / 100u;
+        buf[(*pos)++] = (i % 2) ? -(int32_t)d : (int32_t)d;
+    }
 }
 
 static void test_pwm_identification(void) {
@@ -42,19 +105,25 @@ static void test_pwm_identification(void) {
     size_t pos = 0;
     const char* key = "101010110011000011110001"; /* 24 bits */
     for(int i = 0; i < 4; i++)
-        emit_princeton(buf, &pos, key);
+        emit_pwm(buf, &pos, key, 0);
 
-    RgAnalysis a;
-    rg_analyzer_run(buf, pos, &a);
-
-    CHECK(a.encoding == RgEncodingPWM, "encoding classified as PWM/OOK");
-    CHECK(a.encoding_confidence >= 50, "PWM confidence is meaningful");
-    CHECK(a.te_us >= 300 && a.te_us <= 400, "Te estimated near 350us");
-    CHECK(a.frame_count == 4, "four frames segmented on sync gaps");
-    CHECK(a.frames_repeat, "repeated frames detected");
-    CHECK(a.repeat_count == 4, "all four repeats counted");
-    CHECK(a.bit_count == 24, "24 bits extracted from representative frame");
-    CHECK(strcmp(a.bits, key) == 0, "decoded bits match the emitted key");
+    rg_analyzer_run(buf, pos, &g_a);
+    CHECK(g_a.encoding == RgEncodingPWM, "encoding classified as PWM");
+    CHECK(g_a.encoding_confidence >= 80, "clean PWM gets high confidence");
+    CHECK(g_a.encoding_confidence <= 95, "confidence never claims certainty");
+    CHECK(g_a.te_us >= 330 && g_a.te_us <= 370, "Te estimated near 350us");
+    CHECK(g_a.high_peak_count == 2, "two high-pulse timing peaks observed");
+    CHECK(g_a.low_peak_count == 3, "three low peaks observed (Te, 3Te, sync gap)");
+    CHECK(g_a.frame_count == 4, "four frames segmented on sync gaps");
+    CHECK(g_a.signal_frames == 4, "all four frames decode cleanly");
+    CHECK(g_a.group_count == 1 && g_a.groups[0].exact == 4, "four identical repeats");
+    CHECK(g_a.bit_count == 24 && g_a.bit_count_frames == 4, "bit length 24 in 4/4 frames");
+    CHECK(strcmp(g_a.bits, key) == 0, "decoded bits match the emitted key");
+    CHECK(g_a.fit_pct == 100, "every symbol fits the PWM grammar");
+    CHECK(g_a.noise_pct == 0 && g_a.jitter_pct == 0, "synthetic timing is clean");
+    CHECK(g_a.quality == RgQualityGood, "clean signal graded good");
+    CHECK(g_a.frames_kept == 4 && g_a.frames[1].start_index == 50, "frame 2 starts at sample 50");
+    CHECK(g_a.frames[1].start_us == 24ull * 4 * TE + 32 * TE, "frame 2 start time measured");
 }
 
 static void test_fixed_code_fields(void) {
@@ -63,90 +132,289 @@ static void test_fixed_code_fields(void) {
     size_t pos = 0;
     const char* key = "110100101011000011110000";
     for(int i = 0; i < 3; i++)
-        emit_princeton(buf, &pos, key);
+        emit_pwm(buf, &pos, key, 0);
 
-    RgAnalysis a;
-    rg_analyzer_run(buf, pos, &a);
-    CHECK(a.have_field_diff, "field diff computed for repeated frames");
-    CHECK(a.changing_bits == 0, "fixed code: no changing bits across presses");
-    CHECK(a.const_bits == 24, "fixed code: all 24 bits constant");
+    rg_analyzer_run(buf, pos, &g_a);
+    CHECK(g_a.have_field_diff && g_a.compared == 2, "field diff over the other two frames");
+    CHECK(g_a.changing_bits == 0, "fixed code: no changing bits across repeats");
+    CHECK(g_a.const_bits == 24, "fixed code: all 24 bits constant");
+    CHECK(g_a.id_len == 0, "no ID candidate without changing bits");
 }
 
-static void test_rolling_code_fields(void) {
-    printf("test_rolling_code_fields\n");
-    /* Two presses sharing a constant ID prefix but a changing counter suffix. */
+static void test_changing_fields(void) {
+    printf("test_changing_fields\n");
+    /* Two presses sharing a constant prefix but a changing suffix. */
     int32_t buf[2048];
     size_t pos = 0;
-    const char* press_a = "101010101010"
-                          "000000000000";
-    const char* press_b = "101010101010"
-                          "000000000111"; /* last 3 bits differ */
-    emit_princeton(buf, &pos, press_a);
-    emit_princeton(buf, &pos, press_b);
+    emit_pwm(buf, &pos, "101010101010000000000000", 0);
+    emit_pwm(buf, &pos, "101010101010000000000111", 0);
 
-    RgAnalysis a;
-    rg_analyzer_run(buf, pos, &a);
-    CHECK(a.frames_repeat, "two equal-length frames treated as repeats");
-    CHECK(a.have_field_diff, "field diff computed");
-    CHECK(a.changing_bits == 3, "exactly the 3 differing bits flagged as changing");
-    CHECK(a.const_bits == 21, "remaining 21 bits reported constant (ID portion)");
+    rg_analyzer_run(buf, pos, &g_a);
+    CHECK(g_a.group_count == 2, "two distinct patterns");
+    CHECK(g_a.have_field_diff, "field diff computed");
+    CHECK(g_a.changing_bits == 3, "exactly the 3 differing bits flagged as changing");
+    CHECK(g_a.const_bits == 21, "remaining 21 bits reported constant");
     CHECK(
-        a.field_map[21] == 'X' && a.field_map[23] == 'X' && a.field_map[0] == '.',
+        g_a.field_map[21] == 'X' && g_a.field_map[23] == 'X' && g_a.field_map[0] == '.',
         "field map marks the changing suffix, not the constant prefix");
+    CHECK(g_a.id_start == 0 && g_a.id_len == 21, "ID candidate is the 21-bit constant run");
+}
+
+static void test_ppm_identification(void) {
+    printf("test_ppm_identification\n");
+    int32_t buf[1024];
+    size_t pos = 0;
+    const char* key = "1100101011110000";
+    for(int i = 0; i < 3; i++)
+        emit_ppm(buf, &pos, key);
+
+    rg_analyzer_run(buf, pos, &g_a);
+    CHECK(g_a.encoding == RgEncodingPPM, "constant pulse + two gap widths classified PPM");
+    CHECK(g_a.params.ppm_high_us == 500, "pulse width measured");
+    CHECK(
+        g_a.params.ppm_short_us == 1000 && g_a.params.ppm_long_us == 2000,
+        "the two gap widths measured");
+    CHECK(strcmp(g_a.bits, key) == 0, "PPM bits recovered (long gap = 1)");
+    CHECK(g_a.groups[0].exact == 3, "three identical PPM frames");
+}
+
+static void test_manchester_identification(void) {
+    printf("test_manchester_identification\n");
+    int32_t buf[2048];
+    size_t pos = 0;
+    /* Starts with '1' so the first half-cell merges into the idle low. */
+    const char* key = "10110010111000011010010110110001";
+    for(int i = 0; i < 3; i++)
+        emit_manchester(buf, &pos, key);
+
+    rg_analyzer_run(buf, pos, &g_a);
+    CHECK(g_a.encoding == RgEncodingManchester, "1/2 Te transitions classified Manchester");
+    CHECK(g_a.te_us >= 380 && g_a.te_us <= 420, "half-bit Te near 400us");
+    CHECK(g_a.frame_count == 3, "three Manchester frames");
+    CHECK(strcmp(g_a.bits, key) == 0, "Manchester bits recovered (IEEE convention)");
+    CHECK(g_a.groups[0].exact == 3, "three identical Manchester frames");
+    CHECK(g_a.fit_pct == 100, "no Manchester violations");
+
+    /* Starting with '0' needs the other phase. */
+    pos = 0;
+    const char* key0 = "01001101000111100101101001001110";
+    for(int i = 0; i < 2; i++)
+        emit_manchester(buf, &pos, key0);
+    rg_analyzer_run(buf, pos, &g_a);
+    CHECK(g_a.encoding == RgEncodingManchester, "Manchester starting with 0 identified");
+    CHECK(strcmp(g_a.bits, key0) == 0, "bits recovered when the frame starts high");
+}
+
+static void test_noise_robustness(void) {
+    printf("test_noise_robustness\n");
+    static int32_t buf[4096];
+    size_t pos = 0;
+    const char* key = "011010011100101000111010";
+    g_rng = 777u;
+    emit_noise(buf, &pos, 300);
+    buf[pos++] = -20000; /* silence before the press */
+    for(int i = 0; i < 5; i++)
+        emit_pwm(buf, &pos, key, 0);
+    emit_noise(buf, &pos, 300);
+
+    rg_analyzer_run(buf, pos, &g_a);
+    CHECK(g_a.noise_pct >= 20, "noise share is reported");
+    CHECK(g_a.te_us >= 300 && g_a.te_us <= 400, "Te still found under noise");
+    CHECK(g_a.encoding == RgEncodingPWM, "PWM still identified under noise");
+    CHECK(strcmp(g_a.bits, key) == 0, "dominant pattern is the real frame, not noise");
+    CHECK(g_a.groups[0].exact >= 4, "repeats grouped despite noise");
+    CHECK(g_a.frame_count > g_a.signal_frames, "noise frames counted but not decoded");
+}
+
+static void test_jitter(void) {
+    printf("test_jitter\n");
+    int32_t buf[2048];
+    size_t pos = 0;
+    const char* key = "111000101101001011000110";
+    g_rng = 99u;
+    for(int i = 0; i < 4; i++)
+        emit_pwm(buf, &pos, key, 12);
+
+    rg_analyzer_run(buf, pos, &g_a);
+    CHECK(g_a.encoding == RgEncodingPWM, "PWM identified with +-12% jitter");
+    CHECK(strcmp(g_a.bits, key) == 0, "bits survive jitter");
+    CHECK(g_a.jitter_pct > 0 && g_a.jitter_pct <= 15, "jitter measured, roughly the input");
+}
+
+static void test_truncated_first_frame(void) {
+    printf("test_truncated_first_frame\n");
+    /* The recording started mid-frame: the first 4 bits are missing. */
+    int32_t buf[2048];
+    size_t pos = 0;
+    const char* key = "100110101100011101001011";
+    emit_pwm(buf, &pos, key + 4, 0);
+    for(int i = 0; i < 3; i++)
+        emit_pwm(buf, &pos, key, 0);
+
+    rg_analyzer_run(buf, pos, &g_a);
+    CHECK(g_a.bit_count == 24 && g_a.bit_count_frames == 3, "modal length 24 (3 frames)");
+    CHECK(strcmp(g_a.bits, key) == 0, "reference pattern is a full frame");
+    CHECK(g_a.group_count == 1, "cut-off frame joins the group");
+    CHECK(g_a.groups[0].exact == 3 && g_a.groups[0].aligned == 1, "3 exact + 1 aligned");
+    CHECK(g_a.frames[0].group == 0 && g_a.frames[0].shift == 4, "aligned 4 bits in");
+    CHECK(g_a.compared == 2 && g_a.changing_bits == 0, "field map over full frames only");
+}
+
+static void test_two_buttons(void) {
+    printf("test_two_buttons\n");
+    int32_t buf[4096];
+    size_t pos = 0;
+    const char* a = "101100111000101011110001";
+    const char* b = "101100111000101011110100";
+    for(int i = 0; i < 2; i++)
+        emit_pwm(buf, &pos, b, 0);
+    for(int i = 0; i < 3; i++)
+        emit_pwm(buf, &pos, a, 0);
+
+    rg_analyzer_run(buf, pos, &g_a);
+    CHECK(g_a.group_count == 2, "two patterns");
+    CHECK(g_a.groups[0].exact == 3 && g_a.groups[1].exact == 2, "largest group first");
+    CHECK(strcmp(g_a.bits, a) == 0, "dominant pattern is the most repeated");
+    CHECK(g_a.frames[0].group == 1 && g_a.frames[4].group == 0, "frames remapped to groups");
+    CHECK(g_a.changing_bits == 2, "the two differing bits found across the groups");
+}
+
+static void test_streaming_equivalence(void) {
+    printf("test_streaming_equivalence\n");
+    int32_t buf[2048];
+    size_t pos = 0;
+    const char* key = "001011101010010110100111";
+    for(int i = 0; i < 3; i++)
+        emit_pwm(buf, &pos, key, 0);
+    rg_analyzer_run(buf, pos, &g_a);
+
+    /* Same data in odd-sized chunks, with one long high split in two. */
+    static RgAnalyzer an;
+    rg_analyzer_begin(&an);
+    int passes = 0;
+    do {
+        passes++;
+        for(size_t i = 0; i < pos; i += 7) {
+            size_t n = pos - i < 7 ? pos - i : 7;
+            if(i == 0) {
+                int32_t split[2] = {buf[0] / 2, buf[0] - buf[0] / 2};
+                rg_analyzer_feed(&an, split, 2);
+                rg_analyzer_feed(&an, buf + 1, n - 1);
+            } else {
+                rg_analyzer_feed(&an, buf + i, n);
+            }
+        }
+    } while(rg_analyzer_next_pass(&an));
+    CHECK(passes == 3, "three passes over the data");
+    CHECK(strcmp(an.result.bits, g_a.bits) == 0, "chunked feed gives the same bits");
+    CHECK(an.result.sample_count == g_a.sample_count, "split pulse merged back");
+    CHECK(an.result.encoding_confidence == g_a.encoding_confidence, "same confidence");
+    rg_analyzer_feed(&an, buf, pos);
+    CHECK(!rg_analyzer_next_pass(&an), "a finished analyzer stays finished");
+}
+
+static void test_align(void) {
+    printf("test_align\n");
+    int shift = 99;
+    size_t ov = 0;
+    const char* a = "1100101011110000";
+    CHECK(rg_analyzer_align(a, 16, a, 16, 4, &shift, &ov) == 16, "identical: all match");
+    CHECK(shift == 0 && ov == 16, "identical: zero shift");
+    CHECK(rg_analyzer_align(a, 16, a + 3, 13, 4, &shift, &ov) == 13, "suffix matches");
+    CHECK(shift == 3 && ov == 13, "suffix aligned 3 bits in");
+    CHECK(rg_analyzer_align(a + 2, 14, a, 16, 4, &shift, &ov) == 14, "prefix-extended frame");
+    CHECK(shift == -2, "negative shift when the frame has extra leading bits");
+}
+
+static void test_decode_api(void) {
+    printf("test_decode_api\n");
+    RgDecodeParams p = {0};
+    char bits[RG_ANALYZER_MAX_BITS + 1];
+    int fit = -1;
+    int32_t pwm[] = {TE, -3 * TE, 3 * TE, -TE};
+    CHECK(
+        rg_analyzer_decode(RgEncodingPWM, &p, pwm, 4, bits, sizeof(bits) - 1, &fit) == 0 &&
+            fit == 0,
+        "decoder without its parameters reports no fit");
+    p.pwm_short_us = TE;
+    p.pwm_long_us = 3 * TE;
+    CHECK(
+        rg_analyzer_decode(RgEncodingPWM, &p, pwm, 4, bits, sizeof(bits) - 1, &fit) == 2,
+        "2 bits");
+    CHECK(strcmp(bits, "01") == 0 && fit == 100, "PWM 0 then 1");
+    int32_t bad[] = {TE, -TE, TE, -TE};
+    rg_analyzer_decode(RgEncodingPWM, &p, bad, 4, bits, sizeof(bits) - 1, &fit);
+    CHECK(fit == 0, "wrong symbol period does not fit PWM");
+    p.te_us = 400;
+    int32_t man[] = {400, -800, 400, -400, 800}; /* H L L H L H H (+idle L) */
+    size_t n = rg_analyzer_decode(RgEncodingManchester, &p, man, 5, bits, sizeof(bits) - 1, &fit);
+    CHECK(n == 4 && strcmp(bits, "0110") == 0, "Manchester pairs decoded");
+    CHECK(fit == 100, "clean Manchester fits fully");
 }
 
 static void test_similarity(void) {
     printf("test_similarity\n");
     int32_t a[256], b[256], c[256];
     size_t pa = 0, pb = 0, pc = 0;
-    emit_princeton(a, &pa, "101010110011000011110001");
-    emit_princeton(b, &pb, "101010110011000011110001"); /* identical */
-    emit_princeton(c, &pc, "010101001100111100001110"); /* inverted-ish */
+    emit_pwm(a, &pa, "101010110011000011110001", 0);
+    emit_pwm(b, &pb, "101010110011000011110001", 0); /* identical */
+    emit_pwm(c, &pc, "010101001100111100001110", 0); /* inverted */
 
     CHECK(rg_analyzer_similarity(a, pa, b, pb) >= 95, "identical captures score very high");
     CHECK(rg_analyzer_similarity(a, pa, c, pc) < 70, "different captures score lower");
     CHECK(rg_analyzer_similarity(a, pa, a, 0) == 0, "empty comparand scores 0");
+
+    RgSimilarity s;
+    rg_similarity_init(&s);
+    rg_similarity_feed(&s, a, b, 20);
+    rg_similarity_feed(&s, a + 20, b + 20, pa - 20);
+    rg_similarity_tail(&s, 0, pa);
+    CHECK(rg_similarity_score(&s) == 50, "streamed: longer tail halves the score");
 }
 
 static void test_degenerate(void) {
     printf("test_degenerate\n");
-    RgAnalysis a;
-    rg_analyzer_run(NULL, 0, &a);
-    CHECK(a.sample_count == 0 && a.encoding == RgEncodingUnknown, "empty input is safe");
-    CHECK(a.bit_count == 0 && a.bits[0] == '\0', "no bits from empty input");
+    rg_analyzer_run(NULL, 0, &g_a);
+    CHECK(g_a.sample_count == 0 && g_a.encoding == RgEncodingUnknown, "empty input is safe");
+    CHECK(g_a.bit_count == 0 && g_a.bits[0] == '\0', "no bits from empty input");
 
     int32_t one[1] = {350};
-    rg_analyzer_run(one, 1, &a);
-    CHECK(a.sample_count == 1, "single-sample input handled");
-}
+    rg_analyzer_run(one, 1, &g_a);
+    CHECK(g_a.sample_count == 1, "single-sample input handled");
+    CHECK(g_a.encoding == RgEncodingUnknown, "one pulse is not an encoding");
 
-static void test_ppm_shape(void) {
-    printf("test_ppm_shape\n");
-    /* Constant short high pulse, information in variable gap -> PPM shape. */
-    int32_t buf[512];
+    int32_t highs[64];
+    for(int i = 0; i < 64; i++)
+        highs[i] = 350 + i;
+    rg_analyzer_run(highs, 64, &g_a);
+    CHECK(g_a.sample_count == 1, "same-level samples merge into one pulse");
+    CHECK(g_a.frame_count == 0, "no frames without transitions");
+
+    static int32_t noise[2000];
     size_t pos = 0;
-    for(int rep = 0; rep < 2; rep++) {
-        for(int i = 0; i < 20; i++) {
-            buf[pos++] = TE; /* fixed high */
-            buf[pos++] = (i % 2 == 0) ? -2 * TE : -4 * TE; /* variable gap */
-        }
-        buf[pos++] = -31 * TE;
-    }
-    RgAnalysis a;
-    rg_analyzer_run(buf, pos, &a);
-    CHECK(
-        a.encoding == RgEncodingPPM || a.encoding == RgEncodingPWM,
-        "constant-pulse/variable-gap classified as PPM (or PWM fallback)");
-    CHECK(a.encoding_confidence > 0, "a hypothesis with non-zero confidence is produced");
+    g_rng = 4242u;
+    emit_noise(noise, &pos, 2000);
+    rg_analyzer_run(noise, pos, &g_a);
+    CHECK(g_a.noise_pct >= 50, "pure noise is mostly outside timing peaks");
+    CHECK(g_a.quality == RgQualityPoor, "pure noise graded poor");
+    CHECK(g_a.encoding_confidence < 60, "pure noise never gets a confident encoding");
 }
 
 int main(void) {
     test_pwm_identification();
     test_fixed_code_fields();
-    test_rolling_code_fields();
+    test_changing_fields();
+    test_ppm_identification();
+    test_manchester_identification();
+    test_noise_robustness();
+    test_jitter();
+    test_truncated_first_frame();
+    test_two_buttons();
+    test_streaming_equivalence();
+    test_align();
+    test_decode_api();
     test_similarity();
     test_degenerate();
-    test_ppm_shape();
 
     printf("\n%d checks, %d failures\n", g_checks, g_failures);
     if(g_failures) {

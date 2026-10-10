@@ -100,8 +100,9 @@ firmware) in your pull request; if you did not, say that too.
 - Radio worker callbacks run off the GUI thread: record data under the existing
   mutex and post a custom event; never touch views from the worker thread.
 - Label analysis output honestly. `[CONFIRMED]` is reserved for results backed
-  by a firmware protocol decoder; statistics-based guesses are `[HEURISTIC]`;
-  engine inferences are `[HYPOTHESIS]`. Never present an inference as a verified
+  by a firmware protocol decoder; direct measurements of a capture are
+  `[OBSERVED]`; statistics-based guesses are `[HEURISTIC]`; engine inferences
+  are `[HYPOTHESIS]`. Never present an inference as a verified
   decode.
 - Keep transmit safeguards intact: firmware region checks, refusing
   dynamic/rolling-code protocols, and refusing unknown modulation presets.

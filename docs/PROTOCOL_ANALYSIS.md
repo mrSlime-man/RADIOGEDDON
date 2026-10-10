@@ -4,22 +4,25 @@ How RadioGeddon identifies and analyses signals, what every part of the
 on-screen reports means, and — just as important — what the analysis cannot
 tell you.
 
-> **Status:** the analysis code is covered by host unit-test checks (55 for parsing and the analysis engine) on
-> synthetic signals. It has **not** yet been validated against real captures on
-> a physical Flipper Zero ([VERIFICATION.md](VERIFICATION.md)).
+> **Status:** the analysis code is covered by host unit-test checks (149 for
+> parsing, the RAW reader and the analysis engine) on synthetic signals. It has
+> **not** yet been validated against real captures on a physical Flipper Zero
+> ([VERIFICATION.md](VERIFICATION.md)).
 
 ## Confidence labels
 
-Every conclusion in a report carries one of three labels:
+Every conclusion in a report carries one of four labels:
 
 | Label | Meaning | Source |
 |-------|---------|--------|
-| `[CONFIRMED]` | A firmware protocol decoder recognised the signal, or the firmware's protocol registry classifies the protocol. | Flipper firmware decoders and protocol registry |
+| `[CONFIRMED]` | A firmware protocol decoder recognised the signal, or the firmware's protocol registry classifies the protocol. A verified protocol decode. | Flipper firmware decoders and protocol registry |
+| `[OBSERVED]` | A structural observation measured directly from the RAW timing: sample counts, duration, timing peaks, noise share, jitter, frames cut on gaps. No interpretation. | RadioGeddon signal engine |
 | `[HEURISTIC]` | A judgement from simple signal statistics (pulse widths, key-byte variety, key differences). | RadioGeddon |
-| `[HYPOTHESIS]` | An inference about an unknown signal from the analysis engine — encoding, framing, bits, field layout. | RadioGeddon signal engine |
+| `[HYPOTHESIS]` | A statistical inference about an unknown signal: encoding, bits, bit length, repeated patterns, field layout, ID candidate. It may be wrong. | RadioGeddon signal engine |
 
 `[HEURISTIC]` and `[HYPOTHESIS]` results are starting points for your own
-investigation, never verified decodes.
+investigation, never verified decodes. `[OBSERVED]` values are measurements,
+but what they mean is still up to you.
 
 ## Protocol identification — `[CONFIRMED]`
 
@@ -63,55 +66,82 @@ file:
 - *Est. base Te*: the shortest group's width — a first guess at the protocol's
   base time unit.
 
-(*Unknown Protocol Analysis* groups timings a little differently — 25 % vs. 20 %
-tolerance, and it ignores tiny groups — so it may report a slightly different Te
-for the same file.)
+(*Unknown Protocol Analysis* uses a different method, histogram peaks over the
+whole file, so it may report a slightly different Te for the same file.)
 
 On-off keyed (OOK) remotes typically show two or three dominant groups (for
 example ~400 µs and ~1200 µs, a 1:3 ratio). Many tight groups usually mean
 noise or several overlapping transmitters.
 
-## Unknown Protocol Analysis — `[HYPOTHESIS]`
+## Unknown Protocol Analysis — `[OBSERVED]` and `[HYPOTHESIS]`
 
 For RAW captures the firmware could not decode, *Unknown Protocol Analysis*
-runs RadioGeddon's signal engine (`helpers/rg_analyzer.c`) over the **first
-4,096 timing samples** of the file. Each step is a hypothesis:
+runs RadioGeddon's signal engine (`helpers/rg_analyzer.c`) over the **whole
+file**. The file is streamed up to three times through a 256-byte buffer
+(`helpers/rg_raw.c`), so a long recording is never loaded into RAM: the
+engine needs about 8 KB however long the capture is, and shows *Not enough
+free memory* instead of starting when the heap is short.
 
-1. **Timing groups and base Te.** Durations are grouped within 25 % (+10 µs),
-   up to 10 groups. Te is the shortest group that holds at least 5 % of all
-   edges, so stray glitches don't define the time base.
-2. **Frames.** Any gap (carrier-off period) of at least **7 × Te** ends a
-   frame; up to 64 frames are tracked.
-3. **Repeats.** Remotes usually send the same frame several times per press.
-   Frames whose length matches the most common length (±1 sample) count as
-   repeats; one of them becomes the *representative frame* (otherwise the
-   longest frame is used).
-4. **Encoding hypothesis** on the representative frame, with a confidence
-   score:
+The report opens with what the labels mean, then has three parts.
 
-   | Hypothesis | When | Confidence |
-   |------------|------|------------|
-   | **PPM (gap-coded)** | one dominant pulse width, two or more gap widths | 55 %, +20 if most durations are ≈ Te; max 90 % |
-   | **PWM / OOK** | two or more pulse widths, or one pulse width with ≥ 15 % of durations ≈ 2 × Te | 50 % + coverage of Te/2Te; max 92 % |
-   | **Manchester** | ≥ 85 % of durations ≈ Te or 2 × Te (≥ 25 % ≈ Te and ≥ 15 % ≈ 2 Te) | 45 % + excess coverage; max 80 % |
-   | **PWM / OOK (weak)** | none of the above | 25 % |
+### `[OBSERVED]` timing
 
-   ("Dominant" = at least 10 % of the high or low durations.) In practice the
-   PWM/OOK branch is tried first and catches most on-off-keyed remotes; the
-   Manchester branch rarely fires, and noisy or non-OOK input usually lands on
-   the 25 % "weak PWM" fallback — treat a low confidence as "no clear
-   structure", and the extracted bits of a weak result as meaningless.
-5. **Bits (PWM only).** Starting at the first carrier-on pulse, each on/off pair
-   becomes one bit: `1` if the on-time is at least as long as the off-time,
-   otherwise `0`. Up to 256 bits. The polarity is a convention — some protocols
-   use the opposite one.
-6. **Constant vs. changing fields.** When repeated frames exist, each one is
-   converted to bits and compared position by position with the representative
-   frame. The map shows `.` for positions that never change and `X` for
-   positions that do, with the counts of each.
-7. **Device ID candidate.** The constant bits are packed (up to 64) into a hex
-   value. A fixed device or remote identifier often lives in the constant part
-   of a frame — but this is only a candidate.
+1. **Samples and duration.** Consecutive values with the same level are merged
+   into one pulse first (some recorders split long pulses).
+2. **Timing peaks.** High (carrier-on) and low (carrier-off) durations go into
+   two histograms with log-spaced bins 10 % wide. A peak is a local maximum
+   that falls to half its height on both sides, holds at least 2 % of that
+   side's edges and spans at most 8 bins (about ±45 %). Peaks are listed as
+   `<width> x<count>`.
+3. **Noise** is the share of edges outside every peak. Receiver noise is
+   spread over many bins, so it lands here rather than forming peaks.
+4. **Jitter** is the mean distance of peak edges from their peak's centre, as a
+   percentage (approximate: it is measured per bin).
+5. **Quality:** *good* when noise ≤ 15 % and jitter ≤ 10 %, *poor* when noise
+   > 50 %, jitter > 25 % or no peak was found, otherwise *fair*.
+6. **Frames.** A low at least **7 × Te** long (and at least 1 ms) ends a frame.
+   Bursts of fewer than 8 pulses are counted as *bursts* (noise), not frames.
+
+### `[HYPOTHESIS]` structure
+
+1. **Base Te.** The shortest high peak and the shortest low peak that hold at
+   least a quarter of their side's largest peak. Receivers tend to widen
+   pulses and shorten gaps by the same amount, so when the two are within
+   1.6× of each other Te is their average; otherwise the shorter one.
+2. **Encoding by trial decoding.** Every frame is decoded three ways, each
+   giving a *fit*: the share of symbols that obey that encoding's rules.
+
+   | Encoding | Symbols | A symbol fits when | Bit value |
+   |----------|---------|--------------------|-----------|
+   | **PWM** | pulse + gap pairs | the pulse is within 30 % of one of the two pulse-width peaks and pulse + gap is within 25 % of their sum | `1` = long pulse |
+   | **PPM** | pulse + gap pairs | the pulse is within 30 % of the main pulse width and the gap within 30 % of one of the two in-frame gap peaks | `1` = long gap |
+   | **Manchester** | half-bit cells: a duration of 0.5–1.5 Te is one cell, 1.5–2.6 Te two | the two cells of a bit differ in level (both cell phases are tried); other durations count as errors | `1` = low-to-high (IEEE 802.3; the G.E. Thomas convention inverts every bit) |
+
+   A lone pulse before the frame gap is treated as a stop/sync pulse, not a
+   bit. Frames where some encoding fits at least 60 % are *signal frames*;
+   the encoding with the highest mean fit over them wins and the runner-up is
+   shown as *Alt* when it fits at least 30 %.
+3. **Confidence** starts at the winner's mean fit, loses 20 points when the
+   runner-up is within 10 (10 points when within 25), loses 10 when only one
+   frame fits any encoding, gains 5 when a pattern repeats exactly, is capped at
+   40 for frames under 8 bits and never exceeds 95 %.
+4. **Bit length** is the most common bit count among signal frames.
+5. **Patterns.** Identical frames are grouped (A, B, … largest first, up to 6
+   patterns) and shown in binary and hex. A frame that matches a pattern after
+   shifting up to 4 bits (for example the first frame of a recording that
+   started mid-transmission) joins it as *shifted*.
+6. **Field map.** Every frame of the modal bit length is compared position by
+   position with the reference frame: `.` never changes, `X` changes.
+7. **Device ID candidate.** When some bits change, the longest run of at least
+   8 constant bits is offered as a possible device ID, in hex. A fixed device
+   or remote identifier often lives there, but this is only a candidate.
+
+### Frame list
+
+One line per frame (the first 48): start time, bit count, pattern letter,
+and the shift when a frame was aligned (`A+3`). Frames that fit no encoding
+show as `noise`; frames longer than 520 pulses are decoded up to that point
+and marked `long`.
 
 ### Reading the field map correctly
 
@@ -119,10 +149,18 @@ runs RadioGeddon's signal engine (`helpers/rg_analyzer.c`) over the **first
   press normally repeats an identical frame, so even a rolling-code remote shows
   `0` changing bits from one press. To see which fields change between presses,
   **press the button several times during one RAW recording**.
-- A few `X` positions in otherwise constant frames are often noise or a frame
-  boundary detected one sample off, not a counter.
-- When everything is constant across several presses, the report says the
-  signal is *likely a fixed code* — still a hypothesis.
+- Pressing *different buttons* also changes bits; the report says changing
+  bits may be a counter, a button code or encrypted data.
+- When everything is constant across several frames, the report says the
+  signal is *likely a fixed code*, which is still a hypothesis.
+
+### What it cannot do
+
+- Recognise FSK signals, protocols with more than two symbol widths, or
+  encodings other than PWM, PPM and Manchester. Those report *no frame fits*.
+- Tell which Manchester convention or bit order the device uses.
+- Decode anything: the bits are a structural reading of the timing. Only the
+  firmware's decoders (*Receive & Record*) give `[CONFIRMED]` results.
 
 ## Crypto Analysis
 
@@ -156,19 +194,19 @@ the same, `~` a field that differs.
   shown with the hint that a *small* delta across presses suggests a counter.
   The hint is printed whenever the keys differ, so judge the size of the delta
   yourself — encrypted rolling codes produce large, random-looking deltas.
-- **RAW captures:** the sample counts, plus a **RAW timing match** score:
-  - the first 4,096 samples of each file are compared position by position;
-  - two samples match when they have the same polarity and differ by at most
-    25 % of the longer one (minimum 60 µs);
-  - the score is matches ÷ the longer capture's length, so length differences
-    lower the score;
-  - ≥ 90 % → *near-identical capture*, ≥ 60 % → *similar structure*,
-    otherwise *clearly different*.
-
-  The comparison does **not** align the captures. Two recordings of the same
-  button that start at different points in the transmission (or with different
-  amounts of noise before it) can score low. Scores are most meaningful when both captures were started
-  the same way (for example, recording started just before pressing the button).
+- **RAW captures:** the sample counts, plus two RAW comparisons. Both stream
+  the files, so their length does not matter.
+  - **RAW timing match**: the files are compared sample by sample from the
+    start; two samples match when they have the same polarity and differ by
+    at most 25 % of the longer one (minimum 60 µs); the score is matches ÷
+    the longer capture's length. ≥ 90 % → *near-identical capture*, ≥ 60 % →
+    *similar structure*, otherwise *clearly different*. This score does
+    **not** align the captures, so two recordings of the same button that
+    start at different points can score low.
+  - **`[HYPOTHESIS]` patterns**: each file runs through the analysis engine
+    and their dominant frame patterns are compared, aligned by up to 4 bits.
+    It reports *Same frame pattern*, *Different encodings*, or how many bits
+    differ with a `.`/`X` map. This does not depend on when recording started.
 
 ## What RadioGeddon never does
 

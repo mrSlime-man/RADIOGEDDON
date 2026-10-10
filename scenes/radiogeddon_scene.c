@@ -25,3 +25,9 @@ const SceneManagerHandlers radiogeddon_scene_handlers = {
     .on_exit_handlers = radiogeddon_scene_on_exit_handlers,
     .scene_num = RadioGeddonSceneNum,
 };
+
+void radiogeddon_scene_show_busy(RadioGeddonApp* app, const char* text) {
+    popup_reset(app->popup);
+    popup_set_header(app->popup, text, 64, 32, AlignCenter, AlignCenter);
+    view_dispatcher_switch_to_view(app->view_dispatcher, RadioGeddonViewPopup);
+}

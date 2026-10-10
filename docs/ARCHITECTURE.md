@@ -60,18 +60,19 @@ scenes/                     One file per screen; the scene list is generated fro
 views/                      Custom canvas views: scanner sweep, live receiver
 helpers/
   radiogeddon_subghz.*      Radio wrapper: device, decoders, RAW capture, hopper retune, TX
-  radiogeddon_storage.*     SD-card layout, .sub parsing, RAW sample loading
+  radiogeddon_storage.*     SD-card layout, .sub parsing, streaming RAW file access
   radiogeddon_scanner.*     Scanner sweep thread, results and CSV export
   radiogeddon_hopper.*      Hopper thread, auto-recording, statistics report
   radiogeddon_settings.*    Settings persisted to the SD card
   radiogeddon_history.*     Per-session list of decoded signals (max 32, de-duplicated)
   radiogeddon_analysis.*    Text reports: info, analysis, crypto, compare, unknown-protocol
   radiogeddon_dsp.*         Pure RAW parsing / clustering helpers (no firmware headers)
-  rg_analyzer.*             Pure signal-analysis engine (no firmware headers)
+  rg_analyzer.*             Pure streaming signal-analysis engine (no firmware headers)
+  rg_raw.*                  Pure streaming RAW_Data reader with seek checkpoints
   rg_scan.*                 Pure scanner logic: noise floor, detection, peak hold
   rg_hop.*                  Pure hopper state machine: dwell, hold, lock, history
 assets/                     10x10 launcher icon (compiled into the .fap)
-test/                       Host unit tests (128 checks) + reference .sub fixtures
+test/                       Host unit tests (222 checks) + reference .sub fixtures
 scripts/                    Pinned builds, manifest verification, packaging, link check
 tools/brand/                Generator for the logo, banner and social preview
 .github/workflows/          CI (ci.yml), shared build pipeline (build.yml), release.yml
@@ -184,15 +185,22 @@ The database screen uses the firmware's file browser filtered to `.sub`.
 
 ## Analysis pipeline
 
-`radiogeddon_analysis.c` builds every text report. It reads the parsed file
-from `radiogeddon_storage` and, for RAW captures, loads up to the first
-**4,096** timing samples into the engine:
+`radiogeddon_analysis.c` builds every text report from the parsed file in
+`radiogeddon_storage`:
 
 - `radiogeddon_dsp` — pulse-width clustering used by the basic Signal Analyzer;
-- `rg_analyzer` — the deeper engine behind Unknown Protocol Analysis and RAW
-  similarity scoring.
+- `rg_raw` — reads `RAW_Data` values through a 256-byte buffer, never a whole
+  line or file, and keeps up to 32 checkpoints (byte offset, sample index,
+  time) so a reader can seek to a time without re-reading from the start.
+  `radiogeddon_storage_raw_open` wraps it around a Storage file stream;
+- `rg_analyzer` — the engine behind Unknown Protocol Analysis and RAW
+  comparison. It streams: the caller feeds the whole file once per pass
+  (timing histograms, then trial decoding, then frame grouping), so its state
+  is a fixed ~8 KB (`RgAnalyzer`) whatever the file length. The app allocates
+  it only while a report is built, after checking the largest free heap block
+  leaves a margin, and frees it before showing the report.
 
-Both engines are plain C with no firmware headers, so `test/` compiles and runs
+These are plain C with no firmware headers, so `test/` compiles and runs
 them on a normal computer under AddressSanitizer and UndefinedBehaviorSanitizer.
 See [Protocol Analysis](PROTOCOL_ANALYSIS.md) for the algorithms and how
 results are labelled.
@@ -216,8 +224,9 @@ results are labelled.
 - **Standalone.** No companion app, network, or desktop processing is required.
 - **Real data only.** Analysis runs on actual captures; there is no simulated
   reception or placeholder output.
-- **Honest labelling.** Firmware decoder matches are `[CONFIRMED]`; statistics
-  are `[HEURISTIC]`; engine inferences are `[HYPOTHESIS]`.
+- **Honest labelling.** Firmware decoder matches are `[CONFIRMED]`; direct
+  measurements are `[OBSERVED]`; statistics are `[HEURISTIC]`; engine
+  inferences are `[HYPOTHESIS]`.
 - **Firmware safety rails stay on.** Regional transmit rules are enforced by
   the firmware, dynamic/rolling-code protocols are never replayed, and builds
   are never re-labelled to load on a firmware they weren't compiled for.

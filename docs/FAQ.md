@@ -92,9 +92,11 @@ receiver has already seen.) It does show the firmware's own decoder output,
 which may use the SD-card manufacturer keystore to identify KeeLoq-family
 signals — that identification happens in the firmware, not in RadioGeddon.
 
-### What do `[CONFIRMED]`, `[HEURISTIC]` and `[HYPOTHESIS]` mean?
+### What do `[CONFIRMED]`, `[OBSERVED]`, `[HEURISTIC]` and `[HYPOTHESIS]` mean?
 
 - `[CONFIRMED]` — one of the firmware's protocol decoders matched the signal.
+- `[OBSERVED]` — measured directly from a RAW capture's timing (sample counts,
+  timing peaks, noise, jitter, frames). A measurement, not an interpretation.
 - `[HEURISTIC]` — a judgement derived from signal statistics (for example pulse
   timings or key-byte variety). Useful, but a guess.
 - `[HYPOTHESIS]` — an inference from the analysis engine about an unknown
