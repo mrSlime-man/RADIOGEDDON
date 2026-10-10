@@ -33,13 +33,13 @@ locally.
 | Sample-ring unit tests | `make -C test check` → `test_ring` | Pass — 47 checks |
 | RAW-writer unit tests | `make -C test check` → `test_rawfmt` | Pass — 18 checks |
 | Recorder tests (stub Furi/Storage) | `make -C test check` → `test_recorder` | Pass — 29 checks |
-| Database-index unit tests | `make -C test check` → `test_db` | Pass — 59 checks |
+| Database-index unit tests | `make -C test check` → `test_db` | Pass — 75 checks |
 | Thread safety of ring and recorder | `make -C test tsan` (ThreadSanitizer; optional, not in CI) | Pass — no reports |
 | Memory safety of tested code | tests built `-Werror` under `-fsanitize=address,undefined` | Pass — no ASan/UBSan reports |
 | Documentation links | `scripts/check_links.py` (offline link + anchor check) | Pass |
 | `.fap` metadata | `scripts/verify_fap.py` parses `.fapmeta` and asserts magic, API, target, name, version, icon | Pass for all three artifacts |
 
-Host-test total: **423 checks, 0 failures.** What the suite covers (synthetic
+Host-test total: **439 checks, 0 failures.** What the suite covers (synthetic
 signals, not real captures):
 
 - `test_dsp` — RAW `RAW_Data` parsing (incl. whitespace, signs, out-of-range),
@@ -99,7 +99,9 @@ signals, not real captures):
   line cut off), the name pool and entry table filling up, duplicates (a
   different frequency is not one; RAW only with equal size and content hash;
   stale marks cleared), every filter, the name search, each sort order with
-  its tie-breaks, and the protocol list.
+  its tie-breaks, the protocol list, finding a file by name, and Rename's
+  name rules (empty, longest allowed, too long, each character FAT cannot
+  store, a dot or space at either end, a typed `.sub` in any case).
 
 ## Release-pipeline integrity
 
@@ -168,7 +170,10 @@ Everything about on-device radio behaviour, and the end-to-end workflow. See the
   (checklist F6–F6e).
 - The Database list on a real card: how long indexing takes for a large
   folder, memory left for analysis while it is open, and the list, options
-  and re-read after a delete (checklist F11–F11e).
+  and re-read after a delete (checklist F11–F11e); rename, report export and
+  damaged-file handling on the device (F12–F12d). The report writer and the
+  rename checks against existing files use the SD card and are not covered by
+  host tests.
 - The internal-radio presence fix (defect 1) actually resolving "No radio" on a
   device.
 - The analysis engine's inferences against real captured signals (host tests use

@@ -184,13 +184,22 @@ void radiogeddon_storage_make_scan_path(FuriString* out) {
         dt.second);
 }
 
-bool radiogeddon_storage_make_unique_path(Storage* storage, FuriString* out, const char* name) {
-    radiogeddon_storage_make_path(out, name);
+bool radiogeddon_storage_make_unique_path_in(
+    Storage* storage,
+    FuriString* out,
+    const char* folder,
+    const char* name,
+    const char* ext) {
+    furi_string_printf(out, "%s/%s%s", folder, name, ext);
     if(!storage_common_exists(storage, furi_string_get_cstr(out))) return true;
     for(unsigned i = 2; i <= 99; i++) {
-        furi_string_printf(
-            out, "%s/%s_%u%s", RADIOGEDDON_SIGNALS_FOLDER, name, i, RADIOGEDDON_SUB_EXTENSION);
+        furi_string_printf(out, "%s/%s_%u%s", folder, name, i, ext);
         if(!storage_common_exists(storage, furi_string_get_cstr(out))) return true;
     }
     return false;
+}
+
+bool radiogeddon_storage_make_unique_path(Storage* storage, FuriString* out, const char* name) {
+    return radiogeddon_storage_make_unique_path_in(
+        storage, out, RADIOGEDDON_SIGNALS_FOLDER, name, RADIOGEDDON_SUB_EXTENSION);
 }

@@ -19,13 +19,28 @@ static void radiogeddon_scene_saved_list_view_cb(RadioGeddonDbViewEvent event, v
     view_dispatcher_send_custom_event(app->view_dispatcher, out);
 }
 
-/* (Re)build the index, keeping the query and the highlighted position. */
+/* Position of the file called @p name in the current view, if listed. */
+static bool radiogeddon_scene_saved_list_find(RadioGeddonDb* db, const char* name, size_t* pos) {
+    for(size_t i = 0; i < db->view_count; i++) {
+        if(strcmp(rg_db_name(&db->db, radiogeddon_db_at(db, i)), name) == 0) {
+            *pos = i;
+            return true;
+        }
+    }
+    return false;
+}
+
+/* (Re)build the index, keeping the query and the highlighted file: the same
+ * name, else the file just renamed, else the same position. */
 static bool radiogeddon_scene_saved_list_load(RadioGeddonApp* app) {
     RgDbQuery query = {.sort = RgDbSortDate, .show = RgDbShowAll};
     size_t selected = 0;
+    FuriString* keep = furi_string_alloc();
     if(app->db) {
         query = app->db->query;
         selected = radiogeddon_db_view_get_selected(app->db_view);
+        const RgDbEntry* e = radiogeddon_db_at(app->db, selected);
+        if(e) furi_string_set(keep, rg_db_name(&app->db->db, e));
     }
     radiogeddon_scene_show_busy(app, "Loading...");
     // Detach before freeing so the list never draws a freed index.
@@ -36,12 +51,19 @@ static bool radiogeddon_scene_saved_list_load(RadioGeddonApp* app) {
 
     RadioGeddonDbStatus status;
     app->db = radiogeddon_db_load(app->storage, &status);
-    if(!app->db) return false;
-    app->db->query = query;
-    radiogeddon_db_apply(app->db);
-    radiogeddon_db_view_set_db(app->db_view, app->db);
-    radiogeddon_db_view_set_selected(app->db_view, selected);
-    return true;
+    if(app->db) {
+        app->db->query = query;
+        radiogeddon_db_apply(app->db);
+        const char* opened = strrchr(furi_string_get_cstr(app->file_path), '/');
+        if(!radiogeddon_scene_saved_list_find(app->db, furi_string_get_cstr(keep), &selected) &&
+           opened) {
+            radiogeddon_scene_saved_list_find(app->db, opened + 1, &selected);
+        }
+        radiogeddon_db_view_set_db(app->db_view, app->db);
+        radiogeddon_db_view_set_selected(app->db_view, selected);
+    }
+    furi_string_free(keep);
+    return app->db != NULL;
 }
 
 void radiogeddon_scene_saved_list_on_enter(void* context) {
@@ -72,19 +94,18 @@ static void radiogeddon_scene_saved_list_open(RadioGeddonApp* app) {
     const RgDbEntry* e =
         radiogeddon_db_at(app->db, radiogeddon_db_view_get_selected(app->db_view));
     if(!e) return;
-    FuriString* path = furi_string_alloc();
-    radiogeddon_db_path(app->db, e, path);
+    radiogeddon_db_path(app->db, e, app->file_path);
     radiogeddon_loaded_signal_reset(&app->loaded);
     radiogeddon_loaded_signal_init(&app->loaded);
-    if(radiogeddon_storage_load(app->storage, furi_string_get_cstr(path), &app->loaded)) {
-        furi_string_set(app->file_path, path);
-        app->have_loaded_signal = true;
-        app->db_keep = true;
-        scene_manager_next_scene(app->scene_manager, RadioGeddonSceneSavedInfo);
-    } else {
-        notification_message(app->notifications, &sequence_error);
-    }
-    furi_string_free(path);
+    bool loaded =
+        radiogeddon_storage_load(app->storage, furi_string_get_cstr(app->file_path), &app->loaded);
+    // A damaged file still opens, with only Details, Rename and Delete.
+    app->file_damaged = !loaded || e->kind == RgDbKindCorrupt;
+    app->have_loaded_signal = !app->file_damaged;
+    app->db_keep = true;
+    // A new file: its menu starts at the top.
+    scene_manager_set_scene_state(app->scene_manager, RadioGeddonSceneSavedInfo, 0);
+    scene_manager_next_scene(app->scene_manager, RadioGeddonSceneSavedInfo);
 }
 
 bool radiogeddon_scene_saved_list_on_event(void* context, SceneManagerEvent event) {

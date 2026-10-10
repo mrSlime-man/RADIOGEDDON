@@ -24,6 +24,10 @@ Every conclusion in a report carries one of four labels:
 investigation, never verified decodes. `[OBSERVED]` values are measurements,
 but what they mean is still up to you.
 
+*Save report to SD* in a file's menu writes the same reports, labels
+included, to `apps_data/radiogeddon/reports/<name>.txt`, headed by a legend
+of these four labels.
+
 ## Protocol identification — `[CONFIRMED]`
 
 While **Receive & Record** or the **Frequency Hopper** is running, every

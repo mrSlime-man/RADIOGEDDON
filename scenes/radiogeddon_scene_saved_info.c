@@ -7,6 +7,9 @@ typedef enum {
     SavedInfoIndexCrypto,
     SavedInfoIndexCompare,
     SavedInfoIndexReplay,
+    SavedInfoIndexDetails,
+    SavedInfoIndexRename,
+    SavedInfoIndexReport,
     SavedInfoIndexDelete,
 } SavedInfoIndex;
 
@@ -16,14 +19,33 @@ typedef enum {
     SavedInfoEventDeleteCancel,
 } SavedInfoEvent;
 
-/* Scene state: which view we are showing. */
+/* Scene state: the view shown (low byte) and the highlighted menu item
+ * (above it), so returning from a report keeps the place. The Database list
+ * sets it to 0 when it opens a file. */
 typedef enum {
     SavedInfoStateMenu = 0,
     SavedInfoStateConfirmDelete = 1,
 } SavedInfoState;
 
+#define SAVED_INFO_MODE_MASK 0xFFu
+
+static uint32_t radiogeddon_scene_saved_info_state(RadioGeddonApp* app) {
+    return scene_manager_get_scene_state(app->scene_manager, RadioGeddonSceneSavedInfo);
+}
+
+static void radiogeddon_scene_saved_info_set_mode(RadioGeddonApp* app, SavedInfoState mode) {
+    uint32_t state = radiogeddon_scene_saved_info_state(app);
+    scene_manager_set_scene_state(
+        app->scene_manager, RadioGeddonSceneSavedInfo, (state & ~SAVED_INFO_MODE_MASK) | mode);
+}
+
 static void radiogeddon_scene_saved_info_cb(void* context, uint32_t index) {
     RadioGeddonApp* app = context;
+    uint32_t state = radiogeddon_scene_saved_info_state(app);
+    scene_manager_set_scene_state(
+        app->scene_manager,
+        RadioGeddonSceneSavedInfo,
+        (index << 8) | (state & SAVED_INFO_MODE_MASK));
     view_dispatcher_send_custom_event(app->view_dispatcher, index);
 }
 
@@ -44,6 +66,18 @@ static void radiogeddon_scene_saved_info_show_menu(RadioGeddonApp* app) {
     Submenu* submenu = app->submenu;
     submenu_reset(submenu);
     submenu_set_header(submenu, furi_string_get_cstr(app->loaded.name));
+    if(app->file_damaged) {
+        // Not a readable .sub: only what works on any file.
+        submenu_add_item(
+            submenu, "File details", SavedInfoIndexDetails, radiogeddon_scene_saved_info_cb, app);
+        submenu_add_item(
+            submenu, "Rename", SavedInfoIndexRename, radiogeddon_scene_saved_info_cb, app);
+        submenu_add_item(
+            submenu, "Delete", SavedInfoIndexDelete, radiogeddon_scene_saved_info_cb, app);
+        submenu_set_selected_item(submenu, radiogeddon_scene_saved_info_state(app) >> 8);
+        view_dispatcher_switch_to_view(app->view_dispatcher, RadioGeddonViewSubmenu);
+        return;
+    }
     submenu_add_item(
         submenu,
         "Signal Info & Analysis",
@@ -71,13 +105,14 @@ static void radiogeddon_scene_saved_info_show_menu(RadioGeddonApp* app) {
     submenu_add_item(
         submenu, "Replay (TX)", SavedInfoIndexReplay, radiogeddon_scene_saved_info_cb, app);
     submenu_add_item(
+        submenu, "File details", SavedInfoIndexDetails, radiogeddon_scene_saved_info_cb, app);
+    submenu_add_item(
+        submenu, "Rename", SavedInfoIndexRename, radiogeddon_scene_saved_info_cb, app);
+    submenu_add_item(
+        submenu, "Save report to SD", SavedInfoIndexReport, radiogeddon_scene_saved_info_cb, app);
+    submenu_add_item(
         submenu, "Delete", SavedInfoIndexDelete, radiogeddon_scene_saved_info_cb, app);
-    submenu_set_selected_item(
-        submenu,
-        scene_manager_get_scene_state(app->scene_manager, RadioGeddonSceneSavedInfo) ==
-                SavedInfoStateConfirmDelete ?
-            SavedInfoIndexDelete :
-            0);
+    submenu_set_selected_item(submenu, radiogeddon_scene_saved_info_state(app) >> 8);
     view_dispatcher_switch_to_view(app->view_dispatcher, RadioGeddonViewSubmenu);
 }
 
@@ -108,8 +143,7 @@ static void radiogeddon_scene_saved_info_show_confirm(RadioGeddonApp* app) {
 
 void radiogeddon_scene_saved_info_on_enter(void* context) {
     RadioGeddonApp* app = context;
-    scene_manager_set_scene_state(
-        app->scene_manager, RadioGeddonSceneSavedInfo, SavedInfoStateMenu);
+    radiogeddon_scene_saved_info_set_mode(app, SavedInfoStateMenu);
     radiogeddon_scene_saved_info_show_menu(app);
 }
 
@@ -162,10 +196,21 @@ bool radiogeddon_scene_saved_info_on_event(void* context, SceneManagerEvent even
             scene_manager_next_scene(app->scene_manager, RadioGeddonSceneReplay);
             consumed = true;
             break;
+        case SavedInfoIndexDetails:
+            scene_manager_next_scene(app->scene_manager, RadioGeddonSceneFileDetails);
+            consumed = true;
+            break;
+        case SavedInfoIndexRename:
+            scene_manager_next_scene(app->scene_manager, RadioGeddonSceneRename);
+            consumed = true;
+            break;
+        case SavedInfoIndexReport:
+            scene_manager_next_scene(app->scene_manager, RadioGeddonSceneReport);
+            consumed = true;
+            break;
         case SavedInfoIndexDelete:
             // Show a confirmation instead of deleting immediately.
-            scene_manager_set_scene_state(
-                app->scene_manager, RadioGeddonSceneSavedInfo, SavedInfoStateConfirmDelete);
+            radiogeddon_scene_saved_info_set_mode(app, SavedInfoStateConfirmDelete);
             radiogeddon_scene_saved_info_show_confirm(app);
             consumed = true;
             break;
@@ -179,8 +224,7 @@ bool radiogeddon_scene_saved_info_on_event(void* context, SceneManagerEvent even
             consumed = true;
             break;
         case SavedInfoEventDeleteCancel:
-            scene_manager_set_scene_state(
-                app->scene_manager, RadioGeddonSceneSavedInfo, SavedInfoStateMenu);
+            radiogeddon_scene_saved_info_set_mode(app, SavedInfoStateMenu);
             radiogeddon_scene_saved_info_show_menu(app);
             consumed = true;
             break;
@@ -189,10 +233,9 @@ bool radiogeddon_scene_saved_info_on_event(void* context, SceneManagerEvent even
         }
     } else if(event.type == SceneManagerEventTypeBack) {
         // Back while confirming returns to the menu rather than leaving.
-        if(scene_manager_get_scene_state(app->scene_manager, RadioGeddonSceneSavedInfo) ==
+        if((radiogeddon_scene_saved_info_state(app) & SAVED_INFO_MODE_MASK) ==
            SavedInfoStateConfirmDelete) {
-            scene_manager_set_scene_state(
-                app->scene_manager, RadioGeddonSceneSavedInfo, SavedInfoStateMenu);
+            radiogeddon_scene_saved_info_set_mode(app, SavedInfoStateMenu);
             radiogeddon_scene_saved_info_show_menu(app);
             consumed = true;
         }
