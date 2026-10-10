@@ -162,10 +162,12 @@ static size_t rg_find_peaks(const RgHistogram* h, RgPeakWork* out, size_t max) {
     return n;
 }
 
-/* The two most populous peaks, returned as (shorter, longer); 0 if missing. */
+/* The two most populous peaks at or above RG_ANALYZER_MIN_TE_US, returned as
+ * (shorter, longer); 0 if missing. */
 static void rg_top_two(const RgPeak* p, size_t n, uint32_t* shorter, uint32_t* longer) {
     size_t a = n, b = n;
     for(size_t i = 0; i < n; i++) {
+        if(p[i].center_us < RG_ANALYZER_MIN_TE_US) continue;
         if(a == n || p[i].count > p[a].count) {
             b = a;
             a = i;
@@ -189,23 +191,31 @@ static void rg_top_two(const RgPeak* p, size_t n, uint32_t* shorter, uint32_t* l
 }
 
 /* Shortest peak holding at least a quarter of the side's largest peak: a
- * sparse cluster of glitches below the real timing must not become Te. */
+ * sparse cluster of glitches below the real timing must not become Te. Peaks
+ * below RG_ANALYZER_MIN_TE_US are receiver glitches however many there are. */
 static uint32_t rg_shortest_major(const RgPeak* p, size_t n) {
     uint32_t most = 0;
     for(size_t i = 0; i < n; i++)
-        if(p[i].count > most) most = p[i].count;
+        if(p[i].center_us >= RG_ANALYZER_MIN_TE_US && p[i].count > most) most = p[i].count;
     for(size_t i = 0; i < n; i++)
-        if(p[i].count * 4u >= most) return p[i].center_us;
+        if(p[i].center_us >= RG_ANALYZER_MIN_TE_US && p[i].count * 4u >= most)
+            return p[i].center_us;
     return 0;
 }
 
 /* ---- trial decoders ----------------------------------------------------- */
 
-static size_t rg_decode_pairs(
+/*
+ * PWM and PPM: one bit per high/low pair. Phase 0 pairs each high with the
+ * low after it; phase 1 skips the frame's first high (a start pulse) and pairs
+ * each low with the high after it, as protocols that send the low first do.
+ */
+static size_t rg_decode_pairs_phase(
     RgEncoding enc,
     const RgDecodeParams* p,
     const int32_t* s,
     size_t n,
+    int phase,
     char* bits,
     size_t max_bits,
     int* fit) {
@@ -221,11 +231,14 @@ static size_t rg_decode_pairs(
     size_t i = 0;
     while(i < n && s[i] <= 0)
         i++; /* a frame may open with the tail of the idle low */
+    if(phase == 1) i++;
     for(; i + 1 < n; i += 2) {
         pairs++;
-        if(s[i] <= 0 || s[i + 1] >= 0) continue; /* not a high/low pair */
-        uint32_t h = rg_abs32(s[i]);
-        uint32_t l = rg_abs32(s[i + 1]);
+        int32_t hs = phase == 1 ? s[i + 1] : s[i];
+        int32_t ls = phase == 1 ? s[i] : s[i + 1];
+        if(hs <= 0 || ls >= 0) continue; /* not a high/low pair */
+        uint32_t h = rg_abs32(hs);
+        uint32_t l = rg_abs32(ls);
         bool ok;
         char bit;
         if(enc == RgEncodingPWM) {
@@ -244,6 +257,20 @@ static size_t rg_decode_pairs(
     if(bits) bits[b] = '\0';
     *fit = pairs ? (int)((good * 100u) / pairs) : 0;
     return b;
+}
+
+static size_t rg_decode_pairs(
+    RgEncoding enc,
+    const RgDecodeParams* p,
+    const int32_t* s,
+    size_t n,
+    char* bits,
+    size_t max_bits,
+    int* fit) {
+    int fit0 = 0, fit1 = 0;
+    rg_decode_pairs_phase(enc, p, s, n, 0, NULL, max_bits, &fit0);
+    rg_decode_pairs_phase(enc, p, s, n, 1, NULL, max_bits, &fit1);
+    return rg_decode_pairs_phase(enc, p, s, n, fit1 > fit0 ? 1 : 0, bits, max_bits, fit);
 }
 
 /*
@@ -413,6 +440,16 @@ static void rg_frame_end(RgAnalyzer* a) {
     char bits[RG_ANALYZER_MAX_BITS + 1];
     if(a->pass == 2) {
         r->frame_count++;
+        /* A frame of single Te cells only (a preamble or wake-up run) carries
+         * no information about the encoding: every grammar that allows a
+         * square wave fits it, Manchester best. It does not vote. */
+        bool any_long = false;
+        for(size_t i = 0; i < a->frame_n && !any_long; i++)
+            any_long = (uint64_t)rg_abs32(a->frame[i]) * 2u > (uint64_t)r->params.te_us * 3u;
+        if(!any_long) {
+            rg_frame_reset(a);
+            return;
+        }
         int fits[RgEncodingCount] = {0};
         int best = 0;
         for(int e = RgEncodingPWM; e < RgEncodingCount; e++) {
@@ -428,9 +465,13 @@ static void rg_frame_end(RgAnalyzer* a) {
             if(fits[e] > best) best = fits[e];
         }
         if(best >= RG_ANALYZER_GOOD_FIT) {
-            a->candidates++;
+            /* Weighted by length: a long frame is more evidence than a short
+             * burst of noise that happens to fit a grammar. */
+            uint32_t weight = (uint32_t)a->frame_n;
+            a->candidates += weight;
+            a->candidate_frames++;
             for(int e = RgEncodingPWM; e < RgEncodingCount; e++)
-                a->enc_fit_sum[e] += (uint32_t)fits[e];
+                a->enc_fit_sum[e] += (uint64_t)fits[e] * weight;
         }
     } else if(a->pass == 3) {
         int fit = 0;
@@ -468,7 +509,11 @@ static void rg_process(RgAnalyzer* a, int32_t v) {
         if(r->min_us == 0 || d < r->min_us) r->min_us = d;
         if(d > r->max_us) r->max_us = d;
         rg_hist_add(v > 0 ? &a->hist_high : &a->hist_low, d);
-    } else if(v < 0 && d >= r->gap_us) {
+    } else if(
+        v < 0 ? d >= r->gap_us :
+                (r->te_us && (uint64_t)d >= (uint64_t)r->te_us * RG_ANALYZER_HIGH_GAP_FACTOR)) {
+        /* A gap ends a frame; so does a carrier held far longer than any
+         * header pulse (a separator some remotes send between repeats). */
         rg_frame_end(a);
     } else {
         if(a->frame_samples == 0) {
@@ -554,12 +599,43 @@ static void rg_finish_timing(RgAnalyzer* a) {
     r->gap_us = te ? te * RG_ANALYZER_GAP_FACTOR : 3000u;
     if(r->gap_us < RG_ANALYZER_MIN_GAP_US) r->gap_us = RG_ANALYZER_MIN_GAP_US;
 
+    /* Frames sent back to back can be separated by less than GAP_FACTOR x Te.
+     * A low peak well above the two most common lows below the gap, and much
+     * rarer than them, is taken as that separator. */
+    size_t c1 = nl, c2 = nl;
+    for(size_t i = 0; i < nl; i++) {
+        const RgPeak* pk = &r->low_peaks[i];
+        if(pk->center_us < RG_ANALYZER_MIN_TE_US || pk->center_us >= r->gap_us) continue;
+        if(c1 == nl || pk->count > r->low_peaks[c1].count) {
+            c2 = c1;
+            c1 = i;
+        } else if(c2 == nl || pk->count > r->low_peaks[c2].count) {
+            c2 = i;
+        }
+    }
+    if(c1 < nl && c2 < nl) {
+        uint32_t d1 = r->low_peaks[c1].center_us, d2 = r->low_peaks[c2].center_us;
+        uint32_t longest = d1 > d2 ? d1 : d2;
+        uint32_t rarest = r->low_peaks[c2].count;
+        for(size_t i = 0; i < nl; i++) {
+            const RgPeak* pk = &r->low_peaks[i];
+            if(pk->center_us >= r->gap_us) break;
+            if((uint64_t)pk->center_us * 2u >= (uint64_t)longest * 3u &&
+               pk->count * 2u <= rarest) {
+                r->gap_us = (longest + pk->center_us) / 2u;
+                break;
+            }
+        }
+    }
+
     /* Decoder parameters: two high widths (PWM), dominant high plus two
      * in-frame low widths (PPM). Gap-sized lows are not data. */
     rg_top_two(r->high_peaks, nh, &r->params.pwm_short_us, &r->params.pwm_long_us);
     size_t top = nh;
-    for(size_t i = 0; i < nh; i++)
+    for(size_t i = 0; i < nh; i++) {
+        if(r->high_peaks[i].center_us < RG_ANALYZER_MIN_TE_US) continue;
         if(top == nh || r->high_peaks[i].count > r->high_peaks[top].count) top = i;
+    }
     r->params.ppm_high_us = top < nh ? r->high_peaks[top].center_us : 0;
     size_t nl_in = 0;
     while(nl_in < nl && r->low_peaks[nl_in].center_us < r->gap_us)
@@ -603,7 +679,7 @@ static void rg_finish_encoding(RgAnalyzer* a) {
         else if(score[second] >= score[best] - 25)
             conf -= 10;
     }
-    if(a->candidates < 2) conf -= 10;
+    if(a->candidate_frames < 2) conf -= 10;
     r->encoding_confidence = conf;
 }
 

@@ -47,6 +47,11 @@
 /* A low at least this many times Te (and >= RG_ANALYZER_MIN_GAP_US) ends a frame. */
 #define RG_ANALYZER_GAP_FACTOR        7
 #define RG_ANALYZER_MIN_GAP_US        1000u
+/* A high at least this many times Te also ends a frame (and is not data). */
+#define RG_ANALYZER_HIGH_GAP_FACTOR   14
+/* Timing peaks below this are receiver glitches, never Te or a bit width. The
+ * shortest base unit among the firmware's remote protocols is 160 us. */
+#define RG_ANALYZER_MIN_TE_US         100u
 /* Bursts shorter than this are counted as noise, not frames. */
 #define RG_ANALYZER_MIN_FRAME_SAMPLES 8
 /* Decode fit (percent of symbols matching the grammar) for a frame to count. */
@@ -176,8 +181,9 @@ typedef struct {
     uint64_t frame_start_us;
     size_t frame_start_index;
     uint64_t frame_duration_us;
-    uint32_t enc_fit_sum[RgEncodingCount];
-    uint32_t candidates;
+    uint64_t enc_fit_sum[RgEncodingCount]; /* fit x frame samples */
+    uint64_t candidates; /* samples in the frames that voted */
+    uint32_t candidate_frames;
     uint32_t chosen_fit_sum;
 } RgAnalyzer;
 

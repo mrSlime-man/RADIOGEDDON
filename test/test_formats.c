@@ -325,8 +325,8 @@ static void test_firmware_files(bool verbose) {
         t.paired,
         t.bits_one_short);
     CHECK(t.paired >= 33, "33 captures paired with a decoded file");
-    CHECK(t.bits_exact >= 8, "analyzer frame length still exact for at least 8");
-    CHECK(t.bits_exact + t.bits_one_short >= 13, "and within one bit for at least 13");
+    CHECK(t.bits_exact >= 10, "analyzer frame length still exact for at least 10");
+    CHECK(t.bits_exact + t.bits_one_short >= 17, "and within one bit for at least 17");
 }
 
 static void test_fixture_files(void) {

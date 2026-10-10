@@ -205,6 +205,117 @@ static void test_manchester_identification(void) {
     CHECK(strcmp(g_a.bits, key0) == 0, "bits recovered when the frame starts high");
 }
 
+/* Glitches: the receiver's ~65 us blips, more numerous than either real
+ * width, between the frames. They are observed as a peak but are never Te. */
+static void test_glitch_floor(void) {
+    printf("test_glitch_floor\n");
+    static int32_t buf[4096];
+    size_t pos = 0;
+    const char* key = "110100101100111000101101";
+    for(int i = 0; i < 4; i++) {
+        for(int k = 0; k < 120; k++)
+            buf[pos++] = (k % 2) ? -66 : 65;
+        buf[pos++] = -20000;
+        emit_pwm(buf, &pos, key, 0);
+    }
+    rg_analyzer_run(buf, pos, &g_a);
+    CHECK(g_a.high_peak_count > 0 && g_a.high_peaks[0].center_us < 100, "glitch peak observed");
+    CHECK(g_a.te_us >= 330 && g_a.te_us <= 370, "Te is the signal's, not the glitches'");
+    CHECK(
+        g_a.params.pwm_short_us == TE && g_a.params.pwm_long_us == 3 * TE,
+        "widths ignore glitches");
+    CHECK(g_a.encoding == RgEncodingPWM && strcmp(g_a.bits, key) == 0, "frames still decode");
+}
+
+/* Low first, as CAME sends it: a start pulse, then each bit is a low then a
+ * high ('0' = 2Te low / Te high, '1' = Te low / 2Te high). */
+static void emit_low_first(int32_t* buf, size_t* pos, const char* bits) {
+    buf[(*pos)++] = TE;
+    for(const char* b = bits; *b; b++) {
+        buf[(*pos)++] = (*b == '1') ? -TE : -2 * TE;
+        buf[(*pos)++] = (*b == '1') ? 2 * TE : TE;
+    }
+    buf[(*pos)++] = -40 * TE;
+}
+
+static void test_low_first_pwm(void) {
+    printf("test_low_first_pwm\n");
+    int32_t buf[2048];
+    size_t pos = 0;
+    const char* key = "100110100011";
+    for(int i = 0; i < 6; i++)
+        emit_low_first(buf, &pos, key);
+    rg_analyzer_run(buf, pos, &g_a);
+    CHECK(g_a.encoding == RgEncodingPWM, "low-first PWM is PWM, not Manchester");
+    CHECK(g_a.bit_count == 12 && strcmp(g_a.bits, key) == 0, "bits paired low then high");
+}
+
+/* KeeLoq-like: a square-wave preamble, a 10 Te header gap, then the data. The
+ * preamble is a frame of single Te cells and gives no vote. */
+static void test_preamble_no_vote(void) {
+    printf("test_preamble_no_vote\n");
+    static int32_t buf[4096];
+    size_t pos = 0;
+    const char* key = "0110100111010001101011001110001011010011";
+    for(int i = 0; i < 4; i++) {
+        for(int k = 0; k < 24; k++)
+            buf[pos++] = (k % 2) ? -TE : TE;
+        buf[pos++] = -10 * TE;
+        for(const char* b = key; *b; b++) {
+            buf[pos++] = (*b == '1') ? 2 * TE : TE;
+            buf[pos++] = (*b == '1') ? -TE : -2 * TE;
+        }
+        buf[pos++] = TE; /* stop pulse */
+        buf[pos++] = -40 * TE;
+    }
+    rg_analyzer_run(buf, pos, &g_a);
+    CHECK(g_a.encoding == RgEncodingPWM, "preambles do not outvote the data");
+    CHECK(g_a.bit_count == 40 && strcmp(g_a.bits, key) == 0, "data frames decoded");
+}
+
+/* Repeats only 5 Te apart (less than the 7 Te default gap): the rare longer
+ * low is taken as the separator. */
+static void test_back_to_back(void) {
+    printf("test_back_to_back\n");
+    static int32_t buf[4096];
+    size_t pos = 0;
+    const char* key = "1011001110001011";
+    for(int i = 0; i < 8; i++) {
+        for(const char* b = key; *b; b++) {
+            buf[pos++] = (*b == '1') ? 2 * TE : TE;
+            buf[pos++] = (*b == '1') ? -TE : -2 * TE;
+        }
+        buf[pos++] = TE;
+        buf[pos++] = -5 * TE;
+    }
+    rg_analyzer_run(buf, pos, &g_a);
+    CHECK(g_a.gap_us > 2 * TE && g_a.gap_us < 5 * TE, "separator found below the default gap");
+    CHECK(g_a.frame_count == 8, "each repeat is its own frame");
+    CHECK(g_a.bit_count == 16 && strcmp(g_a.bits, key) == 0, "frame length is one repeat");
+}
+
+/* Repeats separated by a long carrier pulse instead of a gap (as Hormann
+ * sends them). */
+static void test_high_separator(void) {
+    printf("test_high_separator\n");
+    static int32_t buf[4096];
+    size_t pos = 0;
+    const char* key = "110010100111001010110100";
+    for(int i = 0; i < 5; i++) {
+        buf[pos++] = 30 * TE;
+        buf[pos++] = -TE;
+        for(const char* b = key; *b; b++) {
+            buf[pos++] = (*b == '1') ? 2 * TE : TE;
+            buf[pos++] = (*b == '1') ? -TE : -2 * TE;
+        }
+    }
+    buf[pos++] = TE; /* stop pulse */
+    buf[pos++] = -40 * TE;
+    rg_analyzer_run(buf, pos, &g_a);
+    CHECK(g_a.frame_count == 5, "a long high ends a frame");
+    CHECK(g_a.bit_count == 24 && strcmp(g_a.bits, key) == 0, "frames split at the long highs");
+}
+
 static void test_noise_robustness(void) {
     printf("test_noise_robustness\n");
     static int32_t buf[4096];
@@ -407,6 +518,11 @@ int main(void) {
     test_ppm_identification();
     test_manchester_identification();
     test_noise_robustness();
+    test_glitch_floor();
+    test_low_first_pwm();
+    test_preamble_no_vote();
+    test_back_to_back();
+    test_high_separator();
     test_jitter();
     test_truncated_first_frame();
     test_two_buttons();
