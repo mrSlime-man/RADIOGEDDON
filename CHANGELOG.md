@@ -18,6 +18,15 @@ to follow [Semantic Versioning](https://semver.org/) (pre-1.0.0 releases use
   Unleashed and RogueMaster check for a missing table and were not affected.
 
 ### Added
+- **Decode with Firmware**: a new item in a RAW capture's Database menu runs
+  the firmware's own protocol decoders (the ones Receive uses, with the same
+  keystore) over the saved recording, feeding them every sample the way the
+  firmware's `subghz decode_raw` command feeds a file. Each distinct decode is
+  listed once as `[CONFIRMED]` with how many times and when it was decoded and
+  the description Receive shows; a capture nothing decodes says so. Shows a
+  progress percentage; the radio is not used. It checks memory like Receive
+  and refuses with `Not enough memory` (`Decoders need ~N KB`) when the
+  decoders no longer fit. *Save report to SD* includes it for RAW captures.
 - **Decoder tests** (`make -C test decoders`, run in CI): the firmware's own
   Sub-GHz receiver and all of its protocol decoders, built on the host from
   the pinned Official release, decode the firmware's 50 RAW test captures fed

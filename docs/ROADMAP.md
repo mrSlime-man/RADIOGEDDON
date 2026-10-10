@@ -78,6 +78,12 @@ still needs.
       upload, weekly firmware watch with canary builds, `1.0.0-beta.3`
       prepared; it is published once milestones 1–9 are merged).
 
+## After beta 3
+
+- [ ] **Decode with Firmware**: the firmware's own decoders run over a saved
+      RAW capture, listing each decode once with its count and times
+      (implemented; hardware check F4g pending).
+
 ## Toward a stable 1.0.0
 
 - [ ] Fix whatever hardware testing surfaces.
@@ -88,8 +94,7 @@ still needs.
 ## Later
 
 - [ ] Custom frequency entry and a custom modulation/preset editor.
-- [ ] Richer analysis: more encodings, CRC/checksum guesses, bit-field views,
-      running the firmware's decoders over a RAW capture.
+- [ ] Richer analysis: more encodings, CRC/checksum guesses, bit-field views.
 - [ ] A larger library of reference captures for regression testing.
 - [ ] Localisation of on-screen text.
 

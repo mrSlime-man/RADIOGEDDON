@@ -19,6 +19,7 @@
 #include <lib/subghz/devices/preset.h>
 #include <lib/subghz/protocols/raw.h>
 #include "radiogeddon_recorder.h"
+#include "rg_decode.h"
 #include "radiogeddon_bands.h"
 
 typedef struct RadioGeddonSubGhz RadioGeddonSubGhz;
@@ -197,3 +198,21 @@ RadioGeddonTxResult radiogeddon_subghz_tx_start(
 
 void radiogeddon_subghz_tx_stop(RadioGeddonSubGhz* instance);
 bool radiogeddon_subghz_is_tx_running(RadioGeddonSubGhz* instance);
+
+/* ---- Decoding a saved capture ------------------------------------------ */
+
+/**
+ * Run the firmware's protocol decoders over a RAW capture: every sample of
+ * @p reader goes to the same decoders, with the same keystore, as Receive
+ * uses, the way the firmware's `subghz decode_raw` command feeds them (see
+ * rg_decode.h). What they decode is collected in @p log; @p progress gets the
+ * reader's byte position. Blocks the caller until the file is read; the
+ * radio is not used. The decoders are allocated for the call only.
+ * Returns false, without reading, while receiving or transmitting.
+ */
+bool radiogeddon_subghz_decode_raw(
+    RadioGeddonSubGhz* instance,
+    RgRawReader* reader,
+    RgDecodeLog* log,
+    RgDecodeProgress progress,
+    void* progress_context);

@@ -18,6 +18,7 @@ device ([VERIFICATION.md](VERIFICATION.md)).
 | [Frequency Hopper](#frequency-hopper) | ✅ | ✅ dwell, hold, lock, history | ⏳ pending |
 | [RAW Signal Capture](#raw-signal-capture) | ✅ | ✅ ring, file format, writer thread with slow/failing card | ⏳ pending |
 | [Protocol Identification](#protocol-identification) | ✅ | — (firmware decoders) | ⏳ pending |
+| [Decode with Firmware](#decode-with-firmware) | ✅ | ✅ sample feeding, timing, repeat list; the firmware's decoders on its own test captures | ⏳ pending |
 | [Signal Analyzer](#signal-analyzer) | ✅ | ✅ parsing, clustering | ⏳ pending |
 | [Unknown Protocol Analysis](#unknown-protocol-analysis) | ✅ | ✅ PWM/PPM/Manchester, noise, alignment, streaming | ⏳ pending |
 | [Pulse Timeline](#pulse-timeline) | ✅ | ✅ layout, pan/zoom, frame navigation | ⏳ pending |
@@ -111,6 +112,27 @@ present.
 
 Identification is only as broad as your firmware's decoder library, which
 differs between Official, Unleashed and RogueMaster.
+
+## Decode with Firmware
+
+*Decode with Firmware* in a RAW capture's menu runs the same decoders, with
+the same keystore, over the saved recording, so a capture made with RAW
+recording (or by the Hopper's auto-record, or by another app) can still be
+identified afterwards. Every sample goes to the decoders the way the
+firmware's own `subghz decode_raw` command feeds a file. The radio is not
+used: nothing is received or transmitted.
+
+Each different decode is listed once as `[CONFIRMED]`, with how many times it
+was decoded, when in the recording it was first and last decoded, and the
+description Receive shows (for example key, serial and button). Up to 12
+different decodes are listed; more are counted. A capture no decoder
+recognises says so and points to *Unknown Protocol Analysis*. Nothing is
+saved apart from an optional report.
+
+The decoders need as much memory as a receive session, so the same check
+applies: if the last measured session no longer fits, the screen says
+`Not enough memory` instead of starting. *Save report to SD* includes this
+decode for RAW captures when it fits.
 
 ## Signal Analyzer
 

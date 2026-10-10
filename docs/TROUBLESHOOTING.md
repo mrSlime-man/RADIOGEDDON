@@ -148,10 +148,11 @@ The field map compares frames within one recording, and a single press usually
 repeats the same frame. Record **several presses** in one RAW capture to see
 which bits change between presses.
 
-## `Not enough memory` when opening Receive or Hopper
+## `Not enough memory` when opening Receive, Hopper or Decode with Firmware
 
 The screen reads, for example, `Radio needs ~27 KB, 15 KB free. Restart the
-Flipper and retry.` The first figure is what a receive session took the last
+Flipper and retry.` (`Decoders need ...` for *Decode with Firmware*, which
+uses the same decoders without the radio). The first figure is what a receive session took the last
 time it was measured on this firmware, plus a 6 KB margin; the second is the
 free heap now. The app does not start the radio rather than risk an
 out-of-memory crash.

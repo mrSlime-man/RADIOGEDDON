@@ -72,7 +72,8 @@ helpers/
   radiogeddon_memdiag.*     Heap sampling and the About memory figures
   radiogeddon_history.*     Per-session list of decoded signals (max 32, de-duplicated)
   radiogeddon_decode_text.* A decode's description (data-only for decoders needing a table)
-  radiogeddon_analysis.*    Text reports: info, analysis, crypto, compare, unknown-protocol
+  radiogeddon_analysis.*    Text reports: info, analysis, crypto, compare, unknown-protocol,
+                            firmware decode
   radiogeddon_dsp.*         Pure RAW parsing / clustering helpers (no firmware headers)
   rg_analyzer.*             Pure streaming signal-analysis engine (no firmware headers)
   rg_raw.*                  Pure streaming RAW_Data reader with seek checkpoints
@@ -332,7 +333,19 @@ section by section through one reused string, to a new file opened with
   it only while a report is built, after checking the largest free heap block
   leaves a margin, and frees it before showing the report.
 
-The **Pulse Timeline** reuses both. On entry it opens the file, runs the
+**Decode with Firmware** feeds a RAW capture to the firmware's decoders
+instead of the engine. `rg_decode` streams the file through `rg_raw` and
+hands each sample over as a (level, duration) pair, the way the firmware's
+file player does for `subghz decode_raw`; it keeps a ~3 KB `RgDecodeLog` of
+distinct decodes (protocol, hash, description, count, first and last time),
+each described by `radiogeddon_decode_text` as in Receive.
+`radiogeddon_subghz_decode_raw` lends it the protocol environment (registry
+and keystore) and a receiver allocated for the call, on the GUI thread, with
+the radio idle; both are freed before the report is shown. Since they are
+most of a receive session's memory, the screen applies the same measured
+check as Receive before starting.
+
+The **Pulse Timeline** reuses `rg_raw` and `rg_analyzer`. On entry it opens the file, runs the
 analyzer once for frame starts and Te (which also fills the reader's seek
 checkpoints), frees the analyzer, and only then allocates its view
 (`views/radiogeddon_timeline_view`, a ~4.5 KB model holding a 1,024-sample

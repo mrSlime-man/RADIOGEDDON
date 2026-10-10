@@ -197,7 +197,7 @@ capture.
   needed last time (on this firmware) is still free, plus a 6 KB margin. If it
   is not, the screen shows `Not enough memory` with the figures, for example
   `Radio needs ~27 KB, 15 KB free.`, and the radio is not started (see
-  [Troubleshooting](TROUBLESHOOTING.md#not-enough-memory-when-opening-receive-or-hopper)).
+  [Troubleshooting](TROUBLESHOOTING.md#not-enough-memory-when-opening-receive-hopper-or-decode-with-firmware)).
   The Frequency Hopper does the same.
 
 ## Frequency Hopper
@@ -303,6 +303,7 @@ when you come back from a report):
 | Action | What you get |
 |--------|--------------|
 | `Signal Info & Analysis` | Summary (protocol, frequency, preset, bits/key or samples) and timing or bit analysis |
+| `Decode with Firmware` | RAW captures only: runs the firmware's decoders, the ones *Receive* uses, over the whole recording and lists each signal they decode once, `[CONFIRMED]`, with how many times and when it was decoded and the decoder's description. Shows `Decoding...` and a percentage meanwhile. The radio is not used. If the decoders don't fit in memory, `Not enough memory` (`Decoders need ~N KB`) appears instead, as for *Receive* |
 | `Unknown Protocol Analysis` | For RAW captures: measured timing, noise and frames, then the likely encoding, bit patterns, a frame-by-frame comparison, a constant-vs-changing field map and a device-ID candidate. Shows `Analyzing...` and a percentage while it reads the whole file |
 | `Pulse Timeline` | RAW captures only: the recording as a zoomable waveform (see below) |
 | `Crypto Analysis` | Static vs. rolling-code classification and key-byte statistics for decoded protocols |
@@ -310,7 +311,7 @@ when you come back from a report):
 | `Replay (TX)` | Transmit the recording, where permitted |
 | `File details` | File name, size, date modified, type, frequency, preset, sample count or bits, and the names of its duplicates |
 | `Rename` | Type a new name (`.sub` is added). Names the SD card can't store (`< > : " / \ | ? *`, or a `.` or space at the start or end) and names already used are refused, so renaming never replaces another file. The SD card ignores letter case, so a name that differs only in case counts as used |
-| `Save report to SD` | Writes *Signal Info & Analysis*, plus *Unknown Protocol Analysis* for a RAW capture or *Crypto Analysis* for a decoded signal, to `apps_data/radiogeddon/reports/<name>.txt`. Shows `Writing report...` (with a percentage while a RAW capture is analysed), then the file name. An existing report is never replaced: the new one gets `_2`, `_3` and so on |
+| `Save report to SD` | Writes *Signal Info & Analysis*, plus *Decode with Firmware* and *Unknown Protocol Analysis* for a RAW capture or *Crypto Analysis* for a decoded signal, to `apps_data/radiogeddon/reports/<name>.txt`. Shows `Writing report...` (with a percentage while a RAW capture is analysed), then the file name. An existing report is never replaced: the new one gets `_2`, `_3` and so on |
 | `Delete` | Delete the file (asks for confirmation) |
 
 A **damaged file** (`BAD` in the list) opens with only `File details` (which

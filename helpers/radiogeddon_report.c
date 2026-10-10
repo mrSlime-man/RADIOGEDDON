@@ -35,6 +35,7 @@ static void radiogeddon_report_header(FuriString* out, const RadioGeddonLoadedSi
 
 RadioGeddonReportResult radiogeddon_report_save(
     Storage* storage,
+    RadioGeddonSubGhz* subghz,
     const char* sub_path,
     const RadioGeddonLoadedSignal* sig,
     FuriString* scratch,
@@ -61,6 +62,15 @@ RadioGeddonReportResult radiogeddon_report_save(
     radiogeddon_analysis_analyze(storage, sub_path, sig, scratch);
     ok = ok && radiogeddon_report_write(file, scratch);
 
+    if(ok && sig->kind == RadioGeddonSignalKindRaw) {
+        furi_string_set(scratch, "\n== Decode with Firmware ==\n");
+        if(subghz) {
+            radiogeddon_analysis_decode(storage, subghz, sub_path, scratch);
+        } else {
+            furi_string_cat_str(scratch, "Not run: not enough free memory for the decoders.\n");
+        }
+        ok = radiogeddon_report_write(file, scratch);
+    }
     if(ok && sig->kind == RadioGeddonSignalKindRaw) {
         furi_string_set(scratch, "\n== Unknown Protocol Analysis ==\n");
         radiogeddon_analysis_unknown(storage, sub_path, scratch);

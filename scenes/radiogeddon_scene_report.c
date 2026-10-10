@@ -18,8 +18,14 @@ void radiogeddon_scene_report_on_enter(void* context) {
     radiogeddon_scene_show_progress(app, "Writing report...");
 
     FuriString* path = furi_string_alloc();
+    // The decoders run only if they fit; the report says when they did not.
     RadioGeddonReportResult result = radiogeddon_report_save(
-        app->storage, furi_string_get_cstr(app->file_path), &app->loaded, app->temp_str, path);
+        app->storage,
+        radiogeddon_scene_decoders_fit(app) ? app->subghz : NULL,
+        furi_string_get_cstr(app->file_path),
+        &app->loaded,
+        app->temp_str,
+        path);
     radiogeddon_scene_progress_end(app);
 
     furi_string_reset(app->temp_str);

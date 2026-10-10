@@ -313,6 +313,12 @@ Everything about on-device radio behaviour, and the end-to-end workflow. See the
   written against the official firmware's `cc1101_ext` driver source (1.4.3);
   Unleashed and RogueMaster builds compile against their own SDKs, but their
   drivers' behaviour is unverified.
+- *Decode with Firmware* on a device (checklist F4g): that the firmware's
+  decoders find in a saved capture what Receive finds live, how long a long
+  capture takes, and that the memory check and freeing hold on the firmware's
+  heap. The host tests feed the firmware's decoders its own test captures
+  through `rg_decode` (`test_fwdecode`), but they do not run this screen,
+  the keystore or the device's heap.
 - The internal-radio presence fix (defect 1) actually resolving "No radio" on a
   device.
 - The analysis engine's inferences against real captured signals (host tests use

@@ -16,6 +16,7 @@
 #include "radiogeddon_storage.h"
 #include "radiogeddon_progress.h"
 #include "rg_analyzer.h"
+#include "radiogeddon_subghz.h"
 
 /** Append a concise human-readable summary of @p sig to @p out. */
 void radiogeddon_analysis_describe(const RadioGeddonLoadedSignal* sig, FuriString* out);
@@ -81,6 +82,19 @@ void radiogeddon_analysis_cat_status(FuriString* out, RadioGeddonAnalysisStatus 
  * is presented as a verified decode and no key is recovered.
  */
 void radiogeddon_analysis_unknown(Storage* storage, const char* path, FuriString* out);
+
+/**
+ * Run the firmware's protocol decoders over a RAW capture (see
+ * radiogeddon_subghz_decode_raw) and list what they decoded as CONFIRMED:
+ * each distinct decode once, with its repeat count, when it was first and
+ * last decoded in the capture, and the decoder's own description. Progress
+ * goes to radiogeddon_analysis_set_progress's callback.
+ */
+void radiogeddon_analysis_decode(
+    Storage* storage,
+    RadioGeddonSubGhz* subghz,
+    const char* path,
+    FuriString* out);
 
 /**
  * Compare two RAW captures: streamed sample-by-sample timing similarity
