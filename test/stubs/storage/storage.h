@@ -97,6 +97,11 @@ void storage_get_next_filename(
     FuriString* nextfilename,
     uint8_t max_len);
 
+/* Used by the firmware's RAW protocol to save a capture, which test_fwdecode
+ * never does: the stand-ins abort (subghz_stub.c). */
+bool storage_simply_mkdir(Storage* storage, const char* path);
+bool storage_simply_remove(Storage* storage, const char* path);
+
 /* Test controls. */
 extern bool stub_open_fails;
 extern unsigned stub_write_delay_us; /* per write call */

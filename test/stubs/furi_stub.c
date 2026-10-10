@@ -252,6 +252,128 @@ void furi_string_left(FuriString* s, size_t index) {
     }
 }
 
+void furi_string_set_n(FuriString* s, const FuriString* source, size_t offset, size_t length) {
+    /* As M*LIB's string_set_n, which the firmware's is: clamped to the source. */
+    furi_check(s != source && offset <= source->len);
+    if(length > source->len - offset) length = source->len - offset;
+    stub_string_reserve(s, length);
+    memcpy(s->text, source->text + offset, length);
+    s->text[length] = '\0';
+    s->len = length;
+}
+
+/* Append one conversion, formatted by the host's snprintf. */
+static void stub_string_cat_conv(FuriString* s, const char* spec, ...) {
+    va_list args, copy;
+    va_start(args, spec);
+    va_copy(copy, args);
+    int n = vsnprintf(NULL, 0, spec, copy);
+    va_end(copy);
+    furi_check(n >= 0);
+    stub_string_reserve(s, s->len + (size_t)n);
+    vsnprintf(s->text + s->len, (size_t)n + 1, spec, args);
+    va_end(args);
+    s->len += (size_t)n;
+}
+
+/* The firmware's printf on a 32-bit target: each conversion is read from
+ * @p args with the firmware's sizes (an 'l' integer is 32 bits, 'z' is
+ * size_t, 'll' 64 bits) and formatted with the same flags, width and
+ * precision by the host's snprintf. */
+int furi_string_cat_vprintf(FuriString* s, const char format[], va_list args) {
+    size_t start = s->len;
+    const char* p = format;
+    while(*p) {
+        if(*p != '%') {
+            furi_string_push_back(s, *p++);
+            continue;
+        }
+        char spec[48];
+        size_t n = 0;
+        spec[n++] = *p++;
+        while(*p && strchr("-+ #0", *p) && n < 16)
+            spec[n++] = *p++;
+        for(int part = 0; part < 2; part++) {
+            if(part == 1) {
+                if(*p != '.') break;
+                spec[n++] = *p++;
+            }
+            if(*p == '*') {
+                n += (size_t)snprintf(spec + n, sizeof(spec) - n, "%d", va_arg(args, int));
+                p++;
+            } else {
+                while(*p >= '0' && *p <= '9' && n < 40)
+                    spec[n++] = *p++;
+            }
+        }
+        int longs = 0, halves = 0;
+        bool size = false;
+        while(*p == 'l' || *p == 'h' || *p == 'z') {
+            if(*p == 'l') longs++;
+            if(*p == 'h') halves++;
+            if(*p == 'z') size = true;
+            p++;
+        }
+        char conv = *p ? *p++ : '\0';
+        bool integer = conv && strchr("diouxX", conv);
+        furi_check(longs <= 2 && halves <= 2 && (integer || (!longs && !halves && !size)));
+        if(integer) {
+            bool is_signed = conv == 'd' || conv == 'i';
+            if(longs == 2) {
+                spec[n++] = 'l';
+                spec[n++] = 'l';
+                spec[n++] = conv;
+                spec[n] = '\0';
+                if(is_signed)
+                    stub_string_cat_conv(s, spec, va_arg(args, long long));
+                else
+                    stub_string_cat_conv(s, spec, va_arg(args, unsigned long long));
+            } else if(size) {
+                spec[n++] = 'z';
+                spec[n++] = conv;
+                spec[n] = '\0';
+                stub_string_cat_conv(s, spec, va_arg(args, size_t));
+            } else {
+                /* int, and 'l' (32 bits on the firmware); 'h' and 'hh' values
+                 * arrive as int and are narrowed by the host's snprintf. */
+                for(int i = 0; i < halves; i++)
+                    spec[n++] = 'h';
+                spec[n++] = conv;
+                spec[n] = '\0';
+                if(is_signed)
+                    stub_string_cat_conv(s, spec, (int)va_arg(args, int32_t));
+                else
+                    stub_string_cat_conv(s, spec, (unsigned)va_arg(args, uint32_t));
+            }
+        } else if(conv == 'c') {
+            spec[n++] = conv;
+            spec[n] = '\0';
+            stub_string_cat_conv(s, spec, va_arg(args, int));
+        } else if(conv == 's' || conv == 'p') {
+            spec[n++] = conv;
+            spec[n] = '\0';
+            stub_string_cat_conv(s, spec, va_arg(args, void*));
+        } else if(conv && strchr("fFeEgG", conv)) {
+            spec[n++] = conv;
+            spec[n] = '\0';
+            stub_string_cat_conv(s, spec, va_arg(args, double));
+        } else {
+            /* "%%"; anything else is not something the decoders write. */
+            furi_check(conv == '%' && n == 1);
+            furi_string_push_back(s, '%');
+        }
+    }
+    return (int)(s->len - start);
+}
+
+int furi_string_cat_printf(FuriString* s, const char format[], ...) {
+    va_list args;
+    va_start(args, format);
+    int n = furi_string_cat_vprintf(s, format, args);
+    va_end(args);
+    return n;
+}
+
 void datetime_timestamp_to_datetime(uint32_t timestamp, DateTime* dt) {
     time_t t = (time_t)timestamp;
     struct tm tm;

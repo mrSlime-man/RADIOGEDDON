@@ -37,6 +37,7 @@ locally.
 | Memory-bookkeeping unit tests | `make -C test check` → `test_memstat` | Pass — 30 checks |
 | Database-loading tests (stub Furi/Storage) | `make -C test check` → `test_dbload` | Pass — 45 checks |
 | Format tests (firmware code, real files) | `make -C test formats` → `test_formats`: the firmware's FlipperFormat and stream code and its 85 Sub-GHz test files, from the commit of Official 1.4.3 | Pass — 562 checks |
+| Decoder tests (firmware code, real captures) | `make -C test decoders` → `test_fwdecode`: the firmware's Sub-GHz receiver and all its protocol decoders, fed its 50 RAW test captures through `rg_decode` | Pass — 157 checks; 48 decode, 2 crash describing their decode (see below) |
 | Fuzz corpus replay | `make -C test check` → `replay_fuzz_raw`, `replay_fuzz_db`, `replay_fuzz_samples` | Pass — every committed input |
 | Fuzzing | `make -C test fuzz` (libFuzzer with ASan/UBSan; 60 s per target in CI) | Pass — no crash, sanitizer report or broken invariant |
 | Static analysis | `scripts/static_analysis.py`: GCC `-fanalyzer` and clang-tidy ([`.clang-tidy`](../.clang-tidy)) over the device code with the build flags, Official and Unleashed SDKs | Pass — 0 findings |
@@ -156,16 +157,16 @@ the sanitizers then report:
 The seed corpus is synthetic (the fixtures plus hand-made edge cases, written
 by `test/fuzz/make_seeds.py`) plus inputs the fuzzer found.
 
-`test_formats` (`make -C test formats`) is the one suite that uses files from
-outside this repository. `test/firmware/fetch.sh` downloads the Flipper Zero
-firmware's FlipperFormat and stream code and the 85 `.sub` files of its own
-Sub-GHz unit tests, at the commit of the pinned Official release, and checks
-each against `test/firmware/files.sha256`. They are GPL-3.0 and only used
-here to build and run the tests, never committed or shipped. The firmware's
-code is compiled unchanged over the stub Furi/Storage layer, so RadioGeddon's
-settings and `.sub` loading run against the same parser as on the device.
-Those files are third-party test data: they were not captured or checked on
-our hardware. The suite covers:
+`test_formats` (`make -C test formats`) and `test_fwdecode` (below) are the
+suites that use files from outside this repository. `test/firmware/fetch.sh`
+downloads the Flipper Zero firmware's FlipperFormat and stream code and the 85
+`.sub` files of its own Sub-GHz unit tests, at the commit of the pinned
+Official release, and checks each against `test/firmware/files.sha256`. They
+are GPL-3.0 and only used here to build and run the tests, never committed or
+shipped. The firmware's code is compiled unchanged over the stub Furi/Storage
+layer, so RadioGeddon's settings and `.sub` loading run against the same
+parser as on the device. Those files are third-party test data: they were not
+captured or checked on our hardware. The suite covers:
 
 - every file loading with the kind, protocol, frequency, preset, bit count,
   key, RAW sample count and shortest/longest duration that an independent
@@ -198,6 +199,28 @@ into the gap between frames). It finds no encoding for 6 of the 51 RAW files, an
 some PWM protocols (CAME, Nice FLO) for Manchester. The test fails if a
 change lowers those 8 and 13, so an analyzer change cannot make this worse
 unnoticed.
+
+`test_fwdecode` (`make -C test decoders`) fetches the firmware's Sub-GHz
+receiver and protocol decoders the same way (plus the two M\*LIB headers they
+use, at the firmware's submodule commit) and builds them unchanged. Its
+environment is the app's: no keystore (a stand-in with no keys) and no
+rainbow table names. Each RAW capture that the firmware's own decoder test
+pairs with a protocol (the list is checked against that test) goes through
+`RgRawReader` and `rg_decode_run` into a receiver with every decodable
+protocol, as the app feeds it, and must produce that protocol in the decode
+log. 48 of the 50 do. CAME Atomo and Alutech AT-4N decode and then read
+through their NULL rainbow table name when describing the decode
+(`came_atomo.c:198`, `alutech_at_4n.c:86`); the test expects that, since the
+app describes every decode and sets those names to NULL. The firmware allows
+no access to the first megabyte, so on a device receiving either protocol
+should fault (not yet checked on hardware). None of the captures needs a
+keystore to decode. The firmware's random capture gives 327 decodes on a
+fresh receiver and the firmware's 328 after its decoder tests have run on
+the same receiver (a Holtek HT12X decoder keeps its last code between them).
+Ending a capture with a quiet line changes no count. The decoded file next to
+a capture is compared for information only: 17 of 34 keys also decode from
+the capture; the others hold other codes (another button, counter or
+remote).
 
 ## Release-pipeline integrity
 

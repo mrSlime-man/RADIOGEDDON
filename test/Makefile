@@ -37,6 +37,18 @@ FORMATS_SRC := test_formats.c stubs/furi_stub.c ../helpers/radiogeddon_storage.c
 		../helpers/radiogeddon_settings.c ../helpers/radiogeddon_bands.c ../helpers/radiogeddon_dsp.c \
 		../helpers/rg_db.c ../helpers/rg_raw.c ../helpers/rg_analyzer.c
 
+# Decoder tests: the firmware's own Sub-GHz receiver and protocol decoders
+# (lib/subghz, every protocol it registers) run over its own RAW test captures
+# through rg_decode, fetched like the format tests. `make decoders`.
+FW_FILES := $(shell awk '{print $$2}' firmware/files.sha256)
+SUBGHZ_SRC := $(addprefix $(FW)/,$(filter lib/subghz/%.c lib/toolbox/manchester_%.c \
+		lib/toolbox/float_tools.c,$(FW_FILES)))
+DEC_FW_SRC := $(FW_SRC) $(SUBGHZ_SRC)
+DEC_FW_OBJ := $(patsubst $(FW)/%.c,$(BUILD)/fwdec/%.o,$(DEC_FW_SRC))
+DEC_STUB_HDRS := $(STUB_HDRS) stubs/furi_hal.h
+FWDECODE_SRC := test_fwdecode.c stubs/furi_stub.c stubs/subghz_stub.c ../helpers/rg_decode.c \
+		../helpers/rg_raw.c
+
 # Fuzz targets (test/fuzz/). `check` replays their committed corpus with the
 # host compiler; `make fuzz` runs them under libFuzzer (needs clang).
 FUZZ_RAW_SRC := fuzz/fuzz_raw.c ../helpers/rg_raw.c ../helpers/rg_analyzer.c
@@ -46,7 +58,7 @@ FUZZ_TARGETS := fuzz_raw fuzz_db fuzz_samples
 FUZZ_CC ?= clang
 FUZZ_TIME ?= 60
 
-.PHONY: check clean tsan fuzz formats
+.PHONY: check clean tsan fuzz formats decoders
 check: $(BUILD)/test_dsp $(BUILD)/test_analyzer $(BUILD)/test_scan $(BUILD)/test_hop $(BUILD)/test_raw \
 		$(BUILD)/test_timeline $(BUILD)/test_ring $(BUILD)/test_rawfmt $(BUILD)/test_recorder \
 		$(BUILD)/test_db $(BUILD)/test_memstat $(BUILD)/test_dbload $(BUILD)/test_decode \
@@ -127,6 +139,30 @@ $(BUILD)/fwobj/%.o: $(FW)/%.c $(STUB_HDRS)
 $(BUILD)/test_formats: $(FORMATS_SRC) $(STUB_HDRS) $(FW_OBJ) | $(BUILD)
 	$(CC) $(CFLAGS) $(SAN) -D_GNU_SOURCE -I$(FW) -I$(FW)/lib -Istubs -DSTUB_TRACK_ALLOC -pthread \
 		-o $@ $(FORMATS_SRC) $(FW_OBJ)
+
+decoders: $(BUILD)/test_fwdecode
+	$(BUILD)/test_fwdecode
+
+$(SUBGHZ_SRC): $(FW)/.fetched ;
+
+# lib/subghz finds its own headers through its folder (as the firmware's
+# build adds it) and mlib through lib/mlib. STUB_FURI_HEAP: malloc hands out
+# zeroed blocks, as the firmware's does (stubs/furi.h).
+DEC_INC := -I$(FW) -I$(FW)/lib -I$(FW)/lib/subghz -I$(FW)/lib/mlib -Istubs -DSTUB_FURI_HEAP
+
+# The firmware's code (here with its FlipperFormat code again, built the same
+# way) is compiled as it is. It shifts bytes into the sign bit of an int
+# (alutech_at_4n.c: p[0] << 24), which C leaves undefined and GCC, the
+# firmware's compiler, defines; UBSan's shift-base check is off for these
+# objects only. No warning needed turning off.
+$(BUILD)/fwdec/%.o: $(FW)/%.c $(DEC_STUB_HDRS)
+	mkdir -p $(dir $@)
+	$(CC) $(CFLAGS) $(SAN) -fno-sanitize=shift-base -D_GNU_SOURCE $(DEC_INC) -c -o $@ $<
+
+$(BUILD)/test_fwdecode: $(FWDECODE_SRC) $(DEC_STUB_HDRS) ../helpers/rg_decode.h ../helpers/rg_raw.h \
+		$(DEC_FW_OBJ) | $(BUILD)
+	$(CC) $(CFLAGS) $(SAN) -D_GNU_SOURCE $(DEC_INC) -pthread \
+		-o $@ $(FWDECODE_SRC) $(DEC_FW_OBJ) -lm
 
 $(BUILD)/replay_fuzz_raw: fuzz/replay.c $(FUZZ_RAW_SRC) ../helpers/rg_raw.h \
 		../helpers/rg_analyzer.h | $(BUILD)
