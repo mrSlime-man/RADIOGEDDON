@@ -16,6 +16,11 @@ static void radiogeddon_scene_start_submenu_callback(void* context, uint32_t ind
 
 void radiogeddon_scene_start_on_enter(void* context) {
     RadioGeddonApp* app = context;
+    // Back at the main menu: scanner results are no longer needed.
+    if(app->scanner) {
+        radiogeddon_scanner_free(app->scanner);
+        app->scanner = NULL;
+    }
     Submenu* submenu = app->submenu;
     submenu_reset(submenu);
     submenu_set_header(submenu, "RadioGeddon");
@@ -51,7 +56,8 @@ bool radiogeddon_scene_start_on_event(void* context, SceneManagerEvent event) {
     RadioGeddonApp* app = context;
     bool consumed = false;
 
-    if(event.type == SceneManagerEventTypeCustom) {
+    // Only menu indices are ours; ignore late events from a scene just closed.
+    if(event.type == SceneManagerEventTypeCustom && event.event <= StartIndexAbout) {
         scene_manager_set_scene_state(app->scene_manager, RadioGeddonSceneStart, event.event);
         switch(event.event) {
         case StartIndexScanner:
@@ -67,6 +73,7 @@ bool radiogeddon_scene_start_on_event(void* context, SceneManagerEvent event) {
             scene_manager_next_scene(app->scene_manager, RadioGeddonSceneSavedList);
             break;
         case StartIndexSettings:
+            scene_manager_set_scene_state(app->scene_manager, RadioGeddonSceneConfig, 0);
             scene_manager_next_scene(app->scene_manager, RadioGeddonSceneConfig);
             break;
         case StartIndexAbout:

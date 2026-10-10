@@ -19,6 +19,12 @@ static void radiogeddon_tick_event_callback(void* context) {
     scene_manager_handle_tick_event(app->scene_manager);
 }
 
+void radiogeddon_app_save_settings(RadioGeddonApp* app) {
+    app->settings.frequency = app->frequency;
+    app->settings.preset_index = app->preset_index;
+    radiogeddon_settings_save(app->storage, &app->settings);
+}
+
 RadioGeddonApp* radiogeddon_app_alloc(void) {
     RadioGeddonApp* app = malloc(sizeof(RadioGeddonApp));
     memset(app, 0, sizeof(RadioGeddonApp));
@@ -33,12 +39,15 @@ RadioGeddonApp* radiogeddon_app_alloc(void) {
     app->file_path = furi_string_alloc();
     app->file_path_b = furi_string_alloc();
     app->temp_str = furi_string_alloc();
-    app->frequency = RADIOGEDDON_FREQUENCY_DEFAULT;
-    app->preset_index = 1; // AM 650
+    radiogeddon_settings_load(app->storage, &app->settings);
+    app->frequency = app->settings.frequency;
+    app->preset_index = app->settings.preset_index;
     radiogeddon_loaded_signal_init(&app->loaded);
     radiogeddon_loaded_signal_init(&app->loaded_b);
 
     app->subghz = radiogeddon_subghz_alloc();
+    radiogeddon_subghz_set_frequency(app->subghz, app->frequency);
+    radiogeddon_subghz_set_preset(app->subghz, app->preset_index);
     app->history = radiogeddon_history_alloc();
     app->history_mutex = furi_mutex_alloc(FuriMutexTypeNormal);
 
@@ -119,6 +128,7 @@ void radiogeddon_app_free(RadioGeddonApp* app) {
     scene_manager_free(app->scene_manager);
     view_dispatcher_free(app->view_dispatcher);
 
+    if(app->scanner) radiogeddon_scanner_free(app->scanner);
     radiogeddon_history_free(app->history);
     furi_mutex_free(app->history_mutex);
     radiogeddon_subghz_free(app->subghz);

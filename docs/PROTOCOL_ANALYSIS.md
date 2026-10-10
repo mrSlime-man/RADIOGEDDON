@@ -4,7 +4,7 @@ How RadioGeddon identifies and analyses signals, what every part of the
 on-screen reports means, and — just as important — what the analysis cannot
 tell you.
 
-> **Status:** the analysis code is covered by 55 host unit-test checks on
+> **Status:** the analysis code is covered by host unit-test checks (55 for parsing and the analysis engine) on
 > synthetic signals. It has **not** yet been validated against real captures on
 > a physical Flipper Zero ([VERIFICATION.md](VERIFICATION.md)).
 

@@ -2,9 +2,13 @@
 #include <gui/elements.h>
 #include <furi.h>
 
-#define RADIOGEDDON_SCANNER_MAX 24
-#define RSSI_FLOOR              (-100.0f)
-#define RSSI_CEIL               (-30.0f)
+#define RSSI_FLOOR   (-110.0f)
+#define RSSI_CEIL    (-30.0f)
+#define VISIBLE_ROWS 4
+#define ROW_H        13
+#define ROWS_Y       12
+#define BAR_X        38
+#define BAR_W        50
 
 struct RadioGeddonScannerView {
     View* view;
@@ -13,74 +17,126 @@ struct RadioGeddonScannerView {
 };
 
 typedef struct {
-    const uint32_t* frequencies;
-    size_t count;
-    float rssi[RADIOGEDDON_SCANNER_MAX];
+    RadioGeddonScannerSnapshot snap;
     size_t selected;
     size_t top; // first visible row
 } RadioGeddonScannerModel;
 
-#define VISIBLE_ROWS 4
+static int32_t radiogeddon_scanner_bar_pos(float dbm) {
+    float norm = (dbm - RSSI_FLOOR) / (RSSI_CEIL - RSSI_FLOOR);
+    if(norm < 0) norm = 0;
+    if(norm > 1) norm = 1;
+    return (int32_t)(norm * (BAR_W - 2));
+}
+
+static void radiogeddon_scanner_view_draw_header(Canvas* canvas, RadioGeddonScannerModel* m) {
+    const RadioGeddonScannerSnapshot* s = &m->snap;
+    canvas_set_font(canvas, FontSecondary);
+
+    const char* status = "RSSI scan";
+    if(s->paused) {
+        status = "PAUSED";
+    } else if(s->hold_index >= 0) {
+        status = "HOLD";
+    }
+    canvas_draw_str(canvas, 2, 9, status);
+
+    char right[24];
+    if(s->global_floor <= RG_SCAN_RSSI_NONE) {
+        snprintf(right, sizeof(right), "NF -- T+%u", (unsigned)s->threshold_db);
+    } else {
+        snprintf(
+            right,
+            sizeof(right),
+            "NF%d T+%u",
+            (int)(s->global_floor - 0.5f),
+            (unsigned)s->threshold_db);
+    }
+    canvas_draw_str_aligned(canvas, 126, 9, AlignRight, AlignBottom, right);
+    canvas_draw_line(canvas, 0, 11, 127, 11);
+}
+
+static void radiogeddon_scanner_view_draw_row(
+    Canvas* canvas,
+    const RadioGeddonScannerSnapshot* s,
+    size_t idx,
+    int32_t y,
+    bool sel) {
+    const RgScanChannel* ch = &s->channels[idx];
+    if(sel) {
+        canvas_set_color(canvas, ColorBlack);
+        canvas_draw_box(canvas, 0, y, 128, ROW_H);
+        canvas_set_color(canvas, ColorWhite);
+    }
+
+    if(ch->active) canvas_draw_disc(canvas, 2, y + 6, 2);
+
+    char text[16];
+    uint32_t hz = s->frequencies[idx];
+    snprintf(
+        text,
+        sizeof(text),
+        "%lu.%02lu",
+        (unsigned long)(hz / 1000000),
+        (unsigned long)((hz % 1000000) / 10000));
+    canvas_draw_str(canvas, 6, y + 10, text);
+
+    canvas_draw_frame(canvas, BAR_X, y + 2, BAR_W, 9);
+    if(ch->samples > 0) {
+        int32_t fill = radiogeddon_scanner_bar_pos(ch->last);
+        if(fill > 0) canvas_draw_box(canvas, BAR_X + 1, y + 3, fill, 7);
+        // Peak hold: a full-height tick.
+        int32_t peak = BAR_X + 1 + radiogeddon_scanner_bar_pos(ch->peak);
+        canvas_draw_line(canvas, peak, y + 1, peak, y + 11);
+        if(ch->samples >= RG_SCAN_WARMUP_SAMPLES) {
+            // Detection threshold: small marks above and below the bar.
+            int32_t thr =
+                BAR_X + 1 + radiogeddon_scanner_bar_pos(ch->floor + (float)s->threshold_db);
+            canvas_draw_dot(canvas, thr, y + 1);
+            canvas_draw_dot(canvas, thr, y + 11);
+        }
+        snprintf(text, sizeof(text), "%d", (int)(ch->last - 0.5f));
+    } else {
+        snprintf(text, sizeof(text), "--");
+    }
+    canvas_draw_str_aligned(canvas, 110, y + 10, AlignRight, AlignBottom, text);
+
+    if(ch->hits > 99) {
+        snprintf(text, sizeof(text), "99+");
+    } else {
+        snprintf(text, sizeof(text), "%u", (unsigned)ch->hits);
+    }
+    canvas_draw_str_aligned(canvas, 127, y + 10, AlignRight, AlignBottom, text);
+
+    if(sel) canvas_set_color(canvas, ColorBlack);
+}
 
 static void radiogeddon_scanner_view_draw(Canvas* canvas, void* model) {
     RadioGeddonScannerModel* m = model;
     canvas_clear(canvas);
+    radiogeddon_scanner_view_draw_header(canvas, m);
 
-    canvas_set_font(canvas, FontPrimary);
-    canvas_draw_str(canvas, 2, 9, "Scanner");
-    canvas_set_font(canvas, FontSecondary);
-    canvas_draw_str_aligned(canvas, 126, 9, AlignRight, AlignBottom, "RSSI dBm");
-    canvas_draw_line(canvas, 0, 11, 128, 11);
-
-    if(m->count == 0) {
-        canvas_draw_str(canvas, 2, 30, "No frequencies.");
+    if(m->snap.count == 0) {
+        canvas_draw_str(canvas, 2, 30, "No frequencies to scan.");
+        canvas_draw_str(canvas, 2, 42, "Check Settings > Scan list.");
         return;
     }
 
-    // Keep selection within the visible window.
+    if(m->selected >= m->snap.count) m->selected = m->snap.count - 1;
     if(m->selected < m->top) m->top = m->selected;
     if(m->selected >= m->top + VISIBLE_ROWS) m->top = m->selected - (VISIBLE_ROWS - 1);
 
     for(size_t row = 0; row < VISIBLE_ROWS; row++) {
         size_t idx = m->top + row;
-        if(idx >= m->count) break;
-        int32_t y = 14 + (int32_t)row * 13;
-        bool sel = (idx == m->selected);
-        if(sel) {
-            canvas_set_color(canvas, ColorBlack);
-            canvas_draw_box(canvas, 0, y, 128, 13);
-            canvas_set_color(canvas, ColorWhite);
-        }
-
-        char freq_str[16];
-        uint32_t hz = m->frequencies[idx];
-        snprintf(
-            freq_str,
-            sizeof(freq_str),
-            "%lu.%02lu",
-            (unsigned long)(hz / 1000000),
-            (unsigned long)((hz % 1000000) / 10000));
-        canvas_draw_str(canvas, 2, y + 10, freq_str);
-
-        float r = m->rssi[idx];
-        // Bar
-        float norm = (r - RSSI_FLOOR) / (RSSI_CEIL - RSSI_FLOOR);
-        if(norm < 0) norm = 0;
-        if(norm > 1) norm = 1;
-        int32_t bar_x = 44;
-        int32_t bar_w = 54;
-        canvas_draw_frame(canvas, bar_x, y + 2, bar_w, 8);
-        int32_t fill = (int32_t)(norm * (bar_w - 2));
-        if(fill > 0) canvas_draw_box(canvas, bar_x + 1, y + 3, fill, 6);
-
-        char rssi_str[8];
-        snprintf(rssi_str, sizeof(rssi_str), "%d", (int)r);
-        canvas_draw_str_aligned(canvas, 126, y + 10, AlignRight, AlignBottom, rssi_str);
-
-        if(sel) canvas_set_color(canvas, ColorBlack);
+        if(idx >= m->snap.count) break;
+        radiogeddon_scanner_view_draw_row(
+            canvas, &m->snap, idx, ROWS_Y + (int32_t)row * ROW_H, idx == m->selected);
     }
+}
 
-    elements_scrollbar(canvas, m->selected, m->count);
+static void
+    radiogeddon_scanner_view_send(RadioGeddonScannerView* instance, RadioGeddonScannerEvent e) {
+    if(instance->callback) instance->callback(e, instance->context);
 }
 
 static bool radiogeddon_scanner_view_input(InputEvent* event, void* context) {
@@ -88,30 +144,38 @@ static bool radiogeddon_scanner_view_input(InputEvent* event, void* context) {
     bool consumed = false;
 
     if(event->type == InputTypeShort || event->type == InputTypeRepeat) {
-        if(event->key == InputKeyUp) {
+        if(event->key == InputKeyUp || event->key == InputKeyDown) {
+            bool up = (event->key == InputKeyUp);
             with_view_model(
                 instance->view,
                 RadioGeddonScannerModel * m,
                 {
-                    if(m->selected > 0) m->selected--;
+                    if(m->snap.count > 0) {
+                        if(up) {
+                            m->selected = (m->selected > 0) ? m->selected - 1 : m->snap.count - 1;
+                        } else {
+                            m->selected = (m->selected + 1 < m->snap.count) ? m->selected + 1 : 0;
+                        }
+                    }
                 },
                 true);
-            consumed = true;
-        } else if(event->key == InputKeyDown) {
-            with_view_model(
-                instance->view,
-                RadioGeddonScannerModel * m,
-                {
-                    if(m->selected + 1 < m->count) m->selected++;
-                },
-                true);
-            consumed = true;
-        } else if(event->key == InputKeyOk) {
-            if(instance->callback) {
-                instance->callback(RadioGeddonScannerEventSelect, instance->context);
-            }
             consumed = true;
         }
+    }
+    if(event->type == InputTypeShort) {
+        if(event->key == InputKeyOk) {
+            radiogeddon_scanner_view_send(instance, RadioGeddonScannerEventSelect);
+            consumed = true;
+        } else if(event->key == InputKeyLeft) {
+            radiogeddon_scanner_view_send(instance, RadioGeddonScannerEventTogglePause);
+            consumed = true;
+        } else if(event->key == InputKeyRight) {
+            radiogeddon_scanner_view_send(instance, RadioGeddonScannerEventSave);
+            consumed = true;
+        }
+    } else if(event->type == InputTypeLong && event->key == InputKeyLeft) {
+        radiogeddon_scanner_view_send(instance, RadioGeddonScannerEventResetPeaks);
+        consumed = true;
     }
     return consumed;
 }
@@ -130,14 +194,11 @@ RadioGeddonScannerView* radiogeddon_scanner_view_alloc(void) {
         instance->view,
         RadioGeddonScannerModel * m,
         {
-            m->frequencies = NULL;
-            m->count = 0;
-            m->selected = 0;
-            m->top = 0;
-            for(size_t i = 0; i < RADIOGEDDON_SCANNER_MAX; i++)
-                m->rssi[i] = RSSI_FLOOR;
+            memset(m, 0, sizeof(*m));
+            m->snap.hold_index = -1;
+            m->snap.global_floor = RG_SCAN_RSSI_NONE;
         },
-        true);
+        false);
 
     return instance;
 }
@@ -160,26 +221,22 @@ void radiogeddon_scanner_view_set_callback(
     instance->context = context;
 }
 
-void radiogeddon_scanner_view_set_frequencies(
-    RadioGeddonScannerView* instance,
-    const uint32_t* frequencies,
-    size_t count) {
-    if(count > RADIOGEDDON_SCANNER_MAX) count = RADIOGEDDON_SCANNER_MAX;
+void radiogeddon_scanner_view_update(RadioGeddonScannerView* instance, RadioGeddonScanner* scanner) {
+    with_view_model(
+        instance->view,
+        RadioGeddonScannerModel * m,
+        { radiogeddon_scanner_snapshot(scanner, &m->snap); },
+        true);
+}
+
+void radiogeddon_scanner_view_set_selected(RadioGeddonScannerView* instance, size_t index) {
     with_view_model(
         instance->view,
         RadioGeddonScannerModel * m,
         {
-            m->frequencies = frequencies;
-            m->count = count;
-            m->selected = 0;
-            m->top = 0;
+            if(index < m->snap.count) m->selected = index;
         },
         true);
-}
-
-void radiogeddon_scanner_view_set_rssi(RadioGeddonScannerView* instance, size_t index, float rssi) {
-    if(index >= RADIOGEDDON_SCANNER_MAX) return;
-    with_view_model(instance->view, RadioGeddonScannerModel * m, { m->rssi[index] = rssi; }, true);
 }
 
 size_t radiogeddon_scanner_view_get_selected(RadioGeddonScannerView* instance) {

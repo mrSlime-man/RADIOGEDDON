@@ -12,6 +12,7 @@ void radiogeddon_storage_ensure_paths(Storage* storage) {
     storage_common_mkdir(storage, EXT_PATH("apps_data"));
     storage_common_mkdir(storage, RADIOGEDDON_APP_FOLDER);
     storage_common_mkdir(storage, RADIOGEDDON_SIGNALS_FOLDER);
+    storage_common_mkdir(storage, RADIOGEDDON_SCANS_FOLDER);
 }
 
 void radiogeddon_storage_default_name(FuriString* out) {
@@ -169,4 +170,19 @@ size_t radiogeddon_storage_load_raw_samples(
     furi_string_free(value);
     flipper_format_free(ff);
     return total;
+}
+
+void radiogeddon_storage_make_scan_path(FuriString* out) {
+    DateTime dt;
+    furi_hal_rtc_get_datetime(&dt);
+    furi_string_printf(
+        out,
+        "%s/SCAN_%04u%02u%02u_%02u%02u%02u.csv",
+        RADIOGEDDON_SCANS_FOLDER,
+        dt.year,
+        dt.month,
+        dt.day,
+        dt.hour,
+        dt.minute,
+        dt.second);
 }

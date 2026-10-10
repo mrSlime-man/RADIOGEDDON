@@ -423,6 +423,13 @@ void radiogeddon_subghz_scan_end(RadioGeddonSubGhz* instance) {
 }
 
 float radiogeddon_subghz_probe_rssi(RadioGeddonSubGhz* instance, uint32_t frequency) {
+    return radiogeddon_subghz_probe_rssi_dwell(instance, frequency, 0);
+}
+
+float radiogeddon_subghz_probe_rssi_dwell(
+    RadioGeddonSubGhz* instance,
+    uint32_t frequency,
+    uint32_t dwell_ms) {
     if(!instance->device) return -127.0f;
     // set_frequency asserts on out-of-band values — never probe an invalid one.
     if(!subghz_devices_is_frequency_valid(instance->device, frequency)) return -127.0f;
@@ -438,6 +445,14 @@ float radiogeddon_subghz_probe_rssi(RadioGeddonSubGhz* instance, uint32_t freque
     subghz_devices_set_rx(instance->device);
     furi_delay_ms(3); // let the AGC settle
     float rssi = subghz_devices_get_rssi(instance->device);
+    // Keep listening for the dwell time and report the strongest reading, so a
+    // short burst inside the window is not missed between two samples.
+    uint32_t start = furi_get_tick();
+    while(furi_get_tick() - start < furi_ms_to_ticks(dwell_ms)) {
+        furi_delay_ms(1);
+        float r = subghz_devices_get_rssi(instance->device);
+        if(r > rssi) rssi = r;
+    }
     subghz_devices_idle(instance->device);
     if(temp_session) {
         subghz_devices_sleep(instance->device);

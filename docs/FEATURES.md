@@ -9,7 +9,7 @@ verified, and its known limits. For step-by-step use, see the
 **Every feature below is implemented, compiles for all three firmware
 families, and passes CI. None has yet been verified on a physical Flipper
 Zero.** "Unit-tested" means the feature's firmware-independent logic is covered
-by the host test suite (55 checks); radio behaviour can only be confirmed on a
+by the host test suite (86 checks); radio behaviour can only be confirmed on a
 device ([VERIFICATION.md](VERIFICATION.md)).
 
 | Feature | Implemented | Unit-tested logic | Verified on hardware |
@@ -29,15 +29,26 @@ device ([VERIFICATION.md](VERIFICATION.md)).
 
 ## Sub-GHz Scanner
 
-Sweeps 19 common frequencies and shows live received signal strength (RSSI)
-for each as a bar and a dBm value, so you can see which frequency a device is
-using. Select a frequency to jump straight into *Receive & Record* on it.
+A narrowband RSSI scanner. The CC1101 measures one frequency at a time, so the
+scanner steps through a list of frequencies and shows activity on each; it is
+not a wideband spectrum analyzer and cannot see the whole band at once.
 
+- Live RSSI per frequency with a **peak hold**, a per-frequency **noise-floor
+  estimate**, and an overall noise floor in the header.
+- **Activity detection** at an adjustable threshold above each frequency's own
+  floor (+6 to +30 dB) with 3 dB hysteresis, a live activity dot and a count of
+  separate bursts per frequency.
+- **Configurable scan list**: all 19 frequencies, a band (300-348, 387-464 or
+  779-928 MHz), or any custom selection.
+- **Configurable dwell** (5-100 ms per frequency); the strongest reading in
+  each dwell window is kept so short bursts are less likely to be missed.
+- **Hold on hit** (optional): stop on the first active frequency and highlight
+  it; OK opens *Receive & Record* there.
+- **Save results** to the SD card as CSV.
+- The sweep runs on its own thread, so the display stays responsive.
 - Frequencies (MHz): 300.000, 303.875, 304.250, 310.000, 315.000, 318.000,
   390.000, 418.000, 433.075, 433.420, 433.920, 434.420, 434.775, 438.900,
   464.000, 779.000, 868.350, 915.000, 925.000.
-- One frequency is measured every 100 ms (about 2 s per full pass); readings
-  are snapshots, not peak-hold, so very short bursts can be missed.
 - Receive-only.
 
 ## Frequency Hopper
@@ -201,12 +212,10 @@ Regional rules are enforced by the firmware itself
 ## Known limitations
 
 - **Hardware verification pending** — see above.
-- **Settings are not persistent** — frequency and modulation reset to 433.92 MHz /
-  AM 650 when the app starts.
 - **RAW capture length** — 16,384 samples per recording; engine-based analysis
   and similarity use the first 4,096 samples of a file.
 - **Internal radio only** — the app uses the built-in CC1101.
-- **Scanner and hopper sampling** — measurements are periodic snapshots, so brief
-  transmissions can be missed.
+- **Scanner and hopper sampling** — the radio hears one frequency at a time, so
+  a transmission on a frequency the sweep is not currently on can be missed.
 - **Firmware coupling** — each `.fap` only loads on firmware with the matching
   API major version ([Firmware Compatibility](FIRMWARE_COMPATIBILITY.md)).
