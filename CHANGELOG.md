@@ -7,7 +7,7 @@ to follow [Semantic Versioning](https://semver.org/) (pre-1.0.0 releases use
 
 ## [Unreleased]
 
-## [1.0.0-beta.3] - 2026-10-09
+## [1.0.0-beta.3] - 2026-10-10
 
 Milestones 1 to 9: scanner, hopper, analyzer, streaming recording, database,
 interface, external radio, memory and testing. Not yet verified on hardware.
