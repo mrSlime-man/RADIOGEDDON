@@ -7,7 +7,8 @@
 #   host-tests  host unit tests and the fuzz corpus replay under ASan/UBSan,
 #               then the format tests on the firmware's FlipperFormat code and
 #               Sub-GHz test files, and the decoder tests (its Sub-GHz
-#               decoders on its RAW captures), downloaded at the pinned release
+#               decoders on its RAW captures) and the capture tests (the
+#               analyzer on those captures), downloaded at the pinned release
 #   fuzz        the fuzz targets under libFuzzer for a fixed time each
 #   fap         one .fap per firmware family, built against the SDK pinned in
 #               scripts/firmware_pins.sh (checksum-verified), API asserted,
@@ -56,6 +57,8 @@ jobs:
         run: make -C test formats
       - name: Run decoder tests (firmware Sub-GHz decoders on its RAW test captures)
         run: make -C test decoders
+      - name: Run capture tests (analyzer on the firmware's RAW test captures)
+        run: make -C test captures
 
   fuzz:
     name: fuzz (libFuzzer)

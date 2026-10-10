@@ -153,6 +153,11 @@ The report opens with what the labels mean, then has three parts.
 5. **Quality:** *good* when noise ≤ 15 % and jitter ≤ 10 %, *poor* when noise
    > 50 %, jitter > 25 % or no peak was found, otherwise *fair*.
 6. **Frames.** A low at least **7 × Te** long (and at least 1 ms) ends a frame.
+   When repeats are sent closer together, a low peak at least 1.5 × the
+   longer of the two most common lows below that, and at most half as common
+   as them, is taken as the separator instead: frames end halfway between the
+   two. A high at least **14 × Te** long also ends a frame (some remotes
+   separate repeats with a long carrier pulse) and is not part of either.
    Bursts of fewer than 8 pulses are counted as *bursts* (noise), not frames.
 7. **Lost while recording.** If the recorder had to drop samples because the
    SD card fell behind, the file ends with a `# Lost: N` note and the report
@@ -162,9 +167,13 @@ The report opens with what the labels mean, then has three parts.
 ### `[HYPOTHESIS]` structure
 
 1. **Base Te.** The shortest high peak and the shortest low peak that hold at
-   least a quarter of their side's largest peak. Receivers tend to widen
-   pulses and shorten gaps by the same amount, so when the two are within
-   1.6× of each other Te is their average; otherwise the shorter one.
+   least a quarter of their side's largest peak. Peaks below **100 µs** are
+   left out, however large: they are receiver glitches (the firmware's
+   shortest remote protocol uses 160 µs), and they stay listed as observed
+   peaks. Receivers tend to widen pulses and shorten gaps by the same amount,
+   so when the two are within 1.6× of each other Te is their average;
+   otherwise the shorter one. The PWM and PPM widths below skip glitch peaks
+   too.
 2. **Encoding by trial decoding.** Every frame is decoded three ways, each
    giving a *fit*: the share of symbols that obey that encoding's rules.
 
@@ -174,10 +183,16 @@ The report opens with what the labels mean, then has three parts.
    | **PPM** | pulse + gap pairs | the pulse is within 30 % of the main pulse width and the gap within 30 % of one of the two in-frame gap peaks | `1` = long gap |
    | **Manchester** | half-bit cells: a duration of 0.5–1.5 Te is one cell, 1.5–2.6 Te two | the two cells of a bit differ in level (both cell phases are tried); other durations count as errors | `1` = low-to-high (IEEE 802.3; the G.E. Thomas convention inverts every bit) |
 
-   A lone pulse before the frame gap is treated as a stop/sync pulse, not a
-   bit. Frames where some encoding fits at least 60 % are *signal frames*;
-   the encoding with the highest mean fit over them wins and the runner-up is
-   shown as *Alt* when it fits at least 30 %.
+   PWM and PPM pairs are tried both ways: each pulse with the gap after it,
+   and, after skipping the frame's first pulse as a start pulse, each gap with
+   the pulse after it (some remotes, CAME for one, send the gap first). The
+   pairing that fits better is used. A lone pulse before the frame gap is
+   treated as a stop/sync pulse, not a bit. A frame made only of single-Te
+   pulses and gaps (a preamble or wake-up run) fits every encoding that allows
+   a square wave and gives no vote. Frames where some encoding fits at least
+   60 % are *signal frames*; the encoding with the highest mean fit over them,
+   weighted by each frame's length, wins, and the runner-up is shown as *Alt*
+   when it fits at least 30 %.
 3. **Confidence** starts at the winner's mean fit, loses 20 points when the
    runner-up is within 10 (10 points when within 25), loses 10 when only one
    frame fits any encoding, gains 5 when a pattern repeats exactly, is capped at
@@ -215,9 +230,36 @@ and marked `long`.
 
 - Recognise FSK signals, protocols with more than two symbol widths, or
   encodings other than PWM, PPM and Manchester. Those report *no frame fits*.
+- Tell Manchester from pulse-width codes whose pulse and gap have the same
+  width in each bit (Star Line, for example): at the timing level both are
+  runs of 1 and 2 Te.
+- Split repeats sent with no gap between them, or find Te when glitches
+  outnumber the signal on both sides.
+
+How often the hypotheses are right on real captures is measured: see
+[Accuracy on the firmware's test captures](#accuracy-on-the-firmwares-test-captures).
 - Tell which Manchester convention or bit order the device uses.
 - Decode anything: the bits are a structural reading of the timing. Only the
   firmware's decoders (*Receive & Record*, *Decode with Firmware*) give `[CONFIRMED]` results.
+
+### Accuracy on the firmware's test captures
+
+`make -C test captures` (run in CI) analyses the Flipper firmware's own RAW
+test captures, the 50 that its decoder test pairs with a protocol, without
+telling the engine the protocol. It then scores the hypotheses against each
+protocol's decoder source:
+
+| Hypothesis | Counted right when | Right |
+|------------|--------------------|-------|
+| Base Te | within the decoder's own tolerance (`te_delta`) of its `te_short` | 48 of 50 |
+| Encoding | Manchester exactly when the decoder uses the firmware's Manchester decoder; PWM and PPM both count for the others | 41 of 50 (3 give no guess) |
+| Bit length | within one bit of the decoder's `min_count_bit_for_found` | 29 of 50 |
+
+Before the rules above for glitches, pairing, preambles and separators, the
+same scores were 39, 33 and 16. Bit length is the weakest: several protocols
+repeat a frame with no gap the engine can see, and some count bits
+differently from the frame on air. The captures are the firmware's, recorded
+by others; none of this is checked on our hardware.
 
 ## Crypto Analysis
 

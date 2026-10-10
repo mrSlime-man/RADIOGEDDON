@@ -91,6 +91,10 @@ still needs.
 - [x] **Decoder tests**: the firmware's own decoders built on the host and
       run over its RAW test captures in CI. They found the Official-only
       Receive crash fixed in `1.0.0-beta.4` (hardware check F5a pending).
+- [ ] **Analyzer scored on real captures**: Unknown Protocol Analysis run
+      on the firmware's 50 paired test captures in CI and scored against
+      the decoders' timing; glitch, pairing, preamble and separator rules
+      that came out of it (implemented, not yet released).
 
 ## Toward a stable 1.0.0
 

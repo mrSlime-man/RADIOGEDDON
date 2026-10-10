@@ -7,6 +7,23 @@ to follow [Semantic Versioning](https://semver.org/) (pre-1.0.0 releases use
 
 ## [Unreleased]
 
+### Changed
+- **Unknown Protocol Analysis reads real captures better.** Scored on the
+  firmware's 50 paired RAW test captures against each protocol's decoder,
+  its Te is now right for 48 (was 39), its encoding family for 41 (was 33)
+  and its frame length for 29 (was 16). Receiver glitches below 100 µs are
+  no longer taken for Te or a bit width; PWM and PPM are also tried paired
+  gap-first, as CAME sends them; a square-wave preamble no longer votes for
+  Manchester; longer frames weigh more in the vote; repeats sent closer than
+  7 Te apart are split at their rarer, longer gap; and a carrier pulse of
+  14 Te or more ends a frame. Results stay `[HYPOTHESIS]`.
+
+### Added
+- **Capture tests** (`make -C test captures`, run in CI): the analyzer on
+  the firmware's own RAW test captures, scored against each protocol's
+  timing in the firmware's decoder source. A drop in any score fails the
+  test.
+
 ## [1.0.0-beta.4] - 2026-10-10
 
 Fixes a crash on Official firmware and adds Decode with Firmware. Not yet

@@ -49,6 +49,12 @@ DEC_STUB_HDRS := $(STUB_HDRS) stubs/furi_hal.h
 FWDECODE_SRC := test_fwdecode.c stubs/furi_stub.c stubs/subghz_stub.c ../helpers/rg_decode.c \
 		../helpers/rg_raw.c ../helpers/radiogeddon_decode_text.c
 
+# Analyzer tests on real captures: rg_analyzer over the firmware's RAW test
+# captures, scored against each protocol's timing in its decoder source
+# (both fetched like the decoder tests; pure C, nothing of the firmware is
+# compiled). `make captures`.
+FWANALYZE_SRC := test_fwanalyze.c ../helpers/rg_analyzer.c ../helpers/rg_raw.c
+
 # Fuzz targets (test/fuzz/). `check` replays their committed corpus with the
 # host compiler; `make fuzz` runs them under libFuzzer (needs clang).
 FUZZ_RAW_SRC := fuzz/fuzz_raw.c ../helpers/rg_raw.c ../helpers/rg_analyzer.c
@@ -58,7 +64,7 @@ FUZZ_TARGETS := fuzz_raw fuzz_db fuzz_samples
 FUZZ_CC ?= clang
 FUZZ_TIME ?= 60
 
-.PHONY: check clean tsan fuzz formats decoders
+.PHONY: check clean tsan fuzz formats decoders captures
 check: $(BUILD)/test_dsp $(BUILD)/test_analyzer $(BUILD)/test_scan $(BUILD)/test_hop $(BUILD)/test_raw \
 		$(BUILD)/test_timeline $(BUILD)/test_ring $(BUILD)/test_rawfmt $(BUILD)/test_recorder \
 		$(BUILD)/test_db $(BUILD)/test_memstat $(BUILD)/test_dbload $(BUILD)/test_decode \
@@ -145,6 +151,13 @@ decoders: $(BUILD)/test_fwdecode
 
 $(SUBGHZ_SRC): $(FW)/.fetched ;
 
+captures: $(BUILD)/test_fwanalyze
+	$(BUILD)/test_fwanalyze
+
+$(BUILD)/test_fwanalyze: $(FWANALYZE_SRC) ../helpers/rg_analyzer.h ../helpers/rg_raw.h \
+		$(FW)/.fetched | $(BUILD)
+	$(CC) $(CFLAGS) $(SAN) -o $@ $(FWANALYZE_SRC)
+
 # lib/subghz finds its own headers through its folder (as the firmware's
 # build adds it) and mlib through lib/mlib. STUB_FURI_HEAP: malloc hands out
 # zeroed blocks, as the firmware's does (stubs/furi.h).
@@ -211,4 +224,4 @@ $(BUILD):
 
 clean:
 	rm -rf $(BUILD) test_dsp test_analyzer test_scan test_hop test_raw test_timeline test_ring \
-		test_rawfmt test_recorder test_db test_memstat test_dbload test_decode
+		test_rawfmt test_recorder test_db test_memstat test_dbload test_decode test_fwanalyze

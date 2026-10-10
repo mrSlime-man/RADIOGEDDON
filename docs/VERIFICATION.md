@@ -25,7 +25,7 @@ locally.
 | RogueMaster build | RogueMaster source at commit `38d7ae9`, built with its own `fbt`, API asserted 88.16, manifest verified | Pass — `radiogeddon-roguemaster.fap` |
 | Lint | `ufbt lint` (clang-format) | Pass, no warnings |
 | DSP/parse unit tests | `make -C test check` → `test_dsp` | Pass — 36 checks |
-| Analysis-engine unit tests | `make -C test check` → `test_analyzer` | Pass — 89 checks |
+| Analysis-engine unit tests | `make -C test check` → `test_analyzer` | Pass — 102 checks |
 | Scanner-logic unit tests | `make -C test check` → `test_scan` | Pass — 31 checks |
 | Hopper-logic unit tests | `make -C test check` → `test_hop` | Pass — 42 checks |
 | RAW-reader unit tests | `make -C test check` → `test_raw` | Pass — 43 checks |
@@ -38,6 +38,7 @@ locally.
 | Database-loading tests (stub Furi/Storage) | `make -C test check` → `test_dbload` | Pass — 45 checks |
 | RAW-to-decoder feeding tests | `make -C test check` → `test_decode` | Pass — 68 checks |
 | Format tests (firmware code, real files) | `make -C test formats` → `test_formats`: the firmware's FlipperFormat and stream code and its 85 Sub-GHz test files, from the commit of Official 1.4.3 | Pass — 562 checks |
+| Analyzer on real captures | `make -C test captures` → `test_fwanalyze`: `rg_analyzer` on the firmware's 50 paired RAW test captures, scored against each protocol's decoder source | Pass — 354 checks; Te right for 48, encoding family for 41, frame length for 29 (see below) |
 | Decoder tests (firmware code, real captures) | `make -C test decoders` → `test_fwdecode`: the firmware's Sub-GHz receiver and all its protocol decoders, fed its 50 RAW test captures through `rg_decode` | Pass — 213 checks; all 50 decode and are described as the app describes them (see below) |
 | Fuzz corpus replay | `make -C test check` → `replay_fuzz_raw`, `replay_fuzz_db`, `replay_fuzz_samples` | Pass — every committed input |
 | Fuzzing | `make -C test fuzz` (libFuzzer with ASan/UBSan; 60 s per target in CI) | Pass — no crash, sanitizer report or broken invariant |
@@ -49,7 +50,7 @@ locally.
 | Newer firmware (canary) | `scripts/firmware_watch.py --build` (weekly in CI): Official 1.5.1-rc SDK, API 88.2 | Builds; `APPCHK` and manifest pass. No release targets it yet, not hardware-tested |
 | `.fap` metadata | `scripts/verify_fap.py` parses `.fapmeta` and asserts magic, API, target, name, version, icon | Pass for all three artifacts |
 
-Host-test total: **600 checks, 0 failures** (`make -C test check`; the format and decoder tests are counted on their own). What the suite covers (synthetic
+Host-test total: **613 checks, 0 failures** (`make -C test check`; the format, capture and decoder tests are counted on their own). What the suite covers (synthetic
 signals, not real captures):
 
 - `test_dsp` — RAW `RAW_Data` parsing (incl. whitespace, signs, out-of-range
@@ -63,7 +64,12 @@ signals, not real captures):
   of a cut-off first frame, bit-length estimation, constant-vs-changing field
   maps and the ID candidate, identical results when fed in chunks with a split
   pulse, the decode and align APIs, streamed and in-memory RAW similarity, and
-  degenerate input (empty, one pulse, one level only, pure noise).
+  degenerate input (empty, one pulse, one level only, pure noise). Five
+  cases come from what the real captures showed: a glitch peak larger than
+  the signal's never becomes Te, low-first PWM (CAME's) pairs low then high,
+  a square-wave preamble does not outvote the data, repeats 5 Te apart are
+  split, and so are repeats separated by a long carrier pulse. Each of the
+  five fails on the engine before those rules.
 - `test_scan` — scanner logic on synthetic RSSI sequences: no false triggers
   on noise, one count per burst, warm-up suppression, hysteresis, absolute
   minimum, floor tracking up and down, peak/count reset, median noise floor,
@@ -203,13 +209,15 @@ It found that RAW files with a comma after each value (as in the firmware's
 It also measures the analyzer on real captures, without treating its output
 as verified. For the 33 RAW files that have a decoded file of the same
 protocol next to them, the most common frame length the analyzer finds equals
-the decoded `Bit` count for 8 (Princeton, Feron, Dooya, GateTX, Holtek HT12X,
-SMC5326, CAME TWEE and Security+ 2.0) and is one bit short for 5 more (BETT,
-Legrand, Linear, Mastercode and Roger, where the last bit's low period runs
-into the gap between frames). It finds no encoding for 6 of the 51 RAW files, and takes
-some PWM protocols (CAME, Nice FLO) for Manchester. The test fails if a
-change lowers those 8 and 13, so an analyzer change cannot make this worse
-unnoticed.
+the decoded `Bit` count for 10 (Ansonic, CAME TWEE, Doitrand, Feron, GateTX,
+Marantec, Nice FLO, Princeton, Security+ 2.0 and SMC5326) and is one bit
+short for 7 more (BETT, Dooya, GangQi, Legrand, Linear, Mastercode and Roger,
+where the last bit's low period runs into the gap between frames). It finds
+no encoding for 4 of the 51 RAW files, and still takes some pulse-width
+protocols (Star Line, Nero Radio, Holtek HT12X) for Manchester. The test
+fails if a change lowers those 10 and 17, so an analyzer change cannot make
+this worse unnoticed. `test_fwanalyze` (below) scores the analyzer on all 50
+paired captures against the decoders' own timing.
 
 `test_fwdecode` (`make -C test decoders`) fetches the firmware's Sub-GHz
 receiver and protocol decoders the same way (plus the two M\*LIB headers they
@@ -236,6 +244,22 @@ Ending a capture with a quiet line changes no count. The decoded file next to
 a capture is compared for information only: 17 of 34 keys also decode from
 the capture; the others hold other codes (another button, counter or
 remote).
+
+`test_fwanalyze` (`make -C test captures`) runs the analyzer on the same 50
+captures, streamed and rewound for each pass as the app does, without telling
+it the protocol. It reads each protocol's decoder source at run time and
+scores the engine's hypotheses: Te within the decoder's tolerance of its
+short pulse (48 of 50), Manchester exactly when the decoder uses the
+firmware's Manchester decoder (41; 3 get no guess), and frame length within
+one bit of the decoder's bit count (29). The engine before this test's
+changes scored 39, 33 and 16. The test also checks the engine's own rules on
+every capture (Te is 0 or at least 100 µs, confidence at most 95 %, no bits
+without an encoding) and that the streamed result equals the in-memory one.
+It fails if a total drops. The misses are listed by
+[PROTOCOL_ANALYSIS.md](PROTOCOL_ANALYSIS.md#what-it-cannot-do): pulse-width
+codes with equal pulse and gap per bit read as Manchester, repeats with no
+gap stay one long frame, and two very noisy captures (Holtek, Phoenix V2)
+give a Te of 132 µs, twice the width of their glitches.
 
 ## Release-pipeline integrity
 
