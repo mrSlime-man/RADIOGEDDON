@@ -7,6 +7,92 @@ to follow [Semantic Versioning](https://semver.org/) (pre-1.0.0 releases use
 
 ## [Unreleased]
 
+## [1.0.0-beta.6] - 2026-10-10
+
+Two editions from one source tree, a Momentum build, a range scanner,
+favorites and scan profiles, the Catalog edition's region check before
+transmitting, and Apps Catalog preparation. Not yet verified on hardware.
+
+### Added
+- **Editions.** `radiogeddon_edition.h` defines the Full and Catalog editions
+  as feature switches. `application.fam` builds the Catalog edition (appid
+  `radiogeddon`), so a plain `ufbt` — the Apps Catalog's build — produces it;
+  `scripts/stage_edition.py full` writes a copy whose manifest builds the Full
+  edition (appid `radiogeddon_full`, "RadioGeddon Full"). A build that defines
+  neither edition is a Catalog build. Both editions keep their data in
+  `/ext/apps_data/radiogeddon`.
+- **Momentum build** (`radiogeddon-full-momentum.fap`), compiled against
+  Momentum mntm-012's own SDK (SHA-256 pinned, the file Momentum's update index
+  lists), in CI and in releases.
+- **Range Scanner** (Full): start / end / step sweep of up to 256 points over
+  every band the radio in use accepts, gaps skipped (`rg_range`); dwell,
+  threshold, pause on hit, recalibration, peak hold, counters, sweep-time
+  estimate, CSV export, a spectrum screen (`rg_spectrum`, median noise floor
+  over all points), and long OK to receive and record at the cursor. The
+  engine and screen exist only while the scan is open, and a scan that would
+  not fit in the free heap is refused before anything is allocated.
+- **Scan profiles** (Full): save, load and delete named range setups in
+  `apps_data/radiogeddon/profiles/`; replacing or deleting one asks first.
+- **Favorites** (Full): up to 24 frequencies in
+  `apps_data/radiogeddon/favorites.txt`; receive or record on one, make it the
+  receive frequency, or scan / hop the whole list (Settings → Scan source,
+  Hop source).
+- **Fine frequency stepping** (Full): Settings → Freq step makes Left/Right on
+  `Frequency MHz` step 1 kHz to 1 MHz within the radio's bands, jumping gaps.
+- **Radio bands** screen (Full): the receive bands the radio in use accepts,
+  measured from its driver (`rg_range_probe_bands`), and the firmware region's
+  transmit bands.
+- **Checksum structure hypotheses** (Full) in Unknown Protocol Analysis
+  (`rg_checksum`): XOR, sum (plain, inverted, negated) of 8- or 4-bit words,
+  CRC-8 for six polynomials and two initial values, and parity, over the
+  distinct frames of the modal length, reported only when they fit every
+  frame and there are enough distinct frames.
+- **Long OK on the Scanner** opens Receive and starts a RAW recording.
+- **About** shows the edition and the firmware's region.
+- **Tests**: edition switches built as each edition and with none
+  (`test_edition`), the transmit check in both editions (`test_txpolicy`),
+  bands and range plans against each firmware's real tuning ranges
+  (`test_range`), spectrum maths (`test_spectrum`), checksum hypotheses
+  (`test_checksum`), settings shared between editions and older releases,
+  favorites and profiles (format tests), and engine lifecycle tests
+  (`make -C test lifecycle`: the real Scanner, Range Scanner and Hopper
+  started and stopped repeatedly on real threads against a fake radio, every
+  allocation counted). Host checks: 1,548 (was 665).
+- **Apps Catalog preparation**: `catalog/` (description, changelog, manifest
+  template, screenshot instructions), `scripts/check_catalog.py` (the
+  catalog's rules, with its own Markdown filter) and
+  `scripts/catalog_bundle.py` (the catalog's own bundler, step by step), both
+  in CI.
+- `scripts/verify_fap.py --symbols`: every symbol a `.fap` imports must be
+  exported by its SDK's `api_symbols.csv`; every build checks it.
+
+### Changed
+- **Transmit check.** The Catalog edition refuses a transmission unless the
+  radio accepts the frequency, `furi_hal_subghz_is_frequency_valid()` accepts
+  it, the firmware has a provisioned region and that region allows the
+  frequency (`rg_txpolicy`), and explains a refusal on screen; Replay says
+  beforehand when it will refuse. The Full edition relies on the firmware's own
+  transmit authorization (`subghz_devices_set_tx`, as before in both) and no
+  longer adds its own region check for the external module. A refusal by the
+  firmware's driver now reads `Firmware blocked TX`.
+- **Release artifacts** are named by edition and firmware:
+  `radiogeddon-catalog-official.fap`, `radiogeddon-full-roguemaster.fap`,
+  `radiogeddon-full-momentum.fap`, `radiogeddon-full-unleashed.fap`. The
+  release workflow requires all four.
+- **Unknown Protocol Analysis**: Te right on 50 of the firmware's 50 RAW test
+  captures (was 48), frame length on 33 (was 29). The glitch floor is 140 µs
+  (was 100; the shortest protocol Te in the firmware is 160 µs and noisy
+  captures show glitch peaks at 132 µs). A frame that fills the bit buffer or
+  is cut off, and whose bits repeat themselves (at least 97 % at one period,
+  with a repeated unit that carries information), is cut to one repeat and
+  marked `rep`; frames that end on their own are never cut.
+- Static analysis runs on each edition as it is built (`--root`); the firmware
+  watch also follows Momentum and canary-builds the right edition per firmware.
+
+### Measured
+- Resident code (text + rodata + data + bss, from the built files): Catalog
+  75.6 KB, Full 94.5 KB, beta 5 73.8 KB.
+
 ## [1.0.0-beta.5] - 2026-10-10
 
 Saved keys open in the stock Sub-GHz app again, Replay checks custom presets,

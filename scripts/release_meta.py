@@ -27,12 +27,12 @@ import re
 import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-TARGETS = ("official", "unleashed", "roguemaster")
+TARGETS = ("catalog-official", "full-roguemaster", "full-momentum", "full-unleashed")
 VERSION = re.compile(r"^(\d+)\.(\d+)\.(\d+)(-[0-9A-Za-z.]+)?$")
 # A table cell naming `radiogeddon-<target>.fap` next to a cell with its API,
-# in either order ("| `radiogeddon-official.fap` | 87.1 |", "| **87.1** | `...` |").
-FAP_THEN_API = re.compile(r"`radiogeddon-(\w+)\.fap`[^|\n]*\|\s*\**(\d+\.\d+)\**\s*\|")
-API_THEN_FAP = re.compile(r"\|\s*\**(\d+\.\d+)\**\s*\|\s*`radiogeddon-(\w+)\.fap`")
+# in either order ("| `radiogeddon-catalog-official.fap` | 87.1 |", "| **87.1** | `...` |").
+FAP_THEN_API = re.compile(r"`radiogeddon-([\w-]+)\.fap`[^|\n]*\|\s*\**(\d+\.\d+)\**\s*\|")
+API_THEN_FAP = re.compile(r"\|\s*\**(\d+\.\d+)\**\s*\|\s*`radiogeddon-([\w-]+)\.fap`")
 RELEASE_LINK = re.compile(r"/releases/(?:tag|download)/(v[^/)\s]+)")
 
 
@@ -43,7 +43,7 @@ def read(rel):
 
 def pinned_apis():
     pins = dict(re.findall(r'^([A-Z_]+)="([^"]*)"', read("scripts/firmware_pins.sh"), re.M))
-    return {t: pins.get(t.upper() + "_API") for t in TARGETS}
+    return {t: pins.get(t.split("-", 1)[1].upper() + "_API") for t in TARGETS}
 
 
 def fap_api_problems(rel, text, apis):

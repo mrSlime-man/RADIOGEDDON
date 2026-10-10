@@ -10,6 +10,8 @@
  * 0x8C), SAE J1850, AUTOSAR, WCDMA, DVB-S2. */
 static const uint8_t rg_crc8_polys[] = {0x07, 0x31, 0x1D, 0x2F, 0x9B, 0xD5};
 static const uint8_t rg_crc8_inits[] = {0x00, 0xFF};
+#define RG_CRC8_POLYS (sizeof(rg_crc8_polys) / sizeof(rg_crc8_polys[0]))
+#define RG_CRC8_INITS (sizeof(rg_crc8_inits) / sizeof(rg_crc8_inits[0]))
 
 #define RG_CHECKSUM_MAX_END_SKIP 2u
 
@@ -130,11 +132,10 @@ static void
 
     for(int kind = RgChecksumXor; kind <= RgChecksumCrc8; kind++) {
         if(kind == RgChecksumCrc8 && width != 8) continue;
-        size_t variants = kind == RgChecksumCrc8 ? sizeof(rg_crc8_polys) * sizeof(rg_crc8_inits) :
-                                                   1;
+        size_t variants = kind == RgChecksumCrc8 ? RG_CRC8_POLYS * RG_CRC8_INITS : 1;
         for(size_t v = 0; v < variants; v++) {
-            uint8_t poly = rg_crc8_polys[v / sizeof(rg_crc8_inits)];
-            uint8_t init = rg_crc8_inits[v % sizeof(rg_crc8_inits)];
+            uint8_t poly = rg_crc8_polys[v / RG_CRC8_INITS];
+            uint8_t init = rg_crc8_inits[v % RG_CRC8_INITS];
             bool all = true;
             for(size_t f = 0; f < set->count && all; f++) {
                 uint32_t want = rg_word(set->frame[f], ck_start, width);

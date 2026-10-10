@@ -4,16 +4,22 @@
 # Jobs:
 #   docs        offline Markdown link/anchor check; version, release notes,
 #               API table and download links agree (scripts/release_meta.py)
-#   host-tests  host unit tests and the fuzz corpus replay under ASan/UBSan,
-#               then the format tests on the firmware's FlipperFormat code and
-#               Sub-GHz test files, and the decoder tests (its Sub-GHz
-#               decoders on its RAW captures) and the capture tests (the
-#               analyzer on those captures), downloaded at the pinned release
+#   host-tests  host unit tests (both editions' switches) and the fuzz corpus
+#               replay under ASan/UBSan, then the format tests on the
+#               firmware's FlipperFormat code and Sub-GHz test files, the
+#               decoder tests (its Sub-GHz decoders on its RAW captures), the
+#               capture tests (the analyzer on those captures) and the engine
+#               lifecycle tests (Scanner, Range Scanner, Hopper started and
+#               stopped repeatedly, every allocation counted), all downloaded
+#               at the pinned release
+#   catalog     Apps Catalog requirements for the Catalog edition
+#               (scripts/check_catalog.py)
 #   fuzz        the fuzz targets under libFuzzer for a fixed time each
-#   fap         one .fap per firmware family, built against the SDK pinned in
-#               scripts/firmware_pins.sh (checksum-verified), API asserted,
-#               manifest verified; clang-format lint on the official job;
-#               static analysis (GCC -fanalyzer, clang-tidy) on the ufbt SDKs
+#   fap         one .fap per edition and firmware family, built against the
+#               SDK pinned in scripts/firmware_pins.sh (checksum-verified), API
+#               asserted, manifest and every imported symbol verified;
+#               clang-format lint on the Catalog job; static analysis (GCC
+#               -fanalyzer, clang-tidy) of each edition on the ufbt SDKs
 name: Build
 
 on:
@@ -59,6 +65,45 @@ jobs:
         run: make -C test decoders
       - name: Run capture tests (analyzer on the firmware's RAW test captures)
         run: make -C test captures
+      - name: Run engine lifecycle tests (repeated start/stop, allocations counted)
+        run: make -C test lifecycle
+
+  catalog:
+    name: catalog (Apps Catalog checks)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.ref }}
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Fetch the pinned Apps Catalog tools
+        run: |
+          source scripts/firmware_pins.sh
+          git init -q "$RUNNER_TEMP/catalog"
+          git -C "$RUNNER_TEMP/catalog" fetch -q --depth 1 "$CATALOG_REPO" "$CATALOG_REF"
+          git -C "$RUNNER_TEMP/catalog" checkout -q FETCH_HEAD
+          python -m pip install --disable-pip-version-check -q -r "$RUNNER_TEMP/catalog/tools/requirements.txt" "ufbt==${UFBT_VERSION}"
+      - name: Check the Catalog edition against the Apps Catalog rules
+        run: python3 scripts/check_catalog.py --catalog "$RUNNER_TEMP/catalog"
+      # The catalog's own bundler on this commit: clone, lint, build, manifest,
+      # icon, description and changelog. Exit 2 means only the screenshots
+      # (which must come from hardware) are missing.
+      - name: Run the catalog's bundler (tools/bundle.py)
+        env:
+          COMMIT: ${{ inputs.ref || github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set +e
+          python3 scripts/catalog_bundle.py "$RUNNER_TEMP/catalog" "$COMMIT"
+          rc=$?
+          if [ "$rc" -eq 2 ]; then
+            echo "::warning::Apps Catalog bundle: every step passed except screenshots, which need a Flipper Zero and qFlipper"
+            rc=0
+          fi
+          exit "$rc"
 
   fuzz:
     name: fuzz (libFuzzer)
@@ -94,7 +139,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        target: [official, unleashed, roguemaster]
+        target: [catalog-official, full-roguemaster, full-momentum, full-unleashed]
     steps:
       - uses: actions/checkout@v6
         with:
@@ -114,18 +159,23 @@ jobs:
         run: scripts/build_target.sh "${{ matrix.target }}" out
 
       - name: Lint (clang-format)
-        if: matrix.target == 'official'
+        if: matrix.target == 'catalog-official'
         env:
           UFBT_HOME: ${{ github.workspace }}/.ufbt-official
         run: ufbt lint
 
+      # Each edition is analysed as it is built: the Catalog edition in the
+      # checkout, the Full edition in the copy build_target.sh staged.
       - name: Static analysis (GCC -fanalyzer, clang-tidy)
-        if: matrix.target != 'roguemaster'
+        if: matrix.target != 'full-roguemaster'
         env:
-          UFBT_HOME: ${{ github.workspace }}/.ufbt-${{ matrix.target }}
+          TARGET: ${{ matrix.target }}
         run: |
           command -v clang-tidy-18 > /dev/null || sudo apt-get install -y -q --no-install-recommends clang-tidy-18
-          CLANG_TIDY=clang-tidy-18 python3 scripts/static_analysis.py
+          export UFBT_HOME="${GITHUB_WORKSPACE}/.ufbt-${TARGET#*-}"
+          root=.
+          if [ "${TARGET%%-*}" = full ]; then root=".stage/${TARGET}"; fi
+          CLANG_TIDY=clang-tidy-18 python3 scripts/static_analysis.py --root "$root"
 
       - name: Summary
         run: |

@@ -55,7 +55,7 @@ tagged commit, with signed build-provenance attestations:
 
 ```bash
 sha256sum -c SHA256SUMS
-gh attestation verify radiogeddon-official.fap --repo mrSlime-man/RADIOGEDDON
+gh attestation verify radiogeddon-catalog-official.fap --repo mrSlime-man/RADIOGEDDON
 ```
 
 ## Responsible use

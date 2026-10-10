@@ -61,3 +61,8 @@ ROGUEMASTER_REPO="https://github.com/RogueMaster/flipperzero-firmware-wPlugins"
 ROGUEMASTER_REF="38d7ae9ae7eb2d25b31cea9b9fcf88fd11c1f3d3"
 ROGUEMASTER_FW_LABEL="RogueMaster @ 38d7ae9"
 ROGUEMASTER_API="88.16"
+
+# Flipper Apps Catalog tools (tools/bundle.py) the Catalog edition is
+# validated with in CI (scripts/catalog_bundle.py), pinned to a commit.
+CATALOG_REPO="https://github.com/flipperdevices/flipper-application-catalog"
+CATALOG_REF="2d4551f85b9ab581b28b83e783ff983e0eb56420"

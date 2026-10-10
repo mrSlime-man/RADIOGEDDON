@@ -9,10 +9,13 @@ This looks up what each firmware family has published since:
 - Official: the release and release-candidate channels of
   update.flipperzero.one (version, SDK, SHA-256 and API version);
 - Unleashed: the newest unlshd-NNN tag and its API version;
+- Momentum: the release channel of up.momentum-fw.dev (version, SDK,
+  SHA-256) and its API version;
 - RogueMaster: the newest commit on its default branch and its API version.
 
-With --build it also compiles the app against every Official or Unleashed
-SDK that differs from the pin (a canary build: SDK checksum verified where the
+With --build it also compiles the app (the Catalog edition for Official, the
+Full edition for Unleashed and Momentum) against every SDK that differs from
+the pin (a canary build: SDK checksum verified where the
 firmware publishes one, the SDK's own API compatibility check, and the .fap
 manifest checked with verify_fap.py). The checkout is not touched; the build
 runs on a copy in --work. RogueMaster is only reported, since building it
@@ -38,6 +41,8 @@ OFFICIAL_DIRECTORY = "https://update.flipperzero.one/firmware/directory.json"
 OFFICIAL_REPO = "https://github.com/flipperdevices/flipperzero-firmware"
 UNLEASHED_REPO = "https://github.com/DarkFlippers/unleashed-firmware"
 UNLEASHED_SDK = "https://unleashedflip.com/fw/{tag}/flipper-z-f7-sdk-{tag}.zip"
+MOMENTUM_DIRECTORY = "https://up.momentum-fw.dev/firmware/directory.json"
+MOMENTUM_REPO = "https://github.com/Next-Flip/Momentum-Firmware"
 RAW = "https://raw.githubusercontent.com/{repo}/{ref}/targets/f7/api_symbols.csv"
 
 
@@ -83,8 +88,19 @@ def official_channels():
     return found
 
 
-def canary_build(name, url, sha256, work):
-    """Build a copy of the app against the SDK at url; returns (ok, api, note)."""
+def momentum_release():
+    directory = json.loads(fetch(MOMENTUM_DIRECTORY))
+    for channel in directory["channels"]:
+        if channel["id"] == "release" and channel["versions"]:
+            v = channel["versions"][0]
+            sdk = [f for f in v["files"] if f.get("type") == "sdk_zip"]
+            if sdk:
+                return v["version"], sdk[0]["url"], sdk[0].get("sha256")
+    return None
+
+
+def canary_build(name, url, sha256, work, edition="catalog"):
+    """Build the edition's copy of the app against the SDK at url; returns (ok, api, note)."""
     home = os.path.join(work, name)
     shutil.rmtree(home, ignore_errors=True)
     os.makedirs(home)
@@ -97,11 +113,11 @@ def canary_build(name, url, sha256, work):
         return False, "?", "SDK checksum mismatch"
 
     src = os.path.join(home, "src")
-    os.makedirs(src)
-    files = subprocess.run(["git", "ls-files", "-z"], cwd=ROOT, capture_output=True, check=True).stdout
-    for rel in filter(None, files.decode().split("\0")):
-        os.makedirs(os.path.dirname(os.path.join(src, rel)), exist_ok=True)
-        shutil.copy2(os.path.join(ROOT, rel), os.path.join(src, rel))
+    subprocess.run(
+        [sys.executable, os.path.join(ROOT, "scripts", "stage_edition.py"), edition, src],
+        check=True,
+        stdout=subprocess.DEVNULL,
+    )
 
     env = dict(os.environ, UFBT_HOME=os.path.join(home, "ufbt"))
     env.setdefault("FBT_TOOLCHAIN_PATH", os.path.join(work, "toolchain"))
@@ -118,9 +134,21 @@ def canary_build(name, url, sha256, work):
         return False, "?", "`%s` failed (log above)" % " ".join(failed[:2])
     with open(os.path.join(env["UFBT_HOME"], "current", "sdk_headers", "f7_sdk", "targets", "f7", "api_symbols.csv")) as f:
         api = api_of_csv(f.read())
-    fap = os.path.join(src, "dist", "radiogeddon.fap")
+    appid, app_name = ("radiogeddon_full", "RadioGeddon Full") if edition == "full" else ("radiogeddon", "RadioGeddon")
+    fap = os.path.join(src, "dist", appid + ".fap")
+    symbols = os.path.join(env["UFBT_HOME"], "current", "sdk_headers", "f7_sdk", "targets", "f7", "api_symbols.csv")
     verify = subprocess.run(
-        [sys.executable, os.path.join(ROOT, "scripts", "verify_fap.py"), fap, "--api", api, "--name", "RadioGeddon"],
+        [
+            sys.executable,
+            os.path.join(ROOT, "scripts", "verify_fap.py"),
+            fap,
+            "--api",
+            api,
+            "--name",
+            app_name,
+            "--symbols",
+            symbols,
+        ],
         capture_output=True,
         text=True,
     )
@@ -150,7 +178,7 @@ def main():
             rows.append([label, "%s (%s)" % (pinned_official, p["OFFICIAL_API"]), version, p["OFFICIAL_API"], "pinned"])
             continue
         rows.append([label, "%s (%s)" % (pinned_official, p["OFFICIAL_API"]), version, api_at(OFFICIAL_REPO, version), ""])
-        canaries.append((len(rows) - 1, "official-" + channel, url, sha))
+        canaries.append((len(rows) - 1, "official-" + channel, url, sha, "catalog"))
         if channel == "release":
             warnings.append("Official %s is out; the pin is %s" % (version, pinned_official))
 
@@ -162,8 +190,18 @@ def main():
         rows[-1][3:] = [p["UNLEASHED_API"], "pinned"]
     elif tags:
         rows[-1][3] = api_at(UNLEASHED_REPO, latest)
-        canaries.append((len(rows) - 1, "unleashed-" + latest, UNLEASHED_SDK.format(tag=latest), None))
+        canaries.append((len(rows) - 1, "unleashed-" + latest, UNLEASHED_SDK.format(tag=latest), None, "full"))
         warnings.append("Unleashed %s is out; the pin is %s" % (latest, pinned_unleashed))
+
+    pinned_momentum = re.search(r"/download/([^/]+)/", p["MOMENTUM_SDK_URL"]).group(1)
+    release = momentum_release()
+    rows.append(["Momentum", "%s (%s)" % (pinned_momentum, p["MOMENTUM_API"]), release[0] if release else "?", "", ""])
+    if release and release[0] == pinned_momentum:
+        rows[-1][3:] = [p["MOMENTUM_API"], "pinned"]
+    elif release:
+        rows[-1][3] = api_at(MOMENTUM_REPO, release[0])
+        canaries.append((len(rows) - 1, "momentum-" + release[0], release[1], release[2], "full"))
+        warnings.append("Momentum %s is out; the pin is %s" % (release[0], pinned_momentum))
 
     head = ls_remote(p["ROGUEMASTER_REPO"], "HEAD")[0][0]
     pinned_rm = p["ROGUEMASTER_REF"]
@@ -177,9 +215,9 @@ def main():
     failed = False
     if canaries and args.build:
         work = args.work or tempfile.mkdtemp(prefix="firmware-watch-")
-        for row, name, url, sha in canaries:
-            print("canary build: %s (%s)" % (name, url), flush=True)
-            ok, api, note = canary_build(name, url, sha, work)
+        for row, name, url, sha, edition in canaries:
+            print("canary build: %s, %s edition (%s)" % (name, edition, url), flush=True)
+            ok, api, note = canary_build(name, url, sha, work, edition)
             rows[row][3] = rows[row][3] or api
             rows[row][4] = ("OK: " if ok else "FAILED: ") + note
             failed |= not ok

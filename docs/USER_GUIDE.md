@@ -23,9 +23,17 @@ Buttons work the same way everywhere:
 
 ## Main menu
 
+RadioGeddon comes in two editions (see
+[Features → Editions](FEATURES.md#editions)). The **Catalog** edition (Official
+firmware) shows the items below without the two marked *Full*; the **Full**
+edition (RogueMaster, Momentum, Unleashed) is titled `RadioGeddon Full` and
+shows them all.
+
 | Item | What it does |
 |------|--------------|
-| `Scanner` | Live RSSI sweep across common frequencies |
+| `Scanner` | Live RSSI sweep across common frequencies (Full: or your favorites) |
+| `Range Scanner` *(Full)* | RSSI sweep over a start / end / step range across every band the radio tunes |
+| `Favorites` *(Full)* | Your favorite frequencies: receive, record, scan or hop them |
 | `Receive & Record` | Live decoding of known protocols and RAW recording on one frequency |
 | `Frequency Hopper` | Live decoding while hopping across a list of frequencies |
 | `Database` | List, sort, filter and search saved recordings; analyse, compare, replay and delete them |
@@ -50,6 +58,14 @@ Buttons work the same way everywhere:
 | `Hop auto-rec` | **`Off`**, `On` | Off |
 | `Radio` | **`Internal`**, `External` (a CC1101 module on the GPIO pins; see below) | Internal |
 | `Ext radio 5V` | `Off`, **`On`**: power the external module from GPIO pin 1 | On |
+| `Scan source` *(Full)* | **`List`** (the scan list above), `Favorites` | List |
+| `Hop source` *(Full)* | **`List`** (the hop list above), `Favorites` | List |
+| `Freq step` *(Full)* | **`List`**, `1 kHz`, `5 kHz`, `10 kHz`, `12.5 kHz`, `25 kHz`, `100 kHz`, `1 MHz` | List |
+| `Radio bands` *(Full)* | Press **OK**: the receive bands the radio in use accepts and the firmware region's transmit bands | |
+
+With `Freq step` set to a step, **Left / Right** on `Frequency MHz` move the
+frequency by that step instead of through the list, staying inside the bands
+the radio accepts and jumping over a gap to the next band's edge.
 
 Use **Left / Right** to change a value and **Back** to apply it. The
 frequency is used by *Receive & Record*; the modulation is used by the
@@ -163,6 +179,58 @@ list is switched off or unusable, the scanner says so.
 
 The scanner only receives. If the radio can't be started you'll see
 `No radio` — `Sub-GHz device not found or not responding.`
+
+Hold **OK** instead of pressing it to open Receive & Record on the
+highlighted frequency with a RAW recording already running.
+
+## Range Scanner (Full edition)
+
+Sweeps a range of frequencies instead of a list. The setup screen:
+
+| Item | What it does |
+|------|--------------|
+| `Start MHz`, `End MHz` | Press **OK** to type the range in kHz (moving one past the other moves both). |
+| `Step` | 1 kHz to 10 MHz. |
+| `Dwell` | 1 to 100 ms per point. |
+| `Threshold` | Activity threshold over each point's noise floor (shared with the Scanner). |
+| `Pause on hit` | Stop sweeping on the first point that becomes active. |
+| `Modulation` | The receive filter used while measuring. |
+| `Points/sweep` | How many points the range has and about how long one sweep takes, `81 0.7s`; `300>256!` when there are too many, or why it cannot be scanned. |
+| `Start scan` | Open the scan. |
+| `Save profile`, `Load profile`, `Delete profile` | Keep the setup under a name; replacing or deleting asks first. |
+
+Points fall only inside the bands the radio accepts (Settings → Radio bands),
+so a range across a gap just has no points there. At most 256 points.
+
+The scan screen draws one column per pixel: the bar is the latest reading,
+the dot above it the peak hold, the dotted line the threshold over the median
+noise floor, and a mark at the top an active point. The bottom line shows the
+point under the cursor (frequency, latest/peak dBm, bursts) and the last
+sweep's duration. `CALIBRATING` shows until every point has learned its noise
+floor.
+
+| Button | Action |
+|--------|--------|
+| Left / Right | Move the cursor (hold to move faster) |
+| Down | Jump to the strongest peak |
+| OK | Open Receive & Record on the cursor's frequency |
+| Hold OK | The same, with a RAW recording already running |
+| Up | Release a hold; otherwise pause / resume |
+| Hold Up | Recalibrate: learn every point's noise floor again |
+| Hold Down | Clear peak holds and counters |
+| Hold Right | Save the results as CSV in `scans/` |
+| Back | Return to the setup |
+
+A sweep visits one point at a time, so a short burst on a point the sweep is
+not on can be missed; the sweep time tells you how long a full pass takes.
+
+## Favorites (Full edition)
+
+The first two rows add the current receive frequency or a typed one; below
+them the favorites, sorted (up to 24). Pick one for `Receive here`,
+`Receive + record`, `Use as receive freq` or `Delete` (asks first). Set
+Settings → `Scan source` / `Hop source` to `Favorites` to scan or hop exactly
+this list.
 
 ## Receive & Record
 
@@ -376,10 +444,16 @@ You can analyse `.sub` files from other sources (for example the stock app's
 
 Transmits a saved recording **only where you are authorized to do so**.
 
-The `Replay / Transmit` screen shows the protocol and frequency and reminds you
-that regional limits are enforced by the firmware, that decoded rolling-code
-protocols are refused, and that a RAW capture is sent exactly as recorded. Press
-**OK** (`Send`) to transmit.
+The `Replay / Transmit` screen shows the protocol and frequency, reminds you
+that decoded rolling-code protocols are refused and that a RAW capture is sent
+exactly as recorded, and how transmitting is checked:
+
+- **Catalog edition:** `Region: XX (from firmware)`. If the firmware has no
+  region, or its region does not allow the frequency, the screen says
+  `TX NOT ALLOWED` with the reason before you press Send, and Send refuses.
+- **Full edition:** `The firmware's own TX rules apply`.
+
+Press **OK** (`Send`) to transmit.
 
 While sending, the screen shows `Transmitting` / `Sending signal...` and the LED
 blinks magenta. When it finishes you'll see `Done` / `Signal sent`, and the app
@@ -389,7 +463,8 @@ If the recording can't be sent, you'll see `Error` with one of:
 
 | Message | Meaning |
 |---------|---------|
-| `Blocked by region` | Your Flipper's region settings don't allow transmitting on this frequency. |
+| `TX refused` (Catalog) | The app's check refused, with the reason: `Region XX does not allow TX on …`, `Firmware has no region info…`, or the frequency is outside the radio's transmit bands. Nothing was sent. |
+| `Firmware blocked TX` | The firmware's radio driver refused to transmit on this frequency (its own region or range rules). |
 | `Protected/rolling code` | The protocol is dynamic (rolling code), can't be transmitted by the firmware, or isn't known to it. Such files are never replayed. |
 | `Unsupported file` | The file couldn't be read, or its modulation preset isn't recognised. |
 | `Bad custom preset` | The file's own CC1101 register list is missing or damaged, or writes something other than a setting (a radio command). Nothing was sent to the radio. A key saved by `1.0.0-beta.4` or earlier shows this; [Troubleshooting](TROUBLESHOOTING.md#a-saved-key-wont-open) says how to fix the file. |
@@ -403,8 +478,8 @@ frames, like a single button press.
 
 ## About
 
-Shows the version (`Version: 1.0.0-beta.5`), the radio device, memory
-figures, the list of modules, the meaning of the analysis labels, where
+Shows the edition and version (`RadioGeddon Full`, `Version: 1.0.0-beta.6`),
+the radio device, the firmware's region, memory figures, the list of modules, the meaning of the analysis labels, where
 recordings are stored, and the project address.
 
 The memory figures are read from the firmware's heap counters when About

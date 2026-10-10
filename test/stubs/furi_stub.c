@@ -455,6 +455,40 @@ uint32_t furi_thread_flags_wait(uint32_t flags, uint32_t options, uint32_t timeo
     return got;
 }
 
+struct FuriMutex {
+    pthread_mutex_t mutex;
+};
+
+FuriMutex* furi_mutex_alloc(FuriMutexType type) {
+    FuriMutex* m = malloc(sizeof(FuriMutex));
+    pthread_mutexattr_t attr;
+    pthread_mutexattr_init(&attr);
+    pthread_mutexattr_settype(
+        &attr,
+        type == FuriMutexTypeRecursive ? PTHREAD_MUTEX_RECURSIVE : PTHREAD_MUTEX_ERRORCHECK);
+    pthread_mutex_init(&m->mutex, &attr);
+    pthread_mutexattr_destroy(&attr);
+    return m;
+}
+
+void furi_mutex_free(FuriMutex* m) {
+    pthread_mutex_destroy(&m->mutex);
+    free(m);
+}
+
+FuriStatus furi_mutex_acquire(FuriMutex* m, uint32_t timeout) {
+    (void)timeout; /* every caller here waits forever */
+    /* Error-checking mutex: a second lock from the same thread (which would
+     * deadlock on the device) fails the test instead of hanging it. */
+    if(pthread_mutex_lock(&m->mutex) != 0) abort();
+    return FuriStatusOk;
+}
+
+FuriStatus furi_mutex_release(FuriMutex* m) {
+    if(pthread_mutex_unlock(&m->mutex) != 0) abort();
+    return FuriStatusOk;
+}
+
 uint32_t furi_get_tick(void) {
     struct timespec ts;
     clock_gettime(CLOCK_MONOTONIC, &ts);

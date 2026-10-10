@@ -4,18 +4,54 @@ The complete list of what RadioGeddon does, how far each feature has been
 verified, and its known limits. For step-by-step use, see the
 [User Guide](USER_GUIDE.md).
 
+## Editions
+
+RadioGeddon is built as two editions from one source tree. Every difference is
+a feature switch in [`radiogeddon_edition.h`](../radiogeddon_edition.h);
+everything else — radio layer, recorder, decoders, analysis engine, storage,
+settings — is the same code in both.
+
+| | **Catalog** | **Full** |
+|---|---|---|
+| For | Official firmware; the Flipper Apps Catalog | RogueMaster, Momentum, Unleashed |
+| Built by | a plain `ufbt` (`application.fam`) | `scripts/stage_edition.py full` |
+| App name, appid | RadioGeddon, `radiogeddon` | RadioGeddon Full, `radiogeddon_full` |
+| Every feature in the table below not marked *Full* | ✓ | ✓ |
+| [Range Scanner](#range-scanner-full-edition) and scan profiles | — | ✓ |
+| [Favorites](#favorites-full-edition) | — | ✓ |
+| [Fine frequency stepping, Radio bands](#fine-frequency-stepping-and-radio-bands-full-edition) | — | ✓ |
+| [Checksum structure hypotheses](#unknown-protocol-analysis) | — | ✓ |
+| [Replay](#authorized-signal-replay) | the app checks the firmware's region first and explains a refusal; then the firmware's own check | the firmware's own check only |
+| Resident code (from the built files) | 75.6 KB | 94.5 KB |
+
+The Catalog edition keeps every receiving and analysis feature the app had;
+the Full-only features are the research tools that go beyond the built-in
+frequency list. A build that defines neither edition is a Catalog build.
+
+**Shared data.** Both editions use `/ext/apps_data/radiogeddon`: `signals/`,
+`reports/`, `scans/`, `settings.txt`, and in the Full edition
+`favorites.txt` and `profiles/`. Both read and write every settings field,
+so settings only the Full edition uses survive the Catalog edition saving
+them; a beta 5 settings file loads in both (format tests). Neither edition
+deletes, renames or migrates files the other wrote. The two can be installed
+side by side (different app ids).
+
 ## Verification status at a glance
 
-**Every feature below is implemented, compiles for all three firmware
+**Every feature below is implemented, compiles for its editions and firmware
 families, and passes CI. None has yet been verified on a physical Flipper
 Zero.** "Unit-tested" means the feature's firmware-independent logic is covered
-by the host test suite (665 checks, plus format, decoder and capture tests on real files); radio behaviour can only be confirmed on a
+by the host test suite (1,548 checks, plus format, decoder, capture and engine
+lifecycle tests); radio behaviour can only be confirmed on a
 device ([VERIFICATION.md](VERIFICATION.md)).
 
 | Feature | Implemented | Unit-tested logic | Verified on hardware |
 |---------|:-----------:|:-----------------:|:--------------------:|
-| [Sub-GHz Scanner](#sub-ghz-scanner) | ✅ | ✅ floor, activity, CSV rows | ⏳ pending |
-| [Frequency Hopper](#frequency-hopper) | ✅ | ✅ dwell, hold, lock, history | ⏳ pending |
+| [Sub-GHz Scanner](#sub-ghz-scanner) | ✅ | ✅ floor, activity, CSV rows; engine start/stop cycles | ⏳ pending |
+| [Range Scanner](#range-scanner-full-edition) *(Full)* | ✅ | ✅ band probe, plans across gaps, display maths; engine start/stop cycles | ⏳ pending |
+| [Favorites](#favorites-full-edition) and scan profiles *(Full)* | ✅ | ✅ file format, validation, sorting, failed saves | ⏳ pending |
+| [Fine stepping, Radio bands](#fine-frequency-stepping-and-radio-bands-full-edition) *(Full)* | ✅ | ✅ stepping across gaps, band probe | ⏳ pending |
+| [Frequency Hopper](#frequency-hopper) | ✅ | ✅ dwell, hold, lock, history; engine start/stop with auto-record | ⏳ pending |
 | [RAW Signal Capture](#raw-signal-capture) | ✅ | ✅ ring, file format, writer thread with slow/failing card | ⏳ pending |
 | [Protocol Identification](#protocol-identification) | ✅ | — (firmware decoders) | ⏳ pending |
 | [Decode with Firmware](#decode-with-firmware) | ✅ | ✅ sample feeding, timing, repeat list; the firmware's decoders on its own test captures | ⏳ pending |
@@ -27,8 +63,63 @@ device ([VERIFICATION.md](VERIFICATION.md)).
 | [Rolling Code Classification](#rolling-code-classification) | ✅ | ✅ field-map logic | ⏳ pending |
 | [Cryptographic Structure Heuristics](#cryptographic-structure-heuristics) | ✅ | ✅ key-byte statistics | ⏳ pending |
 | [Signal Database](#signal-database) | ✅ | ✅ index, duplicates, sort/filter/search | ⏳ pending |
-| [Authorized Signal Replay](#authorized-signal-replay) | ✅ | — | ⏳ pending |
+| [Authorized Signal Replay](#authorized-signal-replay) | ✅ | ✅ transmit check in both editions | ⏳ pending |
 | [Memory diagnostics](#memory-diagnostics) | ✅ | ✅ bookkeeping, Database and recorder lifecycles | ⏳ pending |
+
+## Range Scanner (Full edition)
+
+The Scanner's sequential RSSI sweep over a range instead of a list:
+
+- **Start, end and step** (1 kHz to 10 MHz), **dwell** (1 to 100 ms),
+  threshold, **pause on hit** and modulation; start and end are typed in kHz.
+- **Bands, not a table.** When the screen opens it asks the radio's driver
+  which frequencies it accepts (`subghz_devices_is_frequency_valid`, edges
+  found to the hertz by binary search) and lays the start / end / step grid
+  over those bands only. On RogueMaster, Momentum and Unleashed that is
+  281–361, 378–481 and 749–962 MHz on the internal radio; on Official
+  300–348, 387–464 and 779–928 MHz. A range across a gap simply has no points
+  there, and the radio is never asked for a frequency it rejects.
+- **Limits checked up front.** At most 256 points; the setup shows the point
+  count and an estimated sweep time (points × (dwell + 4 ms)), or why the
+  range cannot be scanned (`Too many points`, `No tunable points`). The engine
+  and screen take one scan channel per point (about 7 KB for 256 points) and
+  are allocated only after checking the largest free block leaves 12 KB
+  spare; they are freed when the screen closes, also when leaving for Receive.
+- **The screen**: one column per pixel with the latest reading, a dot for the
+  peak hold, the threshold over the median noise floor of all points as a
+  dotted line, active points marked on top, the cursor's frequency, latest /
+  peak dBm and counter, and the last sweep's real duration. Left/Right move
+  the cursor (held: faster), Down jumps to the strongest peak, OK opens
+  Receive there, long OK opens Receive and starts recording, Up pauses (or
+  releases a hold), long Up recalibrates every point's noise floor, long Down
+  clears peaks and counters, long Right saves a CSV to `scans/`.
+- **Profiles**: *Save profile* stores the range, step, dwell, threshold,
+  pause-on-hit and modulation as `profiles/<name>.txt`; *Load* and *Delete*
+  list them. Replacing or deleting asks first; a damaged profile is refused
+  whole.
+
+Like the Scanner it measures one frequency at a time: a sweep over many
+points can miss a burst shorter than the sweep. It is not a wideband
+spectrum analyzer.
+
+## Favorites (Full edition)
+
+Up to 24 favorite frequencies in `favorites.txt`, kept sorted, without
+duplicates. Add the current receive frequency or type one; open a favorite to
+receive there, receive and record at once, or make it the receive frequency;
+delete asks first. Settings → *Scan source* and *Hop source* switch the
+Scanner and the Hopper from the built-in list to the favorites (those the
+radio in use can tune). A favorite another radio cannot tune is kept and
+marked `(no tune)`.
+
+## Fine frequency stepping and Radio bands (Full edition)
+
+- **Freq step** in Settings makes Left/Right on `Frequency MHz` step by 1, 5,
+  10, 12.5, 25 or 100 kHz or 1 MHz within the radio's bands, jumping straight
+  over a gap to the next band's edge; `List` steps through the built-in
+  frequencies as before.
+- **Radio bands** shows the receive bands the radio in use accepts (measured
+  as above), the firmware's region and the region's transmit bands.
 
 ## Sub-GHz Scanner
 
@@ -165,8 +256,9 @@ A frame list ends the report: each frame's start time, bit count and pattern.
 Unit tests cover PWM, PPM and Manchester identification, noise and jitter
 robustness, cut-off frames, several patterns in one file and chunked
 streaming, all on synthetic signals. The capture tests also score it on the
-firmware's own 50 RAW test captures: Te right for 48, encoding family for 41,
-frame length within one bit for 29. Details:
+firmware's own 50 RAW test captures: Te right for 50, encoding family for 41,
+frame length within one bit for 33. The Full edition adds checksum-structure
+hypotheses (XOR, sum, CRC-8, parity) over the distinct frames. Details:
 [Protocol Analysis](PROTOCOL_ANALYSIS.md#unknown-protocol-analysis--observed-and-hypothesis).
 
 ## Pulse Timeline
@@ -287,12 +379,18 @@ Replay **refuses** to transmit when:
 | Condition | Message |
 |-----------|---------|
 | the protocol is dynamic (rolling code), not transmittable, or unknown to the firmware | `Protected/rolling code` |
-| the firmware's region settings forbid the frequency | `Blocked by region` |
+| Catalog edition: the firmware has no region, its region does not allow the frequency, or the radio hardware's transmit check rejects it | `TX refused` with the reason, for example `Region EU does not allow TX on 315.00 MHz`; the Replay screen says so before Send |
+| the firmware's radio driver refuses (`subghz_devices_set_tx`) | `Firmware blocked TX` |
 | the file is unreadable or its modulation preset isn't recognised | `Unsupported file` |
 | its custom preset is empty or damaged (no end, PA table cut) or holds an address that is not a configuration register, such as a command strobe | `Bad custom preset` |
 
 Regional rules are enforced by the firmware itself
-(`subghz_devices_set_tx`), and RadioGeddon does not bypass them. A custom
+(`subghz_devices_set_tx`), and RadioGeddon does not bypass them. The Catalog
+edition checks before that, from the firmware's own answers
+(`furi_hal_region_is_provisioned`, `furi_hal_region_is_frequency_allowed`,
+`furi_hal_subghz_is_frequency_valid`), and refuses when any is negative or
+unknown; there is no region selector. The Full edition adds no regional
+restriction of its own. A custom
 preset is checked first (`rg_preset_check`) because the firmware loads it
 unchecked: a command strobe in it, such as STX, would run before that
 region check.

@@ -18,7 +18,7 @@ protocols). See [SECURITY.md](SECURITY.md) for the responsible-use policy.
 
 ## The most valuable contribution right now: hardware testing
 
-The app builds for three firmware families and passes all automated checks, but
+The app builds as two editions for four firmware families and passes all automated checks, but
 **its on-device behaviour has not yet been verified on a physical Flipper
 Zero**. If you have one:
 
@@ -53,14 +53,16 @@ source scripts/firmware_pins.sh && pip install "ufbt==${UFBT_VERSION}"
 ### Build
 
 `scripts/build_target.sh` is the exact build used by CI and releases. It
-downloads the SDK pinned in [`scripts/firmware_pins.sh`](scripts/firmware_pins.sh),
-checks its SHA-256 and API version, builds, and verifies the `.fap` manifest:
+writes the edition's copy of the source, downloads the SDK pinned in
+[`scripts/firmware_pins.sh`](scripts/firmware_pins.sh), checks its SHA-256 and
+API version, builds, and verifies the `.fap` manifest and its imports:
 
 ```bash
-scripts/build_target.sh official      # -> dist/release/radiogeddon-official.fap
-scripts/build_target.sh unleashed     # -> dist/release/radiogeddon-unleashed.fap
-scripts/build_target.sh roguemaster   # clones RogueMaster at the pinned commit (large)
-scripts/build_release.sh              # all three + SHA256SUMS + BUILD_INFO.txt
+scripts/build_target.sh catalog-official   # -> dist/release/radiogeddon-catalog-official.fap
+scripts/build_target.sh full-momentum      # -> dist/release/radiogeddon-full-momentum.fap
+scripts/build_target.sh full-unleashed     # -> dist/release/radiogeddon-full-unleashed.fap
+scripts/build_target.sh full-roguemaster   # clones RogueMaster at the pinned commit (large)
+scripts/build_release.sh                   # all four + SHA256SUMS + BUILD_INFO.txt
 ```
 
 For a fast edit–build–run loop on a connected Flipper running **official**
@@ -72,7 +74,22 @@ UFBT_HOME=$PWD/.ufbt-official ufbt launch     # install and start on the device
 ```
 
 `ufbt launch` only works when the deployed SDK matches the firmware on the
-device; use `.ufbt-unleashed` for an Unleashed device.
+device. That builds the Catalog edition; for the Full edition on a Momentum or
+Unleashed device, stage it first:
+
+```bash
+python3 scripts/stage_edition.py full .stage/dev && cd .stage/dev
+UFBT_HOME=$PWD/../../.ufbt-momentum ufbt launch    # or .ufbt-unleashed
+```
+
+### Editions
+
+Edition differences are feature switches in
+[`radiogeddon_edition.h`](radiogeddon_edition.h) (`RG_FEATURE_*`). Guard
+edition-specific code with the switch it belongs to, never with the edition
+itself, and keep shared code (settings, storage, radio, engines) identical in
+both editions, so files written by one stay readable — and are not damaged —
+by the other. A new switch needs a check in `test/test_edition.c`.
 
 ### Test
 
@@ -81,11 +98,14 @@ make -C test check                    # host tests + fuzz corpus, -Werror, ASan 
 make -C test formats                  # firmware FlipperFormat code + its .sub test files
 make -C test decoders                 # firmware Sub-GHz decoders on its RAW captures, and its presets
 make -C test captures                 # the analyzer on those captures, scored against the decoders
+make -C test lifecycle                # Scanner / Range Scanner / Hopper start-stop cycles, allocations counted
+python3 scripts/check_catalog.py      # the Catalog edition against the Apps Catalog rules
 make -C test fuzz FUZZ_TIME=60        # fuzz each target under libFuzzer (needs clang)
 python3 scripts/check_links.py        # Markdown links and anchors
 UFBT_HOME=$PWD/.ufbt-official ufbt lint     # clang-format check
 UFBT_HOME=$PWD/.ufbt-official ufbt format   # apply formatting
-UFBT_HOME=$PWD/.ufbt-official python3 scripts/static_analysis.py  # GCC -fanalyzer + clang-tidy
+UFBT_HOME=$PWD/.ufbt-official python3 scripts/static_analysis.py  # GCC -fanalyzer + clang-tidy (Catalog)
+UFBT_HOME=$PWD/.ufbt-momentum python3 scripts/static_analysis.py --root .stage/full-momentum  # (Full, after building it)
 ```
 
 The host tests cover the firmware-independent code (`helpers/rg_*` and

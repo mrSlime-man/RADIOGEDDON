@@ -87,12 +87,41 @@ helpers/
   rg_memstat.*              Pure memory bookkeeping: lowest/peak, session cost, fit check
   rg_freq.*                 Pure frequency text (433.92 / 433.075) and range checks
   rg_preset.*               Pure check of a file's custom CC1101 preset before Replay loads it
+  rg_txpolicy.*             Pure transmit check from the firmware's region facts (per edition)
+  rg_range.*                Pure band probing and range plans (start/end/step, gaps skipped) [Full]
+  rg_spectrum.*             Pure range-scan display maths: compact points, median floor, columns [Full]
+  rg_checksum.*             Pure checksum / CRC-8 / parity structure hypotheses [Full]
+  radiogeddon_rangescan.*   Range Scanner engine: sweep thread, per-point rg_scan, CSV [Full]
+  radiogeddon_profiles.*    Favorites and scan profiles on the SD card [Full]
+radiogeddon_edition.h       The edition (Full / Catalog) and its RG_FEATURE_* switches
+catalog/                    Apps Catalog description, changelog, manifest template, screenshots
 assets/                     10x10 launcher icon (compiled into the .fap)
-test/                       Host unit tests (665 checks), format, decoder and capture tests, fuzz, fixtures
-scripts/                    Pinned builds, manifest verification, packaging, link check
+test/                       Host unit tests (1,548 checks), format, decoder, capture and lifecycle tests, fuzz, fixtures
+scripts/                    Edition staging, pinned builds, manifest and import verification, packaging,
+                            catalog checks, link check
 tools/brand/                Generator for the logo, banner and social preview
 .github/workflows/          CI (ci.yml), shared build pipeline (build.yml), release.yml
 ```
+
+## Editions
+
+`radiogeddon_edition.h` turns `RADIOGEDDON_EDITION_FULL` or
+`RADIOGEDDON_EDITION_CATALOG` (from the manifest's `cdefines`) into
+`RG_FEATURE_*` switches: `RG_FEATURE_RANGE_SCAN`, `_FAVORITES`, `_FREQ_STEP`,
+`_BAND_INFO`, `_CHECKSUM_HINTS` (Full) and `_REGION_TX_GATE` (Catalog). Code
+asks for a feature, never for an edition. With neither defined the build is a
+Catalog build.
+
+`application.fam` is the Catalog edition, so a plain `ufbt` — the way the Apps
+Catalog builds — produces it. `scripts/stage_edition.py full DEST` copies the
+tracked files and rewrites four manifest fields (appid `radiogeddon_full`,
+name, description, the define), each of which must match exactly once.
+Full-only scenes are registered only in Full builds (the scene list's X-macro
+has a `#if`), and Full-only modules compile to nothing in the Catalog edition,
+so it carries none of their code (75.6 KB resident against the Full edition's
+94.5 KB). Settings, storage and the radio layer are the same code in both, so
+either edition reads, writes and keeps the other's files in
+`/ext/apps_data/radiogeddon`.
 
 ## Screens and navigation
 
@@ -117,7 +146,21 @@ reuses.
 
 All radio access goes through `helpers/radiogeddon_subghz.c`, which uses only
 the portable `subghz_devices_*` API — the same layer the stock Sub-GHz app
-uses — so RadioGeddon builds unchanged for Official, Unleashed and RogueMaster.
+uses — so RadioGeddon builds unchanged for Official, RogueMaster, Momentum and
+Unleashed.
+
+**Bands.** `radiogeddon_subghz_probe_bands()` (Full) measures which parts of the
+CC1101's three bands the radio in use accepts by asking its driver
+(`subghz_devices_is_frequency_valid`) and binary-searching each edge
+(`rg_range_probe_bands`), so a range scan or a frequency step never asks the
+radio to tune a frequency it rejects — the HAL asserts on those.
+
+**Transmit check.** `radiogeddon_subghz_tx_check()` gathers the firmware's
+answers (radio accepts the frequency, `furi_hal_subghz_is_frequency_valid`,
+`furi_hal_region_is_provisioned`, `furi_hal_region_is_frequency_allowed`) and
+`rg_txpolicy_check()` decides with the edition's region gate; `tx_start` runs
+it before touching the radio and keeps the verdict for the refusal text. The
+firmware's own check in `subghz_devices_set_tx()` follows in both editions.
 
 **Radio selection.** `radiogeddon_subghz_set_radio()` picks `cc1101_int` or
 the firmware's `cc1101_ext` plugin, and only while nothing is receiving or
@@ -126,9 +169,9 @@ succeeds; that call probes the chip over SPI without keeping it initialised.
 As in the stock app, the 5 V pin (OTG) is switched on for the module when the
 `Ext radio 5V` setting allows it and it wasn't already on. RadioGeddon
 switches it off again only if it switched it on. Before a transmission
-through the external module the module is probed again and the frequency is
-checked against the firmware's region table (`furi_hal_region_is_frequency_allowed`),
-in addition to the driver's own check in `subghz_devices_set_tx()`.
+through the external module the module is probed again; in the Catalog
+edition the transmit check below applies to it as to the internal radio, and
+the driver's own check in `subghz_devices_set_tx()` applies in both editions.
 
 **Receive.** The CC1101 is configured with a standard preset (AM270, AM650,
 FM238 or FM476) and frequency, then put into asynchronous capture. The
@@ -365,16 +408,19 @@ results are labelled.
 ## Build and release
 
 - `scripts/firmware_pins.sh` pins the exact SDK for each firmware family
-  (Official 1.4.3, Unleashed unlshd-093, RogueMaster commit `38d7ae9`).
-- `scripts/build_target.sh` downloads and checksums the SDK, asserts its API
-  version, builds the `.fap`, and verifies its manifest with
-  `scripts/verify_fap.py`.
-- `.github/workflows/build.yml` runs that for all three firmware families plus
-  host tests, fuzzing (`make -C test fuzz`), static analysis
-  (`scripts/static_analysis.py`: GCC `-fanalyzer` and clang-tidy over the
-  device code with the exact build flags, on the Official and Unleashed SDKs),
-  link checks and lint, for every pull request (`ci.yml`) and every release
-  tag (`release.yml`).
+  (Official 1.4.3, Momentum mntm-012, Unleashed unlshd-093, RogueMaster commit
+  `38d7ae9`) and the Apps Catalog tools commit.
+- `scripts/build_target.sh <edition>-<firmware>` stages the edition, downloads
+  and checksums the SDK, asserts its API version, builds the `.fap`, and
+  verifies its manifest and imports with `scripts/verify_fap.py --symbols`.
+- `.github/workflows/build.yml` runs that for the four targets
+  (`catalog-official`, `full-roguemaster`, `full-momentum`, `full-unleashed`)
+  plus host, format, decoder, capture and lifecycle tests, fuzzing
+  (`make -C test fuzz`), static analysis of each edition
+  (`scripts/static_analysis.py --root`: GCC `-fanalyzer` and clang-tidy with
+  the exact build flags), the Apps Catalog checks (`check_catalog.py`,
+  `catalog_bundle.py`), link checks and lint, for every pull request (`ci.yml`)
+  and every release tag (`release.yml`).
 - `scripts/release_meta.py` checks that the version, release notes,
   CHANGELOG, the API listed for each `.fap` and the download links agree; CI
   runs it on every pull request and the release workflow on the tag.
@@ -383,8 +429,9 @@ results are labelled.
   checksum-verified before publishing, and each `.fap` gets a signed
   build-provenance attestation that is verified before upload.
 - `scripts/firmware_watch.py` (`firmware-watch.yml`, weekly) compares the pins
-  with the newest Official, Unleashed and RogueMaster releases and builds the
-  app against any newer Official or Unleashed SDK.
+  with the newest Official, Unleashed, Momentum and RogueMaster releases and
+  canary-builds the matching edition against any newer Official, Unleashed or
+  Momentum SDK.
 
 ## Design principles
 
@@ -395,7 +442,7 @@ results are labelled.
   measurements are `[OBSERVED]`; statistics are `[HEURISTIC]`; engine
   inferences are `[HYPOTHESIS]`.
 - **Firmware safety rails stay on.** Regional transmit rules are enforced by
-  the firmware, dynamic/rolling-code protocols are never replayed, and builds
+  the firmware (and, in the Catalog edition, checked by the app first), dynamic/rolling-code protocols are never replayed, and builds
   are never re-labelled to load on a firmware they weren't compiled for.
 - **Interoperable files.** Everything is stored as standard `.sub`, which keeps
   the door open for a future desktop companion (not part of this project).
