@@ -2,8 +2,8 @@
 """Write the seed corpus for the fuzz targets in test/fuzz/corpus/.
 
 The seeds are synthetic: the repository's test fixtures plus hand-made edge
-cases (extreme values, CRLF line ends, the recorder's "# Lost:" note, cut-off
-lines). None of it is a capture from real hardware. Inputs the fuzzer finds
+cases (extreme values, CRLF line ends, commas between values, the recorder's
+"# Lost:" note, cut-off lines). None of it is a capture from real hardware. Inputs the fuzzer finds
 that broke an invariant are added next to them as regression cases.
 
     python3 test/fuzz/make_seeds.py
@@ -43,6 +43,7 @@ RAW_CASES = {
     "extremes": RAW_HEAD + b"RAW_Data: 2147483647 -2147483648 99999999999 -0 1 -1 0 7\n",
     "cut": RAW_HEAD + b"RAW_Data: 400 -1200 40",
     "garbage": RAW_HEAD + b"RAW_Data: 400 x -1200 --5 +3 400\nRAW_Data:\n",
+    "commas": RAW_HEAD + b"RAW_Data: 1718, -32700, 32700,-494 1047 ,\nRAW_Data: 6, ,7\n",
     "long_line": RAW_HEAD + b"RAW_Data:" + b" 350 -700" * 900 + b"\n",
 }
 

@@ -23,7 +23,7 @@ Sub-GHz signals — entirely on the device, with no computer, phone or network.
 
 > [!WARNING]
 > **Public beta.** Every feature is implemented and the builds pass all
-> automated checks (lint, 522 host-test checks, three firmware builds with
+> automated checks (lint, 532 host-test checks, three firmware builds with
 > API/manifest verification). On physical hardware, so far there is only one
 > tester report (RogueMaster: launches and works); **nothing is independently
 > verified on a device yet.** Expect rough edges, and see
@@ -153,11 +153,12 @@ API version, compiles, and checks the resulting `.fap`'s manifest. More in
 ## Testing & verification
 
 ```bash
-make -C test check               # 522 host checks and the fuzz corpus, ASan + UBSan
+make -C test check               # 532 host checks and the fuzz corpus, ASan + UBSan
+make -C test formats             # the firmware's file code and its 85 Sub-GHz test files
 python3 scripts/check_links.py   # documentation links and anchors
 ```
 
-CI runs the link check, the host tests, the fuzzers, static analysis
+CI runs the link check, the host and format tests, the fuzzers, static analysis
 (GCC `-fanalyzer` and clang-tidy) and all three firmware builds (with API and
 manifest verification plus lint) on every pull request and release tag.
 **CI cannot exercise the radio**, so on-device behaviour remains unverified —

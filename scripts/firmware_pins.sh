@@ -22,6 +22,10 @@ OFFICIAL_SDK_URL="https://update.flipperzero.one/builds/firmware/1.4.3/flipper-z
 OFFICIAL_SDK_SHA256="2e89e70c6b5770440cbf02f2ca01a2f8804e05ddb77f66afdd23ed2584740c7f"
 OFFICIAL_FW_LABEL="Official 1.4.3"
 OFFICIAL_API="87.1"
+# The firmware source commit of that release (tag 1.4.3). Host tests build the
+# firmware's own FlipperFormat code and read its Sub-GHz test files from it
+# (test/firmware/fetch.sh); they are downloaded for testing, never shipped.
+OFFICIAL_SOURCE_COMMIT="8622f1a2b83d8f4918dd5fa3f43de963f6d6f819"
 
 # Unleashed firmware unlshd-093 (release channel).
 UNLEASHED_SDK_URL="https://unleashedflip.com/fw/unlshd-093/flipper-z-f7-sdk-unlshd-093.zip"

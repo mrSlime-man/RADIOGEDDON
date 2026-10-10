@@ -24,11 +24,11 @@ locally.
 | Unleashed build | SDK unlshd-093 pinned by SHA-256, API asserted 88.9, manifest verified | Pass — `radiogeddon-unleashed.fap` |
 | RogueMaster build | RogueMaster source at commit `38d7ae9`, built with its own `fbt`, API asserted 88.16, manifest verified | Pass — `radiogeddon-roguemaster.fap` |
 | Lint | `ufbt lint` (clang-format) | Pass, no warnings |
-| DSP/parse unit tests | `make -C test check` → `test_dsp` | Pass — 34 checks |
+| DSP/parse unit tests | `make -C test check` → `test_dsp` | Pass — 36 checks |
 | Analysis-engine unit tests | `make -C test check` → `test_analyzer` | Pass — 89 checks |
 | Scanner-logic unit tests | `make -C test check` → `test_scan` | Pass — 31 checks |
 | Hopper-logic unit tests | `make -C test check` → `test_hop` | Pass — 42 checks |
-| RAW-reader unit tests | `make -C test check` → `test_raw` | Pass — 35 checks |
+| RAW-reader unit tests | `make -C test check` → `test_raw` | Pass — 43 checks |
 | Timeline-maths unit tests | `make -C test check` → `test_timeline` | Pass — 42 checks |
 | Sample-ring unit tests | `make -C test check` → `test_ring` | Pass — 47 checks |
 | RAW-writer unit tests | `make -C test check` → `test_rawfmt` | Pass — 18 checks |
@@ -36,6 +36,7 @@ locally.
 | Database-index unit tests | `make -C test check` → `test_db` | Pass — 75 checks |
 | Memory-bookkeeping unit tests | `make -C test check` → `test_memstat` | Pass — 30 checks |
 | Database-loading tests (stub Furi/Storage) | `make -C test check` → `test_dbload` | Pass — 45 checks |
+| Format tests (firmware code, real files) | `make -C test formats` → `test_formats`: the firmware's FlipperFormat and stream code and its 85 Sub-GHz test files, from the commit of Official 1.4.3 | Pass — 562 checks |
 | Fuzz corpus replay | `make -C test check` → `replay_fuzz_raw`, `replay_fuzz_db`, `replay_fuzz_samples` | Pass — every committed input |
 | Fuzzing | `make -C test fuzz` (libFuzzer with ASan/UBSan; 60 s per target in CI) | Pass — no crash, sanitizer report or broken invariant |
 | Static analysis | `scripts/static_analysis.py`: GCC `-fanalyzer` and clang-tidy ([`.clang-tidy`](../.clang-tidy)) over the device code with the build flags, Official and Unleashed SDKs | Pass — 0 findings |
@@ -44,7 +45,7 @@ locally.
 | Documentation links | `scripts/check_links.py` (offline link + anchor check) | Pass |
 | `.fap` metadata | `scripts/verify_fap.py` parses `.fapmeta` and asserts magic, API, target, name, version, icon | Pass for all three artifacts |
 
-Host-test total: **522 checks, 0 failures.** What the suite covers (synthetic
+Host-test total: **532 checks, 0 failures** (`make -C test check`; the format tests are counted on their own). What the suite covers (synthetic
 signals, not real captures):
 
 - `test_dsp` — RAW `RAW_Data` parsing (incl. whitespace, signs, out-of-range
@@ -70,7 +71,8 @@ signals, not real captures):
   200 repeated hold/lock/retune cycles with no stuck state.
 - `test_raw` — the streaming `RAW_Data` reader: values, signs, zeros, CRLF and
   a missing final newline, reads split at 5- and 13-byte and one-sample
-  boundaries, corrupt tokens and lone minus signs, non-RAW files, a 6,000-sample file with one
+  boundaries, corrupt tokens and lone minus signs, a comma after a value (as
+  the firmware's RAW player allows), non-RAW files, a 6,000-sample file with one
   3,000-value line (bounded checkpoint table, seeking to any time resumes with
   the right samples, rewind), `test/fixtures/raw_ref.sub` read end to end
   through the analyzer, and the recorder's `# Lost: N` note (read once per
@@ -151,6 +153,49 @@ the sanitizers then report:
 
 The seed corpus is synthetic (the fixtures plus hand-made edge cases, written
 by `test/fuzz/make_seeds.py`) plus inputs the fuzzer found.
+
+`test_formats` (`make -C test formats`) is the one suite that uses files from
+outside this repository. `test/firmware/fetch.sh` downloads the Flipper Zero
+firmware's FlipperFormat and stream code and the 85 `.sub` files of its own
+Sub-GHz unit tests, at the commit of the pinned Official release, and checks
+each against `test/firmware/files.sha256`. They are GPL-3.0 and only used
+here to build and run the tests, never committed or shipped. The firmware's
+code is compiled unchanged over the stub Furi/Storage layer, so RadioGeddon's
+settings and `.sub` loading run against the same parser as on the device.
+Those files are third-party test data: they were not captured or checked on
+our hardware. The suite covers:
+
+- every file loading with the kind, protocol, frequency, preset, bit count,
+  key, RAW sample count and shortest/longest duration that an independent
+  reading of the file finds; the Database index and the streaming RAW reader
+  agreeing with it; the analyzer completing on all 51 RAW files with figures
+  in range; and every byte and file handle returned;
+- settings saved and read back field by field, written as the firmware
+  writes Flipper Format; out-of-range values, the limits themselves, extra
+  mask bits, keys in any order or missing, a session cost without its
+  firmware, CRLF line ends, another file type or version, a file cut off
+  mid-line, binary garbage and an empty file;
+- a save that fails part-way (the previous settings are kept and the
+  temporary file removed), firmware whose rename will not replace a file, and
+  no card;
+- writing a decoded signal and reading it back, unique names up to `_99`, a
+  failed write leaving no damaged file, the default name, missing files;
+- 100 saves and loads returning every byte and file handle.
+
+It found that RAW files with a comma after each value (as in the firmware's
+`hormann_hsm_raw.sub` test file) read as empty; fixed, with unit tests in
+`test_raw` and `test_dsp`. Hardware check F4f covers it on a device.
+
+It also measures the analyzer on real captures, without treating its output
+as verified. For the 33 RAW files that have a decoded file of the same
+protocol next to them, the most common frame length the analyzer finds equals
+the decoded `Bit` count for 8 (Princeton, Feron, Dooya, GateTX, Holtek HT12X,
+SMC5326, CAME TWEE and Security+ 2.0) and is one bit short for 5 more (BETT,
+Legrand, Linear, Mastercode and Roger, where the last bit's low period runs
+into the gap between frames). It finds no encoding for 6 of the 51 RAW files, and takes
+some PWM protocols (CAME, Nice FLO) for Manchester. The test fails if a
+change lowers those 8 and 13, so an analyzer change cannot make this worse
+unnoticed.
 
 ## Release-pipeline integrity
 

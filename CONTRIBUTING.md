@@ -78,6 +78,7 @@ device; use `.ufbt-unleashed` for an Unleashed device.
 
 ```bash
 make -C test check                    # host tests + fuzz corpus, -Werror, ASan + UBSan
+make -C test formats                  # firmware FlipperFormat code + its .sub test files
 make -C test fuzz FUZZ_TIME=60        # fuzz each target under libFuzzer (needs clang)
 python3 scripts/check_links.py        # Markdown links and anchors
 UFBT_HOME=$PWD/.ufbt-official ufbt lint     # clang-format check
@@ -89,7 +90,11 @@ The host tests cover the firmware-independent code (`helpers/rg_*` and
 `helpers/radiogeddon_dsp.*`) and, through small Furi/Storage stand-ins in
 `test/stubs/`, the recorder and the Database loader. If you change or add such
 logic, add a test in `test/` and keep that code free of firmware headers so it
-stays host-testable. Code that reads files from the SD card should also get a
+stays host-testable. `make -C test formats` builds the firmware's own
+FlipperFormat and stream code with the settings and `.sub` loading code and
+runs them on the firmware's Sub-GHz test files; it downloads those files
+(GPL-3.0, checked against `test/firmware/files.sha256`, never committed) on
+first use. Code that reads files from the SD card should also get a
 fuzz target (`test/fuzz/`); an input that once broke it goes into
 `test/fuzz/corpus/<target>/` so every test run replays it. The static analysis
 checks are listed, with the reasons for the ones turned off, in

@@ -18,9 +18,23 @@ DB_SRC := test_db.c ../helpers/rg_db.c
 MEMSTAT_SRC := test_memstat.c ../helpers/rg_memstat.c
 DBLOAD_SRC := test_dbload.c stubs/furi_stub.c ../helpers/radiogeddon_db.c ../helpers/rg_db.c
 STUB_HDRS := stubs/furi.h stubs/storage/storage.h stubs/datetime/datetime.h \
-		stubs/lib/toolbox/stream/stream.h
+		stubs/lib/toolbox/stream/stream.h stubs/core/check.h stubs/core/common_defines.h \
+		stubs/furi_hal_rtc.h stubs/lib/subghz/devices/preset.h
 RECORDER_SRC := test_recorder.c stubs/furi_stub.c ../helpers/radiogeddon_recorder.c \
 		../helpers/rg_ring.c ../helpers/rg_rawfmt.c ../helpers/rg_raw.c
+
+# Format tests: the firmware's own FlipperFormat and stream code and its
+# Sub-GHz test files, downloaded at the pinned release by firmware/fetch.sh
+# (checked against firmware/files.sha256, never committed). `make formats`.
+FW := $(BUILD)/fw
+FW_SRC := $(FW)/lib/flipper_format/flipper_format.c $(FW)/lib/flipper_format/flipper_format_stream.c \
+		$(FW)/lib/toolbox/stream/stream.c $(FW)/lib/toolbox/stream/string_stream.c \
+		$(FW)/lib/toolbox/stream/file_stream.c $(FW)/lib/toolbox/stream/buffered_file_stream.c \
+		$(FW)/lib/toolbox/stream/stream_cache.c $(FW)/lib/toolbox/hex.c $(FW)/lib/toolbox/strint.c
+FW_OBJ := $(patsubst $(FW)/%.c,$(BUILD)/fwobj/%.o,$(FW_SRC))
+FORMATS_SRC := test_formats.c stubs/furi_stub.c ../helpers/radiogeddon_storage.c \
+		../helpers/radiogeddon_settings.c ../helpers/radiogeddon_bands.c ../helpers/radiogeddon_dsp.c \
+		../helpers/rg_db.c ../helpers/rg_raw.c ../helpers/rg_analyzer.c
 
 # Fuzz targets (test/fuzz/). `check` replays their committed corpus with the
 # host compiler; `make fuzz` runs them under libFuzzer (needs clang).
@@ -31,7 +45,7 @@ FUZZ_TARGETS := fuzz_raw fuzz_db fuzz_samples
 FUZZ_CC ?= clang
 FUZZ_TIME ?= 60
 
-.PHONY: check clean tsan fuzz
+.PHONY: check clean tsan fuzz formats
 check: $(BUILD)/test_dsp $(BUILD)/test_analyzer $(BUILD)/test_scan $(BUILD)/test_hop $(BUILD)/test_raw \
 		$(BUILD)/test_timeline $(BUILD)/test_ring $(BUILD)/test_rawfmt $(BUILD)/test_recorder \
 		$(BUILD)/test_db $(BUILD)/test_memstat $(BUILD)/test_dbload \
@@ -88,6 +102,26 @@ $(BUILD)/test_recorder: $(RECORDER_SRC) ../helpers/radiogeddon_recorder.h $(STUB
 $(BUILD)/test_dbload: $(DBLOAD_SRC) ../helpers/radiogeddon_db.h ../helpers/rg_db.h $(STUB_HDRS) \
 		| $(BUILD)
 	$(CC) $(CFLAGS) $(SAN) -Istubs -DSTUB_TRACK_ALLOC -pthread -o $@ $(DBLOAD_SRC)
+
+formats: $(BUILD)/test_formats
+	$(BUILD)/test_formats
+
+$(FW)/.fetched: firmware/files.sha256 firmware/fetch.sh ../scripts/firmware_pins.sh
+	firmware/fetch.sh $(FW)
+	touch $@
+
+$(FW_SRC): $(FW)/.fetched ;
+
+# The firmware's code is built as it is, without the allocation counter's
+# macros (they would rename its vtable->free member); LeakSanitizer still
+# checks it, and the counter covers RadioGeddon's code and the strings.
+$(BUILD)/fwobj/%.o: $(FW)/%.c $(STUB_HDRS)
+	mkdir -p $(dir $@)
+	$(CC) $(CFLAGS) $(SAN) -D_GNU_SOURCE -I$(FW) -I$(FW)/lib -Istubs -c -o $@ $<
+
+$(BUILD)/test_formats: $(FORMATS_SRC) $(STUB_HDRS) $(FW_OBJ) | $(BUILD)
+	$(CC) $(CFLAGS) $(SAN) -D_GNU_SOURCE -I$(FW) -I$(FW)/lib -Istubs -DSTUB_TRACK_ALLOC -pthread \
+		-o $@ $(FORMATS_SRC) $(FW_OBJ)
 
 $(BUILD)/replay_fuzz_raw: fuzz/replay.c $(FUZZ_RAW_SRC) ../helpers/rg_raw.h \
 		../helpers/rg_analyzer.h | $(BUILD)

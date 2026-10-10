@@ -41,6 +41,7 @@ size_t radiogeddon_dsp_parse_line(
         long v = strtol(p, &end, 10);
         if(end == p) break;
         p = end;
+        if(*p == ',') p++; // "1718, -32700", as the firmware's RAW player accepts
         // Out-of-range values (and strtol's overflow result) saturate like the
         // RAW reader's instead of overflowing the negation.
         if(v > (long)INT32_MAX) v = INT32_MAX;

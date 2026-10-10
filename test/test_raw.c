@@ -118,6 +118,27 @@ static void test_corrupt_and_non_raw(void) {
     CHECK(rg_raw_reader_read(&r, out, 16) == 0, "only exact RAW_Data lines are read");
 }
 
+/* Commas between values, as in some of the firmware's own test files
+ * ("RAW_Data: 1718, -32700, ..."): the firmware's RAW player accepts a comma
+ * right after a value, so the reader does too. Found by test_formats. */
+static void test_commas(void) {
+    printf("test_commas\n");
+    static RgRawReader r;
+    int32_t out[16];
+    const char* text = "RAW_Data: 1718, -32700, 32700,-494 1047 ,\n"
+                       "RAW_Data: 5,\r\n"
+                       "RAW_Data: 6, ,7\n";
+    for(size_t chunk = 0; chunk <= 3; chunk++) {
+        MemSource m = {text, strlen(text), 0, chunk, 0};
+        rg_raw_reader_init(&r, mem_source(&m));
+        size_t n = read_all(&r, out, 16, 16);
+        bool ok = n == 7 && out[0] == 1718 && out[1] == -32700 && out[2] == 32700 &&
+                  out[3] == -494 && out[4] == 1047 && out[5] == 5 && out[6] == 6;
+        CHECK(ok, "comma after a value separates it, any read size");
+        CHECK(r.corrupt, "a comma with no value before it is still corrupt");
+    }
+}
+
 /* A long synthetic recording: 6000 values over 512-value lines plus one
  * 3000-value line, as a recorder might write. */
 static char* build_big(size_t* len, int32_t* values, size_t count) {
@@ -250,6 +271,7 @@ int main(void) {
     test_checkpoints_and_seek();
     test_fixture_end_to_end();
     test_lost_comment();
+    test_commas();
 
     printf("\n%d checks, %d failures\n", g_checks, g_failures);
     if(g_failures) {
