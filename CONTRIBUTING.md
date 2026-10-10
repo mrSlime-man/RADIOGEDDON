@@ -137,12 +137,25 @@ firmware) in your pull request; if you did not, say that too.
 2. Add release notes at `docs/releases/vX.Y.Z[-pre].md` (first line is the
    release title) and move CHANGELOG entries out of **Unreleased**.
 3. Update the download links in `README.md` and `docs/INSTALLATION.md`.
-4. Merge to `main`, then run **Actions → Release → Run workflow** with
+4. Run `python3 scripts/release_meta.py`. It checks that the version, notes,
+   CHANGELOG section, the API listed for each `.fap` (notes and
+   `docs/FIRMWARE_COMPATIBILITY.md`) and the download links all agree. CI runs
+   it on every pull request, and the Release workflow refuses a tag that fails
+   it.
+5. Merge to `main`, then run **Actions → Release → Run workflow** with
    `dry_run` enabled. It builds everything, stages a private draft, verifies the
    uploaded assets and deletes the draft.
-5. Tag and push: `git tag -a vX.Y.Z -m "RadioGeddon vX.Y.Z" && git push origin vX.Y.Z`.
-   The Release workflow rebuilds from the tag and publishes (as a pre-release
-   for suffixed versions such as `-beta.1`).
+6. Publish: run the workflow again with `dry_run` off (it creates the tag on
+   the branch head), or tag and push:
+   `git tag -a vX.Y.Z -m "RadioGeddon vX.Y.Z" && git push origin vX.Y.Z`.
+   The Release workflow rebuilds, attests and verifies build provenance, and
+   publishes (as a pre-release for suffixed versions such as `-beta.1`).
+
+The **Firmware watch** workflow runs weekly (and by hand from Actions). It
+lists newer Official, Unleashed and RogueMaster versions with their API
+versions and builds the app against every newer Official or Unleashed SDK,
+including Official's release candidate; it fails only if one no longer builds
+the app. Locally: `python3 scripts/firmware_watch.py --build`.
 
 To move to newer firmware, update the URL, SHA-256 and API values in
 `scripts/firmware_pins.sh`, rebuild, run the hardware checklist on that

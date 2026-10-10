@@ -2,7 +2,8 @@
 # (release.yml) so a release artifact passes exactly the same gates as a PR.
 #
 # Jobs:
-#   docs        offline Markdown link/anchor check
+#   docs        offline Markdown link/anchor check; version, release notes,
+#               API table and download links agree (scripts/release_meta.py)
 #   host-tests  host unit tests and the fuzz corpus replay under ASan/UBSan,
 #               then the format tests on the firmware's FlipperFormat code and
 #               Sub-GHz test files (downloaded at the pinned release)
@@ -36,6 +37,8 @@ jobs:
           persist-credentials: false
       - name: Check Markdown links and anchors
         run: python3 scripts/check_links.py
+      - name: Check version, release notes and download links agree
+        run: python3 scripts/release_meta.py
 
   host-tests:
     name: host tests (ASan/UBSan)

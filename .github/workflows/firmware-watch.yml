@@ -1,0 +1,45 @@
+# Weekly check of the firmware families against the SDKs releases are built
+# with (scripts/firmware_pins.sh). Reports newer Official, Unleashed and
+# RogueMaster versions and their API versions, and compiles the app against
+# every newer Official or Unleashed SDK (including Official's release
+# candidate), so an API change shows up before users update their firmware.
+#
+# It fails only when a newer firmware no longer builds the app. A newer
+# firmware that still builds is a warning: moving the pins needs the hardware
+# checklist on that firmware (see CONTRIBUTING.md, "Releasing").
+name: Firmware watch
+
+on:
+  schedule:
+    - cron: "17 6 * * 1"
+  workflow_dispatch:
+  # Also on pull requests that change the watch itself.
+  pull_request:
+    paths:
+      - scripts/firmware_watch.py
+      - .github/workflows/firmware-watch.yml
+
+permissions:
+  contents: read
+
+jobs:
+  watch:
+    name: newer firmware
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install pinned ufbt
+        run: |
+          source scripts/firmware_pins.sh
+          python -m pip install --disable-pip-version-check "ufbt==${UFBT_VERSION}"
+
+      - name: Compare with the pins and canary-build newer SDKs
+        run: python3 scripts/firmware_watch.py --build --work "$RUNNER_TEMP/firmware-watch"

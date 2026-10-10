@@ -95,8 +95,20 @@ to follow [Semantic Versioning](https://semver.org/) (pre-1.0.0 releases use
   Database index and RAW reader agree, settings survive a save and reload,
   malformed settings fall back field by field, and a save that fails
   part-way keeps the old file.
+- **Release checks** (development): `scripts/release_meta.py` checks that the
+  version, release notes, CHANGELOG section, the API listed for each `.fap`
+  and the download links agree. CI runs it on every pull request; the Release
+  workflow refuses a tag that fails it.
+- **Firmware watch** (development): a weekly workflow lists newer Official,
+  Unleashed and RogueMaster versions with their API versions and builds the
+  app against every newer Official or Unleashed SDK. Its first run found that
+  Official 1.5.1-rc moves to API 88, where the current Official build will
+  not load; the app builds against it.
 
 ### Changed
+- **The Release workflow verifies build provenance** (`gh attestation
+  verify`) for every `.fap` before anything is uploaded, the same check the
+  installation guide gives users.
 - **Progress percentages** for long SD-card work: reading the Database
   (`Reading files...`), Unknown Protocol Analysis, Pulse Timeline indexing,
   RAW comparison and report writing. Opening a large RAW capture shows

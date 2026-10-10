@@ -2,12 +2,13 @@
 #
 #   git tag -a v1.0.0-beta.1 -m "RadioGeddon v1.0.0 Beta 1" && git push origin v1.0.0-beta.1
 #
-# Flow: validate the tag against radiogeddon_version.h / application.fam and
-# require docs/releases/<tag>.md -> rebuild all three .fap files from the tagged
+# Flow: validate the tag, versions, release notes and download links
+# (scripts/release_meta.py) -> rebuild all three .fap files from the tagged
 # commit through the shared pipeline (build.yml) -> package + re-verify, write
-# SHA256SUMS -> attest build provenance -> create a DRAFT release with every
-# asset -> download the assets back and check them -> publish. Any failure
-# deletes the draft, so a partial or broken release is never made public.
+# SHA256SUMS -> attest build provenance and verify the attestation -> create a
+# DRAFT release with every asset -> download the assets back and check them ->
+# publish. Any failure deletes the draft, so a partial or broken release is
+# never made public.
 # Tags with a pre-release suffix (e.g. -beta.1) are published as pre-releases.
 #
 # workflow_dispatch serves two purposes:
@@ -55,7 +56,7 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Validate tag, versions and release notes
+      - name: Validate tag, versions, release notes and download links
         id: meta
         env:
           EVENT: ${{ github.event_name }}
@@ -64,38 +65,15 @@ jobs:
         run: |
           set -euo pipefail
           if [ "$EVENT" = "push" ]; then tag="$REF_NAME"; else tag="$INPUT_TAG"; fi
-          if [[ ! "$tag" =~ ^v([0-9]+)\.([0-9]+)\.([0-9]+)(-[0-9A-Za-z.]+)?$ ]]; then
-            echo "::error::'$tag' is not a vMAJOR.MINOR.PATCH[-prerelease] tag"; exit 1
-          fi
-          major_minor="${BASH_REMATCH[1]}.${BASH_REMATCH[2]}"
-          version="${tag#v}"
-
-          code_version="$(sed -n 's/^#define RADIOGEDDON_VERSION "\(.*\)"$/\1/p' radiogeddon_version.h)"
-          if [ "$code_version" != "$version" ]; then
-            echo "::error::radiogeddon_version.h says '$code_version' but the tag is '$tag'"; exit 1
-          fi
-          fap_version="$(sed -n 's/^[[:space:]]*fap_version="\([0-9.]*\)".*/\1/p' application.fam)"
-          if [ "$fap_version" != "$major_minor" ]; then
-            echo "::error::application.fam fap_version '$fap_version' != '$major_minor' from tag"; exit 1
-          fi
-
-          notes="docs/releases/${tag}.md"
-          if [ ! -f "$notes" ]; then echo "::error::missing release notes $notes"; exit 1; fi
-          title="$(head -n 1 "$notes" | sed 's/^#[[:space:]]*//')"
+          # Tag = radiogeddon_version.h, fap_version, notes, CHANGELOG section,
+          # API table = pins, README/INSTALLATION links = this tag.
+          python3 scripts/release_meta.py --tag "$tag" --github-output "$GITHUB_OUTPUT"
 
           if [ "$EVENT" != "push" ] && [ -n "$(git ls-remote --tags origin "refs/tags/$tag")" ]; then
             echo "::error::tag $tag already exists; push-triggered runs build existing tags"; exit 1
           fi
-
-          prerelease=false
-          [[ "$version" == *-* ]] && prerelease=true
-          {
-            echo "tag=$tag"
-            echo "sha=$(git rev-parse HEAD)"
-            echo "title=$title"
-            echo "prerelease=$prerelease"
-          } >> "$GITHUB_OUTPUT"
-          echo "Releasing $tag ($title) from $(git rev-parse HEAD), prerelease=$prerelease"
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          echo "Releasing $tag from $(git rev-parse HEAD)"
 
   build:
     name: Build
@@ -142,6 +120,16 @@ jobs:
         uses: actions/attest-build-provenance@v3
         with:
           subject-path: release/radiogeddon-*.fap
+
+      # The same check users are told to run (docs/INSTALLATION.md), before
+      # anything is uploaded.
+      - name: Verify build provenance
+        if: ${{ !github.event.repository.private && !(github.event_name == 'workflow_dispatch' && inputs.dry_run) }}
+        run: |
+          set -euo pipefail
+          for fap in release/radiogeddon-*.fap; do
+            gh attestation verify "$fap" --repo "$GH_REPO"
+          done
 
       - name: Refuse to overwrite an existing release
         run: |

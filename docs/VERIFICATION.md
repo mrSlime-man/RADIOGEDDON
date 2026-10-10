@@ -43,6 +43,8 @@ locally.
 | Thread safety of ring and recorder | `make -C test tsan` (ThreadSanitizer; optional, not in CI) | Pass — no reports |
 | Memory safety of tested code | tests built `-Werror` under `-fsanitize=address,undefined` | Pass — no ASan/UBSan reports |
 | Documentation links | `scripts/check_links.py` (offline link + anchor check) | Pass |
+| Release metadata | `scripts/release_meta.py`: version in `radiogeddon_version.h` and `application.fam`, release notes, CHANGELOG section, the API listed for each `.fap` against the pins, download links | Pass |
+| Newer firmware (canary) | `scripts/firmware_watch.py --build` (weekly in CI): Official 1.5.1-rc SDK, API 88.2 | Builds; `APPCHK` and manifest pass. No release targets it yet, not hardware-tested |
 | `.fap` metadata | `scripts/verify_fap.py` parses `.fapmeta` and asserts magic, API, target, name, version, icon | Pass for all three artifacts |
 
 Host-test total: **532 checks, 0 failures** (`make -C test check`; the format tests are counted on their own). What the suite covers (synthetic
