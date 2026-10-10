@@ -36,8 +36,9 @@ locally.
 | Database-index unit tests | `make -C test check` → `test_db` | Pass — 75 checks |
 | Memory-bookkeeping unit tests | `make -C test check` → `test_memstat` | Pass — 30 checks |
 | Database-loading tests (stub Furi/Storage) | `make -C test check` → `test_dbload` | Pass — 45 checks |
+| RAW-to-decoder feeding tests | `make -C test check` → `test_decode` | Pass — 68 checks |
 | Format tests (firmware code, real files) | `make -C test formats` → `test_formats`: the firmware's FlipperFormat and stream code and its 85 Sub-GHz test files, from the commit of Official 1.4.3 | Pass — 562 checks |
-| Decoder tests (firmware code, real captures) | `make -C test decoders` → `test_fwdecode`: the firmware's Sub-GHz receiver and all its protocol decoders, fed its 50 RAW test captures through `rg_decode` | Pass — 157 checks; 48 decode, 2 crash describing their decode (see below) |
+| Decoder tests (firmware code, real captures) | `make -C test decoders` → `test_fwdecode`: the firmware's Sub-GHz receiver and all its protocol decoders, fed its 50 RAW test captures through `rg_decode` | Pass — 213 checks; all 50 decode and are described as the app describes them (see below) |
 | Fuzz corpus replay | `make -C test check` → `replay_fuzz_raw`, `replay_fuzz_db`, `replay_fuzz_samples` | Pass — every committed input |
 | Fuzzing | `make -C test fuzz` (libFuzzer with ASan/UBSan; 60 s per target in CI) | Pass — no crash, sanitizer report or broken invariant |
 | Static analysis | `scripts/static_analysis.py`: GCC `-fanalyzer` and clang-tidy ([`.clang-tidy`](../.clang-tidy)) over the device code with the build flags, Official and Unleashed SDKs | Pass — 0 findings |
@@ -48,7 +49,7 @@ locally.
 | Newer firmware (canary) | `scripts/firmware_watch.py --build` (weekly in CI): Official 1.5.1-rc SDK, API 88.2 | Builds; `APPCHK` and manifest pass. No release targets it yet, not hardware-tested |
 | `.fap` metadata | `scripts/verify_fap.py` parses `.fapmeta` and asserts magic, API, target, name, version, icon | Pass for all three artifacts |
 
-Host-test total: **532 checks, 0 failures** (`make -C test check`; the format tests are counted on their own). What the suite covers (synthetic
+Host-test total: **600 checks, 0 failures** (`make -C test check`; the format and decoder tests are counted on their own). What the suite covers (synthetic
 signals, not real captures):
 
 - `test_dsp` — RAW `RAW_Data` parsing (incl. whitespace, signs, out-of-range
@@ -132,6 +133,16 @@ signals, not real captures):
   and peak use within the heap minus the spare (plus about 1 KB of handles);
   and 100 repeated loads with the same peak and nothing left allocated or
   open.
+- `test_decode` — feeding a RAW capture to decoders (`rg_decode.c`): sign
+  to level and duration (including the int32 extremes), every sample in
+  order whatever the read size, commas and skipped bad values, time and
+  sample counts kept current, decodes timed at the start of the sample that
+  completed them, repeats counted once with first and last time, `\r`
+  removed, long names and descriptions cut, a full list still counting
+  repeats and dropped entries, and progress reports. The decoder is a 24-bit
+  PWM stand-in written for the test, fed synthetic frames with noise before
+  them; mutating the level mapping or the timing order makes it fail. The
+  firmware's real decoders are `test_fwdecode`'s.
 
 The fuzz targets (`test/fuzz/`) feed arbitrary bytes to the code that reads
 files from the SD card and abort on any broken invariant, which libFuzzer and
@@ -207,14 +218,18 @@ environment is the app's: no keystore (a stand-in with no keys) and no
 rainbow table names. Each RAW capture that the firmware's own decoder test
 pairs with a protocol (the list is checked against that test) goes through
 `RgRawReader` and `rg_decode_run` into a receiver with every decodable
-protocol, as the app feeds it, and must produce that protocol in the decode
-log. 48 of the 50 do. CAME Atomo and Alutech AT-4N decode and then read
-through their NULL rainbow table name when describing the decode
-(`came_atomo.c:198`, `alutech_at_4n.c:86`); the test expects that, since the
-app describes every decode and sets those names to NULL. The firmware allows
-no access to the first megabyte, so on a device receiving either protocol
-should fault (not yet checked on hardware). None of the captures needs a
-keystore to decode. The firmware's random capture gives 327 decodes on a
+protocol, as the app feeds it, is described with the app's own
+`radiogeddon_decode_text`, and must produce that protocol in the decode log.
+All 50 do. The test found that two decoders, CAME Atomo and Alutech AT-4N,
+read their rainbow table's file name without checking it when they describe
+a decode (`came_atomo.c:198`, `alutech_at_4n.c:86`). The app sets no tables,
+so that name is NULL; the firmware blocks access to the first megabyte, so on
+Official firmware Receive should crash when it decodes either protocol (up to
+`v1.0.0-beta.3`; not checked on hardware). Unleashed and RogueMaster check
+for a missing name. The app now describes those two from the decoded data
+(name, bits, key); the test checks that, and that the decoders' own text
+still crashes in the app's environment, so a firmware update that fixes it
+shows up. None of the captures needs a keystore to decode. The firmware's random capture gives 327 decodes on a
 fresh receiver and the firmware's 328 after its decoder tests have run on
 the same receiver (a Holtek HT12X decoder keeps its last code between them).
 Ending a capture with a quiet line changes no count. The decoded file next to

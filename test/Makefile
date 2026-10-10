@@ -47,7 +47,7 @@ DEC_FW_SRC := $(FW_SRC) $(SUBGHZ_SRC)
 DEC_FW_OBJ := $(patsubst $(FW)/%.c,$(BUILD)/fwdec/%.o,$(DEC_FW_SRC))
 DEC_STUB_HDRS := $(STUB_HDRS) stubs/furi_hal.h
 FWDECODE_SRC := test_fwdecode.c stubs/furi_stub.c stubs/subghz_stub.c ../helpers/rg_decode.c \
-		../helpers/rg_raw.c
+		../helpers/rg_raw.c ../helpers/radiogeddon_decode_text.c
 
 # Fuzz targets (test/fuzz/). `check` replays their committed corpus with the
 # host compiler; `make fuzz` runs them under libFuzzer (needs clang).
@@ -160,6 +160,7 @@ $(BUILD)/fwdec/%.o: $(FW)/%.c $(DEC_STUB_HDRS)
 	$(CC) $(CFLAGS) $(SAN) -fno-sanitize=shift-base -D_GNU_SOURCE $(DEC_INC) -c -o $@ $<
 
 $(BUILD)/test_fwdecode: $(FWDECODE_SRC) $(DEC_STUB_HDRS) ../helpers/rg_decode.h ../helpers/rg_raw.h \
+		../helpers/radiogeddon_decode_text.h \
 		$(DEC_FW_OBJ) | $(BUILD)
 	$(CC) $(CFLAGS) $(SAN) -D_GNU_SOURCE $(DEC_INC) -pthread \
 		-o $@ $(FWDECODE_SRC) $(DEC_FW_OBJ) -lm

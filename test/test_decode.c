@@ -148,7 +148,8 @@ static void test_level_mapping(void) {
     uint32_t duration = 0;
     CHECK(rg_decode_level(350, &level, &duration) && level && duration == 350, "positive is high");
     CHECK(
-        rg_decode_level(-1050, &level, &duration) && !level && duration == 1050, "negative is low");
+        rg_decode_level(-1050, &level, &duration) && !level && duration == 1050,
+        "negative is low");
     CHECK(!rg_decode_level(0, &level, &duration), "zero is not a sample");
     CHECK(
         rg_decode_level(INT32_MIN, &level, &duration) && !level && duration == 2147483648u,
@@ -262,7 +263,8 @@ static void test_stand_in_decoder(void) {
     static char text[8192];
     strcpy(text, "Filetype: Flipper SubGhz RAW File\nVersion: 1\nProtocol: RAW\n");
     strcat(text, "RAW_Data: 2000 -300 150 -9000\n"); /* noise before the remote */
-    for(int i = 0; i < 3; i++) append_frame(text, sizeof(text), 0xA5A5A5);
+    for(int i = 0; i < 3; i++)
+        append_frame(text, sizeof(text), 0xA5A5A5);
     append_frame(text, sizeof(text), 0x123456);
     append_frame(text, sizeof(text), 0xA5A5A5);
 

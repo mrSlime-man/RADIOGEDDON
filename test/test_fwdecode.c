@@ -20,10 +20,12 @@
  * one receiver with every protocol, filtered to SubGhzProtocolFlag_Decodable,
  * in an environment with no keystore loaded and the rainbow table names NULL
  * (as radiogeddon_subghz_environment_acquire sets them; the firmware's test
- * loads both). Every decode is
- * described, hashed and logged, then the receiver is reset, as the app and
- * the firmware's test do. Each capture runs in a child process, so a decoder
- * that crashes is reported with the protocol it was describing.
+ * loads both). Every decode is described with the app's
+ * radiogeddon_decode_text, hashed and logged, then the receiver is reset, as
+ * the app and the firmware's test do. For the two decoders whose own text
+ * would read the NULL table name, that it still does is checked too (in a
+ * child process, like every capture, so a crash is reported with the
+ * protocol it was describing).
  *
  * Informational, not checked: whether the key of the folder's key file for
  * the same protocol is among those decoded, and how many more (or fewer)
@@ -33,6 +35,7 @@
 #include "furi.h"
 #include "../helpers/rg_decode.h"
 #include "../helpers/rg_raw.h"
+#include "../helpers/radiogeddon_decode_text.h"
 
 #include <lib/subghz/receiver.h>
 #include <lib/subghz/environment.h>
@@ -72,11 +75,12 @@ static int g_checks = 0;
 /* ---- The firmware's decoder test list ------------------------------------ */
 
 typedef enum {
-    ExpectDecode, /* decodes, and is described */
-    /* Decodes, then describing it reads the rainbow table name, which the app
-     * leaves NULL: strcmp(NULL, "") in came_atomo.c and alutech_at_4n.c. On
-     * the device that is a NULL pointer dereference too. */
-    ExpectNullTableCrash,
+    ExpectDecode, /* decodes, and the decoder's own text describes it */
+    /* Decodes, but the decoder's own text reads the rainbow table name, which
+     * the app leaves NULL: strcmp(NULL, "") in came_atomo.c and
+     * alutech_at_4n.c, a NULL pointer dereference on the device too. The app
+     * describes these from the decoded data (radiogeddon_decode_text.h). */
+    ExpectDataOnly,
 } Expect;
 
 typedef struct {
@@ -90,7 +94,7 @@ typedef struct {
 
 /* In the order subghz_test.c runs them. */
 static const Pair pairs[] = {
-    PAIR("came_atomo_raw.sub", SUBGHZ_PROTOCOL_CAME_ATOMO_NAME, ExpectNullTableCrash),
+    PAIR("came_atomo_raw.sub", SUBGHZ_PROTOCOL_CAME_ATOMO_NAME, ExpectDataOnly),
     PAIR("came_raw.sub", SUBGHZ_PROTOCOL_CAME_NAME, ExpectDecode),
     PAIR("came_twee_raw.sub", SUBGHZ_PROTOCOL_CAME_TWEE_NAME, ExpectDecode),
     PAIR("faac_slh_raw.sub", SUBGHZ_PROTOCOL_FAAC_SLH_NAME, ExpectDecode),
@@ -127,7 +131,7 @@ static const Pair pairs[] = {
     PAIR("smc5326_raw.sub", SUBGHZ_PROTOCOL_SMC5326_NAME, ExpectDecode),
     PAIR("holtek_ht12x_raw.sub", SUBGHZ_PROTOCOL_HOLTEK_HT12X_NAME, ExpectDecode),
     PAIR("dooya_raw.sub", SUBGHZ_PROTOCOL_DOOYA_NAME, ExpectDecode),
-    PAIR("alutech_at_4n_raw.sub", SUBGHZ_PROTOCOL_ALUTECH_AT_4N_NAME, ExpectNullTableCrash),
+    PAIR("alutech_at_4n_raw.sub", SUBGHZ_PROTOCOL_ALUTECH_AT_4N_NAME, ExpectDataOnly),
     PAIR("nice_one_raw.sub", SUBGHZ_PROTOCOL_NICE_FLOR_S_NAME, ExpectDecode),
     PAIR("kinggates_stylo4k_raw.sub", SUBGHZ_PROTOCOL_KINGGATES_STYLO_4K_NAME, ExpectDecode),
     PAIR("mastercode_raw.sub", SUBGHZ_PROTOCOL_MASTERCODE_NAME, ExpectDecode),
@@ -142,12 +146,6 @@ static const Pair pairs[] = {
     PAIR("marantec24_raw.sub", SUBGHZ_PROTOCOL_MARANTEC24_NAME, ExpectDecode),
 };
 #define PAIR_COUNT (sizeof(pairs) / sizeof(pairs[0]))
-
-/* The protocols whose description reads a rainbow table name. */
-static bool needs_table_name(const char* protocol) {
-    return strcmp(protocol, SUBGHZ_PROTOCOL_CAME_ATOMO_NAME) == 0 ||
-           strcmp(protocol, SUBGHZ_PROTOCOL_ALUTECH_AT_4N_NAME) == 0;
-}
 
 /* The firmware's whole-receiver test: this many decodes from this capture
  * (subghz_decode_random_test, TEST_RANDOM_COUNT_PARSE). It runs after the
@@ -266,7 +264,7 @@ typedef struct {
 typedef struct {
     RunResult* result;
     const char* expected; /* NULL: none */
-    bool describe_all; /* false: not those that read a rainbow table name */
+    bool own_text; /* the decoder's own text, not the app's (to show why) */
     bool replay; /* first the firmware's decoder tests, on the same receiver */
     FuriString* text;
 } Run;
@@ -346,7 +344,8 @@ static void note_key(RunResult* r, SubGhzProtocolDecoderBase* decoder_base) {
     if(r->keys < MAX_KEYS) r->key[r->keys++] = (DecodedKey){bits, key};
 }
 
-/* As the app's: describe, hash, log, reset. */
+/* As the app's: describe (with the app's radiogeddon_decode_text), hash,
+ * log, reset. */
 static void
     rx_callback(SubGhzReceiver* receiver, SubGhzProtocolDecoderBase* decoder_base, void* context) {
     Run* run = context;
@@ -355,13 +354,15 @@ static void
                            decoder_base->protocol->name :
                            "";
     count_protocol(r, name);
-    furi_string_reset(run->text);
-    if(run->describe_all || !needs_table_name(name)) {
-        snprintf(r->describing, sizeof(r->describing), "%s", name);
+    snprintf(r->describing, sizeof(r->describing), "%s", name);
+    if(run->own_text) {
+        furi_string_reset(run->text);
         subghz_protocol_decoder_base_get_string(decoder_base, run->text);
-        if(run->expected && strcmp(name, run->expected) == 0) note_key(r, decoder_base);
-        r->describing[0] = '\0';
+    } else {
+        radiogeddon_decode_text(decoder_base, NULL, run->text);
     }
+    if(run->expected && strcmp(name, run->expected) == 0) note_key(r, decoder_base);
+    r->describing[0] = '\0';
     uint8_t hash = subghz_protocol_decoder_base_get_hash_data(decoder_base);
     rg_decode_log_add(&r->log, name, furi_string_get_cstr(run->text), hash);
     subghz_receiver_reset(receiver);
@@ -587,11 +588,11 @@ static uint32_t count_of(const RunResult* r, const char* protocol) {
     return 0;
 }
 
-static bool in_log(const RgDecodeLog* log, const char* protocol) {
+static const RgDecodeHit* in_log(const RgDecodeLog* log, const char* protocol) {
     for(size_t i = 0; i < log->hit_count; i++) {
-        if(strcmp(log->hit[i].protocol, protocol) == 0) return true;
+        if(strcmp(log->hit[i].protocol, protocol) == 0) return &log->hit[i];
     }
-    return false;
+    return NULL;
 }
 
 static void format_counts(const RunResult* r, char* out, size_t cap) {
@@ -629,7 +630,7 @@ static void print_key_file(const RunResult* r, const KeyFile* k, bool match) {
 }
 
 typedef struct {
-    unsigned decoded, table_crash, failed;
+    unsigned decoded, data_only, failed;
     unsigned key_files, key_match, tail_differs;
 } Totals;
 
@@ -641,15 +642,14 @@ static void test_pairs(RunResult* r, Totals* t) {
         bool found = find_file(p->file, path, sizeof(path));
         CHECK(found, "capture present");
         if(!found) continue;
-        Run run = {r, p->protocol, true, false, NULL};
+        Run run = {r, p->protocol, false, false, NULL};
         Outcome outcome = run_isolated(path, run);
         uint32_t hits = count_of(r, p->protocol);
-        bool decoded = outcome == OutcomeDone && hits > 0 && in_log(&r->log, p->protocol);
-        bool table_crash = outcome == OutcomeCrash && hits > 0 &&
-                           strcmp(r->describing, p->protocol) == 0 &&
-                           needs_table_name(p->protocol);
-        const char* result = decoded                 ? "decoded" :
-                             table_crash             ? "decoded, crashed describing it" :
+        const RgDecodeHit* hit = outcome == OutcomeDone ? in_log(&r->log, p->protocol) : NULL;
+        bool decoded = hits > 0 && hit;
+        bool data_only = radiogeddon_decode_text_avoids_decoder(p->protocol);
+        const char* result = decoded && data_only    ? "decoded (data-only text)" :
+                             decoded                 ? "decoded" :
                              outcome == OutcomeHang  ? "HUNG" :
                              outcome == OutcomeCrash ? "CRASHED" :
                                                        "NOT DECODED";
@@ -671,14 +671,29 @@ static void test_pairs(RunResult* r, Totals* t) {
             print_tail(r);
             if(r->tail_decodes != r->log.decodes) t->tail_differs++;
         }
-        if(p->expect == ExpectDecode) {
-            CHECK(decoded, "the expected protocol decodes, through the log");
-            t->decoded += decoded;
-            t->failed += !decoded;
-        } else {
-            CHECK(table_crash, "decodes, then reads the NULL rainbow table name");
-            t->table_crash += table_crash;
-            t->failed += !table_crash;
+        CHECK(decoded, "the expected protocol decodes and is described, through the log");
+        t->decoded += decoded;
+        t->failed += !decoded;
+        CHECK(
+            data_only == (p->expect == ExpectDataOnly),
+            "the app's own text only for the decoders that need a table");
+
+        if(p->expect == ExpectDataOnly) {
+            CHECK(
+                hit && strncmp(hit->text, p->protocol, strlen(p->protocol)) == 0 &&
+                    strstr(hit->text, "bit\nKey:") && strstr(hit->text, "rainbow"),
+                "described by name, bits and key, saying why");
+            if(hit) printf("      the app's text: %.60s...\n", hit->text);
+            /* Why: the decoder's own text, in the app's environment. */
+            Run own = {r, p->protocol, true, false, NULL};
+            Outcome own_outcome = run_isolated(path, own);
+            bool table_crash = own_outcome == OutcomeCrash &&
+                               strcmp(r->describing, p->protocol) == 0;
+            printf(
+                "      its decoder's own text: %s\n",
+                table_crash ? "crashes (reads the NULL rainbow table name)" : "does not crash");
+            CHECK(table_crash, "the decoder's own text still reads the NULL table name");
+            t->data_only += decoded && table_crash;
         }
 
         KeyFile k;
@@ -695,10 +710,10 @@ static void test_pairs(RunResult* r, Totals* t) {
 }
 
 /* The firmware's whole-receiver capture: every decode counts. Its test
- * describes them with the rainbow tables present; here the two protocols
- * that would read a NULL name are counted but not described. Run fresh, as
- * the app would, and after replaying the decoder tests, as the firmware's
- * suite does. */
+ * describes them with the rainbow tables present; here every decode is
+ * described with the app's text, as the app has none. Run fresh, as the app
+ * would, and after replaying the decoder tests, as the firmware's suite
+ * does. */
 static void test_random_capture(RunResult* r) {
     printf("test_random_capture\n");
     char path[512];
@@ -744,11 +759,11 @@ int main(void) {
     clock_gettime(CLOCK_MONOTONIC, &t1);
     double secs = (double)(t1.tv_sec - t0.tv_sec) + (double)(t1.tv_nsec - t0.tv_nsec) / 1e9;
     printf(
-        "\n%zu captures: %u decoded as expected, %u decoded and then crashed describing (NULL "
-        "rainbow table name, as the app sets it), %u otherwise\n",
+        "\n%zu captures: %u decoded as expected (%u with the app's data-only text, whose "
+        "decoder's own text crashes without a rainbow table), %u otherwise\n",
         PAIR_COUNT,
         t.decoded,
-        t.table_crash,
+        t.data_only,
         t.failed);
     printf(
         "key files for the same protocol: %u, their key also decoded from the capture: %u\n",

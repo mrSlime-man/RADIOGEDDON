@@ -24,9 +24,9 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#define RG_DECODE_MAX_HITS 12
-#define RG_DECODE_NAME     24
-#define RG_DECODE_TEXT     200
+#define RG_DECODE_MAX_HITS         12
+#define RG_DECODE_NAME             24
+#define RG_DECODE_TEXT             200
 /* Samples fed between progress reports. */
 #define RG_DECODE_PROGRESS_SAMPLES 1024u
 
