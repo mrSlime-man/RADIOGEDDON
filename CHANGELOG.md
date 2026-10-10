@@ -7,6 +7,12 @@ to follow [Semantic Versioning](https://semver.org/) (pre-1.0.0 releases use
 
 ## [Unreleased]
 
+## [1.0.0-beta.5] - 2026-10-10
+
+Saved keys open in the stock Sub-GHz app again, Replay checks custom presets,
+Unknown Protocol Analysis reads real captures better, and Settings takes a
+typed frequency. Not yet verified on hardware.
+
 ### Changed
 - **Unknown Protocol Analysis reads real captures better.** Scored on the
   firmware's 50 paired RAW test captures against each protocol's decoder,
