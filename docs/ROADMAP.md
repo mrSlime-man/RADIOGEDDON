@@ -4,9 +4,15 @@ Where RadioGeddon is headed. This is a plan, not a promise — priorities shift
 with what hardware testing finds and what contributors pick up. Dates are
 deliberately omitted.
 
-## Now — `1.0.0-beta.4`
+## Now — `1.0.0-beta.5`
 
-`1.0.0-beta.4` fixes a crash in Receive and the Hopper on Official firmware
+`1.0.0-beta.5` fixes keys saved from Receive and the Hopper, which the stock
+Sub-GHz app could not open, and has Replay check a file's custom preset before
+loading it into the radio. Unknown Protocol Analysis is now scored on the
+firmware's own RAW test captures and reads them better, and Settings takes a
+typed frequency. None of it is verified on hardware yet.
+
+`1.0.0-beta.4` fixed a crash in Receive and the Hopper on Official firmware
 (CAME Atomo and Alutech AT-4N decodes) and adds *Decode with Firmware*, which
 runs the firmware's own decoders over a saved RAW capture. Neither is verified
 on hardware yet.
@@ -91,10 +97,14 @@ still needs.
 - [x] **Decoder tests**: the firmware's own decoders built on the host and
       run over its RAW test captures in CI. They found the Official-only
       Receive crash fixed in `1.0.0-beta.4` (hardware check F5a pending).
-- [ ] **Analyzer scored on real captures**: Unknown Protocol Analysis run
+- [x] **Analyzer scored on real captures**: Unknown Protocol Analysis run
       on the firmware's 50 paired test captures in CI and scored against
       the decoders' timing; glitch, pairing, preamble and separator rules
-      that came out of it (implemented, not yet released).
+      that came out of it (published in `1.0.0-beta.5`).
+- [x] **Saved keys and custom presets**: keys saved from Receive and the
+      Hopper name their real preset, so the stock app opens them; Replay
+      checks a file's custom preset before the radio loads it (published in
+      `1.0.0-beta.5`; hardware checks F6g and F7 pending).
 
 ## Toward a stable 1.0.0
 
@@ -105,7 +115,7 @@ still needs.
 
 ## Later
 
-- [x] Custom frequency entry (implemented, not yet released; hardware check
+- [x] Custom frequency entry (published in `1.0.0-beta.5`; hardware check
       F1f pending).
 - [ ] A custom modulation/preset editor.
 - [ ] Richer analysis: more encodings, CRC/checksum guesses, bit-field views.

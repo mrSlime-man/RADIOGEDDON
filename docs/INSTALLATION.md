@@ -32,12 +32,12 @@ Using a different fork? See [Firmware Compatibility](FIRMWARE_COMPATIBILITY.md).
 
 ## Step 2 — Download
 
-From the [**v1.0.0-beta.4 release page**](https://github.com/mrSlime-man/RADIOGEDDON/releases/tag/v1.0.0-beta.4),
+From the [**v1.0.0-beta.5 release page**](https://github.com/mrSlime-man/RADIOGEDDON/releases/tag/v1.0.0-beta.5),
 or directly:
 
-- [radiogeddon-official.fap](https://github.com/mrSlime-man/RADIOGEDDON/releases/download/v1.0.0-beta.4/radiogeddon-official.fap)
-- [radiogeddon-unleashed.fap](https://github.com/mrSlime-man/RADIOGEDDON/releases/download/v1.0.0-beta.4/radiogeddon-unleashed.fap)
-- [radiogeddon-roguemaster.fap](https://github.com/mrSlime-man/RADIOGEDDON/releases/download/v1.0.0-beta.4/radiogeddon-roguemaster.fap)
+- [radiogeddon-official.fap](https://github.com/mrSlime-man/RADIOGEDDON/releases/download/v1.0.0-beta.5/radiogeddon-official.fap)
+- [radiogeddon-unleashed.fap](https://github.com/mrSlime-man/RADIOGEDDON/releases/download/v1.0.0-beta.5/radiogeddon-unleashed.fap)
+- [radiogeddon-roguemaster.fap](https://github.com/mrSlime-man/RADIOGEDDON/releases/download/v1.0.0-beta.5/radiogeddon-roguemaster.fap)
 
 ### Optional: verify the download
 
