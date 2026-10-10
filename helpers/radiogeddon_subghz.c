@@ -64,11 +64,8 @@ static FuriHalSubGhzPreset radiogeddon_subghz_current_preset(RadioGeddonSubGhz* 
 }
 
 static SubGhzRadioPreset radiogeddon_subghz_build_radio_preset(RadioGeddonSubGhz* instance) {
-    SubGhzRadioPreset preset = {0};
-    preset.frequency = instance->frequency;
-    preset.name = furi_string_alloc_set(radiogeddon_presets[instance->preset_index].file_name);
-    preset.data = NULL;
-    preset.data_size = 0;
+    SubGhzRadioPreset preset;
+    radiogeddon_decode_preset(&preset, instance->preset_index, instance->frequency);
     return preset;
 }
 
@@ -686,12 +683,10 @@ RadioGeddonTxResult radiogeddon_subghz_tx_start(
         FuriHalSubGhzPreset preset_enum = FuriHalSubGhzPresetIDLE;
         bool preset_known = false;
         if(flipper_format_read_string(ff, "Preset", temp_str)) {
-            for(size_t i = 0; i < radiogeddon_presets_count; i++) {
-                if(furi_string_equal_str(temp_str, radiogeddon_presets[i].file_name)) {
-                    preset_enum = radiogeddon_presets[i].preset;
-                    preset_known = true;
-                    break;
-                }
+            int32_t index = radiogeddon_preset_find_file_name(furi_string_get_cstr(temp_str));
+            if(index >= 0) {
+                preset_enum = radiogeddon_presets[index].preset;
+                preset_known = true;
             }
             if(!preset_known && furi_string_equal_str(temp_str, "FuriHalSubGhzPresetCustom")) {
                 // Custom preset: load the raw CC1101 register array from the file
@@ -714,11 +709,13 @@ RadioGeddonTxResult radiogeddon_subghz_tx_start(
                 // The firmware loads the array without bounds and writes every
                 // address in it, so a damaged file reads past the buffer and a
                 // command strobe would be executed (0x35 is STX, before any
-                // region check): refuse those before the radio sees them.
+                // region check): refuse those before the radio sees them. A
+                // custom preset with no list at all (keys saved from Receive and
+                // the Hopper in 1.0.0-beta.1 to beta.4) is refused the same way.
                 uint8_t bad_reg = 0;
                 RgPresetResult check = custom_preset_data ?
                                            rg_preset_check(custom_preset_data, count, &bad_reg) :
-                                           RgPresetOk;
+                                           RgPresetEmpty;
                 if(check != RgPresetOk) {
                     FURI_LOG_W(
                         TAG,

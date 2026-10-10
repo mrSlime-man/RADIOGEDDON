@@ -289,7 +289,7 @@ Replay **refuses** to transmit when:
 | the protocol is dynamic (rolling code), not transmittable, or unknown to the firmware | `Protected/rolling code` |
 | the firmware's region settings forbid the frequency | `Blocked by region` |
 | the file is unreadable or its modulation preset isn't recognised | `Unsupported file` |
-| its custom preset is damaged (no end, PA table cut) or holds an address that is not a configuration register, such as a command strobe | `Bad custom preset` |
+| its custom preset is empty or damaged (no end, PA table cut) or holds an address that is not a configuration register, such as a command strobe | `Bad custom preset` |
 
 Regional rules are enforced by the firmware itself
 (`subghz_devices_set_tx`), and RadioGeddon does not bypass them. A custom

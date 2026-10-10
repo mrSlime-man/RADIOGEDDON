@@ -15,7 +15,8 @@
  *
  * Covered: loading every .sub file (signal details checked against an
  * independent reading of the same file, and against the Database index and
- * the RAW reader), the analyzer over every RAW file, settings saved and read
+ * the RAW reader, its Preset against the app's presets), the analyzer over
+ * every RAW file, settings saved and read
  * back, malformed settings, a save that fails part-way or cannot replace the
  * old file, writing decoded signals, unique names, and that all of it
  * returns every byte and file handle.
@@ -149,6 +150,7 @@ typedef struct {
     /* RAW captures with a decoded file of the same protocol (name_raw.sub and
      * name.sub): how often the analyzer's frame length equals its Bit. */
     unsigned paired, bits_exact, bits_one_short;
+    unsigned presets_ours; /* Preset names one of the app's (Replay finds it) */
 } Tally;
 
 static void check_sub_file(const char* path, const char* name, Tally* t, bool verbose) {
@@ -158,6 +160,7 @@ static void check_sub_file(const char* path, const char* name, Tally* t, bool ve
         return;
     }
     t->files++;
+    if(radiogeddon_preset_find_file_name(e.preset) >= 0) t->presets_ours++;
     bool is_raw = e.has_protocol && strcmp(e.protocol, "RAW") == 0;
     char what[160];
 
@@ -324,9 +327,30 @@ static void test_firmware_files(bool verbose) {
         t.bits_exact,
         t.paired,
         t.bits_one_short);
+    printf("  Preset is one the app offers in %u of %u files\n", t.presets_ours, t.files);
+    CHECK(t.presets_ours == t.files, "every file's Preset is one of the app's");
     CHECK(t.paired >= 33, "33 captures paired with a decoded file");
     CHECK(t.bits_exact >= 10, "analyzer frame length still exact for at least 10");
     CHECK(t.bits_exact + t.bits_one_short >= 17, "and within one bit for at least 17");
+}
+
+/* The names a file's Preset is looked up by (Replay): the firmware's full
+ * names, not its short setting names, which only a decoder is given. */
+static void test_preset_names(void) {
+    printf("test_preset_names\n");
+    bool found = true;
+    for(size_t i = 0; i < radiogeddon_presets_count; i++) {
+        if(radiogeddon_preset_find_file_name(radiogeddon_presets[i].file_name) != (int32_t)i)
+            found = false;
+        if(radiogeddon_preset_find_file_name(radiogeddon_presets[i].setting_name) != -1)
+            found = false;
+    }
+    CHECK(found, "each preset found by its file name, none by its setting name");
+    CHECK(
+        radiogeddon_preset_find_file_name(NULL) == -1 &&
+            radiogeddon_preset_find_file_name("") == -1 &&
+            radiogeddon_preset_find_file_name("FuriHalSubGhzPresetCustom") == -1,
+        "no preset for nothing, an empty name or a custom preset");
 }
 
 static void test_fixture_files(void) {
@@ -639,6 +663,7 @@ static void test_repeated(void) {
 int main(int argc, char** argv) {
     bool verbose = argc > 1 && strcmp(argv[1], "-v") == 0;
     test_firmware_files(verbose);
+    test_preset_names();
     test_fixture_files();
     test_settings_round_trip();
     test_settings_malformed();

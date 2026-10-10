@@ -34,6 +34,18 @@ to follow [Semantic Versioning](https://semver.org/) (pre-1.0.0 releases use
   test.
 
 ### Fixed
+- **Saved keys open in the stock Sub-GHz app and in Replay.** Every key
+  saved from *Receive & Record* or the Hopper since `1.0.0-beta.1` was
+  written as `Preset: FuriHalSubGhzPresetCustom` with an empty
+  `Custom_preset_data`, because the decoders were given the preset's file
+  name where the firmware expects its short name (`AM650`). The stock app
+  refuses such a file (`Cannot parse file`, in the Official, Unleashed and
+  RogueMaster sources) and Replay said `Unsupported file`. Keys are now saved
+  with their real preset; the decoder tests save every decode on each preset
+  with the firmware's own code and check it. RAW recordings were never
+  affected. Keys saved earlier show `Bad custom preset` in Replay, and
+  [Troubleshooting](docs/TROUBLESHOOTING.md#a-saved-key-wont-open) shows the
+  one-line fix.
 - **Replay checks a file's custom preset before loading it.** A `.sub` file
   can carry its own CC1101 register list (`Custom_preset_data`). The
   firmware writes that list to the radio without bounds or checks, so a

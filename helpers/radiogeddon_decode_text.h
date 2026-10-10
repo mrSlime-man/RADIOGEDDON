@@ -1,6 +1,7 @@
 /**
  * @file radiogeddon_decode_text.h
- * @brief The description shown for a decoded signal.
+ * @brief The description shown for a decoded signal, and the preset its key
+ * is saved with.
  *
  * Usually the decoder's own text. RadioGeddon gives the decoders no rainbow
  * tables (the files some firmware decoders use to undo a rolling code's
@@ -28,3 +29,11 @@ bool radiogeddon_decode_text(
 
 /** Whether the decoder of @p protocol_name gets the data-only description. */
 bool radiogeddon_decode_text_avoids_decoder(const char* protocol_name);
+
+/**
+ * The preset a decode received on radiogeddon_presets[@p index] is saved
+ * with: the firmware's short name for it ("AM650"), which the decoder writes
+ * as the file's Preset ("FuriHalSubGhzPresetOok650Async"). The caller frees
+ * preset->name.
+ */
+void radiogeddon_decode_preset(SubGhzRadioPreset* preset, size_t index, uint32_t frequency);

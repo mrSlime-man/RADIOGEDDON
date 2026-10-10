@@ -1,4 +1,5 @@
 #include "radiogeddon_decode_text.h"
+#include "radiogeddon_bands.h"
 
 #include <lib/flipper_format/flipper_format.h>
 #include <string.h>
@@ -59,4 +60,15 @@ bool radiogeddon_decode_text(
         return radiogeddon_decode_text_from_data(decoder_base, preset, out);
     }
     return subghz_protocol_decoder_base_get_string(decoder_base, out);
+}
+
+void radiogeddon_decode_preset(SubGhzRadioPreset* preset, size_t index, uint32_t frequency) {
+    if(index >= radiogeddon_presets_count) index = 0;
+    // Not the file name: the firmware writes a name it does not know as a
+    // custom preset with the register list given here (none), and neither
+    // the stock app nor Replay can load that key.
+    preset->name = furi_string_alloc_set(radiogeddon_presets[index].setting_name);
+    preset->frequency = frequency;
+    preset->data = NULL;
+    preset->data_size = 0;
 }
