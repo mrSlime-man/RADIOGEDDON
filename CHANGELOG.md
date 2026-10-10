@@ -7,6 +7,11 @@ to follow [Semantic Versioning](https://semver.org/) (pre-1.0.0 releases use
 
 ## [Unreleased]
 
+## [1.0.0-beta.4] - 2026-10-10
+
+Fixes a crash on Official firmware and adds Decode with Firmware. Not yet
+verified on hardware.
+
 ### Fixed
 - **Receive and the Hopper could crash on Official firmware when they decoded
   a CAME Atomo or Alutech AT-4N remote.** Those two firmware decoders read

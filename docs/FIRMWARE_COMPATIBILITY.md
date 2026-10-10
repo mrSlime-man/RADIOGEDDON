@@ -6,7 +6,7 @@ firmware's `subghz` protocol library — so it needs no firmware patches. Becaus
 each firmware family publishes its own SDK API version, **each family gets its
 own `.fap`**.
 
-## Supported firmware (v1.0.0-beta.3)
+## Supported firmware (v1.0.0-beta.4)
 
 | Firmware | Built against | SDK API | Download |
 |----------|---------------|---------|----------|
