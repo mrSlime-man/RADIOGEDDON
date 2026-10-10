@@ -30,6 +30,7 @@
 #include "helpers/radiogeddon_scanner.h"
 #include "helpers/radiogeddon_hopper.h"
 #include "helpers/radiogeddon_report.h"
+#include "helpers/radiogeddon_memdiag.h"
 #include "views/radiogeddon_scanner_view.h"
 #include "views/radiogeddon_receiver_view.h"
 #include "views/radiogeddon_timeline_view.h"
@@ -105,6 +106,9 @@ struct RadioGeddonApp {
     uint8_t progress_slot;
     uint8_t progress_pct;
     uint32_t progress_tick;
+    // "Not enough memory" text shown before a radio session (with figures).
+    char memory_text[96];
+    uint32_t fw_tag; // identifies the running firmware (rg_mem_firmware_tag)
 
     // Persisted settings (frequency/preset are mirrored in the fields below)
     RadioGeddonSettings settings;

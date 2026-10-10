@@ -27,6 +27,8 @@ void radiogeddon_settings_default(RadioGeddonSettings* settings) {
     settings->db_sort = RgDbSortDate;
     settings->radio_external = false;
     settings->ext_power = true; // as the firmware's Sub-GHz app does
+    settings->radio_heap = 0; // not measured yet
+    settings->radio_heap_fw = 0;
 }
 
 uint32_t radiogeddon_settings_default_hop_mask(void) {
@@ -102,6 +104,16 @@ void radiogeddon_settings_load(Storage* storage, RadioGeddonSettings* settings) 
         if(flipper_format_read_bool(ff, "Radio_external", &b, 1)) settings->radio_external = b;
         flipper_format_rewind(ff);
         if(flipper_format_read_bool(ff, "Ext_5V", &b, 1)) settings->ext_power = b;
+        // A measured session cost is only used together with its firmware tag.
+        uint32_t fw = 0;
+        flipper_format_rewind(ff);
+        if(flipper_format_read_uint32(ff, "Radio_heap", &v, 1) && v <= 256u * 1024u) {
+            flipper_format_rewind(ff);
+            if(flipper_format_read_uint32(ff, "Radio_heap_fw", &fw, 1) && fw != 0) {
+                settings->radio_heap = v;
+                settings->radio_heap_fw = fw;
+            }
+        }
     } while(false);
 
     furi_string_free(type);
@@ -109,10 +121,12 @@ void radiogeddon_settings_load(Storage* storage, RadioGeddonSettings* settings) 
 }
 
 bool radiogeddon_settings_save(Storage* storage, const RadioGeddonSettings* settings) {
+    // Write a new file next to the old one and swap it in only when complete,
+    // so a failed write never leaves a cut-off settings file.
     FlipperFormat* ff = flipper_format_file_alloc(storage);
     bool ok = false;
     do {
-        if(!flipper_format_file_open_always(ff, RADIOGEDDON_SETTINGS_PATH)) break;
+        if(!flipper_format_file_open_always(ff, RADIOGEDDON_SETTINGS_TEMP)) break;
         if(!flipper_format_write_header_cstr(ff, SETTINGS_FILE_TYPE, SETTINGS_FILE_VERSION)) break;
         uint32_t v = settings->frequency;
         if(!flipper_format_write_uint32(ff, "Frequency", &v, 1)) break;
@@ -140,8 +154,25 @@ bool radiogeddon_settings_save(Storage* storage, const RadioGeddonSettings* sett
         if(!flipper_format_write_bool(ff, "Radio_external", &b, 1)) break;
         b = settings->ext_power;
         if(!flipper_format_write_bool(ff, "Ext_5V", &b, 1)) break;
+        v = settings->radio_heap;
+        if(!flipper_format_write_uint32(ff, "Radio_heap", &v, 1)) break;
+        v = settings->radio_heap_fw;
+        if(!flipper_format_write_uint32(ff, "Radio_heap_fw", &v, 1)) break;
         ok = true;
     } while(false);
+    ok = flipper_format_file_close(ff) && ok;
     flipper_format_free(ff);
+    if(ok) {
+        FS_Error err =
+            storage_common_rename(storage, RADIOGEDDON_SETTINGS_TEMP, RADIOGEDDON_SETTINGS_PATH);
+        if(err == FSE_EXIST) {
+            // Firmware that does not replace on rename.
+            storage_common_remove(storage, RADIOGEDDON_SETTINGS_PATH);
+            err = storage_common_rename(
+                storage, RADIOGEDDON_SETTINGS_TEMP, RADIOGEDDON_SETTINGS_PATH);
+        }
+        ok = err == FSE_OK;
+    }
+    if(!ok) storage_common_remove(storage, RADIOGEDDON_SETTINGS_TEMP);
     return ok;
 }

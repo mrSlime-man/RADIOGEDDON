@@ -12,6 +12,7 @@
 #include <storage/storage.h>
 
 #define RADIOGEDDON_SETTINGS_PATH EXT_PATH("apps_data/radiogeddon/settings.txt")
+#define RADIOGEDDON_SETTINGS_TEMP EXT_PATH("apps_data/radiogeddon/settings.tmp")
 
 typedef struct {
     uint32_t frequency; // Hz, receiver / default frequency
@@ -27,6 +28,8 @@ typedef struct {
     uint8_t db_sort; // Database sort order (RgDbSort), kept from the last visit
     bool radio_external; // use an external CC1101 module when one answers
     bool ext_power; // switch on 5 V (GPIO pin 1) for the external module
+    uint32_t radio_heap; // heap the last measured receive session took (0: none)
+    uint32_t radio_heap_fw; // firmware it was measured on (rg_mem_firmware_tag)
 } RadioGeddonSettings;
 
 /** Default hopper list: the frequencies in radiogeddon_hopper_frequencies. */
@@ -38,5 +41,6 @@ void radiogeddon_settings_default(RadioGeddonSettings* settings);
 /** Load from the SD card. Missing or invalid fields keep their defaults. */
 void radiogeddon_settings_load(Storage* storage, RadioGeddonSettings* settings);
 
-/** Save to the SD card. Returns false on I/O failure. */
+/** Save to the SD card, replacing the file only once the new one is complete.
+ * Returns false on I/O failure (the previous file is then kept). */
 bool radiogeddon_settings_save(Storage* storage, const RadioGeddonSettings* settings);

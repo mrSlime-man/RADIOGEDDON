@@ -60,6 +60,7 @@ static void radiogeddon_scene_receiver_note(RadioGeddonApp* app, const char* tex
 static void radiogeddon_scene_receiver_start_recording(RadioGeddonApp* app) {
     RadioGeddonRecordError err = radiogeddon_subghz_record_start(app->subghz);
     if(err == RadioGeddonRecordOk) {
+        radiogeddon_memdiag_sample("Recording");
         notification_message(app->notifications, &sequence_set_only_red_255);
         radiogeddon_receiver_view_set_status(app->receiver_view, "");
         RadioGeddonRecordStats st;
@@ -136,7 +137,9 @@ void radiogeddon_scene_receiver_on_enter(void* context) {
     radiogeddon_subghz_set_preset(app->subghz, app->preset_index);
 
     if(radiogeddon_subghz_is_device_present(app->subghz)) {
+        if(!radiogeddon_scene_radio_memory_ok(app)) return;
         radiogeddon_subghz_rx_start(app->subghz, radiogeddon_scene_receiver_decode_cb, app);
+        radiogeddon_memdiag_sample("Receiver");
     } else {
         // No radio: show a clear message instead of pretending to receive.
         popup_reset(app->popup);
@@ -196,6 +199,14 @@ bool radiogeddon_scene_receiver_on_event(void* context, SceneManagerEvent event)
             consumed = true;
             break;
         case ReceiverCustomSave: {
+            // Leaving for the name screen stops the radio, and starting it
+            // again would delete the capture: name the recording first. The
+            // decoded list is kept, so the decode can be saved afterwards.
+            if(radiogeddon_subghz_is_recording(app->subghz)) {
+                radiogeddon_scene_receiver_stop_recording(app);
+                consumed = true;
+                break;
+            }
             size_t sel = radiogeddon_receiver_view_get_selected(app->receiver_view);
             furi_mutex_acquire(app->history_mutex, FuriWaitForever);
             bool ok = radiogeddon_history_has_serialized(app->history, sel);
@@ -235,5 +246,6 @@ void radiogeddon_scene_receiver_on_exit(void* context) {
     // Stop the radio. A capture still running is written out and stays
     // pending, so the save-name scene can still keep it.
     radiogeddon_subghz_rx_stop(app->subghz);
+    radiogeddon_scene_radio_memory_learn(app);
     radiogeddon_receiver_view_set_status(app->receiver_view, "");
 }

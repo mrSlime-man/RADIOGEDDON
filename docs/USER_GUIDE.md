@@ -60,7 +60,9 @@ settings and `Activity hold` to the Hopper.
 
 Settings are saved to `apps_data/radiogeddon/settings.txt` on the SD card when
 you leave the Settings screen, and are restored the next time the app starts.
-A missing or damaged file just means the defaults are used.
+A missing or damaged file just means the defaults are used. The same file also
+keeps the Database sort order and the memory a receive session needed
+(`Radio_heap`, see [Receive & Record](#receive--record)).
 
 ### External CC1101 module
 
@@ -161,7 +163,7 @@ The screen shows:
 | Button | Action |
 |--------|--------|
 | Up / Down | Highlight a decoded signal (the newest is highlighted automatically) |
-| OK | Save the highlighted decoded signal |
+| OK | Save the highlighted decoded signal. While recording, it stops the recording and asks for its name first; the decoded list is kept |
 | Left | Start RAW recording; press again to stop and name it |
 | Back | While recording: stop and name it. Otherwise: stop the radio and return |
 
@@ -191,6 +193,12 @@ capture.
   while recording, it stops and shows `SD card write failed`.
 - Stopping a recording that captured nothing shows `Nothing captured` and
   returns to listening.
+- Before the radio starts, the app checks that the memory a receive session
+  needed last time (on this firmware) is still free, plus a 6 KB margin. If it
+  is not, the screen shows `Not enough memory` with the figures, for example
+  `Radio needs ~27 KB, 15 KB free.`, and the radio is not started (see
+  [Troubleshooting](TROUBLESHOOTING.md#not-enough-memory-when-opening-receive-or-hopper)).
+  The Frequency Hopper does the same.
 
 ## Frequency Hopper
 
@@ -372,9 +380,26 @@ frames, like a single button press.
 
 ## About
 
-Shows the version (`Version: 1.0.0-beta.2`), the radio device, the list of
-modules, the meaning of the analysis labels, where recordings are stored, and
-the project address.
+Shows the version (`Version: 1.0.0-beta.2`), the radio device, memory
+figures, the list of modules, the meaning of the analysis labels, where
+recordings are stored, and the project address.
+
+The memory figures are read from the firmware's heap counters when About
+opens:
+
+| Line | Meaning |
+|------|---------|
+| `Free now` | Free heap at this moment. |
+| `Largest block` | The biggest single allocation that could succeed now. |
+| `At app start` | Free heap when RadioGeddon started. |
+| `Lowest in app` | The lowest free heap the app has seen in this run. It samples on every screen tick (10 times a second) and right after its large allocations; `(after: …)` names the last step it had started, such as `Receiver`, `Recording` or `Reading files...`. |
+| `Peak app use` | `At app start` minus `Lowest in app`. |
+| `Low since boot` | The firmware's lowest free heap since the Flipper started, for any app. |
+| `Radio session` | What starting Receive or the Hopper took (decoders, keystore, worker), as measured this run or kept from an earlier run on the same firmware; `not measured yet` until one has run. |
+| `Total heap` | The heap's size. |
+
+When the app closes it writes the same summary to the log
+(`RadioGeddonMem`), which helps when reporting a memory problem.
 
 ## Tips
 

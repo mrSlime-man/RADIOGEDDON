@@ -6,7 +6,8 @@
  * Every recording is read back with the RAW reader (helpers/rg_raw.c).
  *
  * Timing here is the host's, not the Flipper's: these tests show the logic
- * (no blocking, ordering, loss accounting, error handling), not throughput.
+ * (no blocking, ordering, loss accounting, error handling, memory returned
+ * after every recording), not throughput.
  * Build & run via `make -C test check`. All samples are synthetic.
  */
 #include "furi.h"
@@ -270,12 +271,53 @@ static void test_failures(void) {
         "error text");
 }
 
+/* Heap the recorder leaves free (RECORDER_HEAP_SPARE) and its thread's stack,
+ * which the stub threads do not allocate. */
+#define REC_SPARE (12u * 1024u)
+#define REC_STACK 1536u
+
+static void test_cycles(void) {
+    printf("test_cycles\n");
+    reset_stubs();
+    size_t base = stub_live_bytes;
+    bool cleaned = true, in_budget = true, recorded = true;
+    // Back-to-back recordings, as when the hopper saves one capture after
+    // another, at full and at tight heap.
+    for(int i = 0; i < 40; i++) {
+        stub_heap_free = (i & 1) ? 64 * 1024 : 22 * 1024; /* largest or smallest ring */
+        stub_alloc_reset_peak();
+        RadioGeddonRecorder* rec = start();
+        if(!rec) {
+            recorded = false;
+            continue;
+        }
+        Radio radio = {rec, 3000, 0, 0, 0};
+        run_radio(&radio);
+        RadioGeddonRecordStats st;
+        radiogeddon_recorder_finish(rec, &st);
+        if(st.error != RadioGeddonRecordOk || st.samples + st.lost != 3000) recorded = false;
+        if(stub_peak_bytes - base + REC_STACK > stub_heap_free - REC_SPARE) in_budget = false;
+        if(stub_live_bytes != base || stub_files_open != 0) cleaned = false;
+        if(st.buffer != ((i & 1) ? 8192u : 1024u)) recorded = false;
+    }
+    CHECK(recorded, "40 recordings, each complete");
+    CHECK(in_budget, "each stays within the heap it was given, minus the spare");
+    CHECK(cleaned, "each returns all its memory and closes its file");
+
+    // A refused recorder allocates nothing.
+    stub_heap_free = REC_SPARE;
+    stub_alloc_reset_peak();
+    CHECK(radiogeddon_recorder_alloc() == NULL, "refused below the spare");
+    CHECK(stub_peak_bytes == base, "refusal allocates nothing");
+}
+
 int main(void) {
     test_stream();
     test_slow_card();
     test_before_open();
     test_idle_flush();
     test_failures();
+    test_cycles();
     remove(REC_PATH);
 
     printf("\n%d checks, %d failures\n", g_checks, g_failures);

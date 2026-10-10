@@ -90,7 +90,8 @@ void radiogeddon_scene_rename_on_enter(void* context) {
 
 static void radiogeddon_scene_rename_apply(RadioGeddonApp* app) {
     FuriString* path = furi_string_alloc();
-    FuriString* error = furi_string_alloc();
+    FuriString* error = app->temp_str; // stays valid while the popup shows it
+    furi_string_reset(error);
     if(!radiogeddon_scene_rename_target(app, app->text_store, path, error)) {
         // Taken since the keyboard checked it.
         radiogeddon_scene_rename_result(app, false, furi_string_get_cstr(error));
@@ -109,7 +110,6 @@ static void radiogeddon_scene_rename_apply(RadioGeddonApp* app) {
             radiogeddon_scene_rename_result(app, false, storage_error_get_desc(err));
         }
     }
-    furi_string_free(error);
     furi_string_free(path);
 }
 

@@ -1,5 +1,8 @@
 #include "radiogeddon.h"
 #include "scenes/radiogeddon_scene.h"
+#include "helpers/rg_memstat.h"
+
+#include <toolbox/version.h>
 
 static bool radiogeddon_custom_event_callback(void* context, uint32_t event) {
     furi_assert(context);
@@ -16,6 +19,7 @@ static bool radiogeddon_back_event_callback(void* context) {
 static void radiogeddon_tick_event_callback(void* context) {
     furi_assert(context);
     RadioGeddonApp* app = context;
+    radiogeddon_memdiag_sample(NULL);
     scene_manager_handle_tick_event(app->scene_manager);
 }
 
@@ -35,11 +39,15 @@ RadioGeddonApp* radiogeddon_app_alloc(void) {
     app->storage = furi_record_open(RECORD_STORAGE);
 
     radiogeddon_storage_ensure_paths(app->storage);
+    // A capture cut off by a reboot or flat battery left its temporary file
+    // behind; nothing can name it any more.
+    storage_common_remove(app->storage, RADIOGEDDON_RECORD_TEMP);
 
     app->file_path = furi_string_alloc();
     app->file_path_b = furi_string_alloc();
     app->temp_str = furi_string_alloc();
     radiogeddon_settings_load(app->storage, &app->settings);
+    app->fw_tag = rg_mem_firmware_tag(version_get_version(NULL), version_get_githash(NULL));
     app->frequency = app->settings.frequency;
     app->preset_index = app->settings.preset_index;
     radiogeddon_loaded_signal_init(&app->loaded);
@@ -159,11 +167,14 @@ void radiogeddon_app_free(RadioGeddonApp* app) {
 
 int32_t radiogeddon_app(void* p) {
     UNUSED(p);
+    radiogeddon_memdiag_start();
     RadioGeddonApp* app = radiogeddon_app_alloc();
+    radiogeddon_memdiag_sample("app start");
 
     scene_manager_next_scene(app->scene_manager, RadioGeddonSceneStart);
     view_dispatcher_run(app->view_dispatcher);
 
     radiogeddon_app_free(app);
+    radiogeddon_memdiag_log();
     return 0;
 }

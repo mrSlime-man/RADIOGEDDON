@@ -1,8 +1,10 @@
 /**
- * Minimal host stand-ins for the Furi API used by helpers/radiogeddon_recorder.c,
- * so the recorder's writer thread can be tested on a PC (test/test_recorder.c).
- * Threads are pthreads; ticks are milliseconds; thread flags are a mutex and a
- * condition variable. Only what the recorder calls is provided.
+ * Minimal host stand-ins for the Furi API used by helpers/radiogeddon_recorder.c
+ * and helpers/radiogeddon_db.c, so they can be tested on a PC (test_recorder.c,
+ * test_dbload.c). Threads are pthreads; ticks are milliseconds; thread flags
+ * are a mutex and a condition variable. Only what those modules call is
+ * provided. With STUB_TRACK_ALLOC, malloc/calloc/free in the code under test
+ * are counted (live and peak bytes), so tests can check memory lifecycles.
  */
 #pragma once
 
@@ -19,6 +21,8 @@
     do {                     \
         (void)(tag);         \
     } while(0)
+#define FURI_LOG_W FURI_LOG_E
+#define FURI_LOG_I FURI_LOG_E
 
 typedef int32_t (*FuriThreadCallback)(void* context);
 
@@ -55,5 +59,25 @@ uint32_t furi_kernel_get_tick_frequency(void);
 
 size_t memmgr_heap_get_max_free_block(void);
 
+/* Strings: just what the code under test uses. */
+typedef struct FuriString FuriString;
+FuriString* furi_string_alloc(void);
+void furi_string_free(FuriString* s);
+void furi_string_printf(FuriString* s, const char* format, ...);
+const char* furi_string_get_cstr(const FuriString* s);
+
 /* Test controls. */
-extern size_t stub_heap_free;
+extern size_t stub_heap_free; /* what memmgr_heap_get_max_free_block() reports */
+
+#ifdef STUB_TRACK_ALLOC
+void* stub_malloc(size_t size);
+void* stub_calloc(size_t count, size_t size);
+void stub_free(void* p);
+#define malloc(n)    stub_malloc(n)
+#define calloc(n, s) stub_calloc(n, s)
+#define free(p)      stub_free(p)
+extern size_t stub_live_bytes; /* allocated now, by the code under test */
+extern size_t stub_live_blocks;
+extern size_t stub_peak_bytes; /* highest stub_live_bytes since the last reset */
+void stub_alloc_reset_peak(void);
+#endif

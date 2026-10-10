@@ -177,6 +177,7 @@ void radiogeddon_scene_hopper_on_enter(void* context) {
         return;
     }
 
+    if(!radiogeddon_scene_radio_memory_ok(app)) return;
     if(!app->hopper) app->hopper = radiogeddon_hopper_alloc(app->subghz);
     radiogeddon_hopper_configure(
         app->hopper,
@@ -193,6 +194,7 @@ void radiogeddon_scene_hopper_on_enter(void* context) {
         app->subghz, radiogeddon_hopper_current_frequency(app->hopper));
     radiogeddon_subghz_rx_start(app->subghz, radiogeddon_scene_hopper_decode_cb, app);
     radiogeddon_hopper_start(app->hopper);
+    radiogeddon_memdiag_sample("Hopper");
     app->scanner_running = true; // "hopper active"
 
     radiogeddon_scene_hopper_refresh_status(app);
@@ -273,6 +275,7 @@ void radiogeddon_scene_hopper_on_exit(void* context) {
     radiogeddon_receiver_view_set_hopping(app->receiver_view, false);
     radiogeddon_receiver_view_set_threshold(app->receiver_view, -127.0f);
     radiogeddon_subghz_rx_stop(app->subghz);
+    radiogeddon_scene_radio_memory_learn(app);
     popup_reset(app->popup);
     FURI_LOG_I(TAG, "exit, free heap %u", (unsigned)memmgr_get_free_heap());
 }

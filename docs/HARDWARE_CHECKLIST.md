@@ -64,6 +64,7 @@ region's rules.
 | F6c | Cancel: start recording, press Back, then Back on the name screen. | No file is added to the Database; recording again works. |
 | F6d | Card removed while recording. | The recording stops with `SD card write failed`; no crash; after reinserting the card, recording works again. |
 | F6e | Hopper auto-record with long activity (hold a remote for 10 s on a hop frequency). | One `HOP_*.sub` with all of it; the hopper resumes afterwards. |
+| F6f | OK while recording: start recording in Receive, wait for a decode, press OK. | The RAW name screen appears first; after saving, the receiver shows the decoded list again and OK saves the decode. Both files are in the Database. |
 | F7 | Custom-preset replay: a stock-app RAW `.sub` saved with a custom preset. | Replays on the correct modulation, or is cleanly refused (`Unsupported file`) — never sent on the wrong modulation. |
 | F8 | Delete: choose Delete on a saved file. | Confirmation shown; Cancel/Back keeps the file; Delete removes it; back in the Database the file is gone and the highlight stays near where it was. |
 | F11 | Database list: open Database with a mix of decoded, RAW and stock-app `.sub` files. | `Reading files...` with a rising percentage, then every file newest first with the right type, frequency and date; the counts at the top match the folder. |
@@ -86,6 +87,10 @@ region's rules.
 | F14c | Restart with `External` saved, once with the module and once without. | With it: `EXT` shown. Without: internal radio, Settings shows `Internal`, no crash or hang at start. |
 | F14d | Replay through the module on an allowed frequency, then on one the region forbids. | Allowed: transmits. Forbidden: `Blocked by region`, nothing sent. |
 | F14e | Unplug the module while on the main menu, then open Receive and Replay. | `No radio` / a replay error; no hang. (Unplugging while receiving is not supported by the firmware driver.) |
+| F15 | Memory figures: open About right after launch, then open Receive for a few seconds, go back and open About again. | First visit: `Radio session: not measured yet` (on a firmware never measured before). Second: a non-zero `Radio session` (note the value and the firmware), `Lowest in app` below `At app start` with `(after: Receiver)`, `Free now` back near its first value. |
+| F15a | Session cost kept: quit and restart the app, open About. | `Radio session` shows the same value as before the restart. `settings.txt` holds `Radio_heap` and `Radio_heap_fw`. |
+| F15b | Refusal: with a `Radio_heap` measured, edit `settings.txt` to set `Radio_heap` larger than the free heap (for example `200000`), restart and open Receive and the Hopper. | `Not enough memory` with the figures and the error tone; Back returns to the menu; no crash. Restore the value (or delete the two lines) and Receive starts again. |
+| F15c | Repeated sessions: enter and leave Receive, the Hopper and the Database ten times each (record once in Receive), with a device log open, then open About. | No crash; the `RadioGeddonMem` summary on exit and `Free now` return close to `At app start`; `Lowest in app` stays above 0 with a sensible `(after: …)` label. |
 | F9 | SD card removed mid-session. | Save/open fail gracefully with an error tone; no crash. |
 | F10 | Memory: several capture/save/open/replay cycles. | Free heap (CLI `free` or the log) returns to baseline; no growth across cycles. |
 

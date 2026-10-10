@@ -9,7 +9,7 @@ verified, and its known limits. For step-by-step use, see the
 **Every feature below is implemented, compiles for all three firmware
 families, and passes CI. None has yet been verified on a physical Flipper
 Zero.** "Unit-tested" means the feature's firmware-independent logic is covered
-by the host test suite (439 checks); radio behaviour can only be confirmed on a
+by the host test suite (519 checks); radio behaviour can only be confirmed on a
 device ([VERIFICATION.md](VERIFICATION.md)).
 
 | Feature | Implemented | Unit-tested logic | Verified on hardware |
@@ -27,6 +27,7 @@ device ([VERIFICATION.md](VERIFICATION.md)).
 | [Cryptographic Structure Heuristics](#cryptographic-structure-heuristics) | ✅ | ✅ key-byte statistics | ⏳ pending |
 | [Signal Database](#signal-database) | ✅ | ✅ index, duplicates, sort/filter/search | ⏳ pending |
 | [Authorized Signal Replay](#authorized-signal-replay) | ✅ | — | ⏳ pending |
+| [Memory diagnostics](#memory-diagnostics) | ✅ | ✅ bookkeeping, Database and recorder lifecycles | ⏳ pending |
 
 ## Sub-GHz Scanner
 
@@ -266,6 +267,19 @@ Replay **refuses** to transmit when:
 
 Regional rules are enforced by the firmware itself
 (`subghz_devices_set_tx`), and RadioGeddon does not bypass them.
+
+## Memory diagnostics
+
+- **About** shows the free heap now, the largest free block, the free heap at
+  app start, the lowest the app saw and the step before it, the app's peak
+  use, the lowest since boot, the total heap, and what a receive session took
+  ([User Guide](USER_GUIDE.md#about)). All figures come from the firmware's
+  heap counters; nothing is estimated.
+- **Receive and Hopper** measure what starting the radio took and, the next
+  time, refuse with `Not enough memory` when that plus 6 KB is no longer free,
+  instead of risking an out-of-memory crash. The measurement is kept per
+  firmware.
+- A one-line memory summary goes to the log when the app closes.
 
 ## Not implemented / out of scope
 
