@@ -23,7 +23,7 @@ Sub-GHz signals — entirely on the device, with no computer, phone or network.
 
 > [!WARNING]
 > **Public beta.** Every feature is implemented and the builds pass all
-> automated checks (lint, 532 host-test checks, format tests, fuzzing, static
+> automated checks (lint, 600 host-test checks, format tests, fuzzing, static
 > analysis, three firmware builds with API/manifest verification). On physical
 > hardware there is only one tester report so far, for the beta 2 code
 > (RogueMaster: launches and works); **nothing in beta 3 is verified on a
@@ -154,16 +154,17 @@ API version, compiles, and checks the resulting `.fap`'s manifest. More in
 ## Testing & verification
 
 ```bash
-make -C test check               # 532 host checks and the fuzz corpus, ASan + UBSan
+make -C test check               # 600 host checks and the fuzz corpus, ASan + UBSan
 make -C test formats             # the firmware's file code and its 85 Sub-GHz test files
+make -C test decoders            # the firmware's Sub-GHz decoders on its RAW test captures
 python3 scripts/check_links.py   # documentation links and anchors
 ```
 
-CI runs the link check, the release metadata check, the host and format
-tests, the fuzzers, static analysis (GCC `-fanalyzer` and clang-tidy) and all
-three firmware builds (with API and manifest verification plus lint) on every
-pull request and release. A weekly firmware watch builds the app against
-newer firmware SDKs as they appear.
+CI runs the link check, the release metadata check, the host, format and
+decoder tests, the fuzzers, static analysis (GCC `-fanalyzer` and clang-tidy)
+and all three firmware builds (with API and manifest verification plus lint)
+on every pull request and release. A weekly firmware watch builds the app
+against newer firmware SDKs as they appear.
 **CI cannot exercise the radio**, so on-device behaviour remains unverified —
 tracked honestly in [VERIFICATION.md](docs/VERIFICATION.md) with the test plan
 in [HARDWARE_CHECKLIST.md](docs/HARDWARE_CHECKLIST.md).

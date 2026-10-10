@@ -1,8 +1,9 @@
 /**
  * Minimal host stand-ins for the Furi API used by helpers/radiogeddon_recorder.c
  * and helpers/radiogeddon_db.c, so they can be tested on a PC (test_recorder.c,
- * test_dbload.c). Threads are pthreads; ticks are milliseconds; thread flags
- * are a mutex and a condition variable. Only what those modules call is
+ * test_dbload.c), and for the firmware code that test_formats and
+ * test_fwdecode build. Threads are pthreads; ticks are milliseconds; thread
+ * flags are a mutex and a condition variable. Only what that code calls is
  * provided. With STUB_TRACK_ALLOC, malloc/calloc/free in the code under test
  * are counted (live and peak bytes), so tests can check memory lifecycles.
  */
@@ -31,6 +32,11 @@
     } while(0)
 #define FURI_LOG_W FURI_LOG_E
 #define FURI_LOG_I FURI_LOG_E
+#define FURI_LOG_D FURI_LOG_E
+#define FURI_LOG_T FURI_LOG_E
+#define FURI_LOG_RAW_D(...) \
+    do {                    \
+    } while(0)
 
 typedef int32_t (*FuriThreadCallback)(void* context);
 
@@ -98,6 +104,21 @@ bool furi_string_equal_str(const FuriString* a, const char cstr[]);
 size_t furi_string_search_str(const FuriString* s, const char needle[], size_t start);
 void furi_string_replace_at(FuriString* s, size_t pos, size_t len, const char replace[]);
 void furi_string_left(FuriString* s, size_t index);
+void furi_string_set_n(FuriString* s, const FuriString* source, size_t offset, size_t length);
+/* What the firmware's Sub-GHz decoders describe their decodes with
+ * (test_fwdecode). As on the firmware, where long is 32 bits, a %lu, %ld or
+ * %lX takes a 32-bit value: its code passes uint32_t and int32_t to them.
+ * (Not marked as printf-like: the host compiler would flag every such use.) */
+int furi_string_cat_printf(FuriString* s, const char format[], ...);
+int furi_string_cat_vprintf(FuriString* s, const char format[], va_list args);
+
+/* Records, delays and the free heap: only on paths the tests never take
+ * (saving a RAW file, sending one); the stand-ins abort (subghz_stub.c). */
+#define RECORD_STORAGE "storage"
+void* furi_record_open(const char* name);
+void furi_record_close(const char* name);
+void furi_delay_ms(uint32_t milliseconds);
+size_t memmgr_get_free_heap(void);
 
 #define STUB_STR_SELECT(fs, cs, a, b) \
     _Generic((b), char*: cs, const char*: cs, FuriString*: fs, const FuriString*: fs)(a, b)
@@ -116,6 +137,16 @@ void furi_string_left(FuriString* s, size_t index);
 
 /* Test controls. */
 extern size_t stub_heap_free; /* what memmgr_heap_get_max_free_block() reports */
+
+/* The firmware's heap hands out zeroed blocks (pvPortMalloc wipes them, in
+ * furi/core/memmgr_heap.c) and its Sub-GHz decoders rely on it, starting from
+ * an all-zero state. With STUB_FURI_HEAP (test_fwdecode) malloc does too. */
+#ifdef STUB_FURI_HEAP
+#ifdef STUB_TRACK_ALLOC
+#error "STUB_FURI_HEAP and STUB_TRACK_ALLOC are exclusive"
+#endif
+#define malloc(n) calloc(1, (n))
+#endif
 
 #ifdef STUB_TRACK_ALLOC
 void* stub_malloc(size_t size);

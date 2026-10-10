@@ -71,10 +71,12 @@ helpers/
   radiogeddon_report.*      Writes a file's analysis reports to reports/<name>.txt
   radiogeddon_memdiag.*     Heap sampling and the About memory figures
   radiogeddon_history.*     Per-session list of decoded signals (max 32, de-duplicated)
+  radiogeddon_decode_text.* A decode's description (data-only for decoders needing a table)
   radiogeddon_analysis.*    Text reports: info, analysis, crypto, compare, unknown-protocol
   radiogeddon_dsp.*         Pure RAW parsing / clustering helpers (no firmware headers)
   rg_analyzer.*             Pure streaming signal-analysis engine (no firmware headers)
   rg_raw.*                  Pure streaming RAW_Data reader with seek checkpoints
+  rg_decode.*               Pure RAW-to-decoder feeder and list of distinct decodes
   rg_rawfmt.*               Pure RAW .sub writer: header, RAW_Data lines, lost-sample note
   rg_ring.*                 Pure lock-free single-producer/single-consumer sample ring
   rg_timeline.*             Pure pulse-timeline maths: columns, labels, pan, zoom, frames
@@ -83,7 +85,7 @@ helpers/
   rg_db.*                   Pure database index: .sub header parsing, duplicates, query
   rg_memstat.*              Pure memory bookkeeping: lowest/peak, session cost, fit check
 assets/                     10x10 launcher icon (compiled into the .fap)
-test/                       Host unit tests (532 checks), format tests, fuzz targets, fixtures
+test/                       Host unit tests (600 checks), format and decoder tests, fuzz targets, fixtures
 scripts/                    Pinned builds, manifest verification, packaging, link check
 tools/brand/                Generator for the logo, banner and social preview
 .github/workflows/          CI (ci.yml), shared build pipeline (build.yml), release.yml

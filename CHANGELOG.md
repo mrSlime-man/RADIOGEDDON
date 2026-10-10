@@ -7,6 +7,23 @@ to follow [Semantic Versioning](https://semver.org/) (pre-1.0.0 releases use
 
 ## [Unreleased]
 
+### Fixed
+- **Receive and the Hopper could crash on Official firmware when they decoded
+  a CAME Atomo or Alutech AT-4N remote.** Those two firmware decoders read
+  the file name of a rainbow table, without checking it, when they describe a
+  decode. RadioGeddon gives them none, since it does not undo rolling-code
+  obfuscation, so the name was NULL. Their decodes are now described by name,
+  bit count and key, with a note that serial, button and counter need a
+  table. Found by the new decoder tests; not yet reproduced on hardware.
+  Unleashed and RogueMaster check for a missing table and were not affected.
+
+### Added
+- **Decoder tests** (`make -C test decoders`, run in CI): the firmware's own
+  Sub-GHz receiver and all of its protocol decoders, built on the host from
+  the pinned Official release, decode the firmware's 50 RAW test captures fed
+  through RadioGeddon's new RAW feeder (`rg_decode`), each to the protocol the
+  firmware's own test expects. The feeder has its own unit tests (68 checks).
+
 ## [1.0.0-beta.3] - 2026-10-10
 
 Milestones 1 to 9: scanner, hopper, analyzer, streaming recording, database,

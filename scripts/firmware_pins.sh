@@ -26,6 +26,10 @@ OFFICIAL_API="87.1"
 # firmware's own FlipperFormat code and read its Sub-GHz test files from it
 # (test/firmware/fetch.sh); they are downloaded for testing, never shipped.
 OFFICIAL_SOURCE_COMMIT="8622f1a2b83d8f4918dd5fa3f43de963f6d6f819"
+# The firmware's lib/mlib submodule (M*LIB, BSD-2-Clause), which its Sub-GHz
+# receiver and keystore use: V0.6.0, whose m-core.h and m-array.h are the ones
+# the 1.4.3 SDK ships. Fetched for the host decoder tests only.
+OFFICIAL_MLIB_COMMIT="62c8ac3e5d4a7a4f8757328e7a80286fde2686b6"
 
 # Unleashed firmware unlshd-093 (release channel).
 UNLEASHED_SDK_URL="https://unleashedflip.com/fw/unlshd-093/flipper-z-f7-sdk-unlshd-093.zip"

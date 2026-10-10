@@ -1,6 +1,7 @@
 #include "radiogeddon_subghz.h"
 #include "radiogeddon_storage.h"
 #include "rg_memstat.h"
+#include "radiogeddon_decode_text.h"
 
 #include <furi_hal_subghz.h>
 #include <furi_hal_region.h>
@@ -127,11 +128,12 @@ static void radiogeddon_subghz_receiver_callback(
     FuriString* text = furi_string_alloc();
     FuriString* serialized = furi_string_alloc();
 
-    bool have_text = subghz_protocol_decoder_base_get_string(decoder_base, text);
     uint8_t hash = subghz_protocol_decoder_base_get_hash_data(decoder_base);
+    SubGhzRadioPreset preset = radiogeddon_subghz_build_radio_preset(instance);
+    // Not the decoder's own text for the two that would read a rainbow table.
+    bool have_text = radiogeddon_decode_text(decoder_base, &preset, text);
 
     // Produce a complete, loadable .sub representation in RAM.
-    SubGhzRadioPreset preset = radiogeddon_subghz_build_radio_preset(instance);
     FlipperFormat* ff = flipper_format_string_alloc();
     bool have_sub = false;
     do {
@@ -186,6 +188,9 @@ static void radiogeddon_subghz_environment_acquire(RadioGeddonSubGhz* instance, 
     if(keystore) {
         subghz_environment_load_keystore(instance->environment, SUBGHZ_KEYSTORE_DIR_NAME);
     }
+    // No rainbow tables: they undo rolling-code obfuscation, which this toolkit
+    // does not do. Official's CAME Atomo and Alutech AT-4N decoders cannot
+    // describe a decode without one (radiogeddon_decode_text.h).
     subghz_environment_set_came_atomo_rainbow_table_file_name(instance->environment, NULL);
     subghz_environment_set_alutech_at_4n_rainbow_table_file_name(instance->environment, NULL);
     subghz_environment_set_nice_flor_s_rainbow_table_file_name(instance->environment, NULL);

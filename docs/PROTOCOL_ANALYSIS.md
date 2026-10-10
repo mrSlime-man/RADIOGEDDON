@@ -42,6 +42,11 @@ Two points to keep in mind:
 - Identification is exactly as good as your firmware's decoders. KeeLoq-family
   manufacturer names are only resolved if the firmware's manufacturer keystore
   is present on the SD card; RadioGeddon loads it on a best-effort basis.
+- RadioGeddon gives the decoders no rainbow tables (files some decoders use to
+  undo a rolling code's obfuscation). CAME Atomo and Alutech AT-4N decodes are
+  therefore shown by name, bit count and key only, with a note that serial,
+  button and counter need a table; on Official firmware their decoders' own
+  description would crash without one.
 - When you reopen a saved protocol file, RadioGeddon reports the protocol that
   is **recorded in the file** — it does not re-decode the signal. Files you
   wrote yourself carry the decoder's original result; treat `.sub` files from
