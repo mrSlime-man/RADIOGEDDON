@@ -73,10 +73,10 @@ still needs.
       run; GCC `-fanalyzer` and clang-tidy on the device code; format tests
       that build the firmware's own FlipperFormat code and load its 85
       Sub-GHz test files, settings and saving included).
-- [ ] **10. Release management**: correct builds, checksums and provenance
+- [x] **10. Release management**: correct builds, checksums and provenance
       for every beta (release metadata check in CI, provenance verified before
-      upload, weekly firmware watch with canary builds, `1.0.0-beta.3`
-      prepared; it is published once milestones 1–9 are merged).
+      upload, weekly firmware watch with canary builds; `1.0.0-beta.3`
+      published with milestones 1–9).
 
 ## After beta 3
 
