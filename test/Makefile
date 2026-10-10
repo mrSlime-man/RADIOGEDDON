@@ -16,6 +16,7 @@ RING_SRC := test_ring.c ../helpers/rg_ring.c
 RAWFMT_SRC := test_rawfmt.c ../helpers/rg_rawfmt.c ../helpers/rg_raw.c
 DB_SRC := test_db.c ../helpers/rg_db.c
 FREQ_SRC := test_freq.c ../helpers/rg_freq.c
+PRESET_SRC := test_preset.c ../helpers/rg_preset.c
 MEMSTAT_SRC := test_memstat.c ../helpers/rg_memstat.c
 DECODE_SRC := test_decode.c ../helpers/rg_decode.c ../helpers/rg_raw.c
 DBLOAD_SRC := test_dbload.c stubs/furi_stub.c ../helpers/radiogeddon_db.c ../helpers/rg_db.c
@@ -43,11 +44,14 @@ FORMATS_SRC := test_formats.c stubs/furi_stub.c ../helpers/radiogeddon_storage.c
 # (lib/subghz, every protocol it registers) run over its own RAW test captures
 # through rg_decode, fetched like the format tests. `make decoders`.
 FW_FILES := $(shell awk '{print $$2}' firmware/files.sha256)
-SUBGHZ_SRC := $(addprefix $(FW)/,$(filter lib/subghz/%.c lib/toolbox/manchester_%.c \
-		lib/toolbox/float_tools.c,$(FW_FILES)))
+SUBGHZ_SRC := $(addprefix $(FW)/,$(filter-out lib/subghz/devices/%,$(filter lib/subghz/%.c \
+		lib/toolbox/manchester_%.c lib/toolbox/float_tools.c,$(FW_FILES))))
 DEC_FW_SRC := $(FW_SRC) $(SUBGHZ_SRC)
 DEC_FW_OBJ := $(patsubst $(FW)/%.c,$(BUILD)/fwdec/%.o,$(DEC_FW_SRC))
 DEC_STUB_HDRS := $(STUB_HDRS) stubs/furi_hal.h
+# The firmware's built-in radio presets and example settings file, through the
+# custom preset check (test_fwpreset; also run by `make decoders`).
+FWPRESET_SRC := test_fwpreset.c ../helpers/rg_preset.c
 FWDECODE_SRC := test_fwdecode.c stubs/furi_stub.c stubs/subghz_stub.c ../helpers/rg_decode.c \
 		../helpers/rg_raw.c ../helpers/radiogeddon_decode_text.c
 
@@ -69,7 +73,7 @@ FUZZ_TIME ?= 60
 .PHONY: check clean tsan fuzz formats decoders captures
 check: $(BUILD)/test_dsp $(BUILD)/test_analyzer $(BUILD)/test_scan $(BUILD)/test_hop $(BUILD)/test_raw \
 		$(BUILD)/test_timeline $(BUILD)/test_ring $(BUILD)/test_rawfmt $(BUILD)/test_recorder \
-		$(BUILD)/test_db $(BUILD)/test_memstat $(BUILD)/test_dbload $(BUILD)/test_decode $(BUILD)/test_freq \
+		$(BUILD)/test_db $(BUILD)/test_memstat $(BUILD)/test_dbload $(BUILD)/test_decode $(BUILD)/test_freq $(BUILD)/test_preset \
 		$(addprefix $(BUILD)/replay_,$(FUZZ_TARGETS))
 	$(BUILD)/test_dsp
 	$(BUILD)/test_analyzer
@@ -85,6 +89,7 @@ check: $(BUILD)/test_dsp $(BUILD)/test_analyzer $(BUILD)/test_scan $(BUILD)/test
 	$(BUILD)/test_dbload
 	$(BUILD)/test_decode
 	$(BUILD)/test_freq
+	$(BUILD)/test_preset
 	for t in $(FUZZ_TARGETS); do $(BUILD)/replay_$$t fuzz/corpus/$$t || exit 1; done
 
 $(BUILD)/test_dsp: $(DSP_SRC) ../helpers/radiogeddon_dsp.h | $(BUILD)
@@ -120,6 +125,9 @@ $(BUILD)/test_memstat: $(MEMSTAT_SRC) ../helpers/rg_memstat.h | $(BUILD)
 $(BUILD)/test_freq: $(FREQ_SRC) ../helpers/rg_freq.h | $(BUILD)
 	$(CC) $(CFLAGS) $(SAN) -o $@ $(FREQ_SRC)
 
+$(BUILD)/test_preset: $(PRESET_SRC) ../helpers/rg_preset.h | $(BUILD)
+	$(CC) $(CFLAGS) $(SAN) -o $@ $(PRESET_SRC)
+
 $(BUILD)/test_decode: $(DECODE_SRC) ../helpers/rg_decode.h ../helpers/rg_raw.h | $(BUILD)
 	$(CC) $(CFLAGS) $(SAN) -o $@ $(DECODE_SRC)
 
@@ -152,8 +160,13 @@ $(BUILD)/test_formats: $(FORMATS_SRC) $(STUB_HDRS) $(FW_OBJ) | $(BUILD)
 	$(CC) $(CFLAGS) $(SAN) -D_GNU_SOURCE -I$(FW) -I$(FW)/lib -Istubs -DSTUB_TRACK_ALLOC -pthread \
 		-o $@ $(FORMATS_SRC) $(FW_OBJ)
 
-decoders: $(BUILD)/test_fwdecode
+decoders: $(BUILD)/test_fwdecode $(BUILD)/test_fwpreset
 	$(BUILD)/test_fwdecode
+	$(BUILD)/test_fwpreset
+
+$(BUILD)/test_fwpreset: $(FWPRESET_SRC) ../helpers/rg_preset.h $(FW)/.fetched | $(BUILD)
+	$(CC) $(CFLAGS) $(SAN) -I$(FW) -I$(FW)/lib/drivers -Istubs -DFW_DIR='"$(FW)"' -o $@ \
+		$(FWPRESET_SRC)
 
 $(SUBGHZ_SRC): $(FW)/.fetched ;
 
@@ -230,4 +243,4 @@ $(BUILD):
 
 clean:
 	rm -rf $(BUILD) test_dsp test_analyzer test_scan test_hop test_raw test_timeline test_ring \
-		test_rawfmt test_recorder test_db test_memstat test_dbload test_decode test_freq test_fwanalyze
+		test_rawfmt test_recorder test_db test_memstat test_dbload test_decode test_freq test_preset test_fwpreset test_fwanalyze

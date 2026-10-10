@@ -31,8 +31,9 @@ the release notes unless you prefer otherwise.
 - Memory-safety problems (crashes, out-of-bounds reads/writes, hangs) triggered
   by crafted `.sub` files placed on the SD card or by received radio data.
 - Ways to make RadioGeddon transmit when it should refuse: outside the
-  firmware's regional limits, a dynamic/rolling-code protocol, or with a
-  modulation preset it does not recognise.
+  firmware's regional limits, a dynamic/rolling-code protocol, with a
+  modulation preset it does not recognise, or through a custom preset that
+  writes radio commands instead of settings.
 - Analysis output that presents a guess as a confirmed decode in a way that
   could mislead a user about a device's security.
 - Supply-chain problems in the build and release pipeline (for example a way to

@@ -115,6 +115,9 @@ bool radiogeddon_scene_replay_on_event(void* context, SceneManagerEvent event) {
                 case RadioGeddonTxErrorBusy:
                     msg = "Radio busy";
                     break;
+                case RadioGeddonTxErrorPreset:
+                    msg = "Bad custom preset";
+                    break;
                 default:
                     break;
                 }
