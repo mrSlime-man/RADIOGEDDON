@@ -59,5 +59,11 @@ uint32_t radiogeddon_scene_radio_cost(RadioGeddonApp* app);
  */
 bool radiogeddon_scene_radio_memory_ok(RadioGeddonApp* app);
 
+/** The same check before running the decoders over a saved file. */
+bool radiogeddon_scene_decoders_memory_ok(RadioGeddonApp* app);
+
+/** That check without the message: whether the decoders fit now. */
+bool radiogeddon_scene_decoders_fit(RadioGeddonApp* app);
+
 /** After a receive session: keep its measured cost for the next check. */
 void radiogeddon_scene_radio_memory_learn(RadioGeddonApp* app);

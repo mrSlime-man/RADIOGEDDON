@@ -2,6 +2,7 @@
 
 typedef enum {
     SavedInfoIndexAnalyze,
+    SavedInfoIndexDecode,
     SavedInfoIndexUnknown,
     SavedInfoIndexTimeline,
     SavedInfoIndexCrypto,
@@ -84,6 +85,14 @@ static void radiogeddon_scene_saved_info_show_menu(RadioGeddonApp* app) {
         SavedInfoIndexAnalyze,
         radiogeddon_scene_saved_info_cb,
         app);
+    if(app->loaded.kind == RadioGeddonSignalKindRaw) {
+        submenu_add_item(
+            submenu,
+            "Decode with Firmware",
+            SavedInfoIndexDecode,
+            radiogeddon_scene_saved_info_cb,
+            app);
+    }
     submenu_add_item(
         submenu,
         "Unknown Protocol Analysis",
@@ -155,6 +164,10 @@ bool radiogeddon_scene_saved_info_on_event(void* context, SceneManagerEvent even
         switch(event.event) {
         case SavedInfoIndexAnalyze:
             scene_manager_next_scene(app->scene_manager, RadioGeddonSceneAnalyze);
+            consumed = true;
+            break;
+        case SavedInfoIndexDecode:
+            scene_manager_next_scene(app->scene_manager, RadioGeddonSceneDecode);
             consumed = true;
             break;
         case SavedInfoIndexUnknown:

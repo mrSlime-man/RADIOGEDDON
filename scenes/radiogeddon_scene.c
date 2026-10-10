@@ -82,7 +82,13 @@ uint32_t radiogeddon_scene_radio_cost(RadioGeddonApp* app) {
     return app->settings.radio_heap_fw == app->fw_tag ? app->settings.radio_heap : 0;
 }
 
-bool radiogeddon_scene_radio_memory_ok(RadioGeddonApp* app) {
+bool radiogeddon_scene_decoders_fit(RadioGeddonApp* app) {
+    return rg_mem_session_fits(
+        radiogeddon_memdiag_free(), radiogeddon_scene_radio_cost(app), RADIOGEDDON_RADIO_MARGIN);
+}
+
+/* @p what names the user ("Radio needs") in the refusal. */
+static bool radiogeddon_scene_session_memory_ok(RadioGeddonApp* app, const char* what) {
     uint32_t cost = radiogeddon_scene_radio_cost(app);
     uint32_t free_now = radiogeddon_memdiag_free();
     if(rg_mem_session_fits(free_now, cost, RADIOGEDDON_RADIO_MARGIN)) return true;
@@ -95,7 +101,8 @@ bool radiogeddon_scene_radio_memory_ok(RadioGeddonApp* app) {
     snprintf(
         app->memory_text,
         sizeof(app->memory_text),
-        "Radio needs ~%lu KB,\n%lu KB free. Restart\nthe Flipper and retry.",
+        "%s ~%lu KB,\n%lu KB free. Restart\nthe Flipper and retry.",
+        what,
         (unsigned long)((cost + RADIOGEDDON_RADIO_MARGIN + 1023) / 1024),
         (unsigned long)(free_now / 1024));
     popup_reset(app->popup);
@@ -104,6 +111,16 @@ bool radiogeddon_scene_radio_memory_ok(RadioGeddonApp* app) {
     notification_message(app->notifications, &sequence_error);
     view_dispatcher_switch_to_view(app->view_dispatcher, RadioGeddonViewPopup);
     return false;
+}
+
+bool radiogeddon_scene_radio_memory_ok(RadioGeddonApp* app) {
+    return radiogeddon_scene_session_memory_ok(app, "Radio needs");
+}
+
+/* The decoders and keystore are most of a receive session's cost, so its
+ * measurement is a safe bound for decoding a file without the radio. */
+bool radiogeddon_scene_decoders_memory_ok(RadioGeddonApp* app) {
+    return radiogeddon_scene_session_memory_ok(app, "Decoders need");
 }
 
 void radiogeddon_scene_radio_memory_learn(RadioGeddonApp* app) {

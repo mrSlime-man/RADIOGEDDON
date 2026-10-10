@@ -874,3 +874,60 @@ void radiogeddon_subghz_tx_stop(RadioGeddonSubGhz* instance) {
     instance->tx_complete_cb = NULL;
     instance->tx_complete_ctx = NULL;
 }
+
+/* ---- Decoding a saved capture ------------------------------------------ */
+
+typedef struct {
+    SubGhzReceiver* receiver;
+    RgDecodeLog* log;
+    FuriString* text;
+} RadioGeddonDecodeRun;
+
+static void radiogeddon_subghz_decode_feed(void* context, bool level, uint32_t duration) {
+    RadioGeddonDecodeRun* run = context;
+    subghz_receiver_decode(run->receiver, level, duration);
+}
+
+// Called by the receiver, inside subghz_receiver_decode, on each decode.
+static void radiogeddon_subghz_decode_callback(
+    SubGhzReceiver* receiver,
+    SubGhzProtocolDecoderBase* decoder_base,
+    void* context) {
+    RadioGeddonDecodeRun* run = context;
+    // As in Receive: not the decoder's own text for the two that would read a
+    // rainbow table (radiogeddon_decode_text.h).
+    radiogeddon_decode_text(decoder_base, NULL, run->text);
+    const char* name = (decoder_base->protocol && decoder_base->protocol->name) ?
+                           decoder_base->protocol->name :
+                           "Unknown";
+    rg_decode_log_add(
+        run->log,
+        name,
+        furi_string_get_cstr(run->text),
+        subghz_protocol_decoder_base_get_hash_data(decoder_base));
+    // As Receive and the firmware's decoder tests do: start every decoder over.
+    subghz_receiver_reset(receiver);
+}
+
+bool radiogeddon_subghz_decode_raw(
+    RadioGeddonSubGhz* instance,
+    RgRawReader* reader,
+    RgDecodeLog* log,
+    RgDecodeProgress progress,
+    void* progress_context) {
+    furi_check(instance);
+    if(instance->rx_running || instance->tx_mode != RadioGeddonTxModeNone) return false;
+
+    radiogeddon_subghz_environment_acquire(instance, true);
+    RadioGeddonDecodeRun run = {.log = log, .text = furi_string_alloc()};
+    run.receiver = subghz_receiver_alloc_init(instance->environment);
+    subghz_receiver_set_filter(run.receiver, SubGhzProtocolFlag_Decodable);
+    subghz_receiver_set_rx_callback(run.receiver, radiogeddon_subghz_decode_callback, &run);
+
+    rg_decode_run(reader, log, radiogeddon_subghz_decode_feed, &run, progress, progress_context);
+
+    subghz_receiver_free(run.receiver);
+    furi_string_free(run.text);
+    radiogeddon_subghz_environment_release(instance);
+    return true;
+}

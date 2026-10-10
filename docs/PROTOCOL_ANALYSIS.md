@@ -52,6 +52,50 @@ Two points to keep in mind:
   wrote yourself carry the decoder's original result; treat `.sub` files from
   other sources with the same caution as any file you didn't create.
 
+## Decode with Firmware — `[CONFIRMED]`
+
+*Decode with Firmware* runs the same decoders over a saved **RAW capture**.
+Each sample goes to them as the firmware's own `subghz decode_raw` command
+and decoder unit tests feed a file: a positive value is the line high for
+that many microseconds, a negative one low, and nothing is added after the
+last sample. As in *Receive*, every decoder starts over after each decode.
+
+The report lists each different decode (same protocol, data and description)
+once:
+
+```
+[CONFIRMED] 5 decodes,
+2 different
+----------------
+1. Princeton x4
+at 0.051 s to 0.322 s
+Princeton 24bit
+Key:0x...
+```
+
+- **x4** — how many times it was decoded; a remote repeats its frame while
+  the button is held, so one press often decodes several times.
+- **at ... to ...** — where in the recording the first and last decode
+  happened (the end of the decoded frame).
+- The lines after it are the description *Receive* shows: the decoder's own,
+  or for CAME Atomo and Alutech AT-4N the name, bit count and key (see
+  above). What they contain (key, serial, button, counter) depends on the
+  protocol and the firmware.
+
+Up to 12 different decodes are listed; more are counted under *not listed*.
+When no decoder recognises anything the report says *No protocol decoded*:
+the capture may be a protocol your firmware has no decoder for, too weak or
+noisy, or cut off. *Unknown Protocol Analysis* still shows its structure as
+`[OBSERVED]` and `[HYPOTHESIS]`.
+
+Limits:
+
+- A frame cut off at the very end of the recording may not decode: like the
+  firmware, nothing is added after the last sample.
+- Samples the recorder reported lost (`# Lost:` in the file) leave a gap;
+  frames there may not decode, and the report says so.
+- Nothing is saved as a key file, and the radio is not used.
+
 ## Signal Info & Analysis
 
 Opening a recording from the **Database** and choosing *Signal Info &
@@ -173,7 +217,7 @@ and marked `long`.
   encodings other than PWM, PPM and Manchester. Those report *no frame fits*.
 - Tell which Manchester convention or bit order the device uses.
 - Decode anything: the bits are a structural reading of the timing. Only the
-  firmware's decoders (*Receive & Record*) give `[CONFIRMED]` results.
+  firmware's decoders (*Receive & Record*, *Decode with Firmware*) give `[CONFIRMED]` results.
 
 ## Crypto Analysis
 
