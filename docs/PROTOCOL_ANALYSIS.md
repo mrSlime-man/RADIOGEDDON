@@ -169,10 +169,11 @@ The report opens with what the labels mean, then has three parts.
 ### `[HYPOTHESIS]` structure
 
 1. **Base Te.** The shortest high peak and the shortest low peak that hold at
-   least a quarter of their side's largest peak. Peaks below **100 µs** are
+   least a quarter of their side's largest peak. Peaks below **140 µs** are
    left out, however large: they are receiver glitches (the firmware's
-   shortest remote protocol uses 160 µs), and they stay listed as observed
-   peaks. Receivers tend to widen pulses and shorten gaps by the same amount,
+   shortest remote protocol uses 160 µs; noisy captures show glitch peaks at
+   66 and 132 µs, multiples of the receiver's ~33 µs sampling step), and they
+   stay listed as observed peaks. Receivers tend to widen pulses and shorten gaps by the same amount,
    so when the two are within 1.6× of each other Te is their average;
    otherwise the shorter one. The PWM and PPM widths below skip glitch peaks
    too.
@@ -199,7 +200,15 @@ The report opens with what the labels mean, then has three parts.
    runner-up is within 10 (10 points when within 25), loses 10 when only one
    frame fits any encoding, gains 5 when a pattern repeats exactly, is capped at
    40 for frames under 8 bits and never exceeds 95 %.
-4. **Bit length** is the most common bit count among signal frames.
+4. **Bit length** is the most common bit count among signal frames. A frame
+   whose decode fills the 256-bit buffer or that was cut off (no gap ended
+   it) is checked for repeats sent back to back: if its bits repeat at some
+   period of 8 or more bits on at least 97 % of positions, the repeated unit
+   holds at least two 0s, two 1s and three changes, and the bits do not
+   already repeat at under 8 bits (a preamble or square wave), it is cut to
+   one repeat and marked `rep` in the frame list. Frames that end on their
+   own are never cut: applying the rule to them halved a legitimate 17-bit
+   frame in the capture tests.
 5. **Patterns.** Identical frames are grouped (A, B, … largest first, up to 6
    patterns) and shown in binary and hex. A frame that matches a pattern after
    shifting up to 4 bits (for example the first frame of a recording that
@@ -215,7 +224,30 @@ The report opens with what the labels mean, then has three parts.
 One line per frame (the first 48): start time, bit count, pattern letter,
 and the shift when a frame was aligned (`A+3`). Frames that fit no encoding
 show as `noise`; frames longer than 520 pulses are decoded up to that point
-and marked `long`.
+and marked `long`; frames cut to one gapless repeat are marked `rep`.
+
+### Checksum structure — Full edition, `[HYPOTHESIS]`
+
+The Full edition adds a *Checksum structure* section. It takes the distinct
+frames of the modal bit length (repeats count once, at most 16) and tests
+whether their last bits behave like a common checksum of the bits before
+them (`helpers/rg_checksum.c`):
+
+- XOR or sum (mod 2^W) of the W-bit words before it, plain, inverted (one's
+  complement) or negated ("sums to zero"), for W = 8 and W = 4, words counted
+  back from the checksum so leading preamble bits are left out;
+- CRC-8, MSB first, for polynomials 0x07, 0x31, 0x1D, 0x2F, 0x9B and 0xD5
+  with initial values 0x00 and 0xFF;
+- an even or odd parity bit;
+
+each with the checksum ending at the frame's end or up to two bits before it
+(a stop bit). A structure is listed only when it fits **every** distinct
+frame, and only with enough distinct frames that a chance fit is unlikely: 3
+for 8-bit, 5 for 4-bit structures and 12 for parity, counted on the bits the
+checksum covers. Otherwise the report says how many different frames it
+needs — press several *different* buttons, or the same rolling-code button
+several times, within one recording. A fit describes structure only; it is
+not a decode, and nothing is decrypted or predicted.
 
 ### Reading the field map correctly
 
@@ -235,8 +267,9 @@ and marked `long`.
 - Tell Manchester from pulse-width codes whose pulse and gap have the same
   width in each bit (Star Line, for example): at the timing level both are
   runs of 1 and 2 Te.
-- Split repeats sent with no gap between them, or find Te when glitches
-  outnumber the signal on both sides.
+- Split repeats sent with no gap between them when the decode does not fill
+  the bit buffer (shorter runs of repeats stay one longer frame), or find Te
+  when glitches between 140 µs and the signal's own widths outnumber it.
 
 How often the hypotheses are right on real captures is measured: see
 [Accuracy on the firmware's test captures](#accuracy-on-the-firmwares-test-captures).
@@ -253,12 +286,24 @@ protocol's decoder source:
 
 | Hypothesis | Counted right when | Right |
 |------------|--------------------|-------|
-| Base Te | within the decoder's own tolerance (`te_delta`) of its `te_short` | 48 of 50 |
+| Base Te | within the decoder's own tolerance (`te_delta`) of its `te_short` | 50 of 50 |
 | Encoding | Manchester exactly when the decoder uses the firmware's Manchester decoder; PWM and PPM both count for the others | 41 of 50 (3 give no guess) |
-| Bit length | within one bit of the decoder's `min_count_bit_for_found` | 29 of 50 |
+| Bit length | within one bit of the decoder's `min_count_bit_for_found` | 33 of 50 |
 
 Before the rules above for glitches, pairing, preambles and separators, the
-same scores were 39, 33 and 16. Bit length is the weakest: several protocols
+same scores were 39, 33 and 16; in beta 5 they were 48, 41 and 29. Beta 6's
+140 µs glitch floor fixed Te on Holtek and Phoenix V2, and cutting gapless
+repeats fixed the frame length on FAAC SLH, Power Smart, Honeywell WDB and
+Revers RB2. No rule names a protocol or a capture; each has a synthetic
+regression test that fails without it.
+
+Remaining misses: encoding on Nero Radio, Scher-Khan, Cenmax, Holtek,
+Holtek HT12X and Phoenix V2 (equal-width pulse codes read as Manchester), no
+encoding guess on Linear Delta-3, Hollarm and Marantec24; frame length on 17
+captures, mostly protocols that send a long preamble or sync inside the frame
+(Nero Sketch reads 89 bits for the decoder's 40), count bits differently from
+the frame on air (Nice FLO 24 for 12, Megacode, Clemsa), or repeat without a
+gap but without filling the buffer. Bit length is the weakest: several protocols
 repeat a frame with no gap the engine can see, and some count bits
 differently from the frame on air. The captures are the firmware's, recorded
 by others; none of this is checked on our hardware.

@@ -39,8 +39,9 @@ what has and hasn't been tested, and consider helping with the
 
 ### Which file do I download?
 
-The one that matches your firmware: `radiogeddon-official.fap`,
-`radiogeddon-unleashed.fap`, or `radiogeddon-roguemaster.fap`. See
+The one that matches your firmware: `radiogeddon-catalog-official.fap`
+(Official), `radiogeddon-full-roguemaster.fap`, `radiogeddon-full-momentum.fap`
+or `radiogeddon-full-unleashed.fap`. See
 [Installation](INSTALLATION.md).
 
 ### Why are there three different files?
@@ -56,10 +57,26 @@ You installed the build for a different firmware family, or your firmware is
 older than the one the build targets. Install the matching file, or update your
 firmware. See [Troubleshooting](TROUBLESHOOTING.md#the-app-wont-open).
 
-### Does it work on Momentum / Xtreme / other forks?
+### Does it work on Momentum?
 
-They aren't built or tested. A fork may load one of the three files if its API
-version is compatible; otherwise you can build from source against that fork's
+Yes: `radiogeddon-full-momentum.fap` is the Full edition built against
+Momentum mntm-012's own SDK. Don't use the Official file on Momentum (or the
+other way round): both report API 87.1, so the Flipper may start it, but the
+firmware structures differ. See
+[Firmware Compatibility](FIRMWARE_COMPATIBILITY.md#momentum).
+
+### What is the difference between the Full and Catalog editions?
+
+Same app, two feature sets: the Catalog edition (Official firmware) has the
+whole receive and analysis toolkit and checks the firmware's region before
+any transmission; the Full edition (RogueMaster, Momentum, Unleashed) adds the
+Range Scanner, scan profiles, favorites, fine stepping and checksum
+hypotheses and leaves transmit rules to the firmware. See
+[Features → Editions](FEATURES.md#editions).
+
+### Does it work on Xtreme / other forks?
+
+They aren't built or tested. You can build from source against that fork's
 SDK ([instructions](FIRMWARE_COMPATIBILITY.md#building-for-your-exact-firmware)).
 
 ### Can I use an external CC1101 module?
@@ -79,7 +96,7 @@ the exact tagged commit that produced it:
 
 ```bash
 sha256sum -c SHA256SUMS
-gh attestation verify radiogeddon-official.fap --repo mrSlime-man/RADIOGEDDON
+gh attestation verify radiogeddon-catalog-official.fap --repo mrSlime-man/RADIOGEDDON
 ```
 
 ## Capabilities and limits

@@ -2,6 +2,7 @@
 
 typedef enum {
     ScannerCustomSelect = 100,
+    ScannerCustomRecord,
     ScannerCustomTogglePause,
     ScannerCustomResetPeaks,
     ScannerCustomSave,
@@ -26,6 +27,9 @@ static void radiogeddon_scanner_view_cb(RadioGeddonScannerEvent event, void* con
         break;
     case RadioGeddonScannerEventSave:
         custom = ScannerCustomSave;
+        break;
+    case RadioGeddonScannerEventRecord:
+        custom = ScannerCustomRecord;
         break;
     }
     view_dispatcher_send_custom_event(app->view_dispatcher, custom);
@@ -59,19 +63,6 @@ static void radiogeddon_scene_scanner_show_message(
     view_dispatcher_switch_to_view(app->view_dispatcher, RadioGeddonViewPopup);
 }
 
-// Build the scan list from the saved mask, skipping frequencies the radio
-// cannot tune. Returns the number of frequencies written to @p out.
-static size_t radiogeddon_scene_scanner_build_list(RadioGeddonApp* app, uint32_t* out) {
-    size_t n = 0;
-    for(size_t i = 0; i < radiogeddon_frequencies_count && i < 32; i++) {
-        if(!(app->settings.scan_mask & (1u << i))) continue;
-        uint32_t f = radiogeddon_frequencies[i];
-        if(!radiogeddon_subghz_is_frequency_allowed(app->subghz, f)) continue;
-        if(n < RADIOGEDDON_SCANNER_MAX_CHANNELS) out[n++] = f;
-    }
-    return n;
-}
-
 void radiogeddon_scene_scanner_on_enter(void* context) {
     RadioGeddonApp* app = context;
     app->scanner_running = false;
@@ -83,7 +74,12 @@ void radiogeddon_scene_scanner_on_enter(void* context) {
     }
 
     uint32_t list[RADIOGEDDON_SCANNER_MAX_CHANNELS];
-    size_t count = radiogeddon_scene_scanner_build_list(app, list);
+    size_t count = radiogeddon_scene_build_list(
+        app,
+        app->settings.scan_source,
+        app->settings.scan_mask,
+        list,
+        RADIOGEDDON_SCANNER_MAX_CHANNELS);
 
     if(!app->scanner) app->scanner = radiogeddon_scanner_alloc(app->subghz);
     radiogeddon_scanner_configure(
@@ -156,10 +152,12 @@ bool radiogeddon_scene_scanner_on_event(void* context, SceneManagerEvent event) 
         }
 
         switch(event.event) {
-        case ScannerCustomSelect: {
+        case ScannerCustomSelect:
+        case ScannerCustomRecord: {
             size_t sel = radiogeddon_scanner_view_get_selected(app->scanner_view);
             uint32_t freq = radiogeddon_scanner_frequency(app->scanner, sel);
             if(freq) {
+                app->receiver_autorecord = (event.event == ScannerCustomRecord);
                 app->frequency = freq;
                 radiogeddon_subghz_set_frequency(app->subghz, app->frequency);
                 scene_manager_next_scene(app->scene_manager, RadioGeddonSceneReceiver);

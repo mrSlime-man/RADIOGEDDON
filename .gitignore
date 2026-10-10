@@ -20,3 +20,5 @@ dist/
 
 # static analysis work files (scripts/static_analysis.py)
 /build/
+.stage/
+/out/

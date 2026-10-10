@@ -4,9 +4,17 @@ Where RadioGeddon is headed. This is a plan, not a promise — priorities shift
 with what hardware testing finds and what contributors pick up. Dates are
 deliberately omitted.
 
-## Now — `1.0.0-beta.5`
+## Now — `1.0.0-beta.6`
 
-`1.0.0-beta.5` fixes keys saved from Receive and the Hopper, which the stock
+`1.0.0-beta.6` splits RadioGeddon into two editions from one source tree:
+**Full** for RogueMaster, Momentum (its first build) and Unleashed, with a
+range scanner, scan profiles, favorites, fine stepping and checksum
+hypotheses; and **Catalog** for Official firmware, which checks the
+firmware's region before every transmission and is being prepared for the
+Flipper Apps Catalog. Unknown Protocol Analysis gets Te right on all 50 of the
+firmware's test captures. None of it is verified on hardware yet.
+
+`1.0.0-beta.5` fixed keys saved from Receive and the Hopper, which the stock
 Sub-GHz app could not open, and has Replay check a file's custom preset before
 loading it into the radio. Unknown Protocol Analysis is now scored on the
 firmware's own RAW test captures and reads them better, and Settings takes a
@@ -30,11 +38,16 @@ made `1.0.0-beta.1` unusable on RogueMaster.
 
 Nothing advances to a stable `1.0.0` until the app is exercised on real
 hardware. The goal is to work through [the checklist](HARDWARE_CHECKLIST.md) on
-all three firmware families and record evidence in
+all four firmware families and both editions and record evidence in
 [VERIFICATION.md](VERIFICATION.md).
 
 - [ ] End-to-end workflow (W1–W10) confirmed on at least one firmware.
-- [ ] Each per-firmware build confirmed to load on its firmware (L1–L3).
+- [ ] Each per-firmware build confirmed to load on its firmware (L1–L4),
+      Momentum included.
+- [ ] Full edition: Range Scanner, favorites and profiles (R1–R11) and its
+      memory headroom (M1–M3).
+- [ ] Catalog edition: region refusal on a device (C1–C3), then qFlipper
+      screenshots and the Apps Catalog submission.
 - [ ] Receive/decode, RAW capture fidelity, and authorized replay confirmed
       against real remotes.
 - [ ] Regional transmit enforcement confirmed to block disallowed frequencies.
@@ -45,7 +58,7 @@ This is where help is most valuable — see [Contributing](../CONTRIBUTING.md).
 ## Development milestones
 
 Work proceeds one milestone at a time, each through focused pull requests with
-host tests, all three firmware builds, and a list of the hardware checks it
+host tests, every edition's firmware builds, and a list of the hardware checks it
 still needs.
 
 - [x] **0. Working baseline**: launch out-of-memory crash fixed, `1.0.0-beta.2`.
@@ -78,7 +91,7 @@ still needs.
       cost with a refusal before starting when it no longer fits, Database
       and recorder lifecycle tests; hardware checks F15–F15c pending).
 - [ ] **9. Testing per feature**: unit, real-format, malformed-input and
-      low-memory tests, static analysis, all three builds in CI (implemented;
+      low-memory tests, static analysis, every firmware build in CI (implemented;
       hardware check F4f pending: fuzz targets for the RAW reader, analyzer, Pulse Timeline, Database
       index and Signal Info parser, with their corpus replayed by every test
       run; GCC `-fanalyzer` and clang-tidy on the device code; format tests
@@ -106,6 +119,23 @@ still needs.
       checks a file's custom preset before the radio loads it (published in
       `1.0.0-beta.5`; hardware checks F6g and F7 pending).
 
+## Beta 6: editions
+
+- [x] **Two editions, one source tree**: Full (RogueMaster, Momentum,
+      Unleashed) and Catalog (Official), as feature switches in
+      `radiogeddon_edition.h`; shared data folder.
+- [x] **Momentum build** against its own pinned SDK, in CI and releases.
+- [x] **Range Scanner, scan profiles, favorites, fine stepping, Radio bands**
+      (Full; hardware checks R1–R10 pending).
+- [x] **Catalog transmit check** from the firmware's region, explained on
+      screen (hardware checks C1–C3 pending).
+- [x] **Checksum structure hypotheses** (Full; hardware check R11 pending).
+- [x] **Engine lifecycle tests** and imported-symbol verification for every
+      build.
+- [ ] **Apps Catalog submission**: manifest, description, changelog,
+      validation with the catalog's own bundler are ready; blocked on
+      qFlipper screenshots from a real device.
+
 ## Toward a stable 1.0.0
 
 - [ ] Fix whatever hardware testing surfaces.
@@ -118,7 +148,9 @@ still needs.
 - [x] Custom frequency entry (published in `1.0.0-beta.5`; hardware check
       F1f pending).
 - [ ] A custom modulation/preset editor.
-- [ ] Richer analysis: more encodings, CRC/checksum guesses, bit-field views.
+- [x] CRC/checksum structure guesses (Full edition, beta 6).
+- [ ] Richer analysis: more encodings, bit-field views across several captures.
+- [ ] Range Scanner zoom and a waterfall of past sweeps.
 - [ ] A larger library of reference captures for regression testing.
 - [ ] Localisation of on-screen text.
 

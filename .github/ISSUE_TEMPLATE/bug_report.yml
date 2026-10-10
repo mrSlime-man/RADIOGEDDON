@@ -46,9 +46,10 @@ body:
     attributes:
       label: Which .fap did you install?
       options:
-        - radiogeddon-official.fap
-        - radiogeddon-unleashed.fap
-        - radiogeddon-roguemaster.fap
+        - radiogeddon-catalog-official.fap
+        - radiogeddon-full-roguemaster.fap
+        - radiogeddon-full-momentum.fap
+        - radiogeddon-full-unleashed.fap
         - Built from source
     validations:
       required: true

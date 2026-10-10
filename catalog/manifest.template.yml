@@ -1,0 +1,15 @@
+# Apps Catalog manifest for the RadioGeddon Catalog edition. The catalog copy
+# lives at applications/Sub-GHz/radiogeddon/manifest.yml in
+# https://github.com/flipperdevices/flipper-application-catalog and is written
+# from this template by: scripts/check_catalog.py --write-manifest OUT --commit SHA
+# (which fills in commit_sha and the screenshots found in catalog/screenshots).
+# name, id, version, category, author and icon come from application.fam.
+sourcecode:
+  type: git
+  location:
+    origin: https://github.com/mrSlime-man/RADIOGEDDON.git
+    commit_sha: "@COMMIT@"
+short_description: Sub-GHz signal analysis toolkit - scan, record, decode, analyze and compare.
+description: "@./catalog/description.md"
+changelog: "@./catalog/changelog.md"
+screenshots: "@SCREENSHOTS@"

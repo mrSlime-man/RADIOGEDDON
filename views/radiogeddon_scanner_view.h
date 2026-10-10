@@ -20,6 +20,7 @@ typedef enum {
     RadioGeddonScannerEventTogglePause, // Left: release a hold, else pause / resume
     RadioGeddonScannerEventResetPeaks, // Long Left: clear peaks and counters
     RadioGeddonScannerEventSave, // Right: save results to the SD card
+    RadioGeddonScannerEventRecord, // Long OK: open the receiver and start recording
 } RadioGeddonScannerEvent;
 
 typedef void (*RadioGeddonScannerCallback)(RadioGeddonScannerEvent event, void* context);

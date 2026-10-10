@@ -8,11 +8,12 @@ firmware, copy it to the Flipper, and open it from the Apps menu.
 - A Flipper Zero with a microSD card.
 - One of these firmware versions (or a newer release of the same family):
 
-  | Firmware family | Tested build | API |
-  |-----------------|--------------|-----|
-  | Official | 1.4.3 | 87.1 |
-  | Unleashed | unlshd-093 | 88.9 |
-  | RogueMaster | commit `38d7ae9` | 88.16 |
+  | Firmware family | Edition | Built against | API |
+  |-----------------|---------|---------------|-----|
+  | Official | Catalog | 1.4.3 | 87.1 |
+  | RogueMaster | Full | commit `38d7ae9` | 88.16 |
+  | Momentum | Full | mntm-012 | 87.1 |
+  | Unleashed | Full | unlshd-093 | 88.9 |
 
 - A computer with [qFlipper](https://flipperzero.one/update) (Windows, macOS,
   Linux) — or a microSD card reader.
@@ -24,20 +25,28 @@ qFlipper):
 
 | You see | Your firmware | File to download |
 |---------|---------------|------------------|
-| A plain version number such as `1.4.3` | Official | `radiogeddon-official.fap` |
-| A version starting with `unlshd-` | Unleashed | `radiogeddon-unleashed.fap` |
-| A RogueMaster version | RogueMaster | `radiogeddon-roguemaster.fap` |
+| A plain version number such as `1.4.3` | Official | `radiogeddon-catalog-official.fap` |
+| A RogueMaster version | RogueMaster | `radiogeddon-full-roguemaster.fap` |
+| A version starting with `mntm-` | Momentum | `radiogeddon-full-momentum.fap` |
+| A version starting with `unlshd-` | Unleashed | `radiogeddon-full-unleashed.fap` |
+
+Momentum and Official report the same API version (87.1) but are different
+firmware: take the file named for yours.
 
 Using a different fork? See [Firmware Compatibility](FIRMWARE_COMPATIBILITY.md).
 
 ## Step 2 — Download
 
-From the [**v1.0.0-beta.5 release page**](https://github.com/mrSlime-man/RADIOGEDDON/releases/tag/v1.0.0-beta.5),
+From the [**v1.0.0-beta.6 release page**](https://github.com/mrSlime-man/RADIOGEDDON/releases/tag/v1.0.0-beta.6),
 or directly:
 
-- [radiogeddon-official.fap](https://github.com/mrSlime-man/RADIOGEDDON/releases/download/v1.0.0-beta.5/radiogeddon-official.fap)
-- [radiogeddon-unleashed.fap](https://github.com/mrSlime-man/RADIOGEDDON/releases/download/v1.0.0-beta.5/radiogeddon-unleashed.fap)
-- [radiogeddon-roguemaster.fap](https://github.com/mrSlime-man/RADIOGEDDON/releases/download/v1.0.0-beta.5/radiogeddon-roguemaster.fap)
+- [radiogeddon-catalog-official.fap](https://github.com/mrSlime-man/RADIOGEDDON/releases/download/v1.0.0-beta.6/radiogeddon-catalog-official.fap) — Official firmware
+- [radiogeddon-full-roguemaster.fap](https://github.com/mrSlime-man/RADIOGEDDON/releases/download/v1.0.0-beta.6/radiogeddon-full-roguemaster.fap) — RogueMaster
+- [radiogeddon-full-momentum.fap](https://github.com/mrSlime-man/RADIOGEDDON/releases/download/v1.0.0-beta.6/radiogeddon-full-momentum.fap) — Momentum
+- [radiogeddon-full-unleashed.fap](https://github.com/mrSlime-man/RADIOGEDDON/releases/download/v1.0.0-beta.6/radiogeddon-full-unleashed.fap) — Unleashed
+
+The Catalog edition is being prepared for the official Flipper Apps Catalog;
+until it is accepted there, install it from this page.
 
 ### Optional: verify the download
 
@@ -47,8 +56,8 @@ Download `SHA256SUMS` from the same release into the same folder and run:
 sha256sum -c --ignore-missing SHA256SUMS      # Linux: prints "radiogeddon-...fap: OK"
 ```
 
-On macOS run `shasum -a 256 radiogeddon-official.fap`, and on Windows
-`Get-FileHash radiogeddon-official.fap -Algorithm SHA256` in PowerShell; the
+On macOS run `shasum -a 256 radiogeddon-catalog-official.fap`, and on Windows
+`Get-FileHash radiogeddon-catalog-official.fap -Algorithm SHA256` in PowerShell; the
 printed hash must match the file's line in `SHA256SUMS`.
 
 Each `.fap` also has a signed build-provenance attestation. With the GitHub CLI
@@ -56,7 +65,7 @@ installed you can confirm it was built by this repository's release workflow
 from the tagged source:
 
 ```bash
-gh attestation verify radiogeddon-official.fap --repo mrSlime-man/RADIOGEDDON
+gh attestation verify radiogeddon-full-momentum.fap --repo mrSlime-man/RADIOGEDDON
 ```
 
 ## Step 3 — Copy it to the Flipper
@@ -78,7 +87,9 @@ gh attestation verify radiogeddon-official.fap --repo mrSlime-man/RADIOGEDDON
 
 ## Step 4 — Open RadioGeddon
 
-On the Flipper: **Apps → Sub-GHz → RadioGeddon**.
+On the Flipper: **Apps → Sub-GHz → RadioGeddon** (Catalog edition) or
+**RadioGeddon Full** (Full edition). About shows which edition and version
+you are running.
 
 On first launch RadioGeddon creates `/ext/apps_data/radiogeddon/signals` on the
 SD card for your recordings. Continue with the [User Guide](USER_GUIDE.md).
@@ -97,16 +108,30 @@ compare screens without capturing anything.
 ## Updating
 
 Download the new `.fap` for your firmware and replace the old file in
-`apps/Sub-GHz/`. Your recordings are kept. Whenever you update your Flipper's
+`apps/Sub-GHz/`. Your recordings are kept.
+
+**From 1.0.0-beta.5 or earlier:** the files are now named by edition. On
+Official, `radiogeddon-official.fap` becomes `radiogeddon-catalog-official.fap`
+(same app id, it replaces the old app). On RogueMaster and Unleashed the Full
+edition has its own app id (`radiogeddon_full`, shown as "RadioGeddon Full"):
+delete the old `radiogeddon-roguemaster.fap` / `radiogeddon-unleashed.fap`
+from `apps/Sub-GHz/` so you do not have two entries.
+
+**Switching edition:** both editions read and write the same folder,
+`/ext/apps_data/radiogeddon` — recordings, reports, scan results, settings,
+favorites and scan profiles all carry over, and neither edition removes or
+rewrites the other's files. Settings only the Full edition uses are kept when
+the Catalog edition saves its settings. Whenever you update your Flipper's
 firmware, check whether a matching RadioGeddon build is needed
 ([Firmware Compatibility](FIRMWARE_COMPATIBILITY.md)).
 
 ## Uninstalling
 
-Delete `apps/Sub-GHz/radiogeddon-*.fap`. Your recordings stay in
+Delete `apps/Sub-GHz/radiogeddon*.fap`. Your recordings stay in
 `apps_data/radiogeddon/signals` until you delete that folder too.
 
 ## Building from source instead
 
 See [CONTRIBUTING.md](../CONTRIBUTING.md#development-setup) — one command builds
-and verifies the `.fap` for each firmware family.
+and verifies the `.fap` for each edition and firmware family
+(`scripts/build_target.sh catalog-official | full-roguemaster | full-momentum | full-unleashed`).

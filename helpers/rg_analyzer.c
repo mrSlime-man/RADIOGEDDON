@@ -422,6 +422,32 @@ size_t rg_analyzer_align(
 
 /* ---- streaming passes ---------------------------------------------------- */
 
+static bool rg_repeats_at(const char* bits, size_t n, size_t p) {
+    size_t match = 0;
+    for(size_t i = 0; i + p < n; i++) {
+        if(bits[i] == bits[i + p]) match++;
+    }
+    return match * 100u >= (n - p) * RG_ANALYZER_REPEAT_MATCH_PCT;
+}
+
+size_t rg_analyzer_repeat_period(const char* bits, size_t n) {
+    // A stream that repeats at a few bits (a square wave, a preamble) is not
+    // made of frames.
+    for(size_t q = 1; q < RG_ANALYZER_MIN_REPEAT_BITS && q * 2 <= n; q++) {
+        if(rg_repeats_at(bits, n, q)) return 0;
+    }
+    for(size_t p = RG_ANALYZER_MIN_REPEAT_BITS; p * 2 <= n; p++) {
+        size_t ones = 0, changes = 0;
+        for(size_t i = 0; i < p; i++) {
+            if(bits[i] == '1') ones++;
+            if(i > 0 && bits[i] != bits[i - 1]) changes++;
+        }
+        if(ones < 2 || p - ones < 2 || changes < 3) continue;
+        if(rg_repeats_at(bits, n, p)) return p;
+    }
+    return 0;
+}
+
 static void rg_frame_reset(RgAnalyzer* a) {
     a->frame_n = 0;
     a->frame_samples = 0;
@@ -482,6 +508,15 @@ static void rg_frame_end(RgAnalyzer* a) {
             r->signal_frames++;
             a->chosen_fit_sum += (uint32_t)fit;
         }
+        /* A frame that filled the bit buffer or was cut off ran into the
+         * next one(s): keep one repeat when the bits repeat themselves. */
+        size_t decoded = nb;
+        bool cut_off = a->frame_samples > a->frame_n;
+        size_t period = 0;
+        if(fit >= RG_ANALYZER_GOOD_FIT && (nb >= RG_ANALYZER_MAX_BITS || cut_off)) {
+            period = rg_analyzer_repeat_period(bits, nb);
+            if(period) nb = period;
+        }
         if(r->frames_kept < RG_ANALYZER_MAX_FRAMES) {
             RgFrame* f = &r->frames[r->frames_kept++];
             f->start_us = a->frame_start_us;
@@ -493,7 +528,8 @@ static void rg_frame_end(RgAnalyzer* a) {
             f->fit = (uint8_t)fit;
             f->group = RG_ANALYZER_NO_GROUP;
             f->shift = 0;
-            f->truncated = a->frame_samples > a->frame_n;
+            f->truncated = cut_off;
+            f->repeat_bits = period ? (uint16_t)decoded : 0;
             rg_pack_bits(bits, nb, f->bits);
         }
     }

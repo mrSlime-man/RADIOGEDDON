@@ -1,6 +1,8 @@
 #include "radiogeddon_analysis.h"
 #include "radiogeddon_dsp.h"
 #include "rg_analyzer.h"
+#include "rg_checksum.h"
+#include "../radiogeddon_edition.h"
 
 #include <lib/flipper_format/flipper_format.h>
 #include <lib/subghz/subghz_protocol_registry.h>
@@ -537,13 +539,71 @@ static void radiogeddon_report_frames(const RgAnalysis* r, FuriString* out) {
             furi_string_push_back(out, radiogeddon_group_letter(f->group));
             if(f->shift) furi_string_cat_printf(out, "%+d", f->shift);
         }
-        if(f->truncated) furi_string_cat_str(out, " long");
+        if(f->repeat_bits) {
+            furi_string_cat_str(out, " rep");
+        } else if(f->truncated) {
+            furi_string_cat_str(out, " long");
+        }
         furi_string_cat_str(out, "\n");
     }
     if(r->frame_count > r->frames_kept)
         furi_string_cat_printf(
             out, "(first %u of %u frames)\n", (unsigned)r->frames_kept, (unsigned)r->frame_count);
+    for(size_t i = 0; i < r->frames_kept; i++) {
+        if(r->frames[i].repeat_bits) {
+            furi_string_cat_str(
+                out,
+                "rep = repeats sent with\nno gap; cut to the bits'\nown period [HYPOTHESIS]\n");
+            break;
+        }
+    }
 }
+
+#if RG_FEATURE_CHECKSUM_HINTS
+/* Checksum structure over the distinct frames of the modal length. */
+static void radiogeddon_report_checksums(const RgAnalysis* r, FuriString* out) {
+    furi_string_cat_str(out, "----------------\nChecksum structure\n[HYPOTHESIS]\n");
+    if(r->bit_count < 12) {
+        furi_string_cat_str(out, "Frames too short.\n");
+        return;
+    }
+    RgChecksumSet* set = malloc(sizeof(RgChecksumSet));
+    rg_checksum_set_init(set);
+    char bits[RG_ANALYZER_MAX_BITS + 1];
+    for(size_t i = 0; i < r->frames_kept; i++) {
+        const RgFrame* f = &r->frames[i];
+        if(f->fit < RG_ANALYZER_GOOD_FIT || f->bit_count != r->bit_count) continue;
+        rg_analyzer_frame_bits(f, bits);
+        rg_checksum_set_add(set, bits, f->bit_count);
+    }
+    RgChecksumResult* res = malloc(sizeof(RgChecksumResult));
+    rg_checksum_analyze(set, res);
+    furi_string_cat_printf(
+        out,
+        "%u distinct %u-bit\nframes tested.\n",
+        (unsigned)res->frames,
+        (unsigned)res->bit_count);
+    if(!res->enough_for_byte) {
+        furi_string_cat_printf(
+            out,
+            "Needs %u or more\ndifferent frames (e.g.\nseveral button presses\nin one capture).\n",
+            (unsigned)RG_CHECKSUM_MIN_BYTE);
+    } else if(res->hit_count == 0) {
+        furi_string_cat_str(out, "No common checksum\n(XOR, sum, CRC-8,\nparity) fits all.\n");
+    }
+    char line[96];
+    for(size_t i = 0; i < res->hit_count; i++) {
+        rg_checksum_describe(&res->hit[i], line, sizeof(line));
+        furi_string_cat_printf(
+            out, "- %s; fits %u/%u\n", line, res->hit[i].frames, res->hit[i].frames);
+    }
+    if(res->hit_count) {
+        furi_string_cat_str(out, "A fit is a structure\nguess, not a decode.\n");
+    }
+    free(res);
+    free(set);
+}
+#endif
 
 void radiogeddon_analysis_unknown(Storage* storage, const char* path, FuriString* out) {
     RadioGeddonAnalysisStatus status;
@@ -564,6 +624,9 @@ void radiogeddon_analysis_unknown(Storage* storage, const char* path, FuriString
     radiogeddon_report_hypothesis(r, out);
     furi_string_cat_str(out, "----------------\n");
     radiogeddon_report_frames(r, out);
+#if RG_FEATURE_CHECKSUM_HINTS
+    radiogeddon_report_checksums(r, out);
+#endif
     free(a);
 }
 

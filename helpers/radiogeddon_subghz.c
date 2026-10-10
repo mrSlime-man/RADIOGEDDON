@@ -3,6 +3,7 @@
 #include "rg_memstat.h"
 #include "radiogeddon_decode_text.h"
 #include "rg_preset.h"
+#include "../radiogeddon_edition.h"
 
 #include <furi_hal_subghz.h>
 #include <furi_hal_region.h>
@@ -57,6 +58,8 @@ struct RadioGeddonSubGhz {
     SubGhzFileEncoderWorker* file_encoder;
     RadioGeddonTxCompleteCallback tx_complete_cb;
     void* tx_complete_ctx;
+    RgTxVerdict tx_verdict; // the app's transmit check, last time it refused
+    uint32_t tx_frequency; // frequency of the last transmit attempt
 };
 
 static FuriHalSubGhzPreset radiogeddon_subghz_current_preset(RadioGeddonSubGhz* instance) {
@@ -624,6 +627,41 @@ void radiogeddon_subghz_record_discard(RadioGeddonSubGhz* instance) {
 
 /* ---- Transmit / replay ------------------------------------------------- */
 
+RgTxVerdict radiogeddon_subghz_tx_check(RadioGeddonSubGhz* instance, uint32_t frequency) {
+    RgTxFacts facts = {
+        .device_valid = radiogeddon_subghz_is_frequency_allowed(instance, frequency),
+        .hardware_valid = furi_hal_subghz_is_frequency_valid(frequency),
+        .region_provisioned = furi_hal_region_is_provisioned(),
+        .region_allows = furi_hal_region_is_frequency_allowed(frequency),
+    };
+    return rg_txpolicy_check(&facts, RG_FEATURE_REGION_TX_GATE);
+}
+
+RgTxVerdict radiogeddon_subghz_tx_verdict(RadioGeddonSubGhz* instance, uint32_t* frequency) {
+    if(frequency) *frequency = instance->tx_frequency;
+    return instance->tx_verdict;
+}
+
+const char* radiogeddon_subghz_region_name(void) {
+    const char* name = furi_hal_region_is_provisioned() ? furi_hal_region_get_name() : NULL;
+    return (name && name[0]) ? name : "--";
+}
+
+#if RG_EDITION_FULL
+static bool radiogeddon_subghz_valid_cb(uint32_t hz, void* context) {
+    return radiogeddon_subghz_is_frequency_allowed(context, hz);
+}
+
+void radiogeddon_subghz_probe_bands(RadioGeddonSubGhz* instance, RgBandSet* out) {
+    rg_range_probe_bands(
+        rg_range_cc1101_bands,
+        sizeof(rg_range_cc1101_bands) / sizeof(rg_range_cc1101_bands[0]),
+        radiogeddon_subghz_valid_cb,
+        instance,
+        out);
+}
+#endif
+
 static void radiogeddon_subghz_file_encoder_end(void* context) {
     RadioGeddonSubGhz* instance = context;
     if(instance->tx_complete_cb) instance->tx_complete_cb(instance->tx_complete_ctx);
@@ -657,16 +695,15 @@ RadioGeddonTxResult radiogeddon_subghz_tx_start(
         if(!flipper_format_read_uint32(ff, "Frequency", &frequency, 1)) {
             frequency = instance->frequency;
         }
-        if(!radiogeddon_subghz_is_frequency_allowed(instance, frequency)) {
-            result = RadioGeddonTxErrorRegion;
-            break;
-        }
-        // The external module's driver comes from the SD card and differs
-        // between firmwares; ask the firmware's region table directly too, so
-        // TX through it is never less restricted than the internal radio.
-        if(instance->radio == RadioGeddonRadioExternal &&
-           !furi_hal_region_is_frequency_allowed(frequency)) {
-            result = RadioGeddonTxErrorRegion;
+        // The app's own check (rg_txpolicy): in the Catalog edition the
+        // firmware's region must be known and allow the frequency, and the
+        // radio hardware must accept it, whichever radio is in use. The
+        // driver's own transmit check (subghz_devices_set_tx) follows in both
+        // editions.
+        instance->tx_frequency = frequency;
+        instance->tx_verdict = radiogeddon_subghz_tx_check(instance, frequency);
+        if(instance->tx_verdict != RgTxAllowed) {
+            result = RadioGeddonTxErrorPolicy;
             break;
         }
         // An external module can be unplugged at any time: check it answers

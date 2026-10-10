@@ -23,6 +23,7 @@
 #include <notification/notification_messages.h>
 #include <storage/storage.h>
 
+#include "radiogeddon_edition.h"
 #include "helpers/radiogeddon_subghz.h"
 #include "helpers/radiogeddon_history.h"
 #include "helpers/radiogeddon_storage.h"
@@ -33,10 +34,14 @@
 #include "helpers/radiogeddon_report.h"
 #include "helpers/radiogeddon_memdiag.h"
 #include "helpers/rg_freq.h"
+#include "helpers/rg_range.h"
+#include "helpers/radiogeddon_profiles.h"
+#include "helpers/radiogeddon_rangescan.h"
 #include "views/radiogeddon_scanner_view.h"
 #include "views/radiogeddon_receiver_view.h"
 #include "views/radiogeddon_timeline_view.h"
 #include "views/radiogeddon_db_view.h"
+#include "views/radiogeddon_spectrum_view.h"
 
 #define RADIOGEDDON_TEXT_INPUT_BUFFER_SIZE 64
 #define RADIOGEDDON_TAG                    "RadioGeddon"
@@ -54,7 +59,16 @@ typedef enum {
     RadioGeddonViewTimeline, // added only while the Pulse Timeline is open
     RadioGeddonViewDb, // added only while the Database is open
     RadioGeddonViewNumberInput, // added only while a custom frequency is typed
+    RadioGeddonViewSpectrum, // Full: added only while the Range Scanner is open
 } RadioGeddonView;
+
+/** What a frequency typed on the number keyboard is for. */
+typedef enum {
+    RadioGeddonFreqTargetReceive, // the receive frequency (must be tunable)
+    RadioGeddonFreqTargetRangeStart, // range scan start (any supported value)
+    RadioGeddonFreqTargetRangeEnd, // range scan end
+    RadioGeddonFreqTargetFavorite, // a new favorite (must be tunable)
+} RadioGeddonFreqTarget;
 
 typedef struct RadioGeddonApp RadioGeddonApp;
 
@@ -113,6 +127,8 @@ struct RadioGeddonApp {
     uint32_t progress_tick;
     // "Not enough memory" text shown before a radio session (with figures).
     char memory_text[96];
+    // Why a transmission was refused (Replay), shown on its popup.
+    char tx_text[96];
     uint32_t fw_tag; // identifies the running firmware (rg_mem_firmware_tag)
 
     // Persisted settings (frequency/preset are mirrored in the fields below)
@@ -140,6 +156,28 @@ struct RadioGeddonApp {
     bool receiver_preserve_history;
     // True while the scanner sweep is actively probing a present radio.
     bool scanner_running;
+    // The next Receive start begins a RAW recording at once (long OK on a
+    // scanner screen).
+    bool receiver_autorecord;
+    // What the frequency keyboard is editing (RadioGeddonFreqTarget).
+    uint8_t freq_target;
+
+#if RG_EDITION_FULL
+    // Bands the radio in use accepts, measured when a Full screen needs them.
+    RgBandSet bands;
+    // Favorite frequencies, read from the card on first use.
+    RadioGeddonFavorites favorites;
+    bool favorites_loaded;
+    size_t favorite_index; // favorite whose options are shown
+    // Range scanner: plan of the current settings, the engine and its screen
+    // (both exist only while the Range Scanner screen is open).
+    RgRange range;
+    RgRangeResult range_result;
+    RadioGeddonRangeScan* rangescan;
+    RadioGeddonSpectrumView* spectrum_view;
+    uint32_t range_cursor; // point under the cursor, kept across a trip to Receive
+    char profile_name[RADIOGEDDON_PROFILE_NAME_LEN];
+#endif
 };
 
 /** Copy the session frequency/preset into settings and write them to the SD card. */

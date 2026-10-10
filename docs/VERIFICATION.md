@@ -2,7 +2,7 @@
 
 What has been verified, how, and what has not. Integrity rule: nothing is
 marked hardware-verified without evidence from a physical device. As of
-`1.0.0-beta.5`, the only physical-hardware results are tester reports on
+`1.0.0-beta.6`, the only physical-hardware results are tester reports on
 earlier code (see "Reported by users" below); no checklist item is
 independently verified, and the "Not verified" section stands open.
 
@@ -20,12 +20,14 @@ locally.
 
 | Area | Method | Result |
 |------|--------|--------|
-| Official build | SDK 1.4.3 pinned by SHA-256, API asserted 87.1, `.fap` manifest verified | Pass — `radiogeddon-official.fap` |
-| Unleashed build | SDK unlshd-093 pinned by SHA-256, API asserted 88.9, manifest verified | Pass — `radiogeddon-unleashed.fap` |
-| RogueMaster build | RogueMaster source at commit `38d7ae9`, built with its own `fbt`, API asserted 88.16, manifest verified | Pass — `radiogeddon-roguemaster.fap` |
+| Catalog edition, Official build | SDK 1.4.3 pinned by SHA-256, API asserted 87.1, manifest (name `RadioGeddon`, version) verified, all 289 imports exported by the SDK | Pass — `radiogeddon-catalog-official.fap` |
+| Full edition, RogueMaster build | RogueMaster source at commit `38d7ae9`, built with its own `fbt`, API asserted 88.16, manifest (name `RadioGeddon Full`) verified, all 293 imports exported by its `api_symbols.csv` | Pass — `radiogeddon-full-roguemaster.fap` |
+| Full edition, Momentum build | Momentum mntm-012 SDK pinned by SHA-256 (matches Momentum's update index), API asserted 87.1, manifest verified, all 293 imports exported by Momentum's SDK | Pass — `radiogeddon-full-momentum.fap` |
+| Full edition, Unleashed build | SDK unlshd-093 pinned by SHA-256, API asserted 88.9, manifest verified, all 293 imports exported by the SDK | Pass — `radiogeddon-full-unleashed.fap` |
+| Edition switches | `test_edition` built three times: as Full, as Catalog and with no edition (must be Catalog); defining both must not compile | Pass — 8 checks each, conflict refused |
 | Lint | `ufbt lint` (clang-format) | Pass, no warnings |
 | DSP/parse unit tests | `make -C test check` → `test_dsp` | Pass — 36 checks |
-| Analysis-engine unit tests | `make -C test check` → `test_analyzer` | Pass — 102 checks |
+| Analysis-engine unit tests | `make -C test check` → `test_analyzer` | Pass — 116 checks |
 | Scanner-logic unit tests | `make -C test check` → `test_scan` | Pass — 31 checks |
 | Hopper-logic unit tests | `make -C test check` → `test_hop` | Pass — 42 checks |
 | RAW-reader unit tests | `make -C test check` → `test_raw` | Pass — 43 checks |
@@ -39,21 +41,29 @@ locally.
 | RAW-to-decoder feeding tests | `make -C test check` → `test_decode` | Pass — 68 checks |
 | Frequency text and range tests | `make -C test check` → `test_freq` | Pass — 32 checks |
 | Custom preset check | `make -C test check` → `test_preset` | Pass — 20 checks |
-| Format tests (firmware code, real files) | `make -C test formats` → `test_formats`: the firmware's FlipperFormat and stream code and its 85 Sub-GHz test files, from the commit of Official 1.4.3 | Pass — 569 checks |
-| Analyzer on real captures | `make -C test captures` → `test_fwanalyze`: `rg_analyzer` on the firmware's 50 paired RAW test captures, scored against each protocol's decoder source | Pass — 354 checks; Te right for 48, encoding family for 41, frame length for 29 (see below) |
+| Bands and range plans | `make -C test check` → `test_range`: band probing against Official 1.4.3's and RogueMaster/Momentum/Unleashed's real `furi_hal_subghz_is_frequency_valid()` ranges, range plans across gaps (every point tunable), limits, overflow, fine stepping | Pass — 96 checks |
+| Transmit check | `make -C test check` → `test_txpolicy`: all 16 fact combinations in both editions, refusal texts | Pass — 272 checks |
+| Range-scan display maths | `make -C test check` → `test_spectrum`: compact points, median floor over all points, column binning for 1 to 256 points | Pass — 450 checks |
+| Checksum hypotheses | `make -C test check` → `test_checksum`: CRC-8 catalogue vectors, XOR / sum / CRC-8 / parity structures found, 200 random trials with no false fit, repeats and uncovered differences refused | Pass — 27 checks |
+| Format tests (firmware code, real files) | `make -C test formats` → `test_formats`: the firmware's FlipperFormat and stream code and its 85 Sub-GHz test files, from the commit of Official 1.4.3 | Pass — 654 checks (also settings shared between editions and with beta 5, favorites and scan profiles) |
+| Analyzer on real captures | `make -C test captures` → `test_fwanalyze`: `rg_analyzer` on the firmware's 50 paired RAW test captures, scored against each protocol's decoder source | Pass — 354 checks; Te right for 50, encoding family for 41, frame length for 33 (see below) |
 | Decoder tests (firmware code, real captures) | `make -C test decoders` → `test_fwdecode`: the firmware's Sub-GHz receiver and all its protocol decoders, fed its 50 RAW test captures through `rg_decode` | Pass — 263 checks; all 50 decode and are described as the app describes them, and every decode saved as the app saves a key names its preset (see below) |
 | Preset check on the firmware's presets | `make -C test decoders` → `test_fwpreset`: `rg_preset_check` on the firmware's six built-in CC1101 presets and the custom presets in its example settings file | Pass — 26 checks; all eight pass and end where the firmware ends them |
+| Engine lifecycle | `make -C test lifecycle` → `test_lifecycle`: the real Scanner, Range Scanner and Hopper engines started and stopped 40, 40 and 10 times on real threads against a fake radio, every allocation counted | Pass — 23 checks; memory unchanged between cycles and fully returned on free, every scan session and capture closed, no probe inside a band gap, activity detected after calibration, hold on hit |
+| Apps Catalog rules | `scripts/check_catalog.py --catalog`: fam fields, icon, description and changelog through the catalog's own Markdown filter, ASCII-only strings, writes only under `apps_data/radiogeddon` | Pass; screenshots missing (need hardware) |
+| Apps Catalog bundler | `scripts/catalog_bundle.py`: the catalog's own `tools/bundle.py` steps on the pushed commit (clone, `ufbt lint`, build, manifest from `application.fam`, path, includes, icon, values, Markdown) | Every step passes except screenshots (see "Not verified") |
 | Fuzz corpus replay | `make -C test check` → `replay_fuzz_raw`, `replay_fuzz_db`, `replay_fuzz_samples` | Pass — every committed input |
 | Fuzzing | `make -C test fuzz` (libFuzzer with ASan/UBSan; 60 s per target in CI) | Pass — no crash, sanitizer report or broken invariant |
-| Static analysis | `scripts/static_analysis.py`: GCC `-fanalyzer` and clang-tidy ([`.clang-tidy`](../.clang-tidy)) over the device code with the build flags, Official and Unleashed SDKs | Pass — 0 findings |
+| Static analysis | `scripts/static_analysis.py`: GCC `-fanalyzer` and clang-tidy ([`.clang-tidy`](../.clang-tidy)) over the device code with the build flags: the Catalog edition on the Official SDK, the Full edition on the Momentum and Unleashed SDKs | Pass — 0 findings |
 | Thread safety of ring and recorder | `make -C test tsan` (ThreadSanitizer; optional, not in CI) | Pass — no reports |
 | Memory safety of tested code | tests built `-Werror` under `-fsanitize=address,undefined` | Pass — no ASan/UBSan reports |
 | Documentation links | `scripts/check_links.py` (offline link + anchor check) | Pass |
 | Release metadata | `scripts/release_meta.py`: version in `radiogeddon_version.h` and `application.fam`, release notes, CHANGELOG section, the API listed for each `.fap` against the pins, download links | Pass |
-| Newer firmware (canary) | `scripts/firmware_watch.py --build` (weekly in CI): Official 1.5.1-rc SDK, API 88.2 | Builds; `APPCHK` and manifest pass. No release targets it yet, not hardware-tested |
-| `.fap` metadata | `scripts/verify_fap.py` parses `.fapmeta` and asserts magic, API, target, name, version, icon | Pass for all three artifacts |
+| Newer firmware (canary) | `scripts/firmware_watch.py --build` (weekly in CI): Catalog edition on the Official 1.5.1-rc SDK, API 88.2 | Builds; `APPCHK`, manifest and imports pass. No release targets it yet, not hardware-tested |
+| `.fap` metadata | `scripts/verify_fap.py` parses `.fapmeta` and asserts magic, API, target, name, version, icon; with `--symbols`, that every undefined symbol in the ELF symbol table is exported by the SDK | Pass for all four artifacts |
+| Resident code size | `arm-none-eabi-size` on the built files (text + rodata + data + bss) | Catalog 75,641 B, Full 94,544 B (beta 5: 73,776 B) |
 
-Host-test total: **665 checks, 0 failures** (`make -C test check`; the format, capture and decoder tests are counted on their own). What the suite covers (synthetic
+Host-test total: **1,548 checks, 0 failures** (`make -C test check`; the format, capture and decoder tests are counted on their own). What the suite covers (synthetic
 signals, not real captures):
 
 - `test_dsp` — RAW `RAW_Data` parsing (incl. whitespace, signs, out-of-range
@@ -295,17 +305,16 @@ radio is touched either way.
 captures, streamed and rewound for each pass as the app does, without telling
 it the protocol. It reads each protocol's decoder source at run time and
 scores the engine's hypotheses: Te within the decoder's tolerance of its
-short pulse (48 of 50), Manchester exactly when the decoder uses the
+short pulse (50 of 50), Manchester exactly when the decoder uses the
 firmware's Manchester decoder (41; 3 get no guess), and frame length within
-one bit of the decoder's bit count (29). The engine before this test's
-changes scored 39, 33 and 16. The test also checks the engine's own rules on
-every capture (Te is 0 or at least 100 µs, confidence at most 95 %, no bits
+one bit of the decoder's bit count (33). Beta 5 scored 48, 41 and 29, and the
+engine before this test existed 39, 33 and 16. The test also checks the
+engine's own rules on every capture (Te is 0 or at least 140 µs, confidence at most 95 %, no bits
 without an encoding) and that the streamed result equals the in-memory one.
 It fails if a total drops. The misses are listed by
-[PROTOCOL_ANALYSIS.md](PROTOCOL_ANALYSIS.md#what-it-cannot-do): pulse-width
-codes with equal pulse and gap per bit read as Manchester, repeats with no
-gap stay one long frame, and two very noisy captures (Holtek, Phoenix V2)
-give a Te of 132 µs, twice the width of their glitches.
+[PROTOCOL_ANALYSIS.md](PROTOCOL_ANALYSIS.md#accuracy-on-the-firmwares-test-captures):
+pulse-width codes with equal pulse and gap per bit read as Manchester, and
+frame lengths that include a long preamble or count bits differently.
 
 ## Release-pipeline integrity
 
@@ -412,7 +421,21 @@ Everything about on-device radio behaviour, and the end-to-end workflow. See the
   `Not enough memory` refusal are untested on a device (checklist F15–F15c);
   the host tests check the bookkeeping and the Database and recorder
   lifecycles, not the firmware's heap.
-- That each per-firmware `.fap` loads and runs on its matching firmware.
+- That each per-firmware `.fap` loads and runs on its matching firmware —
+  in particular the first Momentum build and both new editions (checklist
+  L1–L4, E1–E3).
+- The Full edition's Range Scanner, favorites, profiles, fine stepping and
+  Radio bands screen on a device (checklist R1–R11): real sweep times, RSSI
+  behaviour across bands, the band probe against the real drivers (including
+  an external module's), and the spectrum screen's readability. The host
+  tests run the engine against a fake radio, not the CC1101.
+- The Catalog edition's region check refusing a transmission on a device
+  (checklist C1–C3); the host tests check the decision for every combination
+  of the firmware's answers, not the firmware's region data.
+- Memory headroom of the larger Full edition on a device (checklist M1–M3):
+  its resident code is about 21 KB larger than beta 5's.
+- Apps Catalog acceptance: the submission needs qFlipper screenshots from a
+  device, and the catalog's moderators decide.
 
 ## How this file is updated
 

@@ -17,6 +17,10 @@ RAWFMT_SRC := test_rawfmt.c ../helpers/rg_rawfmt.c ../helpers/rg_raw.c
 DB_SRC := test_db.c ../helpers/rg_db.c
 FREQ_SRC := test_freq.c ../helpers/rg_freq.c
 PRESET_SRC := test_preset.c ../helpers/rg_preset.c
+RANGE_SRC := test_range.c ../helpers/rg_range.c
+TXPOLICY_SRC := test_txpolicy.c ../helpers/rg_txpolicy.c
+SPECTRUM_SRC := test_spectrum.c ../helpers/rg_spectrum.c ../helpers/rg_scan.c
+CHECKSUM_SRC := test_checksum.c ../helpers/rg_checksum.c
 MEMSTAT_SRC := test_memstat.c ../helpers/rg_memstat.c
 DECODE_SRC := test_decode.c ../helpers/rg_decode.c ../helpers/rg_raw.c
 DBLOAD_SRC := test_dbload.c stubs/furi_stub.c ../helpers/radiogeddon_db.c ../helpers/rg_db.c
@@ -37,7 +41,7 @@ FW_SRC := $(FW)/lib/flipper_format/flipper_format.c $(FW)/lib/flipper_format/fli
 FW_OBJ := $(patsubst $(FW)/%.c,$(BUILD)/fwobj/%.o,$(FW_SRC))
 FORMATS_SRC := test_formats.c stubs/furi_stub.c ../helpers/radiogeddon_storage.c \
 		../helpers/radiogeddon_settings.c ../helpers/radiogeddon_bands.c ../helpers/rg_freq.c \
-		../helpers/radiogeddon_dsp.c \
+		../helpers/radiogeddon_dsp.c ../helpers/rg_range.c ../helpers/radiogeddon_profiles.c \
 		../helpers/rg_db.c ../helpers/rg_raw.c ../helpers/rg_analyzer.c
 
 # Decoder tests: the firmware's own Sub-GHz receiver and protocol decoders
@@ -70,10 +74,22 @@ FUZZ_TARGETS := fuzz_raw fuzz_db fuzz_samples
 FUZZ_CC ?= clang
 FUZZ_TIME ?= 60
 
-.PHONY: check clean tsan fuzz formats decoders captures
+# Engine lifecycle tests: the Scanner, Range Scanner and Hopper engines
+# started and stopped repeatedly on real threads against a fake radio, with
+# every allocation counted. Built as the Full edition (it has all three) on
+# the firmware's Sub-GHz headers, fetched like the format tests.
+# `make lifecycle`.
+LIFECYCLE_SRC := test_lifecycle.c stubs/furi_stub.c stubs/radio_fake.c \
+		../helpers/radiogeddon_scanner.c ../helpers/radiogeddon_rangescan.c \
+		../helpers/radiogeddon_hopper.c ../helpers/rg_scan.c ../helpers/rg_hop.c \
+		../helpers/rg_range.c ../helpers/rg_spectrum.c ../helpers/rg_freq.c
+
+.PHONY: check clean tsan fuzz formats decoders captures lifecycle
 check: $(BUILD)/test_dsp $(BUILD)/test_analyzer $(BUILD)/test_scan $(BUILD)/test_hop $(BUILD)/test_raw \
 		$(BUILD)/test_timeline $(BUILD)/test_ring $(BUILD)/test_rawfmt $(BUILD)/test_recorder \
-		$(BUILD)/test_db $(BUILD)/test_memstat $(BUILD)/test_dbload $(BUILD)/test_decode $(BUILD)/test_freq $(BUILD)/test_preset \
+		$(BUILD)/test_db $(BUILD)/test_memstat $(BUILD)/test_dbload $(BUILD)/test_decode $(BUILD)/test_freq $(BUILD)/test_preset $(BUILD)/test_range \
+		$(BUILD)/test_txpolicy $(BUILD)/test_spectrum $(BUILD)/test_checksum $(BUILD)/test_edition_full $(BUILD)/test_edition_catalog \
+		$(BUILD)/test_edition_default $(BUILD)/edition_conflict.ok \
 		$(addprefix $(BUILD)/replay_,$(FUZZ_TARGETS))
 	$(BUILD)/test_dsp
 	$(BUILD)/test_analyzer
@@ -90,6 +106,13 @@ check: $(BUILD)/test_dsp $(BUILD)/test_analyzer $(BUILD)/test_scan $(BUILD)/test
 	$(BUILD)/test_decode
 	$(BUILD)/test_freq
 	$(BUILD)/test_preset
+	$(BUILD)/test_range
+	$(BUILD)/test_txpolicy
+	$(BUILD)/test_spectrum
+	$(BUILD)/test_checksum
+	$(BUILD)/test_edition_full
+	$(BUILD)/test_edition_catalog
+	$(BUILD)/test_edition_default
 	for t in $(FUZZ_TARGETS); do $(BUILD)/replay_$$t fuzz/corpus/$$t || exit 1; done
 
 $(BUILD)/test_dsp: $(DSP_SRC) ../helpers/radiogeddon_dsp.h | $(BUILD)
@@ -128,6 +151,32 @@ $(BUILD)/test_freq: $(FREQ_SRC) ../helpers/rg_freq.h | $(BUILD)
 $(BUILD)/test_preset: $(PRESET_SRC) ../helpers/rg_preset.h | $(BUILD)
 	$(CC) $(CFLAGS) $(SAN) -o $@ $(PRESET_SRC)
 
+$(BUILD)/test_range: $(RANGE_SRC) ../helpers/rg_range.h | $(BUILD)
+	$(CC) $(CFLAGS) $(SAN) -DRADIOGEDDON_EDITION_FULL -o $@ $(RANGE_SRC)
+
+$(BUILD)/test_txpolicy: $(TXPOLICY_SRC) ../helpers/rg_txpolicy.h | $(BUILD)
+	$(CC) $(CFLAGS) $(SAN) -o $@ $(TXPOLICY_SRC)
+
+$(BUILD)/test_spectrum: $(SPECTRUM_SRC) ../helpers/rg_spectrum.h ../helpers/rg_scan.h | $(BUILD)
+	$(CC) $(CFLAGS) $(SAN) -DRADIOGEDDON_EDITION_FULL -o $@ $(SPECTRUM_SRC)
+
+$(BUILD)/test_checksum: $(CHECKSUM_SRC) ../helpers/rg_checksum.h | $(BUILD)
+	$(CC) $(CFLAGS) $(SAN) -DRADIOGEDDON_EDITION_FULL -o $@ $(CHECKSUM_SRC)
+
+# The edition switches, built as each edition and with none defined.
+$(BUILD)/test_edition_full: test_edition.c ../radiogeddon_edition.h | $(BUILD)
+	$(CC) $(CFLAGS) $(SAN) -DRADIOGEDDON_EDITION_FULL -DEXPECT_FULL=1 -o $@ test_edition.c
+$(BUILD)/test_edition_catalog: test_edition.c ../radiogeddon_edition.h | $(BUILD)
+	$(CC) $(CFLAGS) $(SAN) -DRADIOGEDDON_EDITION_CATALOG -DEXPECT_FULL=0 -o $@ test_edition.c
+$(BUILD)/test_edition_default: test_edition.c ../radiogeddon_edition.h | $(BUILD)
+	$(CC) $(CFLAGS) $(SAN) -DEXPECT_FULL=0 -o $@ test_edition.c
+# Both editions at once must be a compile error.
+$(BUILD)/edition_conflict.ok: test_edition.c ../radiogeddon_edition.h | $(BUILD)
+	if $(CC) $(CFLAGS) -fsyntax-only -DRADIOGEDDON_EDITION_FULL -DRADIOGEDDON_EDITION_CATALOG \
+		-DEXPECT_FULL=1 test_edition.c 2> /dev/null; then \
+		echo "FAIL: both editions defined compiled"; exit 1; fi
+	touch $@
+
 $(BUILD)/test_decode: $(DECODE_SRC) ../helpers/rg_decode.h ../helpers/rg_raw.h | $(BUILD)
 	$(CC) $(CFLAGS) $(SAN) -o $@ $(DECODE_SRC)
 
@@ -139,6 +188,13 @@ $(BUILD)/test_recorder: $(RECORDER_SRC) ../helpers/radiogeddon_recorder.h $(STUB
 $(BUILD)/test_dbload: $(DBLOAD_SRC) ../helpers/radiogeddon_db.h ../helpers/rg_db.h $(STUB_HDRS) \
 		| $(BUILD)
 	$(CC) $(CFLAGS) $(SAN) -Istubs -DSTUB_TRACK_ALLOC -pthread -o $@ $(DBLOAD_SRC)
+
+lifecycle: $(BUILD)/test_lifecycle
+	$(BUILD)/test_lifecycle
+
+$(BUILD)/test_lifecycle: $(LIFECYCLE_SRC) $(STUB_HDRS) $(FW)/.fetched | $(BUILD)
+	$(CC) $(CFLAGS) $(SAN) -D_GNU_SOURCE -I$(FW) -I$(FW)/lib -I$(FW)/lib/mlib -Istubs \
+		-DSTUB_TRACK_ALLOC -DRADIOGEDDON_EDITION_FULL -pthread -o $@ $(LIFECYCLE_SRC)
 
 formats: $(BUILD)/test_formats
 	$(BUILD)/test_formats
@@ -157,7 +213,7 @@ $(BUILD)/fwobj/%.o: $(FW)/%.c $(STUB_HDRS)
 	$(CC) $(CFLAGS) $(SAN) -D_GNU_SOURCE -I$(FW) -I$(FW)/lib -Istubs -c -o $@ $<
 
 $(BUILD)/test_formats: $(FORMATS_SRC) $(STUB_HDRS) $(FW_OBJ) | $(BUILD)
-	$(CC) $(CFLAGS) $(SAN) -D_GNU_SOURCE -I$(FW) -I$(FW)/lib -Istubs -DSTUB_TRACK_ALLOC -pthread \
+	$(CC) $(CFLAGS) $(SAN) -D_GNU_SOURCE -I$(FW) -I$(FW)/lib -Istubs -DSTUB_TRACK_ALLOC -DRADIOGEDDON_EDITION_FULL -pthread \
 		-o $@ $(FORMATS_SRC) $(FW_OBJ)
 
 decoders: $(BUILD)/test_fwdecode $(BUILD)/test_fwpreset

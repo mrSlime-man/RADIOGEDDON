@@ -177,6 +177,9 @@ static bool radiogeddon_scanner_view_input(InputEvent* event, void* context) {
     } else if(event->type == InputTypeLong && event->key == InputKeyLeft) {
         radiogeddon_scanner_view_send(instance, RadioGeddonScannerEventResetPeaks);
         consumed = true;
+    } else if(event->type == InputTypeLong && event->key == InputKeyOk) {
+        radiogeddon_scanner_view_send(instance, RadioGeddonScannerEventRecord);
+        consumed = true;
     }
     return consumed;
 }

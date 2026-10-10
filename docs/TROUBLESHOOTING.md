@@ -13,7 +13,7 @@ word them slightly differently):
 
 | Message | Cause | Fix |
 |---------|-------|-----|
-| `Error: Outdated App` — *Update the app* | The `.fap` was built for an **older API major version** than your firmware — usually `radiogeddon-official.fap` on Unleashed or RogueMaster. | Install the file for your firmware family. |
+| `Error: Outdated App` — *Update the app* | The `.fap` was built for an **older API major version** than your firmware — usually `radiogeddon-catalog-official.fap` on Unleashed or RogueMaster. | Install the file for your firmware family. |
 | `Error: Outdated Firmware` — *Update firmware* | The `.fap` was built for a **newer API major version** — usually the Unleashed or RogueMaster file on official firmware. | Install the file for your firmware family. |
 | `Error: Missing Imports` | Right family, but your firmware is older than the build expects (lower API minor version), or the file is from another fork. | Update your firmware, or build from source against your firmware's SDK. |
 | `Error: HW Target Mismatch` | Not a Flipper Zero `f7` build. | Download a release `.fap` again. |

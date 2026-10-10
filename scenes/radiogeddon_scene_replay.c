@@ -41,13 +41,26 @@ static void radiogeddon_scene_replay_show_idle(RadioGeddonApp* app) {
     rg_freq_text(app->loaded.frequency, freq, sizeof(freq));
     furi_string_reset(app->temp_str);
     furi_string_cat_printf(
+        app->temp_str, "%s @ %s MHz\n", furi_string_get_cstr(app->loaded.protocol), freq);
+    // Say up front whether the app's own check will refuse, and why.
+    RgTxVerdict verdict = radiogeddon_subghz_tx_check(app->subghz, app->loaded.frequency);
+    if(verdict != RgTxAllowed) {
+        rg_txpolicy_explain(
+            verdict, radiogeddon_subghz_region_name(), freq, app->tx_text, sizeof(app->tx_text));
+        furi_string_cat_printf(app->temp_str, "TX NOT ALLOWED:\n%s\n", app->tx_text);
+    }
+#if RG_FEATURE_REGION_TX_GATE
+    furi_string_cat_printf(
         app->temp_str,
-        "%s @ %s MHz\n"
-        "Legal/region limits are\nenforced by firmware.\n"
+        "Region: %s (from firmware).\nTX only where the region\nallows it.\n",
+        radiogeddon_subghz_region_name());
+#else
+    furi_string_cat_printf(app->temp_str, "The firmware's own TX\nrules apply.\n");
+#endif
+    furi_string_cat_printf(
+        app->temp_str,
         "Rolling-code protocols are\nrefused; a RAW capture is\nsent exactly as recorded.\n"
-        "Only transmit devices you\nare authorized to test.",
-        furi_string_get_cstr(app->loaded.protocol),
-        freq);
+        "Only transmit devices you\nare authorized to test.");
     widget_add_text_scroll_element(widget, 0, 14, 128, 38, furi_string_get_cstr(app->temp_str));
     widget_add_button_element(
         widget, GuiButtonTypeCenter, "Send", radiogeddon_scene_replay_button_cb, app);
@@ -65,12 +78,20 @@ static void radiogeddon_scene_replay_finish(RadioGeddonApp* app, const char* msg
     radiogeddon_subghz_tx_stop(app->subghz);
     scene_manager_set_scene_state(app->scene_manager, RadioGeddonSceneReplay, ReplayStateIdle);
     notification_message(app->notifications, success ? &sequence_success : &sequence_error);
+    // A long explanation (several lines) starts higher and stays longer.
+    bool long_text = strchr(msg, '\n') != NULL;
     popup_reset(app->popup);
-    popup_set_header(app->popup, success ? "Done" : "Error", 64, 18, AlignCenter, AlignCenter);
-    popup_set_text(app->popup, msg, 64, 38, AlignCenter, AlignCenter);
+    popup_set_header(
+        app->popup,
+        success ? "Done" : (long_text ? "TX refused" : "Error"),
+        64,
+        long_text ? 6 : 18,
+        AlignCenter,
+        AlignCenter);
+    popup_set_text(app->popup, msg, 64, long_text ? 36 : 38, AlignCenter, AlignCenter);
     popup_set_context(app->popup, app);
     popup_set_callback(app->popup, radiogeddon_scene_replay_popup_cb);
-    popup_set_timeout(app->popup, 1500);
+    popup_set_timeout(app->popup, long_text ? 4000 : 1500);
     popup_enable_timeout(app->popup);
     view_dispatcher_switch_to_view(app->view_dispatcher, RadioGeddonViewPopup);
 }
@@ -98,8 +119,23 @@ bool radiogeddon_scene_replay_on_event(void* context, SceneManagerEvent event) {
                 const char* msg = "Cannot transmit";
                 switch(res) {
                 case RadioGeddonTxErrorRegion:
-                    msg = "Blocked by region";
+                    // The firmware's radio driver refused (subghz_devices_set_tx).
+                    msg = "Firmware blocked TX";
                     break;
+                case RadioGeddonTxErrorPolicy: {
+                    uint32_t hz = 0;
+                    RgTxVerdict v = radiogeddon_subghz_tx_verdict(app->subghz, &hz);
+                    char freq[RG_FREQ_TEXT_SIZE];
+                    rg_freq_text(hz, freq, sizeof(freq));
+                    rg_txpolicy_explain(
+                        v,
+                        radiogeddon_subghz_region_name(),
+                        freq,
+                        app->tx_text,
+                        sizeof(app->tx_text));
+                    msg = app->tx_text;
+                    break;
+                }
                 case RadioGeddonTxErrorProtected:
                     msg = "Protected/rolling code";
                     break;

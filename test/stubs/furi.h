@@ -67,6 +67,23 @@ FuriThreadId furi_thread_get_id(FuriThread* thread);
 uint32_t furi_thread_flags_set(FuriThreadId id, uint32_t flags);
 uint32_t furi_thread_flags_wait(uint32_t flags, uint32_t options, uint32_t timeout);
 
+/* Mutexes: what the Scanner, Range Scanner and Hopper engines lock their
+ * state with (test_lifecycle). */
+typedef enum {
+    FuriMutexTypeNormal,
+    FuriMutexTypeRecursive,
+} FuriMutexType;
+typedef enum {
+    FuriStatusOk = 0,
+    FuriStatusError = -1,
+} FuriStatus;
+#define FuriWaitForever 0xFFFFFFFFU
+typedef struct FuriMutex FuriMutex;
+FuriMutex* furi_mutex_alloc(FuriMutexType type);
+void furi_mutex_free(FuriMutex* mutex);
+FuriStatus furi_mutex_acquire(FuriMutex* mutex, uint32_t timeout);
+FuriStatus furi_mutex_release(FuriMutex* mutex);
+
 uint32_t furi_get_tick(void);
 uint32_t furi_kernel_get_tick_frequency(void);
 #define furi_ms_to_ticks(ms) (ms)

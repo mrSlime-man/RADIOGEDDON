@@ -1,8 +1,9 @@
 # Hardware Verification Checklist
 
-RadioGeddon builds for three firmware families and passes all automated checks,
-but **none of the items below has been verified on a physical Flipper Zero
-yet**. This is the test plan for doing that. Any subset is useful — please
+RadioGeddon builds as two editions — **Catalog** for Official firmware and
+**Full** for RogueMaster, Momentum and Unleashed — and passes all automated
+checks, but **none of the items below has been verified on a physical Flipper
+Zero yet** (beyond one beta 2 launch report on RogueMaster). This is the test plan for doing that. Any subset is useful — please
 report results (passes and failures alike) with the
 [Hardware test report](https://github.com/mrSlime-man/RADIOGEDDON/issues/new?template=hardware_report.yml)
 form, quoting the item IDs.
@@ -18,12 +19,13 @@ region's rules.
 | S2 | Copy `test/fixtures/*.sub` to `/ext/apps_data/radiogeddon/signals/` (create the folder, or launch the app once first). |
 | S3 | Optional but helpful: open a device log — connect USB, run `ufbt cli`, type `log`, keep it running. |
 | S4 | Note your firmware family and version (Settings → About) and your device's region. |
+| S5 | Note the edition and version RadioGeddon's About screen shows (`RadioGeddon Catalog` or `RadioGeddon Full`, `1.0.0-beta.6`). |
 
 ## End-to-end workflow
 
 | ID | Step | Pass when |
 |----|------|-----------|
-| W1 | Launch: Apps → Sub-GHz → RadioGeddon. | Main menu lists the six items; no error in the log. |
+| W1 | Launch: Apps → Sub-GHz → RadioGeddon (Catalog) or RadioGeddon Full. | Catalog: the menu lists Scanner, Receive & Record, Frequency Hopper, Database, Settings, About. Full: also Range Scanner and Favorites, header `RadioGeddon Full`. No error in the log. |
 | W2 | Start the receiver: Settings `433.92`, `AM 650`; open `Receive & Record`. | Header reads `433.92 AM 650`; RSSI bar reacts to a nearby remote; `Listening...` (not `No radio`). |
 | W3 | Capture a supported transmission: a fixed-code remote, or send `princeton_ref_a.sub` from a second Flipper. | `Decoded: 1` with `[1] <protocol>`; green LED blink. |
 | W4 | Review decoded info: Up/Down through the list. | Each entry shows its protocol name; newest stays selected. |
@@ -31,7 +33,7 @@ region's rules.
 | W6 | Reopen: Database → each new file → `Signal Info & Analysis`. | Correct frequency and preset; protocol/bits/key for the decode; `RAW` + sample count + pulse range for the capture. |
 | W7 | Analyse: run `Signal Info & Analysis` and `Unknown Protocol Analysis` on the RAW file. | Plausible timing groups and Te; measured timing under `[OBSERVED]`; an encoding with a confidence % and the bit patterns under `[HYPOTHESIS]`. |
 | W8 | Compare: `princeton_ref_a` vs `princeton_ref_b`, then two captures of the same button. | `= Proto`, `= Freq`, `~ Key` for the fixtures; for two same-button captures started the same way, a high `RAW timing match` (it is alignment-sensitive, see Protocol Analysis) and *Same frame pattern*. |
-| W9 | Replay (only where authorized): open a RAW or static-code file → `Replay (TX)` → `Send`. | `Transmitting` then `Signal sent`; a receiver/second Flipper sees it. A rolling-code file reports `Protected/rolling code`; a region-disallowed frequency reports `Blocked by region`. |
+| W9 | Replay (only where authorized): open a RAW or static-code file → `Replay (TX)` → `Send`. | `Transmitting` then `Signal sent`; a receiver/second Flipper sees it. A rolling-code file reports `Protected/rolling code`; Catalog edition: a frequency the firmware's region forbids shows `TX NOT ALLOWED` on the Replay screen and `TX refused` with the region and frequency on Send (see C1); Full edition: the firmware's own refusal shows `Firmware blocked TX`. |
 | W10 | Exit: Back out through every screen to the launcher. | No crash or hang; radio LED off; log shows a clean exit. |
 
 ## Per-feature checks
@@ -90,7 +92,7 @@ region's rules.
 | F14a | No module: with nothing connected choose `External`. | `No external radio` with the error tone; Settings shows `Internal`; Scanner and Receive work on the internal radio. |
 | F14b | 5 V: with a module powered from pin 1, toggle `Ext radio 5V` off, then on. | Off: `No external radio`, back to internal (if the module needs 5 V). Leaving the app turns the 5 V pin off again (check with a meter or the module LED). |
 | F14c | Restart with `External` saved, once with the module and once without. | With it: `EXT` shown. Without: internal radio, Settings shows `Internal`, no crash or hang at start. |
-| F14d | Replay through the module on an allowed frequency, then on one the region forbids. | Allowed: transmits. Forbidden: `Blocked by region`, nothing sent. |
+| F14d | Replay through the module on an allowed frequency, then on one the region forbids. | Allowed: transmits. Forbidden: Catalog `TX refused` with the region; Full: whatever the firmware's external driver decides (`Firmware blocked TX` if it refuses). Nothing is sent when refused. |
 | F14e | Unplug the module while on the main menu, then open Receive and Replay. | `No radio` / a replay error; no hang. (Unplugging while receiving is not supported by the firmware driver.) |
 | F15 | Memory figures: open About right after launch, then open Receive for a few seconds, go back and open About again. | First visit: `Radio session: not measured yet` (on a firmware never measured before). Second: a non-zero `Radio session` (note the value and the firmware), `Lowest in app` below `At app start` with `(after: Receiver)`, `Free now` back near its first value. |
 | F15a | Session cost kept: quit and restart the app, open About. | `Radio session` shows the same value as before the restart. `settings.txt` holds `Radio_heap` and `Radio_heap_fw`. |
@@ -99,16 +101,58 @@ region's rules.
 | F9 | SD card removed mid-session. | Save/open fail gracefully with an error tone; no crash. |
 | F10 | Memory: several capture/save/open/replay cycles. | Free heap (CLI `free` or the log) returns to baseline; no growth across cycles. |
 
-## Per-firmware load check
-
-Install each build on its matching firmware; installing the wrong one should
-produce an API error rather than a crash (see [Troubleshooting](TROUBLESHOOTING.md#the-app-wont-open)).
+## Editions (new in beta 6)
 
 | ID | Check | Pass when |
 |----|-------|-----------|
-| L1 | `radiogeddon-official.fap` on Official firmware. | Launches. |
-| L2 | `radiogeddon-unleashed.fap` on Unleashed. | Launches. |
-| L3 | `radiogeddon-roguemaster.fap` on RogueMaster. | Launches. |
+| E1 | About on each edition. | `RadioGeddon Catalog` / `RadioGeddon Full`, `Edition:` line, version `1.0.0-beta.6`, `Region:` with your device's region (or `--`). |
+| E2 | Shared data: with recordings, favorites and a profile made in the Full edition, install the Catalog edition (on a device where both can run, or by moving the SD card), open its Database and Settings, change a setting, then go back to the Full edition. | The Catalog edition lists the same recordings; nothing is deleted or renamed; back in Full, favorites, profiles and the range settings are unchanged. |
+| E3 | Updating from beta 5: on RogueMaster or Unleashed, install the Full edition next to the old beta 5 file, then delete the old file. | Both appear in the Apps menu until the old one is deleted; the Full edition opens the beta 5 recordings and settings. |
+
+## Range Scanner, favorites and profiles (Full edition)
+
+| ID | Check | Pass when |
+|----|-------|-----------|
+| R1 | Settings → Radio bands on the internal radio. | RogueMaster / Momentum / Unleashed: 281.00–361.00, 378.00–481.00, 749.00–962.00 MHz; the firmware region's TX bands below. With an external module selected, the module driver's bands. |
+| R2 | Range Scanner: Start 433000, End 435000, Step 25 kHz, Dwell 5 ms. Start scan; press a 433.92 MHz remote. | `Points/sweep` reads `81 0.7s` (about); the screen shows `CALIBRATING` briefly, then `RANGE`; a bar rises at 433.92 while pressed, a dot keeps the peak, the counter at the cursor rises; Down moves the cursor to the peak. Note the real sweep time shown bottom right. |
+| R3 | Across a gap: Start 300000, End 928000, Step 5 MHz. | Accepted with a point count below 256; the sweep never shows an error; the cursor at the band edges reads frequencies inside the bands (no 370 or 600 MHz point). |
+| R4 | Limits: Step 1 kHz over 300–928 MHz; then End below Start. | `Points/sweep` shows the count with `>256!` and Start scan says `Too many points`; End below Start moves Start with it. |
+| R5 | Pause on hit and receive: turn `Pause on hit` on, press a remote. | Header `HOLD`, cursor on the active point, OK opens Receive there; long OK opens Receive with recording already running. Back returns to the scan (restarted, cursor kept). |
+| R6 | Recalibrate, reset, save: hold Up, hold Down, hold Right. | Hold Up: `CALIBRATING` again; hold Down: peaks and counters clear; hold Right: `Results saved` and a `SCAN_*.csv` with one row per measured point. |
+| R7 | Profiles: Save profile (accept the suggested name), change the range, Load profile; save again under the same name; Delete profile. | Loading restores every field; saving under an existing name asks `Replace profile?`; Delete asks first; the files are in `apps_data/radiogeddon/profiles/`. |
+| R8 | Favorites: add the current frequency, type one (`433075`), try a duplicate and an untunable `100000`; then Receive + record on one; delete one. | Listed sorted; the duplicate says `Already saved`; `100000` is refused by the keyboard; Receive + record starts recording at once; Delete asks first. |
+| R9 | Favorites as sources: Settings → Scan source `Favorites`, Hop source `Favorites`; open Scanner and Hopper. | Both use exactly the favorites; with no favorites the Scanner shows `No frequencies to scan` and the Hopper `No frequencies`. |
+| R10 | Fine step: Settings → Freq step `1 MHz`, then Left/Right on `Frequency MHz` past 361 MHz; then `List`. | Steps by 1 MHz and jumps 361 → 378 MHz (CFW) without stopping in the gap; back on `List`, Left/Right steps through the frequency list again. |
+| R11 | Checksum hypotheses: record several different button presses of a fixed-code remote into one RAW capture; run Unknown Protocol Analysis. | A `Checksum structure` section: either a fit with `fits n/n` or `No common checksum`, or a note that more different frames are needed. Compare with what is known about the remote. |
+
+## Catalog edition transmit check (Official)
+
+| ID | Check | Pass when |
+|----|-------|-----------|
+| C1 | Replay a capture on a frequency your region does not allow (on a US device, for example, a 868.35 MHz RAW file). | The Replay screen shows `TX NOT ALLOWED: Region XX does not allow TX on 868.35 MHz` before Send; Send shows `TX refused` with the same text, the error tone, and nothing is transmitted (check with a second receiver). |
+| C2 | Replay on an allowed frequency (only where authorized). | `Transmitting`, then `Signal sent`. |
+| C3 | If you have a device without a provisioned region (`--` in About; for example after a factory reset before the region is fetched). | Every Send is refused with `Firmware has no region info, so TX is off`. |
+
+## Memory and repeated use (beta 6)
+
+| ID | Check | Pass when |
+|----|-------|-----------|
+| M1 | Launch the Full edition right after a reboot and open About. | Launches (no `Out of memory`); note `At app start` and the largest free block, and compare with the Catalog edition on Official if you have both. |
+| M2 | Enter and leave the Range Scanner ten times with 256 points, then the Scanner, Receive and the Hopper ten times each, with a device log open; open About. | No crash; `Free now` returns close to `At app start`. |
+| M3 | With a 256-point range, open the Range Scanner, then Receive from it, then back, five times. | No `Not enough memory` on a freshly started app; no crash. |
+
+## Per-firmware load check
+
+Install each build on its matching firmware; installing the wrong one should
+produce an API or missing-imports error rather than a crash (see
+[Troubleshooting](TROUBLESHOOTING.md#the-app-wont-open)).
+
+| ID | Check | Pass when |
+|----|-------|-----------|
+| L1 | `radiogeddon-catalog-official.fap` on Official firmware 1.4.x. | Launches as `RadioGeddon`. |
+| L2 | `radiogeddon-full-roguemaster.fap` on RogueMaster. | Launches as `RadioGeddon Full`. |
+| L3 | `radiogeddon-full-momentum.fap` on Momentum mntm-012. | Launches as `RadioGeddon Full`; W2, F1 and R2 work. |
+| L4 | `radiogeddon-full-unleashed.fap` on Unleashed unlshd-093. | Launches as `RadioGeddon Full`. |
 
 ## Results log
 

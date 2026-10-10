@@ -6,16 +6,20 @@ void radiogeddon_scene_about_on_enter(void* context) {
     Widget* widget = app->widget;
     widget_reset(widget);
 
-    widget_add_string_element(widget, 64, 2, AlignCenter, AlignTop, FontPrimary, "RadioGeddon");
+    widget_add_string_element(
+        widget, 64, 2, AlignCenter, AlignTop, FontPrimary, "RadioGeddon " RG_EDITION_NAME);
 
     furi_string_reset(app->temp_str);
     furi_string_cat_printf(
         app->temp_str,
         "Version: " RADIOGEDDON_VERSION "\n"
-        "Radio: %s CC1101\n(%s)\n\n",
+        "Edition: " RG_EDITION_NAME "\n"
+        "Radio: %s CC1101\n(%s)\n"
+        "Region: %s\n\n",
         radiogeddon_subghz_get_radio(app->subghz) == RadioGeddonRadioExternal ? "external" :
                                                                                 "internal",
-        radiogeddon_subghz_device_name(app->subghz));
+        radiogeddon_subghz_device_name(app->subghz),
+        radiogeddon_subghz_region_name());
     // Measured this run if a session ran, else as kept from an earlier run.
     uint32_t cost = radiogeddon_subghz_session_cost(app->subghz);
     radiogeddon_memdiag_report(app->temp_str, cost ? cost : radiogeddon_scene_radio_cost(app));
@@ -24,11 +28,20 @@ void radiogeddon_scene_about_on_enter(void* context) {
         "\nStandalone Sub-GHz\nanalysis toolkit.\n\n"
         "Modules:\n"
         "- Scanner (live RSSI)\n"
+#if RG_FEATURE_RANGE_SCAN
+        "- Range scanner + profiles\n"
+#endif
+#if RG_FEATURE_FAVORITES
+        "- Favorite frequencies\n"
+#endif
         "- Frequency hopper\n"
         "- Receive & decode\n"
         "- RAW recorder\n"
         "- Signal analyzer\n"
         "- Unknown protocol\n  analysis\n"
+#if RG_FEATURE_CHECKSUM_HINTS
+        "- Checksum structure\n  hypotheses\n"
+#endif
         "- Pulse timeline\n"
         "- Crypto characteristics\n"
         "- Comparator\n"
@@ -37,7 +50,11 @@ void radiogeddon_scene_about_on_enter(void* context) {
         "Labels: [CONFIRMED] =\ndecoder matched.\n[OBSERVED] = measured\nfrom the timing.\n"
         "[HEURISTIC] = guess from\nsignal statistics.\n"
         "[HYPOTHESIS] = engine\ninference, unverified.\n\n"
-        "No key recovery is\nperformed. Transmission\nrespects regional limits.\n"
+#if RG_FEATURE_REGION_TX_GATE
+        "No key recovery is\nperformed. TX only where\nthe firmware's region\nallows it.\n"
+#else
+        "No key recovery is\nperformed. TX follows the\nfirmware's own rules.\n"
+#endif
         "Use only on devices you\nare authorized to test.\n\n"
         "Signals stored under:\n/ext/apps_data/\n  radiogeddon/signals\n\n"
         "github.com/mrSlime-man/\n  RADIOGEDDON\n");

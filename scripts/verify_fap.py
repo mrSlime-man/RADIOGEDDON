@@ -14,7 +14,7 @@ Standard library only, so it runs on any CI runner without extra installs.
 
 Usage:
     verify_fap.py FAP --api 87.1 [--target 7] [--name RadioGeddon]
-                      [--version 1.0] [--json]
+                      [--version 1.0] [--symbols api_symbols.csv] [--json]
 
 Exit status is non-zero if the file is malformed or any expectation fails.
 """
@@ -41,7 +41,8 @@ class FapError(Exception):
     pass
 
 
-def read_section(data: bytes, wanted: str) -> bytes:
+def section_headers(data: bytes):
+    """(name, type, offset, size, link) of every ELF32 section."""
     if data[:4] != b"\x7fELF":
         raise FapError("not an ELF file")
     if data[4] != 1:
@@ -58,18 +59,61 @@ def read_section(data: bytes, wanted: str) -> bytes:
 
     def header(i: int):
         off = e_shoff + i * e_shentsize
-        # name, type, flags, addr, offset, size
-        return struct.unpack_from("<IIIIII", data, off)
+        # name, type, flags, addr, offset, size, link
+        return struct.unpack_from("<IIIIIII", data, off)
 
     strtab = header(e_shstrndx)
     str_off, str_size = strtab[4], strtab[5]
     names = data[str_off : str_off + str_size]
+    result = []
     for i in range(e_shnum):
-        sh_name, _t, _f, _a, sh_offset, sh_size = header(i)
+        sh_name, sh_type, _f, _a, sh_offset, sh_size, sh_link = header(i)
         end = names.index(b"\0", sh_name)
-        if names[sh_name:end].decode("ascii", "replace") == wanted:
-            return data[sh_offset : sh_offset + sh_size]
+        name = names[sh_name:end].decode("ascii", "replace")
+        result.append((name, sh_type, sh_offset, sh_size, sh_link))
+    return result
+
+
+def read_section(data: bytes, wanted: str) -> bytes:
+    for name, _type, offset, size, _link in section_headers(data):
+        if name == wanted:
+            return data[offset : offset + size]
     raise FapError(f"section {wanted} not found")
+
+
+SHT_SYMTAB = 2
+ELF32_SYM = struct.Struct("<IIIBBH")
+
+
+def imported_symbols(data: bytes) -> set:
+    """Names of the undefined (imported) symbols of an ELF32 object."""
+    sections = section_headers(data)
+    symtabs = [s for s in sections if s[1] == SHT_SYMTAB]
+    if not symtabs:
+        raise FapError("no symbol table")
+    result = set()
+    for _name, _type, offset, size, link in symtabs:
+        str_off, str_size = sections[link][2], sections[link][3]
+        strings = data[str_off : str_off + str_size]
+        for pos in range(offset, offset + size - ELF32_SYM.size + 1, ELF32_SYM.size):
+            st_name, _value, _size, _info, _other, st_shndx = ELF32_SYM.unpack_from(data, pos)
+            if st_shndx != 0 or st_name == 0:
+                continue
+            end = strings.index(b"\0", st_name)
+            result.add(strings[st_name:end].decode("ascii", "replace"))
+    return result
+
+
+def exported_symbols(csv_path: Path) -> set:
+    """Functions and variables an SDK's api_symbols.csv exports ('+')."""
+    result = set()
+    for line in csv_path.read_text(encoding="utf-8").splitlines():
+        parts = line.split(",")
+        if len(parts) >= 3 and parts[0] in ("Function", "Variable") and parts[1] == "+":
+            result.add(parts[2])
+    if not result:
+        raise FapError(f"{csv_path}: no exported symbols")
+    return result
 
 
 def parse_manifest(path: Path) -> dict:
@@ -110,6 +154,7 @@ def main(argv: list[str]) -> int:
     ap.add_argument("--target", type=int, default=7, help="hardware target id (f7=7)")
     ap.add_argument("--name", default=None, help="expected application name")
     ap.add_argument("--version", default=None, help="expected app version, e.g. 1.0")
+    ap.add_argument("--symbols", type=Path, default=None, help="SDK api_symbols.csv every import must be in")
     ap.add_argument("--json", action="store_true", help="print the manifest as JSON")
     args = ap.parse_args(argv)
 
@@ -134,6 +179,16 @@ def main(argv: list[str]) -> int:
         problems.append(f"app version {m['app_version']} != {args.version}")
     if not m["has_icon"]:
         problems.append("manifest has no launcher icon")
+    if args.symbols is not None:
+        try:
+            imports = imported_symbols(args.fap.read_bytes())
+            missing = sorted(imports - exported_symbols(args.symbols))
+        except (OSError, FapError, struct.error, ValueError) as exc:
+            problems.append(f"symbol check: {exc}")
+        else:
+            m["imports"] = len(imports)
+            for name in missing:
+                problems.append(f"imports {name}, which {args.symbols} does not export")
 
     if args.json:
         print(json.dumps(m, indent=2))
@@ -144,6 +199,7 @@ def main(argv: list[str]) -> int:
     print(
         f"OK   {args.fap}: {m['name']} v{m['app_version']} "
         f"api={m['api']} target=f{m['hardware_target']} ({m['size']} bytes)"
+        + (f", {m['imports']} imports resolved" if "imports" in m else "")
     )
     return 0
 

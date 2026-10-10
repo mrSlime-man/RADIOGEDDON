@@ -2,6 +2,7 @@
 #include "radiogeddon_bands.h"
 #include "rg_db.h"
 #include "rg_freq.h"
+#include "rg_range.h"
 
 #include <lib/flipper_format/flipper_format.h>
 
@@ -30,6 +31,14 @@ void radiogeddon_settings_default(RadioGeddonSettings* settings) {
     settings->ext_power = true; // as the firmware's Sub-GHz app does
     settings->radio_heap = 0; // not measured yet
     settings->radio_heap_fw = 0;
+    settings->range_start_hz = RADIOGEDDON_RANGE_DEFAULT_START;
+    settings->range_end_hz = RADIOGEDDON_RANGE_DEFAULT_END;
+    settings->range_step_hz = RADIOGEDDON_RANGE_DEFAULT_STEP;
+    settings->range_dwell_ms = 5;
+    settings->range_hold_on_hit = false;
+    settings->scan_source = RadioGeddonSourceList;
+    settings->hop_source = RadioGeddonSourceList;
+    settings->freq_step_hz = 0;
 }
 
 uint32_t radiogeddon_settings_default_hop_mask(void) {
@@ -109,6 +118,37 @@ void radiogeddon_settings_load(Storage* storage, RadioGeddonSettings* settings) 
                 settings->radio_heap_fw = fw;
             }
         }
+        // Range scanner: start and end are kept together, so a file can never
+        // leave a start above the end.
+        uint32_t end = 0;
+        flipper_format_rewind(ff);
+        if(flipper_format_read_uint32(ff, "Range_start", &v, 1) && rg_freq_in_range(v)) {
+            flipper_format_rewind(ff);
+            if(flipper_format_read_uint32(ff, "Range_end", &end, 1) && rg_freq_in_range(end) &&
+               end >= v) {
+                settings->range_start_hz = v;
+                settings->range_end_hz = end;
+            }
+        }
+        flipper_format_rewind(ff);
+        if(flipper_format_read_uint32(ff, "Range_step", &v, 1) && v >= RG_RANGE_MIN_STEP_HZ &&
+           v <= RG_RANGE_MAX_STEP_HZ)
+            settings->range_step_hz = v;
+        flipper_format_rewind(ff);
+        if(flipper_format_read_uint32(ff, "Range_dwell_ms", &v, 1) && v >= 1 && v <= 1000)
+            settings->range_dwell_ms = (uint16_t)v;
+        flipper_format_rewind(ff);
+        if(flipper_format_read_bool(ff, "Range_hold_on_hit", &b, 1))
+            settings->range_hold_on_hit = b;
+        flipper_format_rewind(ff);
+        if(flipper_format_read_uint32(ff, "Scan_source", &v, 1) && v < RadioGeddonSourceCount)
+            settings->scan_source = (uint8_t)v;
+        flipper_format_rewind(ff);
+        if(flipper_format_read_uint32(ff, "Hop_source", &v, 1) && v < RadioGeddonSourceCount)
+            settings->hop_source = (uint8_t)v;
+        flipper_format_rewind(ff);
+        if(flipper_format_read_uint32(ff, "Freq_step", &v, 1) && v <= 1000000u)
+            settings->freq_step_hz = v;
     } while(false);
 
     furi_string_free(type);
@@ -153,6 +193,22 @@ bool radiogeddon_settings_save(Storage* storage, const RadioGeddonSettings* sett
         if(!flipper_format_write_uint32(ff, "Radio_heap", &v, 1)) break;
         v = settings->radio_heap_fw;
         if(!flipper_format_write_uint32(ff, "Radio_heap_fw", &v, 1)) break;
+        v = settings->range_start_hz;
+        if(!flipper_format_write_uint32(ff, "Range_start", &v, 1)) break;
+        v = settings->range_end_hz;
+        if(!flipper_format_write_uint32(ff, "Range_end", &v, 1)) break;
+        v = settings->range_step_hz;
+        if(!flipper_format_write_uint32(ff, "Range_step", &v, 1)) break;
+        v = settings->range_dwell_ms;
+        if(!flipper_format_write_uint32(ff, "Range_dwell_ms", &v, 1)) break;
+        b = settings->range_hold_on_hit;
+        if(!flipper_format_write_bool(ff, "Range_hold_on_hit", &b, 1)) break;
+        v = settings->scan_source;
+        if(!flipper_format_write_uint32(ff, "Scan_source", &v, 1)) break;
+        v = settings->hop_source;
+        if(!flipper_format_write_uint32(ff, "Hop_source", &v, 1)) break;
+        v = settings->freq_step_hz;
+        if(!flipper_format_write_uint32(ff, "Freq_step", &v, 1)) break;
         ok = true;
     } while(false);
     ok = flipper_format_file_close(ff) && ok;

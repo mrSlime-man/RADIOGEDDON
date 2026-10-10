@@ -227,6 +227,24 @@ static void test_glitch_floor(void) {
     CHECK(g_a.encoding == RgEncodingPWM && strcmp(g_a.bits, key) == 0, "frames still decode");
 }
 
+/* Noisy captures (the firmware's Holtek and Phoenix V2 test files) also show
+ * a glitch peak at 132 us, two receiver sampling steps: still never Te. */
+static void test_glitch_132(void) {
+    printf("test_glitch_132\n");
+    static int32_t buf[4096];
+    size_t pos = 0;
+    const char* key = "110100101100111000101101";
+    for(int i = 0; i < 4; i++) {
+        for(int k = 0; k < 120; k++)
+            buf[pos++] = (k % 2) ? -132 : 66;
+        buf[pos++] = -20000;
+        emit_pwm(buf, &pos, key, 0);
+    }
+    rg_analyzer_run(buf, pos, &g_a);
+    CHECK(g_a.te_us >= 330 && g_a.te_us <= 370, "Te is the signal's, not the 132 us glitches'");
+    CHECK(g_a.encoding == RgEncodingPWM && strcmp(g_a.bits, key) == 0, "frames still decode");
+}
+
 /* Low first, as CAME sends it: a start pulse, then each bit is a low then a
  * high ('0' = 2Te low / Te high, '1' = Te low / 2Te high). */
 static void emit_low_first(int32_t* buf, size_t* pos, const char* bits) {
@@ -292,6 +310,68 @@ static void test_back_to_back(void) {
     CHECK(g_a.gap_us > 2 * TE && g_a.gap_us < 5 * TE, "separator found below the default gap");
     CHECK(g_a.frame_count == 8, "each repeat is its own frame");
     CHECK(g_a.bit_count == 16 && strcmp(g_a.bits, key) == 0, "frame length is one repeat");
+}
+
+/* Repeats with no separator at all, as FAAC SLH, Power Smart, Honeywell and
+ * Revers RB2 captures show: the decode runs to RG_ANALYZER_MAX_BITS and the
+ * frame is cut to one repeat by the bits' own period. */
+static void test_gapless_repeats(void) {
+    printf("test_gapless_repeats\n");
+    static int32_t buf[8192];
+    size_t pos = 0;
+    const char* key = "1101000000011101000000101001010000011110011111010101001100011101";
+    for(int i = 0; i < 8; i++) {
+        for(const char* b = key; *b; b++) {
+            buf[pos++] = (*b == '1') ? 2 * TE : TE;
+            buf[pos++] = (*b == '1') ? -TE : -2 * TE;
+        }
+    }
+    buf[pos++] = TE;
+    buf[pos++] = -40 * TE;
+    rg_analyzer_run(buf, pos, &g_a);
+    CHECK(g_a.frame_count == 1, "one frame: nothing to cut on");
+    CHECK(g_a.bit_count == 64, "frame length is one repeat");
+    CHECK(strcmp(g_a.bits, key) == 0, "the repeat itself");
+    CHECK(g_a.frames[0].repeat_bits >= 2 * 64, "the frame says it was cut to its period");
+
+    // A frame that ends on its own is never cut, however regular it is.
+    pos = 0;
+    const char* halves = "1011001110110011";
+    for(int i = 0; i < 4; i++)
+        emit_pwm(buf, &pos, halves, 0);
+    rg_analyzer_run(buf, pos, &g_a);
+    CHECK(g_a.bit_count == 16, "self-similar short frame kept whole");
+    CHECK(g_a.frames[0].repeat_bits == 0, "not marked as cut");
+}
+
+static void test_repeat_period(void) {
+    printf("test_repeat_period\n");
+    char bits[RG_ANALYZER_MAX_BITS + 1];
+    const char* unit = "10110010011101";
+    size_t n = 0;
+    while(n + 1 < sizeof(bits)) {
+        bits[n] = unit[n % 14];
+        n++;
+    }
+    bits[n] = '\0';
+    CHECK(rg_analyzer_repeat_period(bits, n) == 14, "period of a repeated unit");
+    // A few flipped bits (noise) still repeat at 97 %.
+    bits[30] = bits[30] == '1' ? '0' : '1';
+    bits[100] = bits[100] == '1' ? '0' : '1';
+    CHECK(rg_analyzer_repeat_period(bits, n) == 14, "period survives a little noise");
+    // Too short for two repeats.
+    CHECK(rg_analyzer_repeat_period(bits, 20) == 0, "fewer than two repeats");
+    // A preamble or a run of one level is not information.
+    memset(bits, '0', 200);
+    bits[0] = '1';
+    CHECK(rg_analyzer_repeat_period(bits, 200) == 0, "near-constant run refused");
+    for(size_t i = 0; i < 200; i++)
+        bits[i] = (i % 2) ? '1' : '0';
+    CHECK(rg_analyzer_repeat_period(bits, 200) == 0, "square wave refused");
+    // Pseudo-random bits do not repeat.
+    for(size_t i = 0; i < 256; i++)
+        bits[i] = (rng() & 1) ? '1' : '0';
+    CHECK(rg_analyzer_repeat_period(bits, 256) == 0, "random bits do not repeat");
 }
 
 /* Repeats separated by a long carrier pulse instead of a gap (as Hormann
@@ -519,9 +599,12 @@ int main(void) {
     test_manchester_identification();
     test_noise_robustness();
     test_glitch_floor();
+    test_glitch_132();
     test_low_first_pwm();
     test_preamble_no_vote();
     test_back_to_back();
+    test_gapless_repeats();
+    test_repeat_period();
     test_high_separator();
     test_jitter();
     test_truncated_first_frame();

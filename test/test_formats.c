@@ -26,6 +26,7 @@
 #include "storage/storage.h"
 #include "../helpers/radiogeddon_storage.h"
 #include "../helpers/radiogeddon_settings.h"
+#include "../helpers/radiogeddon_profiles.h"
 #include "../helpers/radiogeddon_bands.h"
 #include "../helpers/rg_db.h"
 #include "../helpers/rg_raw.h"
@@ -382,7 +383,11 @@ static bool same_settings(const RadioGeddonSettings* a, const RadioGeddonSetting
            a->hop_dwell_ms == b->hop_dwell_ms && a->hop_hold_ms == b->hop_hold_ms &&
            a->hop_auto_record == b->hop_auto_record && a->db_sort == b->db_sort &&
            a->radio_external == b->radio_external && a->ext_power == b->ext_power &&
-           a->radio_heap == b->radio_heap && a->radio_heap_fw == b->radio_heap_fw;
+           a->radio_heap == b->radio_heap && a->radio_heap_fw == b->radio_heap_fw &&
+           a->range_start_hz == b->range_start_hz && a->range_end_hz == b->range_end_hz &&
+           a->range_step_hz == b->range_step_hz && a->range_dwell_ms == b->range_dwell_ms &&
+           a->range_hold_on_hit == b->range_hold_on_hit && a->scan_source == b->scan_source &&
+           a->hop_source == b->hop_source && a->freq_step_hz == b->freq_step_hz;
 }
 
 static RadioGeddonSettings custom_settings(void) {
@@ -403,6 +408,14 @@ static RadioGeddonSettings custom_settings(void) {
     s.ext_power = false;
     s.radio_heap = 27000;
     s.radio_heap_fw = 0x1234ABCDu;
+    s.range_start_hz = 300000000;
+    s.range_end_hz = 928000000;
+    s.range_step_hz = 2500000;
+    s.range_dwell_ms = 20;
+    s.range_hold_on_hit = true;
+    s.scan_source = RadioGeddonSourceFavorites;
+    s.hop_source = RadioGeddonSourceFavorites;
+    s.freq_step_hz = 12500;
     return s;
 }
 
@@ -438,6 +451,223 @@ static void test_settings_round_trip(void) {
     CHECK(radiogeddon_settings_save(CARD, &want), "second save succeeds");
     radiogeddon_settings_load(CARD, &got);
     CHECK(got.frequency == 315000000, "second save replaced the first");
+}
+
+/* Settings files are shared by the two editions and by older releases. */
+static void test_settings_editions(void) {
+    printf("test_settings_editions\n");
+    RadioGeddonSettings def, got;
+    radiogeddon_settings_default(&def);
+
+    // A file from 1.0.0-beta.5 (no Full-edition keys): every new field keeps
+    // its default and the old ones are read.
+    reset_card();
+    write_settings_text("Filetype: RadioGeddon Settings\nVersion: 1\nFrequency: 315000000\n"
+                        "Preset: 0\nScan_mask: 3\nHop_auto_record: true\n");
+    radiogeddon_settings_load(CARD, &got);
+    CHECK(
+        got.frequency == 315000000 && got.preset_index == 0 && got.scan_mask == 3 &&
+            got.hop_auto_record,
+        "beta.5 file read");
+    CHECK(
+        got.range_start_hz == def.range_start_hz && got.range_end_hz == def.range_end_hz &&
+            got.range_step_hz == def.range_step_hz && got.scan_source == RadioGeddonSourceList &&
+            got.hop_source == RadioGeddonSourceList && got.freq_step_hz == 0,
+        "new fields default");
+
+    // Whichever edition saves, the other edition's fields are written back.
+    RadioGeddonSettings want = custom_settings();
+    CHECK(radiogeddon_settings_save(CARD, &want), "save with Full fields");
+    radiogeddon_settings_load(CARD, &got);
+    CHECK(radiogeddon_settings_save(CARD, &got), "save again unchanged");
+    radiogeddon_settings_load(CARD, &got);
+    CHECK(same_settings(&got, &want), "Full fields survive a load and save");
+
+    // Range start and end are taken together or not at all.
+    reset_card();
+    write_settings_text("Filetype: RadioGeddon Settings\nVersion: 1\n"
+                        "Range_start: 435000000\nRange_end: 433000000\nRange_step: 999\n"
+                        "Range_dwell_ms: 0\nScan_source: 2\nHop_source: 9\nFreq_step: 1000001\n");
+    radiogeddon_settings_load(CARD, &got);
+    CHECK(same_settings(&got, &def), "invalid Full fields fall back to defaults");
+    reset_card();
+    write_settings_text("Filetype: RadioGeddon Settings\nVersion: 1\n"
+                        "Range_start: 280000000\nRange_end: 435000000\n");
+    radiogeddon_settings_load(CARD, &got);
+    CHECK(
+        got.range_start_hz == def.range_start_hz && got.range_end_hz == def.range_end_hz,
+        "range start below every firmware: pair refused");
+    reset_card();
+    write_settings_text("Filetype: RadioGeddon Settings\nVersion: 1\n"
+                        "Range_start: 281000000\nRange_end: 962000000\nRange_step: 10000000\n"
+                        "Range_dwell_ms: 1000\nFreq_step: 1000000\n");
+    radiogeddon_settings_load(CARD, &got);
+    CHECK(
+        got.range_start_hz == 281000000 && got.range_end_hz == 962000000 &&
+            got.range_step_hz == 10000000 && got.range_dwell_ms == 1000 &&
+            got.freq_step_hz == 1000000,
+        "Full field limits accepted");
+}
+
+/* ---- Favorites and scan profiles (Full edition, shared folder) ----------- */
+
+static void write_text(const char* path, const char* text) {
+    FILE* fp = fopen(path, "wb");
+    if(!fp) exit(2);
+    fputs(text, fp);
+    fclose(fp);
+}
+
+static void test_favorites(void) {
+    printf("test_favorites\n");
+    reset_card();
+    RadioGeddonFavorites fav;
+    radiogeddon_favorites_load(CARD, &fav);
+    CHECK(fav.count == 0, "no file: empty");
+
+    CHECK(radiogeddon_favorites_add(&fav, 868350000) == RadioGeddonFavoriteAdded, "add 868.35");
+    CHECK(radiogeddon_favorites_add(&fav, 315000000) == RadioGeddonFavoriteAdded, "add 315");
+    CHECK(radiogeddon_favorites_add(&fav, 433920000) == RadioGeddonFavoriteAdded, "add 433.92");
+    CHECK(radiogeddon_favorites_add(&fav, 433920000) == RadioGeddonFavoriteExists, "duplicate");
+    CHECK(radiogeddon_favorites_add(&fav, 100000000) == RadioGeddonFavoriteInvalid, "untunable");
+    CHECK(
+        fav.count == 3 && fav.freq[0] == 315000000 && fav.freq[1] == 433920000 &&
+            fav.freq[2] == 868350000,
+        "kept sorted");
+    CHECK(radiogeddon_favorites_save(CARD, &fav), "save");
+    CHECK(!storage_common_exists(CARD, RADIOGEDDON_FAVORITES_TEMP), "temporary file gone");
+    RadioGeddonFavorites got;
+    radiogeddon_favorites_load(CARD, &got);
+    CHECK(got.count == 3 && memcmp(got.freq, fav.freq, 3 * sizeof(uint32_t)) == 0, "read back");
+
+    CHECK(radiogeddon_favorites_remove(&got, 1), "remove middle");
+    CHECK(!radiogeddon_favorites_remove(&got, 2), "remove past the end");
+    CHECK(got.count == 2 && got.freq[0] == 315000000 && got.freq[1] == 868350000, "removed");
+    CHECK(radiogeddon_favorites_remove(&got, 0) && radiogeddon_favorites_remove(&got, 0), "empty");
+    CHECK(radiogeddon_favorites_save(CARD, &got), "save empty list");
+    radiogeddon_favorites_load(CARD, &fav);
+    CHECK(fav.count == 0, "empty list reads back empty");
+
+    // Full list.
+    for(uint32_t i = 0; i < RADIOGEDDON_FAVORITES_MAX; i++) {
+        CHECK(
+            radiogeddon_favorites_add(&fav, 433000000 + i * 25000) == RadioGeddonFavoriteAdded,
+            "fill");
+    }
+    CHECK(radiogeddon_favorites_add(&fav, 315000000) == RadioGeddonFavoriteFull, "full");
+
+    // A hand-edited file: bad, duplicate and unsorted entries are dropped or
+    // sorted, the rest kept.
+    write_text(
+        RADIOGEDDON_FAVORITES_PATH,
+        "Filetype: RadioGeddon Favorites\nVersion: 1\n"
+        "Frequency: 868350000 5 433920000 433920000 4000000000 315000000\n");
+    radiogeddon_favorites_load(CARD, &fav);
+    CHECK(
+        fav.count == 3 && fav.freq[0] == 315000000 && fav.freq[2] == 868350000,
+        "damaged entries dropped");
+    write_text(RADIOGEDDON_FAVORITES_PATH, "Filetype: Something Else\nVersion: 1\nFrequency: 1\n");
+    radiogeddon_favorites_load(CARD, &fav);
+    CHECK(fav.count == 0, "other file type ignored");
+    write_text(RADIOGEDDON_FAVORITES_PATH, "garbage");
+    radiogeddon_favorites_load(CARD, &fav);
+    CHECK(fav.count == 0, "garbage ignored");
+
+    // A failed write keeps the previous file.
+    radiogeddon_favorites_add(&fav, 433920000);
+    CHECK(radiogeddon_favorites_save(CARD, &fav), "save one");
+    radiogeddon_favorites_add(&fav, 315000000);
+    stub_write_fail_after = 0;
+    CHECK(!radiogeddon_favorites_save(CARD, &fav), "save fails on a card error");
+    stub_write_fail_after = -1;
+    radiogeddon_favorites_load(CARD, &got);
+    CHECK(got.count == 1 && got.freq[0] == 433920000, "previous favorites kept");
+    CHECK(!storage_common_exists(CARD, RADIOGEDDON_FAVORITES_TEMP), "no temporary file left");
+}
+
+static void test_profiles(void) {
+    printf("test_profiles\n");
+    reset_card();
+    char names[RADIOGEDDON_PROFILES_MAX][RADIOGEDDON_PROFILE_NAME_LEN];
+    CHECK(radiogeddon_profile_list(CARD, names, RADIOGEDDON_PROFILES_MAX) == 0, "no profiles");
+
+    RadioGeddonScanProfile p = {
+        .start_hz = 433000000,
+        .end_hz = 435000000,
+        .step_hz = 25000,
+        .dwell_ms = 5,
+        .threshold_db = 10,
+        .hold_on_hit = true,
+        .preset_index = 3,
+    };
+    CHECK(radiogeddon_profile_save(CARD, "Garage 433", &p, false), "save");
+    CHECK(radiogeddon_profile_exists(CARD, "Garage 433"), "exists");
+    RadioGeddonScanProfile got;
+    memset(&got, 0, sizeof(got));
+    CHECK(radiogeddon_profile_load(CARD, "Garage 433", &got), "load");
+    CHECK(memcmp(&got, &p, sizeof(p)) == 0, "every field read back");
+
+    // An existing profile is replaced only when asked.
+    RadioGeddonScanProfile q = p;
+    q.end_hz = 434000000;
+    CHECK(!radiogeddon_profile_save(CARD, "Garage 433", &q, false), "no silent overwrite");
+    CHECK(
+        radiogeddon_profile_load(CARD, "Garage 433", &got) && got.end_hz == 435000000,
+        "original kept");
+    CHECK(radiogeddon_profile_save(CARD, "Garage 433", &q, true), "overwrite when asked");
+    CHECK(
+        radiogeddon_profile_load(CARD, "Garage 433", &got) && got.end_hz == 434000000, "replaced");
+
+    // Invalid names and values are refused before anything is written.
+    CHECK(!radiogeddon_profile_save(CARD, "a/b", &p, false), "bad name");
+    CHECK(!radiogeddon_profile_save(CARD, "", &p, false), "empty name");
+    CHECK(!radiogeddon_profile_save(CARD, ".hidden", &p, false), "dot name");
+    q = p;
+    q.start_hz = 436000000;
+    CHECK(!radiogeddon_profile_save(CARD, "Backwards", &q, false), "start above end");
+    q = p;
+    q.step_hz = 10;
+    CHECK(!radiogeddon_profile_save(CARD, "Tiny step", &q, false), "step too small");
+    q = p;
+    q.preset_index = 9;
+    CHECK(!radiogeddon_profile_save(CARD, "No preset", &q, false), "unknown preset");
+
+    CHECK(radiogeddon_profile_save(CARD, "Alpha", &p, false), "second profile");
+    CHECK(radiogeddon_profile_save(CARD, "Wide 300-928", &p, false), "third profile");
+    size_t n = radiogeddon_profile_list(CARD, names, RADIOGEDDON_PROFILES_MAX);
+    CHECK(n == 3, "three profiles listed");
+    CHECK(
+        n == 3 && strcmp(names[0], "Alpha") == 0 && strcmp(names[1], "Garage 433") == 0 &&
+            strcmp(names[2], "Wide 300-928") == 0,
+        "listed sorted, without extension");
+    CHECK(radiogeddon_profile_list(CARD, names, 2) == 2, "list limit");
+
+    // A damaged profile is refused whole and the output is untouched.
+    FuriString* path = furi_string_alloc();
+    radiogeddon_profile_path(path, "Damaged");
+    write_text(
+        furi_string_get_cstr(path),
+        "Filetype: RadioGeddon Scan Profile\nVersion: 1\nStart: 433000000\n"
+        "End: 435000000\nStep: 25000\nDwell_ms: 5000\nThreshold_db: 10\n"
+        "Hold_on_hit: false\nPreset: FuriHalSubGhzPresetOok650Async\n");
+    memset(&got, 0x5A, sizeof(got));
+    RadioGeddonScanProfile before = got;
+    CHECK(!radiogeddon_profile_load(CARD, "Damaged", &got), "damaged profile refused");
+    CHECK(memcmp(&got, &before, sizeof(got)) == 0, "output untouched");
+    write_text(
+        furi_string_get_cstr(path),
+        "Filetype: RadioGeddon Scan Profile\nVersion: 1\nStart: 433000000\n"
+        "End: 435000000\nStep: 25000\nDwell_ms: 5\nThreshold_db: 10\n"
+        "Hold_on_hit: false\nPreset: FuriHalSubGhzPresetMSK99_97KbAsync\n");
+    CHECK(!radiogeddon_profile_load(CARD, "Damaged", &got), "unsupported preset refused");
+    furi_string_free(path);
+    CHECK(!radiogeddon_profile_load(CARD, "Missing", &got), "missing profile");
+
+    CHECK(radiogeddon_profile_delete(CARD, "Alpha"), "delete");
+    CHECK(!radiogeddon_profile_exists(CARD, "Alpha"), "deleted");
+    CHECK(!radiogeddon_profile_delete(CARD, "Alpha"), "delete twice");
+    CHECK(!radiogeddon_profile_delete(CARD, "../settings"), "delete outside the folder refused");
+    CHECK(storage_common_exists(CARD, RADIOGEDDON_SIGNALS_FOLDER), "signals folder untouched");
 }
 
 static void test_settings_malformed(void) {
@@ -666,6 +896,9 @@ int main(int argc, char** argv) {
     test_preset_names();
     test_fixture_files();
     test_settings_round_trip();
+    test_settings_editions();
+    test_favorites();
+    test_profiles();
     test_settings_malformed();
     test_settings_failed_save();
     test_write_signal();

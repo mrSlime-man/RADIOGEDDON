@@ -12,7 +12,7 @@ Sub-GHz signals — entirely on the device, with no computer, phone or network.
 [![Latest release](https://img.shields.io/github/v/release/mrSlime-man/RADIOGEDDON?include_prereleases&sort=semver&label=release)](https://github.com/mrSlime-man/RADIOGEDDON/releases)
 [![License: MIT](https://img.shields.io/badge/license-MIT-22d3ee.svg)](LICENSE)
 [![Platform: Flipper Zero](https://img.shields.io/badge/platform-Flipper%20Zero%20(f7)-a855f7.svg)](https://flipperzero.one)
-[![Firmware: Official · Unleashed · RogueMaster](https://img.shields.io/badge/firmware-Official%20%C2%B7%20Unleashed%20%C2%B7%20RogueMaster-0ea5e9.svg)](docs/FIRMWARE_COMPATIBILITY.md)
+[![Firmware: Official · RogueMaster · Momentum · Unleashed](https://img.shields.io/badge/firmware-Official%20%C2%B7%20RogueMaster%20%C2%B7%20Momentum%20%C2%B7%20Unleashed-0ea5e9.svg)](docs/FIRMWARE_COMPATIBILITY.md)
 [![Hardware: unverified](https://img.shields.io/badge/hardware-unverified-f59e0b.svg)](docs/VERIFICATION.md)
 
 [Download](#-download) · [Install](docs/INSTALLATION.md) · [User Guide](docs/USER_GUIDE.md) · [Features](docs/FEATURES.md) · [Docs](docs/)
@@ -23,11 +23,12 @@ Sub-GHz signals — entirely on the device, with no computer, phone or network.
 
 > [!WARNING]
 > **Public beta.** Every feature is implemented and the builds pass all
-> automated checks (lint, 665 host-test checks, format tests, fuzzing, static
-> analysis, three firmware builds with API/manifest verification). On physical
-> hardware there is only one tester report so far, for the beta 2 code
-> (RogueMaster: launches and works); **nothing in betas 3 to 5 is verified on
-> a device yet.** Expect rough edges, and see
+> automated checks (lint, 1,548 host-test checks, format, decoder, capture and
+> engine-lifecycle tests, fuzzing, static analysis of both editions, four
+> firmware builds with API, manifest and imported-symbol verification). On
+> physical hardware there is only one tester report so far, for the beta 2 code
+> (RogueMaster: launches and works); **nothing in betas 3 to 6 is verified on
+> a device yet** — including both new editions and the Momentum build. Expect rough edges, and see
 > [VERIFICATION.md](docs/VERIFICATION.md) for exactly what has and hasn't been
 > tested. Testing on real hardware is the single most useful thing you can
 > contribute — the [hardware checklist](docs/HARDWARE_CHECKLIST.md) shows how.
@@ -49,42 +50,83 @@ to replay decoded rolling-code protocols — those are deliberate non-goals. (It
 does display the firmware's own decoder output, which may use the SD-card
 keystore to identify KeeLoq-family signals.)
 
+## Two editions
+
+RadioGeddon comes in two editions built from one source tree
+([`radiogeddon_edition.h`](radiogeddon_edition.h)):
+
+- **RadioGeddon Full** — the flagship research edition for **RogueMaster**,
+  **Momentum** and **Unleashed**. Everything below, plus range scanning across
+  every band the radio tunes, scan profiles, favorite frequencies, fine
+  frequency stepping and checksum-structure hypotheses. Transmitting follows
+  the installed firmware's own rules.
+- **RadioGeddon Catalog** — the **Official firmware** edition, prepared for the
+  Flipper Apps Catalog. The full receive and analysis toolkit; before any
+  transmission it asks the firmware for its region and refuses (and says why)
+  unless that region allows the frequency.
+
+| | Catalog | Full |
+|---|:---:|:---:|
+| Target firmware | Official | RogueMaster, Momentum, Unleashed |
+| Scanner (19-frequency list), Frequency Hopper | ✓ | ✓ |
+| Receive & decode, streaming RAW recording | ✓ | ✓ |
+| Decode with Firmware, Signal Analyzer, Unknown Protocol Analysis | ✓ | ✓ |
+| Pulse Timeline, comparison, Signal Database | ✓ | ✓ |
+| External CC1101, memory diagnostics | ✓ | ✓ |
+| Replay | region-checked by the app **and** the firmware | the firmware's own rules |
+| **Range Scanner** (start/end/step, 256 points, crosses band gaps) | — | ✓ |
+| **Scan profiles** (save / load / delete) | — | ✓ |
+| **Favorites** (Receive, Scanner and Hopper sources) | — | ✓ |
+| **Fine frequency stepping** (1 kHz – 1 MHz across gaps), **Radio bands** screen | — | ✓ |
+| **Checksum / CRC structure hypotheses** | — | ✓ |
+| App name / appid | RadioGeddon / `radiogeddon` | RadioGeddon Full / `radiogeddon_full` |
+
+Both editions keep their data in `/ext/apps_data/radiogeddon`, so recordings,
+settings, favorites and profiles carry over when you switch — see
+[Features → Editions](docs/FEATURES.md#editions).
+
 ## ⬇ Download
 
 Grab the build that matches your firmware from the
-[**v1.0.0-beta.5 release**](https://github.com/mrSlime-man/RADIOGEDDON/releases/tag/v1.0.0-beta.5),
+[**v1.0.0-beta.6 release**](https://github.com/mrSlime-man/RADIOGEDDON/releases/tag/v1.0.0-beta.6),
 then copy it to `apps/Sub-GHz/` on the SD card (full steps in
 [Installation](docs/INSTALLATION.md)).
 
-| Your firmware | Download this file |
-|---------------|--------------------|
-| **Official** (flipperzero.one) | [`radiogeddon-official.fap`](https://github.com/mrSlime-man/RADIOGEDDON/releases/tag/v1.0.0-beta.5) |
-| **Unleashed** | [`radiogeddon-unleashed.fap`](https://github.com/mrSlime-man/RADIOGEDDON/releases/tag/v1.0.0-beta.5) |
-| **RogueMaster** | [`radiogeddon-roguemaster.fap`](https://github.com/mrSlime-man/RADIOGEDDON/releases/tag/v1.0.0-beta.5) |
+| Your firmware | Edition | Download this file |
+|---------------|---------|--------------------|
+| **Official** (flipperzero.one) | Catalog | [`radiogeddon-catalog-official.fap`](https://github.com/mrSlime-man/RADIOGEDDON/releases/download/v1.0.0-beta.6/radiogeddon-catalog-official.fap) |
+| **RogueMaster** | Full | [`radiogeddon-full-roguemaster.fap`](https://github.com/mrSlime-man/RADIOGEDDON/releases/download/v1.0.0-beta.6/radiogeddon-full-roguemaster.fap) |
+| **Momentum** | Full | [`radiogeddon-full-momentum.fap`](https://github.com/mrSlime-man/RADIOGEDDON/releases/download/v1.0.0-beta.6/radiogeddon-full-momentum.fap) |
+| **Unleashed** | Full | [`radiogeddon-full-unleashed.fap`](https://github.com/mrSlime-man/RADIOGEDDON/releases/download/v1.0.0-beta.6/radiogeddon-full-unleashed.fap) |
 
-Each firmware family has its own SDK API version, so **install the file for
-your firmware** — the wrong one is safely refused with an "Outdated App /
-Firmware" message rather than loading. Not sure which you have, or using another
-fork? See [Firmware Compatibility](docs/FIRMWARE_COMPATIBILITY.md). Every
-release lists `SHA256SUMS` and ships signed build-provenance attestations.
+Each firmware family has its own SDK and symbol table, so **install the file
+for your firmware** — the wrong one is refused ("Outdated App / Firmware" or
+a missing-symbol error) rather than loading. Every file is compiled against
+that firmware's own pinned SDK; none is a renamed copy of another. Not sure
+which you have? See [Firmware Compatibility](docs/FIRMWARE_COMPATIBILITY.md).
+Every release lists `SHA256SUMS` and ships signed build-provenance
+attestations. The Catalog edition is being prepared for the official Apps
+Catalog; it is **not** in the catalog yet.
 
 ## Features
 
 | Module | What it does |
 |--------|--------------|
-| **Sub-GHz Scanner** | Narrowband RSSI sweep over a configurable list of 19 common frequencies: noise floor, activity detection, peak hold, burst counts, CSV export; pick one to receive on. |
+| **Sub-GHz Scanner** | Narrowband RSSI sweep over a configurable list of 19 common frequencies (Full: or your favorites): noise floor, activity detection, peak hold, burst counts, CSV export; OK receives there, long OK receives and starts recording. |
+| **Range Scanner** *(Full)* | Start / end / step sweep of up to 256 points across every band the radio accepts, skipping the gaps; dwell, threshold, pause on hit, noise-floor recalibration, peak hold, counters, sweep-time estimate, CSV export and saved profiles. |
+| **Favorites** *(Full)* | Up to 24 favorite frequencies; receive or record on one, or scan / hop the whole list. |
 | **Frequency Hopper** | Hops a configurable list (default 315 / 390 / 433.92 / 868.35 MHz), holds on noise-floor-relative activity or decodes, lock/next, statistics, optional auto RAW recording. |
 | **RAW Signal Capture** | Streams the raw on/off timing to a standard RAW `.sub` file on the SD card while recording, so length is limited by the card, not RAM; shows time, samples and any samples lost to a slow card. |
 | **Protocol Identification** | Live decoding with the firmware's own decoders (Princeton, CAME, Nice FLO, Holtek, KeeLoq-family, …) — marked `[CONFIRMED]`. |
 | **Signal Analyzer** | Pulse-width groups and base time unit for RAW; bit/field breakdown for decoded protocols. |
-| **Unknown Protocol Analysis** | Streams a whole RAW capture: measured timing, noise and frames (`[OBSERVED]`), then the encoding (PWM/PPM/Manchester) with a confidence score, bit patterns, frame-by-frame comparison and field map (`[HYPOTHESIS]`). |
+| **Unknown Protocol Analysis** | Streams a whole RAW capture: measured timing, noise and frames (`[OBSERVED]`), then the encoding (PWM/PPM/Manchester) with a confidence score, bit patterns, frame-by-frame comparison and field map (`[HYPOTHESIS]`). Full: also tests whether the frames end in a common checksum (XOR, sum, CRC-8, parity). |
 | **Pulse Timeline** | Zoomable, scrollable waveform of a RAW capture with frame markers and pulse durations, streamed from the SD card. |
 | **Signal Comparison** | Field-by-field diff of two recordings; for RAW captures, a timing-similarity score and a frame-pattern comparison that does not depend on when recording started. |
 | **Device ID Candidate Detection** | Offers the longest run of bits that stay constant while others change as a candidate device identifier. |
 | **Rolling Code Classification** | Flags static vs. dynamic (rolling-code) protocols, and highlights changing bits in unknown ones. |
 | **Cryptographic Structure Heuristics** | Key-byte variety and key-delta hints — never key recovery. |
 | **Signal Database** | Browse, analyse, compare, replay and delete recordings stored as `.sub` on the SD card. |
-| **Authorized Signal Replay** | Transmits RAW and static-protocol captures where the firmware's region rules allow; refuses decoded rolling-code protocols and unrecognised modulations. A RAW capture is sent exactly as recorded. |
+| **Authorized Signal Replay** | Transmits RAW and static-protocol captures; refuses decoded rolling-code protocols and unrecognised modulations. A RAW capture is sent exactly as recorded. Catalog: refused, with the reason on screen, unless the firmware's region allows the frequency. |
 
 Analysis conclusions are labelled **`[CONFIRMED]`** (a firmware decoder
 matched), **`[OBSERVED]`** (measured from the timing), **`[HEURISTIC]`** (a
@@ -128,8 +170,8 @@ flowchart LR
 ```
 
 The radio layer uses only the portable `subghz_devices` API — the same one the
-stock app uses — so a single source tree builds for all three firmware
-families. The analysis engine (`helpers/rg_analyzer.*`, `helpers/radiogeddon_dsp.*`)
+stock app uses — so a single source tree builds both editions for all four
+firmware families. The analysis engine (`helpers/rg_analyzer.*`, `helpers/radiogeddon_dsp.*`)
 has no firmware dependencies, so it is unit-tested on a normal computer. Deeper
 dive: [Architecture](docs/ARCHITECTURE.md).
 
@@ -140,31 +182,38 @@ git clone https://github.com/mrSlime-man/RADIOGEDDON.git
 cd RADIOGEDDON
 source scripts/firmware_pins.sh && pip install "ufbt==${UFBT_VERSION}"
 
-scripts/build_target.sh official      # -> dist/release/radiogeddon-official.fap (+ verified)
-scripts/build_target.sh unleashed
-scripts/build_target.sh roguemaster   # clones RogueMaster at a pinned commit (large)
-scripts/build_release.sh              # all three + SHA256SUMS + BUILD_INFO.txt
+scripts/build_target.sh catalog-official   # -> dist/release/radiogeddon-catalog-official.fap (+ verified)
+scripts/build_target.sh full-momentum
+scripts/build_target.sh full-unleashed
+scripts/build_target.sh full-roguemaster   # clones RogueMaster at a pinned commit (large)
+scripts/build_release.sh                   # all four + SHA256SUMS + BUILD_INFO.txt
 ```
 
-Each build downloads the exact SDK pinned in
-[`scripts/firmware_pins.sh`](scripts/firmware_pins.sh), verifies its SHA-256 and
-API version, compiles, and checks the resulting `.fap`'s manifest. More in
+Each build writes the edition's copy of the source
+([`scripts/stage_edition.py`](scripts/stage_edition.py)), downloads the exact
+SDK pinned in [`scripts/firmware_pins.sh`](scripts/firmware_pins.sh), verifies
+its SHA-256 and API version, compiles, and checks the resulting `.fap`'s
+manifest and that every symbol it imports is exported by that SDK. A plain
+`ufbt` in the checkout builds the Catalog edition, as the Apps Catalog does. More in
 [Contributing](CONTRIBUTING.md#development-setup).
 
 ## Testing & verification
 
 ```bash
-make -C test check               # 665 host checks and the fuzz corpus, ASan + UBSan
-make -C test formats             # the firmware's file code and its 85 Sub-GHz test files
+make -C test check               # 1,548 host checks (both editions) and the fuzz corpus, ASan + UBSan
+make -C test formats             # the firmware's file code, its 85 Sub-GHz test files, settings, favorites, profiles
 make -C test decoders            # the firmware's Sub-GHz decoders on its RAW test captures, and its presets
 make -C test captures            # the analyzer on those captures, scored against the decoders
+make -C test lifecycle           # Scanner, Range Scanner, Hopper started/stopped repeatedly, allocations counted
+python3 scripts/check_catalog.py # the Catalog edition against the Apps Catalog's rules
 python3 scripts/check_links.py   # documentation links and anchors
 ```
 
 CI runs the link check, the release metadata check, the host, format,
-decoder and capture tests, the fuzzers, static analysis (GCC `-fanalyzer` and clang-tidy)
-and all three firmware builds (with API and manifest verification plus lint)
-on every pull request and release. A weekly firmware watch builds the app
+decoder, capture and lifecycle tests, the fuzzers, the Apps Catalog checks
+(including the catalog's own bundler), static analysis of both editions (GCC
+`-fanalyzer` and clang-tidy) and all four firmware builds (with API, manifest
+and imported-symbol verification plus lint) on every pull request and release. A weekly firmware watch builds the app
 against newer firmware SDKs as they appear.
 **CI cannot exercise the radio**, so on-device behaviour remains unverified —
 tracked honestly in [VERIFICATION.md](docs/VERIFICATION.md) with the test plan
