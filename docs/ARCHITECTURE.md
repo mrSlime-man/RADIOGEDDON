@@ -86,7 +86,7 @@ helpers/
   rg_db.*                   Pure database index: .sub header parsing, duplicates, query
   rg_memstat.*              Pure memory bookkeeping: lowest/peak, session cost, fit check
 assets/                     10x10 launcher icon (compiled into the .fap)
-test/                       Host unit tests (600 checks), format and decoder tests, fuzz targets, fixtures
+test/                       Host unit tests (613 checks), format, decoder and capture tests, fuzz, fixtures
 scripts/                    Pinned builds, manifest verification, packaging, link check
 tools/brand/                Generator for the logo, banner and social preview
 .github/workflows/          CI (ci.yml), shared build pipeline (build.yml), release.yml

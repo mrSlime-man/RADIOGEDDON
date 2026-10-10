@@ -6,7 +6,7 @@
  * shaped like Princeton's) and the captures are synthetic .sub text built in
  * memory; none of it is the firmware's decoder or a capture from hardware.
  * The firmware's decoders on its own test captures are covered by
- * `make -C test formats` (test_formats.c).
+ * `make -C test decoders` (test_fwdecode.c).
  */
 #include "../helpers/rg_decode.h"
 #include <stdio.h>

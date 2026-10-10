@@ -80,6 +80,7 @@ device; use `.ufbt-unleashed` for an Unleashed device.
 make -C test check                    # host tests + fuzz corpus, -Werror, ASan + UBSan
 make -C test formats                  # firmware FlipperFormat code + its .sub test files
 make -C test decoders                 # firmware Sub-GHz decoders on its RAW test captures
+make -C test captures                 # the analyzer on those captures, scored against the decoders
 make -C test fuzz FUZZ_TIME=60        # fuzz each target under libFuzzer (needs clang)
 python3 scripts/check_links.py        # Markdown links and anchors
 UFBT_HOME=$PWD/.ufbt-official ufbt lint     # clang-format check
@@ -96,7 +97,9 @@ FlipperFormat and stream code with the settings and `.sub` loading code and
 runs them on the firmware's Sub-GHz test files; it downloads those files
 (GPL-3.0, checked against `test/firmware/files.sha256`, never committed) on
 first use. `make -C test decoders` does the same with the firmware's Sub-GHz
-decoders and its RAW captures, fed through `rg_decode`. Code that reads files
+decoders and its RAW captures, fed through `rg_decode`, and `make -C test
+captures` scores the analyzer on those captures against the decoders'
+timing; a change to `rg_analyzer.c` must not lower its totals. Code that reads files
 from the SD card should also get a fuzz target (`test/fuzz/`); an input that
 once broke it goes into `test/fuzz/corpus/<target>/` so every test run replays
 it. The static analysis checks are listed, with the reasons for the ones
