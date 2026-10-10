@@ -36,7 +36,7 @@ Buttons work the same way everywhere:
 
 | Setting | Values | Default |
 |---------|--------|---------|
-| `Frequency MHz` | 300.00, 303.87, 304.25, 310.00, 315.00, 318.00, 390.00, 418.00, 433.07, 433.42, **433.92**, 434.42, 434.77, 438.90, 464.00, 779.00, 868.35, 915.00, 925.00 | 433.92 |
+| `Frequency MHz` | 300.00, 303.875, 304.25, 310.00, 315.00, 318.00, 390.00, 418.00, 433.075, 433.42, **433.92**, 434.42, 434.775, 438.90, 464.00, 779.00, 868.35, 915.00, 925.00, or press **OK** to type one (see below) | 433.92 |
 | `Modulation` | `AM 270`, **`AM 650`**, `FM 2.38k`, `FM 47.6k` | AM 650 |
 | `Threshold` | `+6`, `+8`, **`+10`**, `+15`, `+20`, `+30` dB over the noise floor | +10 dB |
 | `Scan list` | **`All`**, `300-348`, `387-464`, `779-928`, `Custom` | All |
@@ -57,6 +57,27 @@ frequency is used by *Receive & Record*; the modulation is used by the
 the recording's own modulation). `Threshold` applies to both the *Scanner* and
 the *Frequency Hopper*; the `Scan` settings apply to the Scanner and the `Hop`
 settings and `Activity hold` to the Hopper.
+
+### Custom frequency
+
+Press **OK** on `Frequency MHz` to type any frequency in kHz, for example
+`433075` for 433.075 MHz, then select the enter key. The keyboard takes 281000
+to 962000; the radio in use then decides whether it can tune there:
+
+- Official firmware's radio, and an external CC1101 module, tune 300-348,
+  387-464 and 779-928 MHz.
+- Unleashed and RogueMaster let the internal radio tune 281-361, 378-481 and
+  749-962 MHz.
+
+If it cannot, you see `Cannot tune there`, the frequency is not changed, and
+**Back** returns to the keyboard with what you typed. A custom frequency is
+shown in Settings as typed; **Left / Right** move from it to the nearest ones
+in the list. It is used by *Receive & Record*, like any frequency chosen there;
+the Scanner and the Hopper keep to their lists. It is saved with the other
+settings, and if the radio in use at the next start cannot tune it, 433.92 MHz
+is used instead. Choosing a frequency does not make transmitting on it
+allowed: *Replay* is still checked against the firmware's region rules,
+whatever frequency a recording was made on.
 
 Settings are saved to `apps_data/radiogeddon/settings.txt` on the SD card when
 you leave the Settings screen, and are restored the next time the app starts.

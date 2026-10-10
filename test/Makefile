@@ -15,6 +15,7 @@ TIMELINE_SRC := test_timeline.c ../helpers/rg_timeline.c
 RING_SRC := test_ring.c ../helpers/rg_ring.c
 RAWFMT_SRC := test_rawfmt.c ../helpers/rg_rawfmt.c ../helpers/rg_raw.c
 DB_SRC := test_db.c ../helpers/rg_db.c
+FREQ_SRC := test_freq.c ../helpers/rg_freq.c
 MEMSTAT_SRC := test_memstat.c ../helpers/rg_memstat.c
 DECODE_SRC := test_decode.c ../helpers/rg_decode.c ../helpers/rg_raw.c
 DBLOAD_SRC := test_dbload.c stubs/furi_stub.c ../helpers/radiogeddon_db.c ../helpers/rg_db.c
@@ -34,7 +35,8 @@ FW_SRC := $(FW)/lib/flipper_format/flipper_format.c $(FW)/lib/flipper_format/fli
 		$(FW)/lib/toolbox/stream/stream_cache.c $(FW)/lib/toolbox/hex.c $(FW)/lib/toolbox/strint.c
 FW_OBJ := $(patsubst $(FW)/%.c,$(BUILD)/fwobj/%.o,$(FW_SRC))
 FORMATS_SRC := test_formats.c stubs/furi_stub.c ../helpers/radiogeddon_storage.c \
-		../helpers/radiogeddon_settings.c ../helpers/radiogeddon_bands.c ../helpers/radiogeddon_dsp.c \
+		../helpers/radiogeddon_settings.c ../helpers/radiogeddon_bands.c ../helpers/rg_freq.c \
+		../helpers/radiogeddon_dsp.c \
 		../helpers/rg_db.c ../helpers/rg_raw.c ../helpers/rg_analyzer.c
 
 # Decoder tests: the firmware's own Sub-GHz receiver and protocol decoders
@@ -67,7 +69,7 @@ FUZZ_TIME ?= 60
 .PHONY: check clean tsan fuzz formats decoders captures
 check: $(BUILD)/test_dsp $(BUILD)/test_analyzer $(BUILD)/test_scan $(BUILD)/test_hop $(BUILD)/test_raw \
 		$(BUILD)/test_timeline $(BUILD)/test_ring $(BUILD)/test_rawfmt $(BUILD)/test_recorder \
-		$(BUILD)/test_db $(BUILD)/test_memstat $(BUILD)/test_dbload $(BUILD)/test_decode \
+		$(BUILD)/test_db $(BUILD)/test_memstat $(BUILD)/test_dbload $(BUILD)/test_decode $(BUILD)/test_freq \
 		$(addprefix $(BUILD)/replay_,$(FUZZ_TARGETS))
 	$(BUILD)/test_dsp
 	$(BUILD)/test_analyzer
@@ -82,6 +84,7 @@ check: $(BUILD)/test_dsp $(BUILD)/test_analyzer $(BUILD)/test_scan $(BUILD)/test
 	$(BUILD)/test_memstat
 	$(BUILD)/test_dbload
 	$(BUILD)/test_decode
+	$(BUILD)/test_freq
 	for t in $(FUZZ_TARGETS); do $(BUILD)/replay_$$t fuzz/corpus/$$t || exit 1; done
 
 $(BUILD)/test_dsp: $(DSP_SRC) ../helpers/radiogeddon_dsp.h | $(BUILD)
@@ -113,6 +116,9 @@ $(BUILD)/test_db: $(DB_SRC) ../helpers/rg_db.h | $(BUILD)
 
 $(BUILD)/test_memstat: $(MEMSTAT_SRC) ../helpers/rg_memstat.h | $(BUILD)
 	$(CC) $(CFLAGS) $(SAN) -o $@ $(MEMSTAT_SRC)
+
+$(BUILD)/test_freq: $(FREQ_SRC) ../helpers/rg_freq.h | $(BUILD)
+	$(CC) $(CFLAGS) $(SAN) -o $@ $(FREQ_SRC)
 
 $(BUILD)/test_decode: $(DECODE_SRC) ../helpers/rg_decode.h ../helpers/rg_raw.h | $(BUILD)
 	$(CC) $(CFLAGS) $(SAN) -o $@ $(DECODE_SRC)
@@ -224,4 +230,4 @@ $(BUILD):
 
 clean:
 	rm -rf $(BUILD) test_dsp test_analyzer test_scan test_hop test_raw test_timeline test_ring \
-		test_rawfmt test_recorder test_db test_memstat test_dbload test_decode test_fwanalyze
+		test_rawfmt test_recorder test_db test_memstat test_dbload test_decode test_freq test_fwanalyze

@@ -43,15 +43,7 @@ typedef enum {
 #define ConfigCustomEditScanList 600
 #define ConfigCustomEditHopList  601
 #define ConfigCustomExtMissing   602
-
-static void radiogeddon_config_freq_text(uint32_t hz, char* out, size_t out_size) {
-    snprintf(
-        out,
-        out_size,
-        "%lu.%02lu",
-        (unsigned long)(hz / 1000000),
-        (unsigned long)((hz % 1000000) / 10000));
-}
+#define ConfigCustomFrequency    603
 
 static uint32_t radiogeddon_config_band_mask(size_t band) {
     return rg_scan_band_mask(
@@ -72,8 +64,8 @@ static void radiogeddon_scene_config_freq_changed(VariableItem* item) {
     RadioGeddonApp* app = variable_item_get_context(item);
     uint8_t index = variable_item_get_current_value_index(item);
     uint32_t hz = radiogeddon_frequencies[index];
-    char text[12];
-    radiogeddon_config_freq_text(hz, text, sizeof(text));
+    char text[RG_FREQ_TEXT_SIZE];
+    rg_freq_text(hz, text, sizeof(text));
     variable_item_set_current_value_text(item, text);
     app->frequency = hz;
 }
@@ -222,7 +214,9 @@ static void radiogeddon_scene_config_ext_power_changed(VariableItem* item) {
 
 static void radiogeddon_scene_config_enter_cb(void* context, uint32_t index) {
     RadioGeddonApp* app = context;
-    if(index == ConfigItemEditScanList) {
+    if(index == ConfigItemFrequency) {
+        view_dispatcher_send_custom_event(app->view_dispatcher, ConfigCustomFrequency);
+    } else if(index == ConfigItemEditScanList) {
         view_dispatcher_send_custom_event(app->view_dispatcher, ConfigCustomEditScanList);
     } else if(index == ConfigItemEditHopList) {
         view_dispatcher_send_custom_event(app->view_dispatcher, ConfigCustomEditHopList);
@@ -258,15 +252,12 @@ void radiogeddon_scene_config_on_enter(void* context) {
         radiogeddon_frequencies_count,
         radiogeddon_scene_config_freq_changed,
         app);
-    uint8_t freq_index = 0;
-    for(size_t i = 0; i < radiogeddon_frequencies_count; i++) {
-        if(radiogeddon_frequencies[i] == app->frequency) {
-            freq_index = (uint8_t)i;
-            break;
-        }
-    }
-    variable_item_set_current_value_index(item, freq_index);
-    radiogeddon_config_freq_text(radiogeddon_frequencies[freq_index], text, sizeof(text));
+    // A custom frequency (OK opens the keyboard) is shown as it is; left and
+    // right then step from the nearest one in the list.
+    size_t freq_index =
+        rg_freq_nearest(radiogeddon_frequencies, radiogeddon_frequencies_count, app->frequency);
+    variable_item_set_current_value_index(item, (uint8_t)freq_index);
+    rg_freq_text(app->frequency, text, sizeof(text));
     variable_item_set_current_value_text(item, text);
 
     // Preset
@@ -401,6 +392,13 @@ bool radiogeddon_scene_config_on_event(void* context, SceneManagerEvent event) {
             "No CC1101 module answered\non the GPIO pins. Using\nthe internal radio.");
         return true;
     }
+    if(event.type == SceneManagerEventTypeCustom && event.event == ConfigCustomFrequency) {
+        scene_manager_set_scene_state(
+            app->scene_manager, RadioGeddonSceneConfig, ConfigItemFrequency);
+        scene_manager_set_scene_state(app->scene_manager, RadioGeddonSceneFrequency, 0);
+        scene_manager_next_scene(app->scene_manager, RadioGeddonSceneFrequency);
+        return true;
+    }
     if(event.type == SceneManagerEventTypeCustom &&
        (event.event == ConfigCustomEditScanList || event.event == ConfigCustomEditHopList)) {
         bool hop = (event.event == ConfigCustomEditHopList);
@@ -418,6 +416,10 @@ bool radiogeddon_scene_config_on_event(void* context, SceneManagerEvent event) {
 
 void radiogeddon_scene_config_on_exit(void* context) {
     RadioGeddonApp* app = context;
+    // A custom frequency may not suit a radio chosen after it was typed.
+    if(!radiogeddon_subghz_is_frequency_allowed(app->subghz, app->frequency)) {
+        app->frequency = RADIOGEDDON_FREQUENCY_DEFAULT;
+    }
     // Apply to the radio wrapper and persist across launches.
     radiogeddon_subghz_set_frequency(app->subghz, app->frequency);
     radiogeddon_subghz_set_preset(app->subghz, app->preset_index);

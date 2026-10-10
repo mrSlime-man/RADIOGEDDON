@@ -1,5 +1,6 @@
 #include "radiogeddon_hopper.h"
 #include "radiogeddon_storage.h"
+#include "rg_freq.h"
 
 #include <datetime/datetime.h>
 #include <furi_hal_rtc.h>
@@ -283,8 +284,9 @@ void radiogeddon_hopper_copy_state(RadioGeddonHopper* instance, RgHop* out, uint
 }
 
 static void radiogeddon_hopper_fmt_mhz(FuriString* out, uint32_t hz) {
-    furi_string_cat_printf(
-        out, "%lu.%02lu", (unsigned long)(hz / 1000000), (unsigned long)((hz % 1000000) / 10000));
+    char text[RG_FREQ_TEXT_SIZE];
+    rg_freq_text(hz, text, sizeof(text));
+    furi_string_cat_str(out, text);
 }
 
 static void radiogeddon_hopper_fmt_secs(FuriString* out, uint32_t ms) {

@@ -105,7 +105,9 @@ still needs.
 
 ## Later
 
-- [ ] Custom frequency entry and a custom modulation/preset editor.
+- [x] Custom frequency entry (implemented, not yet released; hardware check
+      F1f pending).
+- [ ] A custom modulation/preset editor.
 - [ ] Richer analysis: more encodings, CRC/checksum guesses, bit-field views.
 - [ ] A larger library of reference captures for regression testing.
 - [ ] Localisation of on-screen text.

@@ -1,6 +1,7 @@
 #include "radiogeddon_settings.h"
 #include "radiogeddon_bands.h"
 #include "rg_db.h"
+#include "rg_freq.h"
 
 #include <lib/flipper_format/flipper_format.h>
 
@@ -41,13 +42,6 @@ uint32_t radiogeddon_settings_default_hop_mask(void) {
     return mask ? mask : radiogeddon_settings_all_mask();
 }
 
-static bool radiogeddon_settings_known_frequency(uint32_t hz) {
-    for(size_t i = 0; i < radiogeddon_frequencies_count; i++) {
-        if(radiogeddon_frequencies[i] == hz) return true;
-    }
-    return false;
-}
-
 void radiogeddon_settings_load(Storage* storage, RadioGeddonSettings* settings) {
     radiogeddon_settings_default(settings);
 
@@ -65,8 +59,9 @@ void radiogeddon_settings_load(Storage* storage, RadioGeddonSettings* settings) 
 
         // Each field is optional and validated on its own; read in file order
         // with a rewind before each so missing keys don't skip later ones.
-        if(flipper_format_read_uint32(ff, "Frequency", &v, 1) &&
-           radiogeddon_settings_known_frequency(v))
+        // Any frequency some firmware can tune, so a custom one survives a
+        // restart; the radio in use is asked again at startup.
+        if(flipper_format_read_uint32(ff, "Frequency", &v, 1) && rg_freq_in_range(v))
             settings->frequency = v;
         flipper_format_rewind(ff);
         if(flipper_format_read_uint32(ff, "Preset", &v, 1) && v < radiogeddon_presets_count)

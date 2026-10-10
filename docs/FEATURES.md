@@ -9,7 +9,7 @@ verified, and its known limits. For step-by-step use, see the
 **Every feature below is implemented, compiles for all three firmware
 families, and passes CI. None has yet been verified on a physical Flipper
 Zero.** "Unit-tested" means the feature's firmware-independent logic is covered
-by the host test suite (613 checks, plus format, decoder and capture tests on real files); radio behaviour can only be confirmed on a
+by the host test suite (645 checks, plus format, decoder and capture tests on real files); radio behaviour can only be confirmed on a
 device ([VERIFICATION.md](VERIFICATION.md)).
 
 | Feature | Implemented | Unit-tested logic | Verified on hardware |
@@ -98,7 +98,8 @@ the firmware can't decode — and saves it as a standard RAW `.sub` file
 - A failed SD write stops the recording and is reported; it is not saved.
 - The file layout is the firmware's own, so the stock Sub-GHz app opens and
   replays it.
-- Uses the frequency and modulation chosen in **Settings**.
+- Uses the frequency and modulation chosen in **Settings**: one of the 19
+  listed, or any frequency typed in kHz that the radio in use can tune.
 
 ## Protocol Identification
 
