@@ -485,6 +485,11 @@ bool radiogeddon_subghz_record_start(RadioGeddonSubGhz* instance, const char* fi
     return true;
 }
 
+void radiogeddon_subghz_record_discard(RadioGeddonSubGhz* instance) {
+    if(instance->recording) return;
+    radiogeddon_subghz_raw_buffer_free(instance);
+}
+
 bool radiogeddon_subghz_is_recording(RadioGeddonSubGhz* instance) {
     return instance->recording;
 }

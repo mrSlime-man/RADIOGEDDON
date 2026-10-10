@@ -19,6 +19,20 @@ void radiogeddon_settings_default(RadioGeddonSettings* settings) {
     settings->scan_dwell_ms = 10;
     settings->scan_threshold_db = 10;
     settings->scan_hold_on_hit = false;
+    settings->hop_mask = radiogeddon_settings_default_hop_mask();
+    settings->hop_dwell_ms = 200;
+    settings->hop_hold_ms = 2000;
+    settings->hop_auto_record = false;
+}
+
+uint32_t radiogeddon_settings_default_hop_mask(void) {
+    uint32_t mask = 0;
+    for(size_t i = 0; i < radiogeddon_frequencies_count && i < 32; i++) {
+        for(size_t j = 0; j < radiogeddon_hopper_frequencies_count; j++) {
+            if(radiogeddon_frequencies[i] == radiogeddon_hopper_frequencies[j]) mask |= 1u << i;
+        }
+    }
+    return mask ? mask : radiogeddon_settings_all_mask();
 }
 
 static bool radiogeddon_settings_known_frequency(uint32_t hz) {
@@ -64,6 +78,19 @@ void radiogeddon_settings_load(Storage* storage, RadioGeddonSettings* settings) 
             settings->scan_threshold_db = (uint8_t)v;
         flipper_format_rewind(ff);
         if(flipper_format_read_bool(ff, "Scan_hold_on_hit", &b, 1)) settings->scan_hold_on_hit = b;
+        flipper_format_rewind(ff);
+        if(flipper_format_read_uint32(ff, "Hop_mask", &v, 1)) {
+            v &= radiogeddon_settings_all_mask();
+            if(v) settings->hop_mask = v;
+        }
+        flipper_format_rewind(ff);
+        if(flipper_format_read_uint32(ff, "Hop_dwell_ms", &v, 1) && v >= 50 && v <= 10000)
+            settings->hop_dwell_ms = (uint16_t)v;
+        flipper_format_rewind(ff);
+        if(flipper_format_read_uint32(ff, "Hop_hold_ms", &v, 1) && v >= 100 && v <= 60000)
+            settings->hop_hold_ms = (uint16_t)v;
+        flipper_format_rewind(ff);
+        if(flipper_format_read_bool(ff, "Hop_auto_record", &b, 1)) settings->hop_auto_record = b;
     } while(false);
 
     furi_string_free(type);
@@ -88,6 +115,14 @@ bool radiogeddon_settings_save(Storage* storage, const RadioGeddonSettings* sett
         if(!flipper_format_write_uint32(ff, "Scan_threshold_db", &v, 1)) break;
         bool b = settings->scan_hold_on_hit;
         if(!flipper_format_write_bool(ff, "Scan_hold_on_hit", &b, 1)) break;
+        v = settings->hop_mask;
+        if(!flipper_format_write_uint32(ff, "Hop_mask", &v, 1)) break;
+        v = settings->hop_dwell_ms;
+        if(!flipper_format_write_uint32(ff, "Hop_dwell_ms", &v, 1)) break;
+        v = settings->hop_hold_ms;
+        if(!flipper_format_write_uint32(ff, "Hop_hold_ms", &v, 1)) break;
+        b = settings->hop_auto_record;
+        if(!flipper_format_write_bool(ff, "Hop_auto_record", &b, 1)) break;
         ok = true;
     } while(false);
     flipper_format_free(ff);

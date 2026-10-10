@@ -27,7 +27,7 @@ Buttons work the same way everywhere:
 |------|--------------|
 | `Scanner` | Live RSSI sweep across common frequencies |
 | `Receive & Record` | Live decoding of known protocols and RAW recording on one frequency |
-| `Frequency Hopper` | Live decoding while cycling four common bands |
+| `Frequency Hopper` | Live decoding while hopping across a list of frequencies |
 | `Database` | Browse, analyse, compare, replay and delete saved recordings |
 | `Settings` | Choose the frequency and modulation |
 | `About` | Version, modules, label legend and storage location |
@@ -38,16 +38,23 @@ Buttons work the same way everywhere:
 |---------|--------|---------|
 | `Frequency MHz` | 300.00, 303.87, 304.25, 310.00, 315.00, 318.00, 390.00, 418.00, 433.07, 433.42, **433.92**, 434.42, 434.77, 438.90, 464.00, 779.00, 868.35, 915.00, 925.00 | 433.92 |
 | `Modulation` | `AM 270`, **`AM 650`**, `FM 2.38k`, `FM 47.6k` | AM 650 |
+| `Threshold` | `+6`, `+8`, **`+10`**, `+15`, `+20`, `+30` dB over the noise floor | +10 dB |
 | `Scan list` | **`All`**, `300-348`, `387-464`, `779-928`, `Custom` | All |
 | `Edit scan list` | Press **OK** to switch individual frequencies on or off | all on |
 | `Scan dwell` | `5`, **`10`**, `20`, `50`, `100` ms per frequency | 10 ms |
-| `Threshold` | `+6`, `+8`, **`+10`**, `+15`, `+20`, `+30` dB over the noise floor | +10 dB |
 | `Hold on hit` | **`Off`**, `On` | Off |
+| `Hop list` | **`Common`** (315 / 390 / 433.92 / 868.35), `All`, `300-348`, `387-464`, `779-928`, `Custom` | Common |
+| `Edit hop list` | Press **OK** to switch individual frequencies on or off | Common four |
+| `Hop dwell` | `100`, **`200`**, `300`, `500`, `1000` ms per frequency | 200 ms |
+| `Activity hold` | `1`, **`2`**, `3`, `5`, `10` s after activity was last seen | 2 s |
+| `Hop auto-rec` | **`Off`**, `On` | Off |
 
 Use **Left / Right** to change a value and **Back** to apply it. The
 frequency is used by *Receive & Record*; the modulation is used by the
 *Scanner*, *Receive & Record* and the *Frequency Hopper* (*Replay* always uses
-the recording's own modulation). The scan settings apply to the *Scanner*.
+the recording's own modulation). `Threshold` applies to both the *Scanner* and
+the *Frequency Hopper*; the `Scan` settings apply to the Scanner and the `Hop`
+settings and `Activity hold` to the Hopper.
 
 Settings are saved to `apps_data/radiogeddon/settings.txt` on the SD card when
 you leave the Settings screen, and are restored the next time the app starts.
@@ -153,20 +160,46 @@ name if you want to keep the earlier capture.
 
 ## Frequency Hopper
 
-Like *Receive & Record*, but cycles through **315.00 → 390.00 → 433.92 →
-868.35 MHz**, listening about 200 ms on each. When the signal strength reaches
-−90 dBm or more it stays on that frequency for about two seconds so a
-transmission can be decoded, then resumes hopping. The header shows the current
-frequency and the status line reads `Hopping frequencies...`.
+Like *Receive & Record*, but moves through the **hop list** (by default
+**315.00 → 390.00 → 433.92 → 868.35 MHz**), listening for the **Hop dwell**
+time on each (200 ms by default). Each frequency learns its own noise floor;
+when the signal rises the **Threshold** above it, or a signal is decoded, the
+hopper **holds** on that frequency. The hold lasts the **Activity hold** time
+after the signal was last seen (2 s by default), so a transmission isn't cut
+off by a retune. RSSI is checked every 10 ms and decoding runs the whole time.
+
+The header shows the current frequency; the short line on the RSSI bar is the
+current frequency's detection level. The status line shows:
+
+- `Hop 2/4  L:lock R:next` while hopping,
+- `HOLD 1.8s` while holding on activity (time left),
+- `LOCKED` when you locked the frequency,
+- `REC <samples>` while an automatic recording is running.
 
 | Button | Action |
 |--------|--------|
 | Up / Down | Highlight a decoded signal |
 | OK | Save the highlighted decoded signal |
+| Left | Lock on the current frequency / unlock (pauses / resumes hopping) |
+| Right | Go to the next frequency now (also while locked) |
+| Hold OK | Statistics: per-frequency activity and the recent activity list |
 | Back | Stop the radio and return |
 
-RAW recording isn't available while hopping — use *Receive & Record* on the
-frequency you found. The modulation comes from **Settings**.
+**Statistics** list, for each frequency, the number of activity periods,
+decodes, peak and noise-floor RSSI and total time spent holding on activity,
+then the last 16 activity periods (frequency, peak, duration, first decoded
+protocol, and whether a RAW capture was saved). They are kept while you visit
+Statistics or save a signal, and cleared when you return to the main menu.
+
+**Automatic recording** (Settings → `Hop auto-rec`): when activity starts, the
+hopper also records RAW until the hold ends, then saves it as
+`HOP_<date>_<time>.sub` in the signals folder (a number is added rather than
+overwriting an existing file) with a success tone. Captures under 64 samples
+are discarded as noise. Recording starts when activity is *detected*, so the
+first few milliseconds of a transmission are not in the file. If there is not
+enough free memory to record, the hopper keeps working without recording.
+
+The modulation comes from **Settings**.
 
 ## Database
 

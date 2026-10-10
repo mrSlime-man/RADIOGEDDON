@@ -78,5 +78,12 @@ void radiogeddon_loaded_signal_init(RadioGeddonLoadedSignal* sig);
 /** Release a loaded-signal struct (frees strings). */
 void radiogeddon_loaded_signal_reset(RadioGeddonLoadedSignal* sig);
 
+/**
+ * Build a signals-folder path for @p name that does not overwrite an existing
+ * file: "<name>.sub", else "<name>_2.sub" ... "<name>_99.sub". Returns false
+ * if all are taken.
+ */
+bool radiogeddon_storage_make_unique_path(Storage* storage, FuriString* out, const char* name);
+
 /** Build a timestamped scan-results path, e.g. ".../scans/SCAN_20261009_163500.csv". */
 void radiogeddon_storage_make_scan_path(FuriString* out);

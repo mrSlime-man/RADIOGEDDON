@@ -27,11 +27,12 @@ locally.
 | DSP/parse unit tests | `make -C test check` → `test_dsp` | Pass — 31 checks |
 | Analysis-engine unit tests | `make -C test check` → `test_analyzer` | Pass — 24 checks |
 | Scanner-logic unit tests | `make -C test check` → `test_scan` | Pass — 31 checks |
+| Hopper-logic unit tests | `make -C test check` → `test_hop` | Pass — 42 checks |
 | Memory safety of tested code | tests built `-Werror` under `-fsanitize=address,undefined` | Pass — no ASan/UBSan reports |
 | Documentation links | `scripts/check_links.py` (offline link + anchor check) | Pass |
 | `.fap` metadata | `scripts/verify_fap.py` parses `.fapmeta` and asserts magic, API, target, name, version, icon | Pass for all three artifacts |
 
-Host-test total: **86 checks, 0 failures.** What the suite covers (synthetic
+Host-test total: **128 checks, 0 failures.** What the suite covers (synthetic
 signals, not real captures):
 
 - `test_dsp` — RAW `RAW_Data` parsing (incl. whitespace, signs, out-of-range),
@@ -45,6 +46,11 @@ signals, not real captures):
   on noise, one count per burst, warm-up suppression, hysteresis, absolute
   minimum, floor tracking up and down, peak/count reset, median noise floor,
   band masks and CSV row formatting (including truncation).
+- `test_hop` — hopper state machine on simulated time and RSSI: even time
+  sharing on quiet bands, holding on a burst with no retunes until the hold
+  expires, event history (channel, peak, duration), lock/unlock, decodes
+  starting and extending holds, ring-buffer bounds, single/empty lists, and
+  200 repeated hold/lock/retune cycles with no stuck state.
 
 The Manchester encoding branch has no dedicated unit test yet.
 

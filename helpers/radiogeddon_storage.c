@@ -186,3 +186,14 @@ void radiogeddon_storage_make_scan_path(FuriString* out) {
         dt.minute,
         dt.second);
 }
+
+bool radiogeddon_storage_make_unique_path(Storage* storage, FuriString* out, const char* name) {
+    radiogeddon_storage_make_path(out, name);
+    if(!storage_common_exists(storage, furi_string_get_cstr(out))) return true;
+    for(unsigned i = 2; i <= 99; i++) {
+        furi_string_printf(
+            out, "%s/%s_%u%s", RADIOGEDDON_SIGNALS_FOLDER, name, i, RADIOGEDDON_SUB_EXTENSION);
+        if(!storage_common_exists(storage, furi_string_get_cstr(out))) return true;
+    }
+    return false;
+}

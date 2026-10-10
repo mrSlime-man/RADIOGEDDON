@@ -45,6 +45,11 @@ region's rules.
 | F1d | Scan list and dwell: choose `387-464`, then a custom list with two frequencies; try 5 ms and 100 ms dwell. | Only the chosen frequencies are listed; a pass is visibly faster at 5 ms. |
 | F1e | Settings persistence: change frequency, modulation and scan options, exit the app and reopen it. | The chosen values are restored. |
 | F2 | Frequency Hopper cycles 315 / 390 / 433.92 / 868.35 MHz. | Displayed frequency changes; it holds on a band carrying a transmission long enough to decode; OK saves; Back releases the radio. |
+| F2a | Hopper detection: press a remote on one of the hop frequencies. | Status shows `HOLD` with a countdown; it stays while you keep pressing and resumes `Hop n/m` after the Activity hold time; cyan LED blink on activity. |
+| F2b | Lock and next: Left, then Right a few times, then Left. | `LOCKED`; Right steps the frequency; Left resumes hopping. |
+| F2c | Statistics: hold OK after some activity. | Per-frequency counts and the recent-activity list match what happened; Back returns to the hopper with the decoded list intact. |
+| F2d | Auto-record: enable `Hop auto-rec`, press a remote on a hop frequency. | Success tone when the hold ends; a new `HOP_*.sub` in the Database opens and analyses as RAW; two captures in the same second get `_2`. |
+| F2e | Repeated use: enter and leave the Hopper ten times with activity, with a device log open. | No crash or hang; the `RadioGeddonHopperScene` free-heap values on exit return to the same level. |
 | F3 | Crypto Analysis on a static protocol vs a rolling-code (KeeLoq-family) capture. | Static → `[CONFIRMED] Static code`; rolling → `[CONFIRMED] Dynamic code` and an explicit "no key recovery" note. |
 | F4 | Unknown Protocol Analysis across several presses in one RAW capture. | Same fixed remote → 0 changing bits; rolling-code remote → a changing suffix with a device-ID candidate; all `[HYPOTHESIS]`. |
 | F5 | History: send rapid repeated transmissions. | No crash; identical consecutive parcels listed once; list caps at 32. |

@@ -21,6 +21,10 @@ void radiogeddon_scene_start_on_enter(void* context) {
         radiogeddon_scanner_free(app->scanner);
         app->scanner = NULL;
     }
+    if(app->hopper) {
+        radiogeddon_hopper_free(app->hopper);
+        app->hopper = NULL;
+    }
     Submenu* submenu = app->submenu;
     submenu_reset(submenu);
     submenu_set_header(submenu, "RadioGeddon");

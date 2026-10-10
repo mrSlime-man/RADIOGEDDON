@@ -20,7 +20,14 @@ typedef struct {
     uint16_t scan_dwell_ms; // listening time per frequency
     uint8_t scan_threshold_db; // activity threshold above the noise floor
     bool scan_hold_on_hit; // stop sweeping on the frequency that became active
+    uint32_t hop_mask; // bit i enables radiogeddon_frequencies[i] in the hopper
+    uint16_t hop_dwell_ms; // time on a quiet frequency before hopping on
+    uint16_t hop_hold_ms; // time to stay after activity was last seen
+    bool hop_auto_record; // record RAW while holding on activity, save automatically
 } RadioGeddonSettings;
+
+/** Default hopper list: the frequencies in radiogeddon_hopper_frequencies. */
+uint32_t radiogeddon_settings_default_hop_mask(void);
 
 /** Fill @p settings with defaults. */
 void radiogeddon_settings_default(RadioGeddonSettings* settings);

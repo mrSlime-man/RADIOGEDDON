@@ -8,7 +8,7 @@ deliberately omitted.
 
 `1.0.0-beta.2` fixes an out-of-memory crash on launch that made `1.0.0-beta.1`
 unusable on RogueMaster. The full toolkit is implemented and builds for Official, Unleashed and
-RogueMaster, with 86 host-test checks and a verified release pipeline. See
+RogueMaster, with 128 host-test checks and a verified release pipeline. See
 [Features](FEATURES.md) for the complete list.
 
 ## Next: hardware verification (the gating milestone)
@@ -38,7 +38,8 @@ still needs.
       activity counts, scan lists, dwell, hold on hit, CSV export
       (implemented; hardware checks F1a–F1e pending).
 - [ ] **2. Frequency Hopper 2.0**: custom lists, dwell, adaptive thresholds,
-      pause/lock, detection history, optional auto-recording.
+      pause/lock, detection history, optional auto-recording
+      (implemented; hardware checks F2a–F2e pending).
 - [ ] **3. Signal Analyzer 2.0**: better inference and confidence, pulse
       timeline view, multi-frame comparison without loading whole files.
 - [ ] **4. Streaming RAW recording**: bounded RAM, writes to SD while

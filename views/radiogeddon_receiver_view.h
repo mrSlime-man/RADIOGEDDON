@@ -10,7 +10,9 @@ typedef struct RadioGeddonReceiverView RadioGeddonReceiverView;
 
 typedef enum {
     RadioGeddonReceiverEventSave, // OK: persist the highlighted decoded signal
-    RadioGeddonReceiverEventToggleRecord, // Left: start/stop RAW capture
+    RadioGeddonReceiverEventToggleRecord, // Left: start/stop RAW capture (hopper: lock)
+    RadioGeddonReceiverEventRight, // Right (hopper: next frequency)
+    RadioGeddonReceiverEventMore, // Long OK (hopper: statistics)
 } RadioGeddonReceiverEvent;
 
 typedef void (*RadioGeddonReceiverCallback)(RadioGeddonReceiverEvent event, void* context);
@@ -33,6 +35,12 @@ void radiogeddon_receiver_view_set_config(
 void radiogeddon_receiver_view_set_hopping(RadioGeddonReceiverView* instance, bool hopping);
 
 void radiogeddon_receiver_view_set_rssi(RadioGeddonReceiverView* instance, float rssi);
+
+/** Show a detection-threshold mark on the RSSI bar (pass -127 or lower to hide). */
+void radiogeddon_receiver_view_set_threshold(RadioGeddonReceiverView* instance, float dbm);
+
+/** Status text shown in hopping mode instead of the default hint ("" for default). */
+void radiogeddon_receiver_view_set_status(RadioGeddonReceiverView* instance, const char* text);
 
 void radiogeddon_receiver_view_set_recording(
     RadioGeddonReceiverView* instance,
