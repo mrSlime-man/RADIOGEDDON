@@ -63,6 +63,31 @@ void radiogeddon_subghz_free(RadioGeddonSubGhz* instance);
 /** True if a usable radio device is present and responding. */
 bool radiogeddon_subghz_is_device_present(RadioGeddonSubGhz* instance);
 
+/* ---- Radio selection ------------------------------------------------------ */
+
+/** Name the firmware registers an external CC1101 module under. */
+#define RADIOGEDDON_EXT_RADIO_NAME "cc1101_ext"
+
+typedef enum {
+    RadioGeddonRadioInternal,
+    RadioGeddonRadioExternal, /* a CC1101 module on the GPIO header */
+} RadioGeddonRadio;
+
+/**
+ * Choose the radio. Only while nothing is receiving or transmitting.
+ * External is used only if the firmware's external CC1101 driver is installed
+ * and a module answers on the SPI bus; otherwise the internal radio stays in
+ * use. With @p ext_power the 5 V pin is switched on for the module (as the
+ * firmware's Sub-GHz app does) and off again when it is no longer used.
+ * Returns the radio now in use.
+ */
+RadioGeddonRadio radiogeddon_subghz_set_radio(
+    RadioGeddonSubGhz* instance,
+    RadioGeddonRadio radio,
+    bool ext_power);
+
+RadioGeddonRadio radiogeddon_subghz_get_radio(RadioGeddonSubGhz* instance);
+
 /** Human-readable name of the active radio device (e.g. "cc1101_int"). */
 const char* radiogeddon_subghz_device_name(RadioGeddonSubGhz* instance);
 

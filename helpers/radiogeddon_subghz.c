@@ -3,6 +3,8 @@
 
 #include <furi_hal_subghz.h>
 #include <furi_hal_region.h>
+#include <furi_hal_power.h>
+#include <power/power_service/power.h>
 #include <lib/subghz/subghz_protocol_registry.h>
 #include <lib/subghz/protocols/base.h>
 #include <lib/subghz/subghz_file_encoder_worker.h>
@@ -51,6 +53,8 @@ typedef enum {
 struct RadioGeddonSubGhz {
     const SubGhzDevice* device;
     bool device_begun;
+    RadioGeddonRadio radio;
+    bool ext_power_ours; // we switched the 5 V pin on for the external module
 
     SubGhzEnvironment* environment;
     SubGhzReceiver* receiver;
@@ -247,6 +251,22 @@ static void radiogeddon_subghz_decoders_free(RadioGeddonSubGhz* instance) {
     radiogeddon_subghz_environment_release(instance);
 }
 
+/* 5 V on GPIO pin 1 for the external module, the way the Sub-GHz app does it. */
+static void radiogeddon_subghz_ext_power(RadioGeddonSubGhz* instance, bool on) {
+    if(on) {
+        if(instance->ext_power_ours || furi_hal_power_is_otg_enabled()) return;
+        Power* power = furi_record_open(RECORD_POWER);
+        power_enable_otg(power, true);
+        furi_record_close(RECORD_POWER);
+        instance->ext_power_ours = true;
+    } else if(instance->ext_power_ours) {
+        Power* power = furi_record_open(RECORD_POWER);
+        power_enable_otg(power, false);
+        furi_record_close(RECORD_POWER);
+        instance->ext_power_ours = false;
+    }
+}
+
 RadioGeddonSubGhz* radiogeddon_subghz_alloc(void) {
     RadioGeddonSubGhz* instance = malloc(sizeof(RadioGeddonSubGhz));
     memset(instance, 0, sizeof(RadioGeddonSubGhz));
@@ -265,6 +285,7 @@ void radiogeddon_subghz_free(RadioGeddonSubGhz* instance) {
     furi_assert(instance);
     if(instance->rx_running) radiogeddon_subghz_rx_stop(instance);
     if(instance->tx_mode != RadioGeddonTxModeNone) radiogeddon_subghz_tx_stop(instance);
+    radiogeddon_subghz_ext_power(instance, false);
 
     radiogeddon_subghz_decoders_free(instance);
     radiogeddon_subghz_environment_release(instance);
@@ -287,6 +308,37 @@ bool radiogeddon_subghz_is_device_present(RadioGeddonSubGhz* instance) {
     bool connected = subghz_devices_is_connect(instance->device);
     subghz_devices_end(instance->device);
     return connected;
+}
+
+RadioGeddonRadio radiogeddon_subghz_set_radio(
+    RadioGeddonSubGhz* instance,
+    RadioGeddonRadio radio,
+    bool ext_power) {
+    furi_check(!instance->rx_running && instance->tx_mode == RadioGeddonTxModeNone);
+    furi_check(!instance->device_begun);
+
+    const SubGhzDevice* ext = NULL;
+    if(radio == RadioGeddonRadioExternal) {
+        if(ext_power) radiogeddon_subghz_ext_power(instance, true);
+        // The driver is a plugin on the SD card; is_connect() probes the chip
+        // over SPI without keeping it initialised.
+        ext = subghz_devices_get_by_name(RADIOGEDDON_EXT_RADIO_NAME);
+        if(ext && !subghz_devices_is_connect(ext)) ext = NULL;
+        FURI_LOG_I(TAG, "External radio %s", ext ? "found" : "not found");
+    }
+    if(ext) {
+        instance->device = ext;
+        instance->radio = RadioGeddonRadioExternal;
+    } else {
+        radiogeddon_subghz_ext_power(instance, false);
+        instance->device = subghz_devices_get_by_name(SUBGHZ_DEVICE_CC1101_INT_NAME);
+        instance->radio = RadioGeddonRadioInternal;
+    }
+    return instance->radio;
+}
+
+RadioGeddonRadio radiogeddon_subghz_get_radio(RadioGeddonSubGhz* instance) {
+    return instance->radio;
 }
 
 const char* radiogeddon_subghz_device_name(RadioGeddonSubGhz* instance) {
@@ -620,6 +672,21 @@ RadioGeddonTxResult radiogeddon_subghz_tx_start(
         }
         if(!radiogeddon_subghz_is_frequency_allowed(instance, frequency)) {
             result = RadioGeddonTxErrorRegion;
+            break;
+        }
+        // The external module's driver comes from the SD card and differs
+        // between firmwares; ask the firmware's region table directly too, so
+        // TX through it is never less restricted than the internal radio.
+        if(instance->radio == RadioGeddonRadioExternal &&
+           !furi_hal_region_is_frequency_allowed(frequency)) {
+            result = RadioGeddonTxErrorRegion;
+            break;
+        }
+        // An external module can be unplugged at any time: check it answers
+        // before driving it (its frequency setup waits for the chip).
+        if(instance->radio == RadioGeddonRadioExternal &&
+           !subghz_devices_is_connect(instance->device)) {
+            result = RadioGeddonTxErrorNoDevice;
             break;
         }
         // Read the preset so the EXACT modulation the signal was captured on is

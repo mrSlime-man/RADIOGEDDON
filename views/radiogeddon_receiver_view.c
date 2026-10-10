@@ -26,6 +26,7 @@ typedef struct {
     bool hopping;
     float threshold;
     char status[26];
+    bool external; // the external CC1101 module is in use
 } RadioGeddonReceiverModel;
 
 /* "12345", or "123k" from 100000 up, so the REC line stays short. */
@@ -52,6 +53,10 @@ static void radiogeddon_receiver_view_draw(Canvas* canvas, void* model) {
         (unsigned long)((m->frequency % 1000000) / 10000),
         m->preset_label);
     canvas_draw_str(canvas, 2, 9, header);
+    if(m->external) {
+        canvas_set_font(canvas, FontSecondary);
+        canvas_draw_str_aligned(canvas, 126, 9, AlignRight, AlignBottom, "EXT");
+    }
     canvas_draw_line(canvas, 0, 11, 128, 11);
 
     // RSSI meter
@@ -258,6 +263,11 @@ void radiogeddon_receiver_view_set_rssi(RadioGeddonReceiverView* instance, float
 
 void radiogeddon_receiver_view_set_hopping(RadioGeddonReceiverView* instance, bool hopping) {
     with_view_model(instance->view, RadioGeddonReceiverModel * m, { m->hopping = hopping; }, true);
+}
+
+void radiogeddon_receiver_view_set_external(RadioGeddonReceiverView* instance, bool external) {
+    with_view_model(
+        instance->view, RadioGeddonReceiverModel * m, { m->external = external; }, true);
 }
 
 void radiogeddon_receiver_view_set_recording(

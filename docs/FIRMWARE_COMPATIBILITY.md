@@ -112,5 +112,10 @@ were compared against the firmware sources:
 ## Hardware
 
 Builds target Flipper Zero hardware revision `f7` and its internal CC1101 radio
-(`cc1101_int`). External CC1101 modules are reachable through the same portable
-radio API but are not offered in the app's menus yet.
+(`cc1101_int`). An external CC1101 module can be chosen in Settings; it is
+driven by the firmware's own `cc1101_ext` driver, which the firmware installs
+as a plugin in `/ext/apps_data/subghz/plugins`. If that plugin is missing, or
+no module answers on the SPI bus, the internal radio is used. The external
+driver applies the firmware's region table when tuning, and RadioGeddon also
+checks `furi_hal_region_is_frequency_allowed()` itself before transmitting
+through it.

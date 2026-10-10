@@ -36,10 +36,13 @@ typedef enum {
     ConfigItemHopDwell,
     ConfigItemHopHold,
     ConfigItemHopRecord,
+    ConfigItemRadio,
+    ConfigItemExtPower,
 } ConfigItem;
 
 #define ConfigCustomEditScanList 600
 #define ConfigCustomEditHopList  601
+#define ConfigCustomExtMissing   602
 
 static void radiogeddon_config_freq_text(uint32_t hz, char* out, size_t out_size) {
     snprintf(
@@ -175,6 +178,46 @@ static void radiogeddon_scene_config_hold_changed(VariableItem* item) {
     uint8_t index = variable_item_get_current_value_index(item);
     app->settings.scan_hold_on_hit = (index == 1);
     variable_item_set_current_value_text(item, index ? "On" : "Off");
+}
+
+/* Switch to the radio the settings ask for. False if an external module was
+ * wanted but did not answer (the internal radio is then in use). */
+static bool radiogeddon_scene_config_apply_radio(RadioGeddonApp* app, bool want_external) {
+    // Start from the internal radio so a changed 5 V setting takes effect.
+    radiogeddon_subghz_set_radio(app->subghz, RadioGeddonRadioInternal, false);
+    bool external = false;
+    if(want_external) {
+        external = radiogeddon_subghz_set_radio(
+                       app->subghz, RadioGeddonRadioExternal, app->settings.ext_power) ==
+                   RadioGeddonRadioExternal;
+    }
+    app->settings.radio_external = external;
+    return external == want_external;
+}
+
+static void radiogeddon_scene_config_radio_text(VariableItem* item, bool external) {
+    variable_item_set_current_value_index(item, external ? 1 : 0);
+    variable_item_set_current_value_text(item, external ? "External" : "Internal");
+}
+
+static void radiogeddon_scene_config_radio_changed(VariableItem* item) {
+    RadioGeddonApp* app = variable_item_get_context(item);
+    bool want = variable_item_get_current_value_index(item) == 1;
+    bool ok = radiogeddon_scene_config_apply_radio(app, want);
+    radiogeddon_scene_config_radio_text(item, app->settings.radio_external);
+    if(!ok) view_dispatcher_send_custom_event(app->view_dispatcher, ConfigCustomExtMissing);
+}
+
+static void radiogeddon_scene_config_ext_power_changed(VariableItem* item) {
+    RadioGeddonApp* app = variable_item_get_context(item);
+    uint8_t index = variable_item_get_current_value_index(item);
+    app->settings.ext_power = (index == 1);
+    variable_item_set_current_value_text(item, index ? "On" : "Off");
+    if(app->settings.radio_external && !radiogeddon_scene_config_apply_radio(app, true)) {
+        // Without 5 V the module no longer answers: back on the internal
+        // radio. The message screen says so and the list is rebuilt after it.
+        view_dispatcher_send_custom_event(app->view_dispatcher, ConfigCustomExtMissing);
+    }
 }
 
 static void radiogeddon_scene_config_enter_cb(void* context, uint32_t index) {
@@ -331,6 +374,16 @@ void radiogeddon_scene_config_on_enter(void* context) {
     variable_item_set_current_value_index(item, app->settings.hop_auto_record ? 1 : 0);
     variable_item_set_current_value_text(item, app->settings.hop_auto_record ? "On" : "Off");
 
+    // Radio: internal, or an external CC1101 module (only if one answers)
+    item = variable_item_list_add(list, "Radio", 2, radiogeddon_scene_config_radio_changed, app);
+    radiogeddon_scene_config_radio_text(
+        item, radiogeddon_subghz_get_radio(app->subghz) == RadioGeddonRadioExternal);
+
+    item = variable_item_list_add(
+        list, "Ext radio 5V", 2, radiogeddon_scene_config_ext_power_changed, app);
+    variable_item_set_current_value_index(item, app->settings.ext_power ? 1 : 0);
+    variable_item_set_current_value_text(item, app->settings.ext_power ? "On" : "Off");
+
     variable_item_list_set_enter_callback(list, radiogeddon_scene_config_enter_cb, app);
     variable_item_list_set_selected_item(
         list, scene_manager_get_scene_state(app->scene_manager, RadioGeddonSceneConfig));
@@ -340,6 +393,14 @@ void radiogeddon_scene_config_on_enter(void* context) {
 
 bool radiogeddon_scene_config_on_event(void* context, SceneManagerEvent event) {
     RadioGeddonApp* app = context;
+    if(event.type == SceneManagerEventTypeCustom && event.event == ConfigCustomExtMissing) {
+        scene_manager_set_scene_state(app->scene_manager, RadioGeddonSceneConfig, ConfigItemRadio);
+        radiogeddon_scene_show_message(
+            app,
+            "No external radio",
+            "No CC1101 module answered\non the GPIO pins. Using\nthe internal radio.");
+        return true;
+    }
     if(event.type == SceneManagerEventTypeCustom &&
        (event.event == ConfigCustomEditScanList || event.event == ConfigCustomEditHopList)) {
         bool hop = (event.event == ConfigCustomEditHopList);

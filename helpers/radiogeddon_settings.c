@@ -25,6 +25,8 @@ void radiogeddon_settings_default(RadioGeddonSettings* settings) {
     settings->hop_hold_ms = 2000;
     settings->hop_auto_record = false;
     settings->db_sort = RgDbSortDate;
+    settings->radio_external = false;
+    settings->ext_power = true; // as the firmware's Sub-GHz app does
 }
 
 uint32_t radiogeddon_settings_default_hop_mask(void) {
@@ -96,6 +98,10 @@ void radiogeddon_settings_load(Storage* storage, RadioGeddonSettings* settings) 
         flipper_format_rewind(ff);
         if(flipper_format_read_uint32(ff, "Db_sort", &v, 1) && v < RgDbSortCount)
             settings->db_sort = (uint8_t)v;
+        flipper_format_rewind(ff);
+        if(flipper_format_read_bool(ff, "Radio_external", &b, 1)) settings->radio_external = b;
+        flipper_format_rewind(ff);
+        if(flipper_format_read_bool(ff, "Ext_5V", &b, 1)) settings->ext_power = b;
     } while(false);
 
     furi_string_free(type);
@@ -130,6 +136,10 @@ bool radiogeddon_settings_save(Storage* storage, const RadioGeddonSettings* sett
         if(!flipper_format_write_bool(ff, "Hop_auto_record", &b, 1)) break;
         v = settings->db_sort;
         if(!flipper_format_write_uint32(ff, "Db_sort", &v, 1)) break;
+        b = settings->radio_external;
+        if(!flipper_format_write_bool(ff, "Radio_external", &b, 1)) break;
+        b = settings->ext_power;
+        if(!flipper_format_write_bool(ff, "Ext_5V", &b, 1)) break;
         ok = true;
     } while(false);
     flipper_format_free(ff);

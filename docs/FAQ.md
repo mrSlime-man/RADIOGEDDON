@@ -63,9 +63,12 @@ SDK ([instructions](FIRMWARE_COMPATIBILITY.md#building-for-your-exact-firmware))
 
 ### Can I use an external CC1101 module?
 
-Not from the menus yet — RadioGeddon uses the Flipper's internal radio. The
-radio code uses the firmware's portable device layer, so external-module
-support is on the [roadmap](ROADMAP.md).
+Yes, through the firmware's own external-radio driver: connect the module to
+the GPIO pins as for the stock Sub-GHz app, then set **Settings → `Radio`** to
+`External`. RadioGeddon uses it only if it answers; otherwise it says so and
+keeps the internal radio. See the
+[User Guide](USER_GUIDE.md#external-cc1101-module). This has not yet been
+tried on real hardware.
 
 ### How do I know a download is genuine?
 

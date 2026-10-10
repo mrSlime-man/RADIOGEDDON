@@ -80,6 +80,12 @@ region's rules.
 | F13 | Progress: on a RAW capture of 1 MB or more, open it, then run `Unknown Protocol Analysis`, `Pulse Timeline` and `Save report to SD`. | `Opening...` while it opens; each long step shows a percentage that rises steadily while the work runs; the results are complete. Note how long each step takes. |
 | F13a | Sort persistence: in the Database press Left to `Name`, go back to the main menu, quit and restart the app, open the Database. | The list opens sorted by `Name`. |
 | F13b | Shortcuts and messages: in the Database hold OK on a file; then in a file's menu choose `Compare with...` and pick a `BAD` file. | Hold OK opens File details directly and Back returns to the list; the bad pick shows `Cannot compare` with the error tone and returns to the menu. |
+| F14 | External module: connect a CC1101 module (as for the stock app), Settings → `Radio` → `External`. | Stays `External`; the Scanner header reads `RSSI EXT`, Receive shows `EXT`, About says external; a remote is received and decoded through it. |
+| F14a | No module: with nothing connected choose `External`. | `No external radio` with the error tone; Settings shows `Internal`; Scanner and Receive work on the internal radio. |
+| F14b | 5 V: with a module powered from pin 1, toggle `Ext radio 5V` off, then on. | Off: `No external radio`, back to internal (if the module needs 5 V). Leaving the app turns the 5 V pin off again (check with a meter or the module LED). |
+| F14c | Restart with `External` saved, once with the module and once without. | With it: `EXT` shown. Without: internal radio, Settings shows `Internal`, no crash or hang at start. |
+| F14d | Replay through the module on an allowed frequency, then on one the region forbids. | Allowed: transmits. Forbidden: `Blocked by region`, nothing sent. |
+| F14e | Unplug the module while on the main menu, then open Receive and Replay. | `No radio` / a replay error; no hang. (Unplugging while receiving is not supported by the firmware driver.) |
 | F9 | SD card removed mid-session. | Save/open fail gracefully with an error tone; no crash. |
 | F10 | Memory: several capture/save/open/replay cycles. | Free heap (CLI `free` or the log) returns to baseline; no growth across cycles. |
 

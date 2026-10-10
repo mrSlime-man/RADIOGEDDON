@@ -30,10 +30,24 @@ SD card, and must end in `.fap`. Re-copy it with qFlipper
 ([Installation](INSTALLATION.md)) and restart the Flipper if it still doesn't
 appear.
 
+## `No external radio`
+
+Settings → `Radio` → `External` found no CC1101 module, so the internal radio
+stays in use. Check that:
+
+- the module is wired to the GPIO pins the firmware's external-radio driver
+  expects (the same wiring the stock Sub-GHz app uses);
+- `Ext radio 5V` is `On` if the module is powered from pin 1 (5 V);
+- the stock Sub-GHz app (Radio Settings → External) can see it. If it can't,
+  RadioGeddon can't either: both use the firmware's `cc1101_ext` driver, which
+  lives in `/ext/apps_data/subghz/plugins` (reinstall the firmware's SD-card
+  files if it is missing).
+
 ## `No radio` — `Sub-GHz device not found or not responding.`
 
 The Scanner, Receive & Record or Frequency Hopper couldn't access the CC1101
-radio. Press **Back** and try again. If it persists, reboot the Flipper (**Settings → Power → Reboot**, or hold
+radio. With an external module selected (`EXT` in the header), check that it
+is still connected. Press **Back** and try again. If it persists, reboot the Flipper (**Settings → Power → Reboot**, or hold
 **Left + Back**). If it still happens after a reboot, please report it with a
 device log — this is exactly the kind of result the
 [hardware checklist](HARDWARE_CHECKLIST.md) needs.

@@ -158,6 +158,8 @@ void radiogeddon_scene_hopper_on_enter(void* context) {
     radiogeddon_receiver_view_set_callback(
         app->receiver_view, radiogeddon_scene_hopper_view_cb, app);
     radiogeddon_receiver_view_set_hopping(app->receiver_view, true);
+    radiogeddon_receiver_view_set_external(
+        app->receiver_view, radiogeddon_subghz_get_radio(app->subghz) == RadioGeddonRadioExternal);
     radiogeddon_receiver_view_set_recording(app->receiver_view, false, NULL);
     radiogeddon_receiver_view_set_status(app->receiver_view, "");
     radiogeddon_scene_hopper_refresh_history(app);

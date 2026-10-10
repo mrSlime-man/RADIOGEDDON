@@ -39,5 +39,8 @@ void radiogeddon_scanner_view_update(RadioGeddonScannerView* instance, RadioGedd
 /** Move the highlight to @p index (e.g. the frequency the sweep is holding on). */
 void radiogeddon_scanner_view_set_selected(RadioGeddonScannerView* instance, size_t index);
 
+/** Header reads "RSSI EXT" while the external CC1101 module is in use. */
+void radiogeddon_scanner_view_set_external(RadioGeddonScannerView* instance, bool external);
+
 /** Index currently highlighted by the user. */
 size_t radiogeddon_scanner_view_get_selected(RadioGeddonScannerView* instance);

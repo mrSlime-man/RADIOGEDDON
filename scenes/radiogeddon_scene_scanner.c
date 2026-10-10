@@ -97,6 +97,8 @@ void radiogeddon_scene_scanner_on_enter(void* context) {
 
     radiogeddon_subghz_set_preset(app->subghz, app->preset_index);
     radiogeddon_scanner_view_set_callback(app->scanner_view, radiogeddon_scanner_view_cb, app);
+    radiogeddon_scanner_view_set_external(
+        app->scanner_view, radiogeddon_subghz_get_radio(app->subghz) == RadioGeddonRadioExternal);
     radiogeddon_scanner_view_update(app->scanner_view, app->scanner);
 
     if(count > 0) {

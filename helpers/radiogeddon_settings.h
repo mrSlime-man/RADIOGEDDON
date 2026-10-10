@@ -25,6 +25,8 @@ typedef struct {
     uint16_t hop_hold_ms; // time to stay after activity was last seen
     bool hop_auto_record; // record RAW while holding on activity, save automatically
     uint8_t db_sort; // Database sort order (RgDbSort), kept from the last visit
+    bool radio_external; // use an external CC1101 module when one answers
+    bool ext_power; // switch on 5 V (GPIO pin 1) for the external module
 } RadioGeddonSettings;
 
 /** Default hopper list: the frequencies in radiogeddon_hopper_frequencies. */

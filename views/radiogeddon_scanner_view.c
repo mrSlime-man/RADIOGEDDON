@@ -20,6 +20,7 @@ typedef struct {
     RadioGeddonScannerSnapshot snap;
     size_t selected;
     size_t top; // first visible row
+    bool external; // the external CC1101 module is in use
 } RadioGeddonScannerModel;
 
 static int32_t radiogeddon_scanner_bar_pos(float dbm) {
@@ -33,7 +34,7 @@ static void radiogeddon_scanner_view_draw_header(Canvas* canvas, RadioGeddonScan
     const RadioGeddonScannerSnapshot* s = &m->snap;
     canvas_set_font(canvas, FontSecondary);
 
-    const char* status = "RSSI scan";
+    const char* status = m->external ? "RSSI EXT" : "RSSI scan";
     if(s->paused) {
         status = "PAUSED";
     } else if(s->hold_index >= 0) {
@@ -227,6 +228,11 @@ void radiogeddon_scanner_view_update(RadioGeddonScannerView* instance, RadioGedd
         RadioGeddonScannerModel * m,
         { radiogeddon_scanner_snapshot(scanner, &m->snap); },
         true);
+}
+
+void radiogeddon_scanner_view_set_external(RadioGeddonScannerView* instance, bool external) {
+    with_view_model(
+        instance->view, RadioGeddonScannerModel * m, { m->external = external; }, true);
 }
 
 void radiogeddon_scanner_view_set_selected(RadioGeddonScannerView* instance, size_t index) {
