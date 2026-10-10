@@ -16,6 +16,9 @@ typedef enum {
     RangeItemModulation,
     RangeItemPlan,
     RangeItemScan,
+#if RG_FEATURE_WATERFALL
+    RangeItemWaterfall,
+#endif
     RangeItemSave,
     RangeItemLoad,
     RangeItemDelete,
@@ -25,6 +28,7 @@ typedef enum {
     RangeEventStart = 800,
     RangeEventEnd,
     RangeEventScan,
+    RangeEventWaterfall,
     RangeEventSave,
     RangeEventLoad,
     RangeEventDelete,
@@ -150,6 +154,9 @@ static void radiogeddon_scene_range_enter_cb(void* context, uint32_t index) {
         [RangeItemStart] = RangeEventStart,
         [RangeItemEnd] = RangeEventEnd,
         [RangeItemScan] = RangeEventScan,
+#if RG_FEATURE_WATERFALL
+        [RangeItemWaterfall] = RangeEventWaterfall,
+#endif
         [RangeItemSave] = RangeEventSave,
         [RangeItemLoad] = RangeEventLoad,
         [RangeItemDelete] = RangeEventDelete,
@@ -245,6 +252,10 @@ void radiogeddon_scene_range_setup_on_enter(void* context) {
 
     item = variable_item_list_add(list, "Start scan", 1, NULL, app);
     variable_item_set_current_value_text(item, ">");
+#if RG_FEATURE_WATERFALL
+    item = variable_item_list_add(list, "Start waterfall", 1, NULL, app);
+    variable_item_set_current_value_text(item, ">");
+#endif
     item = variable_item_list_add(list, "Save profile", 1, NULL, app);
     variable_item_set_current_value_text(item, ">");
     item = variable_item_list_add(list, "Load profile", 1, NULL, app);
@@ -259,11 +270,12 @@ void radiogeddon_scene_range_setup_on_enter(void* context) {
     view_dispatcher_switch_to_view(app->view_dispatcher, RadioGeddonViewVarItemList);
 }
 
-static void radiogeddon_scene_range_setup_scan(RadioGeddonApp* app) {
+/* Check the radio, the plan and the memory before the scan or the waterfall. */
+static bool radiogeddon_scene_range_setup_check(RadioGeddonApp* app, bool waterfall) {
     if(!radiogeddon_subghz_is_device_present(app->subghz)) {
         radiogeddon_scene_show_message(
             app, "No radio", "Sub-GHz device not\nfound or not responding.");
-        return;
+        return false;
     }
     RgRangeResult r = radiogeddon_scene_plan_range(app);
     if(r == RgRangeErrorTooMany) {
@@ -271,30 +283,37 @@ static void radiogeddon_scene_range_setup_scan(RadioGeddonApp* app) {
             app,
             "Too many points",
             "At most 256 points.\nUse a larger step or a\nnarrower range.");
-        return;
+        return false;
     }
     if(r == RgRangeErrorNoPoints) {
         radiogeddon_scene_show_message(
             app,
             "No tunable points",
             "The range lies in a gap\nthe radio cannot tune.\nSee Settings > Bands.");
-        return;
+        return false;
     }
     if(r != RgRangeOk) {
         radiogeddon_scene_show_message(app, "Bad range", "Start must not be\nabove end.");
-        return;
+        return false;
     }
     // The engine and the screen model must fit with room to spare.
     size_t need = radiogeddon_rangescan_memory(app->range.points) + 2048u + RANGE_HEAP_MARGIN;
+#if RG_FEATURE_WATERFALL
+    if(waterfall) {
+        need = radiogeddon_scene_waterfall_fixed_bytes(app->range.points) +
+               radiogeddon_scene_waterfall_min_bytes(app->range.points) + RANGE_HEAP_MARGIN;
+    }
+#else
+    UNUSED(waterfall);
+#endif
     if(memmgr_heap_get_max_free_block() < need) {
         radiogeddon_scene_show_message(
             app,
             "Not enough memory",
             "Free memory is too low\nfor this many points.\nUse fewer points.");
-        return;
+        return false;
     }
-    app->range_cursor = 0;
-    scene_manager_next_scene(app->scene_manager, RadioGeddonSceneRangeScan);
+    return true;
 }
 
 bool radiogeddon_scene_range_setup_on_event(void* context, SceneManagerEvent event) {
@@ -314,8 +333,21 @@ bool radiogeddon_scene_range_setup_on_event(void* context, SceneManagerEvent eve
     case RangeEventScan:
         scene_manager_set_scene_state(
             app->scene_manager, RadioGeddonSceneRangeSetup, RangeItemScan);
-        radiogeddon_scene_range_setup_scan(app);
+        if(radiogeddon_scene_range_setup_check(app, false)) {
+            app->range_cursor = 0;
+            scene_manager_next_scene(app->scene_manager, RadioGeddonSceneRangeScan);
+        }
         return true;
+#if RG_FEATURE_WATERFALL
+    case RangeEventWaterfall:
+        scene_manager_set_scene_state(
+            app->scene_manager, RadioGeddonSceneRangeSetup, RangeItemWaterfall);
+        if(radiogeddon_scene_range_setup_check(app, true)) {
+            app->wf_cursor = 0;
+            scene_manager_next_scene(app->scene_manager, RadioGeddonSceneWaterfall);
+        }
+        return true;
+#endif
     case RangeEventSave:
         scene_manager_set_scene_state(
             app->scene_manager, RadioGeddonSceneRangeSetup, RangeItemSave);

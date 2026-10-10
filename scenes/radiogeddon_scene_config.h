@@ -31,3 +31,6 @@ ADD_SCENE(radiogeddon, favorites, Favorites)
 ADD_SCENE(radiogeddon, favorite_options, FavoriteOptions)
 ADD_SCENE(radiogeddon, bands, Bands)
 #endif
+#if RG_FEATURE_WATERFALL
+ADD_SCENE(radiogeddon, waterfall, Waterfall)
+#endif

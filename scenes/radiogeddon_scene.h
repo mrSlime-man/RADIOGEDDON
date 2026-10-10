@@ -92,6 +92,13 @@ void radiogeddon_scene_probe_bands(RadioGeddonApp* app);
 RgRangeResult radiogeddon_scene_plan_range(RadioGeddonApp* app);
 #endif
 
+#if RG_FEATURE_WATERFALL
+/** Smallest Waterfall history for @p points points (one screen of rows). */
+size_t radiogeddon_scene_waterfall_min_bytes(uint32_t points);
+/** The Waterfall's heap besides its history (engine and screen). */
+size_t radiogeddon_scene_waterfall_fixed_bytes(uint32_t points);
+#endif
+
 /**
  * Fill @p out with the frequencies a Scanner or Hopper source gives (the
  * built-in list under @p mask, or the favorites in the Full edition), keeping

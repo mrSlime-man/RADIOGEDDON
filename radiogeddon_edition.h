@@ -60,3 +60,20 @@
  * The Full edition leaves this to the firmware's own transmit authorization
  * (subghz_devices_set_tx), which both editions always go through. */
 #define RG_FEATURE_REGION_TX_GATE (!RG_EDITION_FULL)
+
+/* Waterfall: the history of a range scan's sequential RSSI sweeps drawn as
+ * frequency across, time down (helpers/rg_waterfall.h). Needs the range
+ * scanner's engine. */
+#define RG_FEATURE_WATERFALL (RG_EDITION_FULL && RG_FEATURE_RANGE_SCAN)
+
+/* Bitstream Explorer: binary / hex / frame / difference / field views of the
+ * bits the analyzer infers from a RAW capture (helpers/rg_bits.h). */
+#define RG_FEATURE_BITSTREAM RG_EDITION_FULL
+
+/* Multi-Capture Compare: several saved captures analysed one after another
+ * and compared field by field (helpers/rg_multi.h). */
+#define RG_FEATURE_MULTI_COMPARE RG_EDITION_FULL
+
+/* Research Sessions: named groups of recordings kept in small text files on
+ * the SD card (helpers/rg_session.h). */
+#define RG_FEATURE_SESSIONS RG_EDITION_FULL

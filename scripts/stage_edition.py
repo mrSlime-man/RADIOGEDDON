@@ -31,8 +31,8 @@ FULL_REWRITES = (
     (r'cdefines=\["RADIOGEDDON_EDITION_CATALOG"\]', 'cdefines=["RADIOGEDDON_EDITION_FULL"]'),
     (
         r'fap_description="[^"]*"',
-        'fap_description="Full edition: Sub-GHz research toolkit with range scanning, '
-        'scan profiles, favorites, field maps, recording, decoding and replay."',
+        'fap_description="Full edition: Sub-GHz research toolkit: range scanning, waterfall, '
+        'bitstream explorer, multi-capture compare, sessions, recording, decoding and replay."',
     ),
 )
 

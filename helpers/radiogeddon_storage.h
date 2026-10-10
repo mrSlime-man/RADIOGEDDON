@@ -104,3 +104,6 @@ bool radiogeddon_storage_make_unique_path_in(
 
 /** Build a timestamped scan-results path, e.g. ".../scans/SCAN_20261009_163500.csv". */
 void radiogeddon_storage_make_scan_path(FuriString* out);
+
+/** As above with another file-name prefix, e.g. "WF" for a waterfall history. */
+void radiogeddon_storage_make_scan_path_prefix(FuriString* out, const char* prefix);

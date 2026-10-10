@@ -26,6 +26,10 @@ struct RadioGeddonRangeScan {
     uint32_t sweeps;
     uint32_t sweep_ms;
     RgScanChannel* channels; // range.points entries
+#if RG_FEATURE_WATERFALL
+    RgWaterfall waterfall; // used when waterfall_on (buffer owned by the caller)
+    bool waterfall_on;
+#endif
 
     RadioGeddonRangeScanHitCallback callback;
     void* context;
@@ -109,6 +113,9 @@ static int32_t radiogeddon_rangescan_thread(void* context) {
         if(started && instance->hold_on_hit && instance->hold_index < 0) {
             instance->hold_index = (int32_t)index;
         }
+#if RG_FEATURE_WATERFALL
+        if(instance->waterfall_on) rg_waterfall_add(&instance->waterfall, index, rssi);
+#endif
         furi_mutex_release(instance->mutex);
 
         if(started && instance->callback) instance->callback(index, instance->context);
@@ -120,6 +127,9 @@ static int32_t radiogeddon_rangescan_thread(void* context) {
                 furi_mutex_acquire(instance->mutex, FuriWaitForever);
                 instance->sweep_ms = now - sweep_start;
                 if(instance->sweeps < UINT32_MAX) instance->sweeps++;
+#if RG_FEATURE_WATERFALL
+                if(instance->waterfall_on) rg_waterfall_commit(&instance->waterfall, now);
+#endif
                 furi_mutex_release(instance->mutex);
                 sweep_start = now;
             }
@@ -175,6 +185,10 @@ void radiogeddon_rangescan_recalibrate(RadioGeddonRangeScan* instance) {
     instance->hold_index = -1;
     instance->sweeps = 0;
     instance->sweep_ms = 0;
+#if RG_FEATURE_WATERFALL
+    // Readings before the recalibration must not share a row with those after.
+    if(instance->waterfall_on) rg_waterfall_discard(&instance->waterfall);
+#endif
     furi_mutex_release(instance->mutex);
 }
 
@@ -274,5 +288,233 @@ bool radiogeddon_rangescan_save_csv(
     if(opened && !ok) storage_common_remove(storage, path);
     return ok;
 }
+
+#if RG_FEATURE_WATERFALL
+
+bool radiogeddon_rangescan_waterfall_attach(
+    RadioGeddonRangeScan* instance,
+    void* buf,
+    size_t bytes) {
+    furi_check(!instance->thread);
+    instance->waterfall_on =
+        rg_waterfall_init(&instance->waterfall, buf, bytes, instance->range.points);
+    return instance->waterfall_on;
+}
+
+/* Round a float dBm to an int8 floor (RG_WF_NO_FLOOR stays reserved). */
+static int8_t radiogeddon_rangescan_floor8(float dbm) {
+    float r = dbm + (dbm < 0 ? -0.5f : 0.5f);
+    if(r <= -127.0f) return -127;
+    if(r >= 127.0f) return 127;
+    return (int8_t)r;
+}
+
+/* Point of @p column whose peak hold is highest (measured data), else its
+ * middle point. Called with the lock held. */
+static uint32_t
+    radiogeddon_rangescan_column_point(RadioGeddonRangeScan* instance, uint16_t column) {
+    uint32_t first, last;
+    rg_waterfall_points_of(&instance->waterfall, column, &first, &last);
+    uint32_t best = (first + last) / 2u;
+    float best_peak = RG_SCAN_RSSI_NONE;
+    for(uint32_t i = first; i <= last && i < instance->range.points; i++) {
+        const RgScanChannel* ch = &instance->channels[i];
+        if(ch->samples && ch->peak > best_peak) {
+            best_peak = ch->peak;
+            best = i;
+        }
+    }
+    return best;
+}
+
+void radiogeddon_rangescan_waterfall_frame(
+    RadioGeddonRangeScan* instance,
+    const RadioGeddonWaterfallRequest* request,
+    RadioGeddonWaterfallFrame* out) {
+    int8_t floors[RG_WF_MAX_COLUMNS];
+    memset(out->seg_start, 0, sizeof(out->seg_start));
+
+    furi_mutex_acquire(instance->mutex, FuriWaitForever);
+    RgWaterfall* wf = &instance->waterfall;
+    out->points = instance->range.points;
+    out->paused = instance->paused;
+    out->sweeps = instance->sweeps;
+    out->sweep_ms = instance->sweep_ms;
+    out->threshold_db = instance->threshold_db;
+    out->estimate_ms = rg_range_sweep_ms(instance->range.points, instance->dwell_ms);
+    out->calibrating = false;
+
+    // Per-column floors: the lowest trusted floor of the column's points.
+    for(uint16_t c = 0; c < RG_WF_MAX_COLUMNS; c++)
+        floors[c] = RG_WF_NO_FLOOR;
+    for(uint32_t i = 0; i < instance->range.points; i++) {
+        const RgScanChannel* ch = &instance->channels[i];
+        if(ch->samples < RG_SCAN_WARMUP_SAMPLES) {
+            out->calibrating = true;
+            continue;
+        }
+        uint16_t c = rg_waterfall_column_of(wf, i);
+        int8_t f = radiogeddon_rangescan_floor8(ch->floor);
+        if(floors[c] == RG_WF_NO_FLOOR || f < floors[c]) floors[c] = f;
+    }
+    float global = rg_scan_global_floor(instance->channels, instance->range.points);
+    out->floor = global <= RG_SCAN_RSSI_NONE ? RG_WF_NO_FLOOR :
+                                               radiogeddon_rangescan_floor8(global);
+
+    if(!instance->waterfall_on || wf->columns == 0) {
+        furi_mutex_release(instance->mutex);
+        memset(out->xbm, 0, sizeof(out->xbm));
+        out->drawn = out->filled = out->rows = out->scroll = out->max_scroll = 0;
+        out->columns = 0;
+        out->cursor = out->cursor_x = out->cursor_w = 0;
+        out->cursor_hz = 0;
+        out->cursor_dbm = out->cursor_peak = RG_WF_NO_DATA;
+        out->have_peak = false;
+        out->top_age_ms = 0;
+        out->stored = 0;
+        return;
+    }
+
+    out->columns = wf->columns;
+    out->stored = wf->sweeps;
+    out->rows = wf->rows;
+    out->filled = wf->filled;
+    out->max_scroll = rg_waterfall_max_scroll(wf, RADIOGEDDON_WF_VIEW_H);
+    out->scroll = request->scroll > out->max_scroll ? out->max_scroll : request->scroll;
+    out->cursor = request->cursor >= wf->columns ? (uint16_t)(wf->columns - 1u) : request->cursor;
+
+    RgWaterfallStyle style = {
+        .span_db = request->span_db,
+        .strong_db = instance->threshold_db,
+        .noise_comp = request->noise_comp,
+        .floors = floors,
+        .floor_all = out->floor,
+    };
+    // Strong signals are drawn solid: at least the threshold above the
+    // reference, and never inside the dither span.
+    if(style.strong_db <= style.span_db) style.strong_db = (uint8_t)(style.span_db + 1u);
+    out->drawn = rg_waterfall_render(
+        wf, &style, out->scroll, out->xbm, RADIOGEDDON_WF_VIEW_W, RADIOGEDDON_WF_VIEW_H);
+
+    // Band segments after the first start where the radio's gaps were skipped.
+    uint32_t first_point = 0;
+    for(size_t k = 0; k < instance->range.segments; k++) {
+        if(k > 0) {
+            uint16_t x, w;
+            rg_waterfall_column_span(
+                wf, rg_waterfall_column_of(wf, first_point), RADIOGEDDON_WF_VIEW_W, &x, &w);
+            out->seg_start[x / 8u] |= (uint8_t)(1u << (x % 8u));
+        }
+        first_point += instance->range.segment[k].count;
+    }
+
+    rg_waterfall_column_span(
+        wf, out->cursor, RADIOGEDDON_WF_VIEW_W, &out->cursor_x, &out->cursor_w);
+    out->cursor_hz = rg_range_frequency(
+        &instance->range, radiogeddon_rangescan_column_point(instance, out->cursor));
+    out->cursor_dbm = rg_waterfall_cell(wf, out->scroll, out->cursor);
+    out->cursor_peak = RG_WF_NO_DATA;
+    for(uint16_t a = 0; a < wf->filled; a++) {
+        int16_t v = rg_waterfall_cell(wf, a, out->cursor);
+        if(v != RG_WF_NO_DATA && (out->cursor_peak == RG_WF_NO_DATA || v > out->cursor_peak))
+            out->cursor_peak = v;
+    }
+    out->have_peak = rg_waterfall_peak(wf, &out->peak_column, &out->peak_age, &out->peak_dbm);
+    out->peak_hz =
+        out->have_peak ?
+            rg_range_frequency(
+                &instance->range, radiogeddon_rangescan_column_point(instance, out->peak_column)) :
+            0;
+    uint32_t newest = rg_waterfall_stamp(wf, 0);
+    uint32_t top = rg_waterfall_stamp(wf, out->scroll);
+    out->top_age_ms = (wf->filled && newest >= top) ? newest - top : 0;
+    furi_mutex_release(instance->mutex);
+}
+
+bool radiogeddon_rangescan_waterfall_save_csv(
+    RadioGeddonRangeScan* instance,
+    Storage* storage,
+    const char* path,
+    const char* preset_label) {
+    if(!instance->waterfall_on) return false;
+    File* file = storage_file_alloc(storage);
+    bool ok = false;
+    bool opened = false;
+    char line[112];
+    RgWaterfall* wf = &instance->waterfall;
+    do {
+        if(!storage_file_open(file, path, FSAM_WRITE, FSOM_CREATE_ALWAYS)) break;
+        opened = true;
+        if(!radiogeddon_rangescan_write_str(
+               file,
+               "# RadioGeddon waterfall: RSSI sweep history. Each row is one\n"
+               "# sequential narrowband sweep (CC1101), newest first; each column\n"
+               "# is the strongest reading of its points in that sweep. Empty\n"
+               "# cells were not measured. Not a wideband or IQ capture.\n"))
+            break;
+        snprintf(
+            line,
+            sizeof(line),
+            "# Range %lu-%lu Hz, step %lu Hz, %lu points in %u columns; preset %s\n",
+            (unsigned long)instance->range.start_hz,
+            (unsigned long)instance->range.end_hz,
+            (unsigned long)instance->range.step_hz,
+            (unsigned long)instance->range.points,
+            (unsigned)wf->columns,
+            preset_label);
+        if(!radiogeddon_rangescan_write_str(file, line)) break;
+        snprintf(
+            line,
+            sizeof(line),
+            "# Dwell %u ms; column header = first point's frequency in Hz\n",
+            (unsigned)instance->dwell_ms);
+        if(!radiogeddon_rangescan_write_str(file, line)) break;
+        bool rows_ok = radiogeddon_rangescan_write_str(file, "Age_ms");
+        for(uint16_t c = 0; c < wf->columns && rows_ok; c++) {
+            uint32_t first, last;
+            rg_waterfall_points_of(wf, c, &first, &last);
+            snprintf(
+                line,
+                sizeof(line),
+                ",%lu",
+                (unsigned long)rg_range_frequency(&instance->range, first));
+            rows_ok = radiogeddon_rangescan_write_str(file, line);
+        }
+        if(rows_ok) rows_ok = radiogeddon_rangescan_write_str(file, "\n");
+
+        // One row copied under the lock at a time; formatted and written
+        // without it. Rows that scroll out meanwhile are simply not written.
+        int16_t cells[RG_WF_MAX_COLUMNS];
+        for(uint16_t age = 0; rows_ok; age++) {
+            furi_mutex_acquire(instance->mutex, FuriWaitForever);
+            bool have = age < wf->filled;
+            uint32_t newest = rg_waterfall_stamp(wf, 0);
+            uint32_t stamp = rg_waterfall_stamp(wf, age);
+            uint16_t columns = wf->columns;
+            for(uint16_t c = 0; have && c < columns; c++)
+                cells[c] = rg_waterfall_cell(wf, age, c);
+            furi_mutex_release(instance->mutex);
+            if(!have) break;
+            snprintf(line, sizeof(line), "%lu", (unsigned long)(newest - stamp));
+            rows_ok = radiogeddon_rangescan_write_str(file, line);
+            for(uint16_t c = 0; c < columns && rows_ok; c++) {
+                if(cells[c] == RG_WF_NO_DATA) {
+                    rows_ok = radiogeddon_rangescan_write_str(file, ",");
+                } else {
+                    snprintf(line, sizeof(line), ",%d", (int)cells[c]);
+                    rows_ok = radiogeddon_rangescan_write_str(file, line);
+                }
+            }
+            if(rows_ok) rows_ok = radiogeddon_rangescan_write_str(file, "\n");
+        }
+        ok = rows_ok;
+    } while(false);
+    storage_file_close(file);
+    storage_file_free(file);
+    if(opened && !ok) storage_common_remove(storage, path);
+    return ok;
+}
+
+#endif /* RG_FEATURE_WATERFALL */
 
 #endif

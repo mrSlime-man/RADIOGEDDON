@@ -27,6 +27,9 @@
 #include "rg_range.h"
 #include "rg_scan.h"
 #include "rg_spectrum.h"
+#if RG_FEATURE_WATERFALL
+#include "rg_waterfall.h"
+#endif
 
 typedef struct RadioGeddonRangeScan RadioGeddonRangeScan;
 
@@ -95,5 +98,81 @@ bool radiogeddon_rangescan_save_csv(
     Storage* storage,
     const char* path,
     const char* preset_label);
+
+#if RG_FEATURE_WATERFALL
+
+/* The Waterfall screen's picture: 128 x 42 pixels, one row per sweep. */
+#define RADIOGEDDON_WF_VIEW_W 128u
+#define RADIOGEDDON_WF_VIEW_H 42u
+
+/**
+ * Keep the history of complete sweeps (rg_waterfall) in @p buf, @p bytes
+ * long, owned by the caller and valid until the engine is freed. Call before
+ * start(). False if the buffer holds less than one row.
+ */
+bool radiogeddon_rangescan_waterfall_attach(
+    RadioGeddonRangeScan* instance,
+    void* buf,
+    size_t bytes);
+
+/** What the Waterfall screen asks for. */
+typedef struct {
+    uint16_t scroll; // rows back from the newest sweep (clamped)
+    uint16_t cursor; // display column (clamped)
+    uint8_t span_db; // sensitivity: dB from the reference to the densest dither
+    bool noise_comp; // reference = each column's noise floor
+} RadioGeddonWaterfallRequest;
+
+/** Everything the Waterfall screen draws, made under the engine's lock. */
+typedef struct {
+    uint8_t xbm[RADIOGEDDON_WF_VIEW_H * (RADIOGEDDON_WF_VIEW_W / 8u)];
+    uint8_t seg_start[RADIOGEDDON_WF_VIEW_W / 8u]; // pixels where a band segment starts
+    uint16_t drawn; // picture rows holding a sweep
+    uint16_t filled; // sweeps stored
+    uint16_t rows; // history capacity
+    uint16_t scroll; // the request's, clamped
+    uint16_t max_scroll;
+    uint16_t columns;
+    uint16_t cursor; // the request's, clamped
+    uint16_t cursor_x; // first pixel of the cursor column
+    uint16_t cursor_w; // its width in pixels
+    uint32_t cursor_hz; // frequency OK tunes to (strongest point of the column)
+    int16_t cursor_dbm; // the column in the top visible row, RG_WF_NO_DATA if none
+    int16_t cursor_peak; // the column's strongest stored reading, RG_WF_NO_DATA if none
+    bool have_peak;
+    uint16_t peak_column;
+    uint16_t peak_age;
+    int16_t peak_dbm;
+    uint32_t peak_hz;
+    int8_t floor; // median noise floor, RG_WF_NO_FLOOR while calibrating
+    uint8_t threshold_db;
+    bool paused;
+    bool calibrating;
+    uint32_t sweeps; // sweeps since start or recalibration
+    uint32_t stored; // sweeps added to the history (one more per new row)
+    uint32_t sweep_ms; // last measured sweep (0 until known)
+    uint32_t estimate_ms; // estimated sweep time from points and dwell
+    uint32_t top_age_ms; // how long ago the top visible row ended
+    uint32_t points;
+} RadioGeddonWaterfallFrame;
+
+/** Build the screen's frame (GUI thread, on the tick). */
+void radiogeddon_rangescan_waterfall_frame(
+    RadioGeddonRangeScan* instance,
+    const RadioGeddonWaterfallRequest* request,
+    RadioGeddonWaterfallFrame* out);
+
+/**
+ * Write the stored sweeps as CSV: comment header, then one row per sweep
+ * (newest first), its age in ms, then each column's reading in dBm (empty
+ * where nothing was measured). False on a card error (the file is removed).
+ */
+bool radiogeddon_rangescan_waterfall_save_csv(
+    RadioGeddonRangeScan* instance,
+    Storage* storage,
+    const char* path,
+    const char* preset_label);
+
+#endif /* RG_FEATURE_WATERFALL */
 
 #endif
