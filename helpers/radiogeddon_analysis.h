@@ -14,6 +14,7 @@
 #include <furi.h>
 #include <storage/storage.h>
 #include "radiogeddon_storage.h"
+#include "radiogeddon_progress.h"
 #include "rg_analyzer.h"
 
 /** Append a concise human-readable summary of @p sig to @p out. */
@@ -62,6 +63,12 @@ RgAnalyzer* radiogeddon_analysis_run_file(
 /** As above on an already open file (its reader keeps the seek checkpoints). */
 RgAnalyzer*
     radiogeddon_analysis_run_raw(RadioGeddonRawFile* file, RadioGeddonAnalysisStatus* status);
+
+/**
+ * Report the progress of whole-file analyses (the passes of
+ * radiogeddon_analysis_run_raw) to @p callback; NULL stops reporting.
+ */
+void radiogeddon_analysis_set_progress(RadioGeddonProgressCallback callback, void* context);
 
 /** Append a short user-facing explanation of a non-Ok @p status. */
 void radiogeddon_analysis_cat_status(FuriString* out, RadioGeddonAnalysisStatus status);

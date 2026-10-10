@@ -15,11 +15,12 @@ static void radiogeddon_scene_report_popup_cb(void* context) {
 
 void radiogeddon_scene_report_on_enter(void* context) {
     RadioGeddonApp* app = context;
-    radiogeddon_scene_show_busy(app, "Writing report...");
+    radiogeddon_scene_show_progress(app, "Writing report...");
 
     FuriString* path = furi_string_alloc();
     RadioGeddonReportResult result = radiogeddon_report_save(
         app->storage, furi_string_get_cstr(app->file_path), &app->loaded, app->temp_str, path);
+    radiogeddon_scene_progress_end(app);
 
     furi_string_reset(app->temp_str);
     if(result == RadioGeddonReportOk) {

@@ -75,11 +75,12 @@ static void radiogeddon_scene_timeline_show_text(RadioGeddonApp* app) {
 void radiogeddon_scene_timeline_on_enter(void* context) {
     RadioGeddonApp* app = context;
     furi_string_reset(app->temp_str);
-    radiogeddon_scene_show_busy(app, "Indexing...");
+    radiogeddon_scene_show_progress(app, "Indexing...");
 
     app->timeline_file =
         radiogeddon_storage_raw_open(app->storage, furi_string_get_cstr(app->file_path));
     if(!app->timeline_file) {
+        radiogeddon_scene_progress_end(app);
         radiogeddon_analysis_cat_status(app->temp_str, RadioGeddonAnalysisOpenFailed);
         radiogeddon_scene_timeline_show_text(app);
         return;
@@ -90,6 +91,7 @@ void radiogeddon_scene_timeline_on_enter(void* context) {
     // is allocated, so the two are never in memory together.
     RadioGeddonAnalysisStatus status;
     RgAnalyzer* a = radiogeddon_analysis_run_raw(app->timeline_file, &status);
+    radiogeddon_scene_progress_end(app);
     if(!a) {
         radiogeddon_analysis_cat_status(app->temp_str, status);
         radiogeddon_scene_timeline_show_text(app);

@@ -51,7 +51,10 @@ still needs.
 - [ ] **5. Signal Database 2.0**: rename, sort, filter, metadata, duplicates,
       report export, corrupted-file handling (implemented; hardware checks
       F11–F12d pending).
-- [ ] **6. Interface pass**: consistent layout, status, errors, shortcuts.
+- [ ] **6. Interface pass**: consistent layout, status, errors, shortcuts
+      (progress percentages, messages, Database shortcuts and saved sort
+      implemented; hardware checks F13–F13b pending; memory thresholds for
+      the radio screens wait for the measurements in milestone 8).
 - [ ] **7. Optional external CC1101** through the firmware's device layer.
 - [ ] **8. Performance and reliability**: memory diagnostics, lifecycle tests.
 

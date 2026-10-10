@@ -94,7 +94,13 @@ the views and a `SceneManager` drives navigation. Each scene has
 live displays (RSSI, scanner sweep, hopper timing, recording counters).
 
 Reusable firmware widgets (`Submenu`, `Widget`, `VariableItemList`, `Popup`,
-`TextInput`, `TextBox`) cover menus and reports. Two custom views draw the live
+`TextInput`, `TextBox`) cover menus and reports. Long SD-card work runs in a
+scene's `on_enter` behind a `Popup`; operations that can measure their
+progress (Database indexing, whole-file analysis) call a
+`RadioGeddonProgressCallback`, and `radiogeddon_scene_progress` writes the
+percentage under the popup at most every 150 ms. The GUI thread redraws it
+while the app thread keeps working. Errors that end an action are shown by a
+small Message scene that closes itself after three seconds. Two custom views draw the live
 screens: the **scanner** (per-frequency RSSI bars) and the **receiver** (RSSI
 meter, recording status, decoded-signal list), which the Frequency Hopper also
 reuses.

@@ -66,7 +66,7 @@ region's rules.
 | F6e | Hopper auto-record with long activity (hold a remote for 10 s on a hop frequency). | One `HOP_*.sub` with all of it; the hopper resumes afterwards. |
 | F7 | Custom-preset replay: a stock-app RAW `.sub` saved with a custom preset. | Replays on the correct modulation, or is cleanly refused (`Unsupported file`) — never sent on the wrong modulation. |
 | F8 | Delete: choose Delete on a saved file. | Confirmation shown; Cancel/Back keeps the file; Delete removes it; back in the Database the file is gone and the highlight stays near where it was. |
-| F11 | Database list: open Database with a mix of decoded, RAW and stock-app `.sub` files. | `Loading...`, then every file newest first with the right type, frequency and date; the counts at the top match the folder. |
+| F11 | Database list: open Database with a mix of decoded, RAW and stock-app `.sub` files. | `Reading files...` with a rising percentage, then every file newest first with the right type, frequency and date; the counts at the top match the folder. |
 | F11a | Sort and filter: press Left through the sort orders; in Options try each `Show` value and a protocol. | Each order and filter lists the expected files; leaving with Back and reopening a file keeps the order and filter until the main menu. |
 | F11b | Search: Options → `Search name`, type part of a name in either case; then save an empty text. | Only matching names, `*` in the header; empty text lists all again. |
 | F11c | Duplicates: copy a decoded `.sub` and a RAW capture with qFlipper under new names, then `Reload from SD`. | Both pairs show `=` and `=1`; `Show: Duplicates` lists the four files. |
@@ -77,6 +77,9 @@ region's rules.
 | F12b | Save report to SD on a RAW capture and on a decoded signal; then again on the same file. | `Report saved`, `reports/<name>.txt`, then `<name>_2.txt`; the files on the card contain the labelled sections shown on screen. |
 | F12c | Save report with the SD card nearly full or write-protected. | `Report not saved` with a reason; no partial report left on the card. |
 | F12d | Menu position: open a file, choose a report lower in the menu, press Back. | The menu returns with the same item highlighted. |
+| F13 | Progress: on a RAW capture of 1 MB or more, open it, then run `Unknown Protocol Analysis`, `Pulse Timeline` and `Save report to SD`. | `Opening...` while it opens; each long step shows a percentage that rises steadily while the work runs; the results are complete. Note how long each step takes. |
+| F13a | Sort persistence: in the Database press Left to `Name`, go back to the main menu, quit and restart the app, open the Database. | The list opens sorted by `Name`. |
+| F13b | Shortcuts and messages: in the Database hold OK on a file; then in a file's menu choose `Compare with...` and pick a `BAD` file. | Hold OK opens File details directly and Back returns to the list; the bad pick shows `Cannot compare` with the error tone and returns to the menu. |
 | F9 | SD card removed mid-session. | Save/open fail gracefully with an error tone; no crash. |
 | F10 | Memory: several capture/save/open/replay cycles. | Free heap (CLI `free` or the log) returns to baseline; no growth across cycles. |
 

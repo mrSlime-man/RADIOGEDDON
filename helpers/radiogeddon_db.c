@@ -74,7 +74,11 @@ static uint32_t
     return h;
 }
 
-RadioGeddonDb* radiogeddon_db_load(Storage* storage, RadioGeddonDbStatus* status) {
+RadioGeddonDb* radiogeddon_db_load(
+    Storage* storage,
+    RadioGeddonDbStatus* status,
+    RadioGeddonProgressCallback progress,
+    void* context) {
     *status = RadioGeddonDbOk;
     char* name = malloc(DB_NAME_BUF);
     size_t files = 0, name_bytes = 0;
@@ -132,6 +136,7 @@ RadioGeddonDb* radiogeddon_db_load(Storage* storage, RadioGeddonDbStatus* status
         RgDbEntry* e = &db->db.entries[i];
         radiogeddon_db_path(db, e, path);
         radiogeddon_db_read_entry(storage, e, furi_string_get_cstr(path), buf);
+        if(progress) progress(context, i + 1, db->db.count);
     }
 
     // Confirm RAW duplicates by content, only where sizes collide.

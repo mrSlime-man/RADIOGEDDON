@@ -8,7 +8,8 @@
  * never redrawn while it changes.
  *
  * Controls: Up/Down move (hold to repeat; wraps), Left changes the sort
- * order, Right opens the options, OK opens the highlighted file.
+ * order, Right opens the options, OK opens the highlighted file and holding
+ * OK shows its details.
  */
 #pragma once
 
@@ -19,6 +20,7 @@ typedef struct RadioGeddonDbView RadioGeddonDbView;
 
 typedef enum {
     RadioGeddonDbViewEventOpen,
+    RadioGeddonDbViewEventDetails, /* hold OK */
     RadioGeddonDbViewEventSort,
     RadioGeddonDbViewEventOptions,
 } RadioGeddonDbViewEvent;
