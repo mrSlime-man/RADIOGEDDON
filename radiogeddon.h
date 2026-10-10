@@ -18,6 +18,7 @@
 #include <gui/modules/popup.h>
 #include <gui/modules/text_input.h>
 #include <gui/modules/text_box.h>
+#include <gui/modules/number_input.h>
 #include <dialogs/dialogs.h>
 #include <notification/notification_messages.h>
 #include <storage/storage.h>
@@ -31,6 +32,7 @@
 #include "helpers/radiogeddon_hopper.h"
 #include "helpers/radiogeddon_report.h"
 #include "helpers/radiogeddon_memdiag.h"
+#include "helpers/rg_freq.h"
 #include "views/radiogeddon_scanner_view.h"
 #include "views/radiogeddon_receiver_view.h"
 #include "views/radiogeddon_timeline_view.h"
@@ -51,6 +53,7 @@ typedef enum {
     RadioGeddonViewReceiver,
     RadioGeddonViewTimeline, // added only while the Pulse Timeline is open
     RadioGeddonViewDb, // added only while the Database is open
+    RadioGeddonViewNumberInput, // added only while a custom frequency is typed
 } RadioGeddonView;
 
 typedef struct RadioGeddonApp RadioGeddonApp;
@@ -70,6 +73,8 @@ struct RadioGeddonApp {
     Popup* popup;
     TextInput* text_input;
     TextBox* text_box;
+    // Number keyboard: exists only while a custom frequency is typed.
+    NumberInput* number_input;
 
     // Custom live views
     RadioGeddonScannerView* scanner_view;

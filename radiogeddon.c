@@ -62,6 +62,10 @@ RadioGeddonApp* radiogeddon_app_alloc(void) {
                 app->subghz, RadioGeddonRadioExternal, app->settings.ext_power) ==
             RadioGeddonRadioExternal;
     }
+    // A custom frequency saved with another radio or firmware may not tune here.
+    if(!radiogeddon_subghz_is_frequency_allowed(app->subghz, app->frequency)) {
+        app->frequency = RADIOGEDDON_FREQUENCY_DEFAULT;
+    }
     radiogeddon_subghz_set_frequency(app->subghz, app->frequency);
     radiogeddon_subghz_set_preset(app->subghz, app->preset_index);
     app->history = radiogeddon_history_alloc();

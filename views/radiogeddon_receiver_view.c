@@ -1,4 +1,5 @@
 #include "radiogeddon_receiver_view.h"
+#include "../helpers/rg_freq.h"
 #include <gui/elements.h>
 #include <furi.h>
 
@@ -44,14 +45,10 @@ static void radiogeddon_receiver_view_draw(Canvas* canvas, void* model) {
 
     // Header: frequency + preset
     canvas_set_font(canvas, FontPrimary);
+    char freq[RG_FREQ_TEXT_SIZE];
+    rg_freq_text(m->frequency, freq, sizeof(freq));
     char header[24];
-    snprintf(
-        header,
-        sizeof(header),
-        "%lu.%02lu %s",
-        (unsigned long)(m->frequency / 1000000),
-        (unsigned long)((m->frequency % 1000000) / 10000),
-        m->preset_label);
+    snprintf(header, sizeof(header), "%s %s", freq, m->preset_label);
     canvas_draw_str(canvas, 2, 9, header);
     if(m->external) {
         canvas_set_font(canvas, FontSecondary);

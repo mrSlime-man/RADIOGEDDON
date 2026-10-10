@@ -37,16 +37,17 @@ static void radiogeddon_scene_replay_show_idle(RadioGeddonApp* app) {
     widget_add_string_element(
         widget, 64, 2, AlignCenter, AlignTop, FontPrimary, "Replay / Transmit");
 
+    char freq[RG_FREQ_TEXT_SIZE];
+    rg_freq_text(app->loaded.frequency, freq, sizeof(freq));
     furi_string_reset(app->temp_str);
     furi_string_cat_printf(
         app->temp_str,
-        "%s @ %lu.%02lu MHz\n"
+        "%s @ %s MHz\n"
         "Legal/region limits are\nenforced by firmware.\n"
         "Rolling-code protocols are\nrefused; a RAW capture is\nsent exactly as recorded.\n"
         "Only transmit devices you\nare authorized to test.",
         furi_string_get_cstr(app->loaded.protocol),
-        (unsigned long)(app->loaded.frequency / 1000000),
-        (unsigned long)((app->loaded.frequency % 1000000) / 10000));
+        freq);
     widget_add_text_scroll_element(widget, 0, 14, 128, 38, furi_string_get_cstr(app->temp_str));
     widget_add_button_element(
         widget, GuiButtonTypeCenter, "Send", radiogeddon_scene_replay_button_cb, app);

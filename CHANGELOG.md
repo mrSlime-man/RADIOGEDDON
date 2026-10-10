@@ -17,8 +17,17 @@ to follow [Semantic Versioning](https://semver.org/) (pre-1.0.0 releases use
   Manchester; longer frames weigh more in the vote; repeats sent closer than
   7 Te apart are split at their rarer, longer gap; and a carrier pulse of
   14 Te or more ends a frame. Results stay `[HYPOTHESIS]`.
+- **Frequencies are shown with their kHz.** 433.075, 303.875 and 434.775 MHz
+  read as 433.075, 303.875 and 434.775 in Settings, Receive, Replay, the
+  Database list and the Hopper statistics, where they were cut to 433.07,
+  303.87 and 434.77.
 
 ### Added
+- **Custom frequency**: press OK on `Frequency MHz` in Settings to type any
+  frequency in kHz for *Receive & Record*. The radio in use must be able to
+  tune it (otherwise `Cannot tune there` and nothing changes); it is saved
+  with the settings. Transmitting is still checked against the firmware's
+  region rules. The keyboard exists only while it is open.
 - **Capture tests** (`make -C test captures`, run in CI): the analyzer on
   the firmware's own RAW test captures, scored against each protocol's
   timing in the firmware's decoder source. A drop in any score fails the

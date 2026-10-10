@@ -37,7 +37,8 @@ locally.
 | Memory-bookkeeping unit tests | `make -C test check` → `test_memstat` | Pass — 30 checks |
 | Database-loading tests (stub Furi/Storage) | `make -C test check` → `test_dbload` | Pass — 45 checks |
 | RAW-to-decoder feeding tests | `make -C test check` → `test_decode` | Pass — 68 checks |
-| Format tests (firmware code, real files) | `make -C test formats` → `test_formats`: the firmware's FlipperFormat and stream code and its 85 Sub-GHz test files, from the commit of Official 1.4.3 | Pass — 562 checks |
+| Frequency text and range tests | `make -C test check` → `test_freq` | Pass — 32 checks |
+| Format tests (firmware code, real files) | `make -C test formats` → `test_formats`: the firmware's FlipperFormat and stream code and its 85 Sub-GHz test files, from the commit of Official 1.4.3 | Pass — 566 checks |
 | Analyzer on real captures | `make -C test captures` → `test_fwanalyze`: `rg_analyzer` on the firmware's 50 paired RAW test captures, scored against each protocol's decoder source | Pass — 354 checks; Te right for 48, encoding family for 41, frame length for 29 (see below) |
 | Decoder tests (firmware code, real captures) | `make -C test decoders` → `test_fwdecode`: the firmware's Sub-GHz receiver and all its protocol decoders, fed its 50 RAW test captures through `rg_decode` | Pass — 213 checks; all 50 decode and are described as the app describes them (see below) |
 | Fuzz corpus replay | `make -C test check` → `replay_fuzz_raw`, `replay_fuzz_db`, `replay_fuzz_samples` | Pass — every committed input |
@@ -50,7 +51,7 @@ locally.
 | Newer firmware (canary) | `scripts/firmware_watch.py --build` (weekly in CI): Official 1.5.1-rc SDK, API 88.2 | Builds; `APPCHK` and manifest pass. No release targets it yet, not hardware-tested |
 | `.fap` metadata | `scripts/verify_fap.py` parses `.fapmeta` and asserts magic, API, target, name, version, icon | Pass for all three artifacts |
 
-Host-test total: **613 checks, 0 failures** (`make -C test check`; the format, capture and decoder tests are counted on their own). What the suite covers (synthetic
+Host-test total: **645 checks, 0 failures** (`make -C test check`; the format, capture and decoder tests are counted on their own). What the suite covers (synthetic
 signals, not real captures):
 
 - `test_dsp` — RAW `RAW_Data` parsing (incl. whitespace, signs, out-of-range
@@ -149,6 +150,13 @@ signals, not real captures):
   PWM stand-in written for the test, fed synthetic frames with noise before
   them; mutating the level mapping or the timing order makes it fail. The
   firmware's real decoders are `test_fwdecode`'s.
+- `test_freq` — frequency text: two decimals for whole 10 kHz steps, three
+  otherwise (433.075 MHz is no longer shown as 433.07), digits below 1 kHz
+  dropped, short buffers; the range a saved or typed frequency must be in
+  (281-962 MHz, bounds included); the nearest list entry to a custom
+  frequency. Whether the radio tunes a frequency is the firmware's check and
+  is not tested on the host; `test_formats` checks that a custom frequency
+  is kept in `settings.txt` and an out-of-range one is not.
 
 The fuzz targets (`test/fuzz/`) feed arbitrary bytes to the code that reads
 files from the SD card and abort on any broken invariant, which libFuzzer and
@@ -191,7 +199,8 @@ captured or checked on our hardware. The suite covers:
   agreeing with it; the analyzer completing on all 51 RAW files with figures
   in range; and every byte and file handle returned;
 - settings saved and read back field by field, written as the firmware
-  writes Flipper Format; out-of-range values, the limits themselves, extra
+  writes Flipper Format; a custom frequency kept and one outside every
+  firmware's range refused; out-of-range values, the limits themselves, extra
   mask bits, keys in any order or missing, a session cost without its
   firmware, CRLF line ends, another file type or version, a file cut off
   mid-line, binary garbage and an empty file;
@@ -337,6 +346,10 @@ Everything about on-device radio behaviour, and the end-to-end workflow. See the
   written against the official firmware's `cc1101_ext` driver source (1.4.3);
   Unleashed and RogueMaster builds compile against their own SDKs, but their
   drivers' behaviour is unverified.
+- Custom frequency entry on a device (checklist F1f): the number keyboard,
+  the firmware refusing frequencies its radio cannot tune, and receiving on
+  a typed frequency. The keyboard and the radio check are firmware code and
+  are not run by the host tests.
 - *Decode with Firmware* on a device (checklist F4g): that the firmware's
   decoders find in a saved capture what Receive finds live, how long a long
   capture takes, and that the memory check and freeing hold on the firmware's

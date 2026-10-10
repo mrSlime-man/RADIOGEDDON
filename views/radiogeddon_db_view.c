@@ -1,4 +1,5 @@
 #include "radiogeddon_db_view.h"
+#include "../helpers/rg_freq.h"
 #include <gui/elements.h>
 #include <furi.h>
 
@@ -95,14 +96,9 @@ static void radiogeddon_db_view_footer(Canvas* canvas, const RgDbEntry* e) {
     } else {
         char when[16];
         radiogeddon_db_format_time(e->mtime, when, sizeof(when));
-        char freq[12];
+        char freq[RG_FREQ_TEXT_SIZE];
         if(e->frequency) {
-            snprintf(
-                freq,
-                sizeof(freq),
-                "%lu.%02lu",
-                (unsigned long)(e->frequency / 1000000),
-                (unsigned long)((e->frequency % 1000000) / 10000));
+            rg_freq_text(e->frequency, freq, sizeof(freq));
         } else {
             snprintf(freq, sizeof(freq), "-");
         }

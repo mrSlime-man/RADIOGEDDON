@@ -423,7 +423,7 @@ static void test_settings_malformed(void) {
 
     reset_card();
     write_settings_text("Filetype: RadioGeddon Settings\nVersion: 1\n"
-                        "Frequency: 433000000\nPreset: 4\nScan_mask: 0\nScan_dwell_ms: 0\n"
+                        "Frequency: 2400000000\nPreset: 4\nScan_mask: 0\nScan_dwell_ms: 0\n"
                         "Scan_threshold_db: 61\nHop_dwell_ms: 49\nHop_hold_ms: 60001\n"
                         "Db_sort: 4\nScan_hold_on_hit: maybe\nHop_mask: 0\n"
                         "Radio_heap: 300000\nRadio_heap_fw: 7\n");
@@ -454,6 +454,25 @@ static void test_settings_malformed(void) {
             got.radio_heap_fw == 99,
         "keys in any order; missing keys keep defaults");
     CHECK(got.hop_hold_ms == def.hop_hold_ms, "an absent key keeps its default");
+
+    /* A custom frequency (not in the app's list) is kept if some firmware can
+     * tune it; the radio in use is asked again at startup. */
+    reset_card();
+    write_settings_text("Filetype: RadioGeddon Settings\nVersion: 1\nFrequency: 433075500\n");
+    radiogeddon_settings_load(CARD, &got);
+    CHECK(got.frequency == 433075500, "a custom frequency is kept");
+    reset_card();
+    write_settings_text("Filetype: RadioGeddon Settings\nVersion: 1\nFrequency: 281000000\n");
+    radiogeddon_settings_load(CARD, &got);
+    CHECK(got.frequency == 281000000, "the lowest tunable frequency is kept");
+    reset_card();
+    write_settings_text("Filetype: RadioGeddon Settings\nVersion: 1\nFrequency: 280999999\n");
+    radiogeddon_settings_load(CARD, &got);
+    CHECK(got.frequency == def.frequency, "below every firmware's range: default");
+    reset_card();
+    write_settings_text("Filetype: RadioGeddon Settings\nVersion: 1\nFrequency: 962000001\n");
+    radiogeddon_settings_load(CARD, &got);
+    CHECK(got.frequency == def.frequency, "above every firmware's range: default");
 
     reset_card();
     write_settings_text("Filetype: RadioGeddon Settings\nVersion: 1\nRadio_heap: 20000\n");
