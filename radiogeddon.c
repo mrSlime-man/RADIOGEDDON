@@ -162,6 +162,9 @@ void radiogeddon_app_free(RadioGeddonApp* app) {
 #if RG_FEATURE_WATERFALL
     free(app->wf_buf); // normally freed when the Waterfall closes
 #endif
+#if RG_FEATURE_BITSTREAM
+    free(app->bits_doc); // normally freed when the explorer closes
+#endif
     radiogeddon_history_free(app->history);
     furi_mutex_free(app->history_mutex);
     radiogeddon_subghz_free(app->subghz);

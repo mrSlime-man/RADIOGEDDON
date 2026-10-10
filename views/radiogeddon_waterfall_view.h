@@ -12,11 +12,11 @@
  * the history, and the measured (or, before the first sweep, estimated)
  * sweep time, or how old the top row is when scrolled.
  *
- * Keys: Left/Right move the cursor one column (held: faster), Up/Down scroll
- * newer/older sweeps, OK pauses / resumes, long OK opens Receive on the
- * cursor, long Up puts the cursor on the strongest reading, long Left cycles
- * the sensitivity, long Down toggles noise-floor compensation, long Right
- * saves the history as CSV. Exists only while the Waterfall is open.
+ * Keys: Left/Right move the cursor one column (held: faster), Up/Down
+ * scroll four sweeps newer/older (the view then stays on those sweeps while
+ * new ones arrive), OK pauses / resumes the sweep. Holding OK opens a menu:
+ * Receive here, Cursor to peak, Newest sweeps, Sensitivity, Floor comp and
+ * Save history CSV; Back closes it. Exists only while the Waterfall is open.
  */
 #pragma once
 
@@ -31,9 +31,9 @@ typedef struct RadioGeddonWaterfallView RadioGeddonWaterfallView;
 
 typedef enum {
     RadioGeddonWaterfallEventTogglePause, // OK
-    RadioGeddonWaterfallEventReceive, // long OK
-    RadioGeddonWaterfallEventSave, // long Right
-    RadioGeddonWaterfallEventSettings, // long Left / long Down (sensitivity, compensation)
+    RadioGeddonWaterfallEventReceive, // menu: Receive here
+    RadioGeddonWaterfallEventSave, // menu: Save history CSV
+    RadioGeddonWaterfallEventSettings, // menu: sensitivity or compensation changed
 } RadioGeddonWaterfallEvent;
 
 typedef void (*RadioGeddonWaterfallCallback)(RadioGeddonWaterfallEvent event, void* context);

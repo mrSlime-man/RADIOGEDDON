@@ -26,7 +26,19 @@ typedef struct {
     bool external;
     bool have_frame;
     uint32_t last_stored; // frame.stored at the previous update
+    bool menu_open; // hold OK: the action menu over the picture
+    uint8_t menu_index;
 } RadioGeddonWaterfallModel;
+
+typedef enum {
+    WfMenuReceive,
+    WfMenuPeak,
+    WfMenuLive,
+    WfMenuSpan,
+    WfMenuComp,
+    WfMenuSave,
+    WfMenuCount,
+} WfMenuItem;
 
 static void
     radiogeddon_waterfall_seconds(char* out, size_t size, uint32_t ms, const char* prefix) {
@@ -144,6 +156,47 @@ static void radiogeddon_waterfall_view_draw(Canvas* canvas, void* model) {
         radiogeddon_waterfall_seconds(text, sizeof(text), f->estimate_ms, "~");
     }
     canvas_draw_str_aligned(canvas, 127, 63, AlignRight, AlignBottom, text);
+
+    if(m->menu_open) {
+        // Action menu: a framed list over the picture.
+        canvas_set_color(canvas, ColorWhite);
+        canvas_draw_box(canvas, 10, 8, 108, 56);
+        canvas_set_color(canvas, ColorBlack);
+        canvas_draw_frame(canvas, 10, 8, 108, 56);
+        for(uint8_t i = 0; i < WfMenuCount; i++) {
+            int32_t y = 17 + i * 9;
+            switch(i) {
+            case WfMenuReceive:
+                snprintf(text, sizeof(text), "Receive here");
+                break;
+            case WfMenuPeak:
+                snprintf(text, sizeof(text), "Cursor to peak");
+                break;
+            case WfMenuLive:
+                snprintf(text, sizeof(text), "Newest sweeps");
+                break;
+            case WfMenuSpan:
+                snprintf(
+                    text,
+                    sizeof(text),
+                    "< Sensitivity %u dB >",
+                    (unsigned)radiogeddon_waterfall_spans[m->span_index % RADIOGEDDON_WF_SPANS]);
+                break;
+            case WfMenuComp:
+                snprintf(text, sizeof(text), "< Floor comp %s >", m->noise_comp ? "On" : "Off");
+                break;
+            default:
+                snprintf(text, sizeof(text), "Save history CSV");
+                break;
+            }
+            if(i == m->menu_index) {
+                canvas_draw_box(canvas, 11, y - 8, 106, 9);
+                canvas_set_color(canvas, ColorWhite);
+            }
+            canvas_draw_str(canvas, 14, y, text);
+            canvas_set_color(canvas, ColorBlack);
+        }
+    }
 }
 
 static void radiogeddon_waterfall_view_send(
@@ -152,99 +205,117 @@ static void radiogeddon_waterfall_view_send(
     if(instance->callback) instance->callback(e, instance->context);
 }
 
+/* Menu action on the model; returns the event to send, or -1. */
+static int radiogeddon_waterfall_menu_act(RadioGeddonWaterfallModel* m, InputKey key) {
+    switch(m->menu_index) {
+    case WfMenuReceive:
+        if(key != InputKeyOk) return -1;
+        m->menu_open = false;
+        return RadioGeddonWaterfallEventReceive;
+    case WfMenuPeak:
+        if(key != InputKeyOk) return -1;
+        if(m->frame.have_peak) {
+            m->cursor = m->frame.peak_column;
+            // Scroll so the peak's sweep is on screen.
+            uint16_t age = m->frame.peak_age;
+            if(age < m->scroll || age >= m->scroll + RADIOGEDDON_WF_VIEW_H) {
+                uint16_t want = age > RADIOGEDDON_WF_VIEW_H / 2 ?
+                                    (uint16_t)(age - RADIOGEDDON_WF_VIEW_H / 2) :
+                                    0;
+                m->scroll = want > m->frame.max_scroll ? m->frame.max_scroll : want;
+            }
+        }
+        m->menu_open = false;
+        return -1;
+    case WfMenuLive:
+        if(key != InputKeyOk) return -1;
+        m->scroll = 0;
+        m->menu_open = false;
+        return -1;
+    case WfMenuSpan:
+        m->span_index =
+            (uint8_t)((m->span_index + (key == InputKeyLeft ? RADIOGEDDON_WF_SPANS - 1u : 1u)) %
+                      RADIOGEDDON_WF_SPANS);
+        return RadioGeddonWaterfallEventSettings;
+    case WfMenuComp:
+        m->noise_comp = !m->noise_comp;
+        return RadioGeddonWaterfallEventSettings;
+    default:
+        if(key != InputKeyOk) return -1;
+        m->menu_open = false;
+        return RadioGeddonWaterfallEventSave;
+    }
+}
+
+/* Keys on the model; returns the event to send, or -1. A held key gives a
+ * long press and then repeats, so no key has both a "fast" and a separate
+ * long-press meaning. */
+static int radiogeddon_waterfall_input_model(RadioGeddonWaterfallModel* m, InputEvent* event) {
+    bool any = event->type == InputTypeShort || event->type == InputTypeLong ||
+               event->type == InputTypeRepeat;
+    if(m->menu_open) {
+        if(event->key == InputKeyBack) {
+            if(event->type == InputTypeShort) m->menu_open = false;
+            return -1;
+        }
+        if(event->type != InputTypeShort && event->type != InputTypeRepeat) return -1;
+        if(event->key == InputKeyUp) {
+            m->menu_index = (uint8_t)(m->menu_index ? m->menu_index - 1u : WfMenuCount - 1u);
+        } else if(event->key == InputKeyDown) {
+            m->menu_index = (uint8_t)((m->menu_index + 1u) % WfMenuCount);
+        } else if(event->type == InputTypeShort) {
+            return radiogeddon_waterfall_menu_act(m, event->key);
+        }
+        return -1;
+    }
+    if(event->key == InputKeyOk) {
+        if(event->type == InputTypeShort) return RadioGeddonWaterfallEventTogglePause;
+        if(event->type == InputTypeLong) {
+            m->menu_open = true;
+            m->menu_index = WfMenuReceive;
+        }
+        return -1;
+    }
+    if(!any) return -1;
+    if(event->key == InputKeyLeft || event->key == InputKeyRight) {
+        // Held: the long press and its repeats move faster.
+        uint16_t n = m->frame.columns;
+        if(n > 0) {
+            uint16_t step = (event->type != InputTypeShort && n >= 32) ? (uint16_t)(n / 32u) : 1u;
+            if(event->key == InputKeyRight) {
+                m->cursor = (uint16_t)((m->cursor + step < n) ? m->cursor + step : 0);
+            } else {
+                m->cursor = (uint16_t)((m->cursor >= step) ? m->cursor - step : n - 1);
+            }
+        }
+    } else if(event->key == InputKeyUp || event->key == InputKeyDown) {
+        // One sweep is one pixel row: scroll a few at a time.
+        uint16_t step = 4u;
+        uint16_t max = m->frame.max_scroll;
+        if(event->key == InputKeyDown) {
+            m->scroll = (uint16_t)(m->scroll + step > max ? max : m->scroll + step);
+        } else {
+            m->scroll = (uint16_t)(m->scroll > step ? m->scroll - step : 0);
+        }
+    }
+    return -1;
+}
+
 static bool radiogeddon_waterfall_view_input(InputEvent* event, void* context) {
     RadioGeddonWaterfallView* instance = context;
-    bool repeat = event->type == InputTypeRepeat;
-
-    if((event->type == InputTypeShort || repeat) &&
-       (event->key == InputKeyLeft || event->key == InputKeyRight)) {
-        bool right = event->key == InputKeyRight;
-        with_view_model(
-            instance->view,
-            RadioGeddonWaterfallModel * m,
-            {
-                uint16_t n = m->frame.columns;
-                if(n > 0) {
-                    uint16_t step = (repeat && n >= 32) ? (uint16_t)(n / 32u) : 1u;
-                    if(right) {
-                        m->cursor = (uint16_t)((m->cursor + step < n) ? m->cursor + step : 0);
-                    } else {
-                        m->cursor = (uint16_t)((m->cursor >= step) ? m->cursor - step : n - 1);
-                    }
-                }
-            },
-            true);
-        return true;
-    }
-    if((event->type == InputTypeShort || repeat) &&
-       (event->key == InputKeyUp || event->key == InputKeyDown)) {
-        bool older = event->key == InputKeyDown;
-        with_view_model(
-            instance->view,
-            RadioGeddonWaterfallModel * m,
-            {
-                uint16_t step = repeat ? 4u : 1u;
-                uint16_t max = m->frame.max_scroll;
-                if(older) {
-                    m->scroll = (uint16_t)(m->scroll + step > max ? max : m->scroll + step);
-                } else {
-                    m->scroll = (uint16_t)(m->scroll > step ? m->scroll - step : 0);
-                }
-            },
-            true);
-        return true;
-    }
-    if(event->type == InputTypeShort && event->key == InputKeyOk) {
-        radiogeddon_waterfall_view_send(instance, RadioGeddonWaterfallEventTogglePause);
-        return true;
-    }
-    if(event->type != InputTypeLong) return false;
-    switch(event->key) {
-    case InputKeyOk:
-        radiogeddon_waterfall_view_send(instance, RadioGeddonWaterfallEventReceive);
-        return true;
-    case InputKeyRight:
-        radiogeddon_waterfall_view_send(instance, RadioGeddonWaterfallEventSave);
-        return true;
-    case InputKeyUp:
-        // Cursor to the strongest stored reading, and scroll to show its row.
-        with_view_model(
-            instance->view,
-            RadioGeddonWaterfallModel * m,
-            {
-                if(m->frame.have_peak) {
-                    m->cursor = m->frame.peak_column;
-                    if(m->frame.peak_age < m->scroll ||
-                       m->frame.peak_age >= m->scroll + RADIOGEDDON_WF_VIEW_H) {
-                        uint16_t want =
-                            m->frame.peak_age > RADIOGEDDON_WF_VIEW_H / 2 ?
-                                (uint16_t)(m->frame.peak_age - RADIOGEDDON_WF_VIEW_H / 2) :
-                                0;
-                        m->scroll = want > m->frame.max_scroll ? m->frame.max_scroll : want;
-                    }
-                }
-            },
-            true);
-        return true;
-    case InputKeyLeft:
-        with_view_model(
-            instance->view,
-            RadioGeddonWaterfallModel * m,
-            { m->span_index = (uint8_t)((m->span_index + 1u) % RADIOGEDDON_WF_SPANS); },
-            true);
-        radiogeddon_waterfall_view_send(instance, RadioGeddonWaterfallEventSettings);
-        return true;
-    case InputKeyDown:
-        with_view_model(
-            instance->view,
-            RadioGeddonWaterfallModel * m,
-            { m->noise_comp = !m->noise_comp; },
-            true);
-        radiogeddon_waterfall_view_send(instance, RadioGeddonWaterfallEventSettings);
-        return true;
-    default:
-        return false;
-    }
+    int send = -1;
+    bool consumed = true;
+    with_view_model(
+        instance->view,
+        RadioGeddonWaterfallModel * m,
+        {
+            // Back leaves the screen unless it closes the menu.
+            if(event->key == InputKeyBack && !m->menu_open) consumed = false;
+            if(consumed) send = radiogeddon_waterfall_input_model(m, event);
+        },
+        true);
+    if(send >= 0) radiogeddon_waterfall_view_send(instance, (RadioGeddonWaterfallEvent)send);
+    return consumed;
 }
 
 RadioGeddonWaterfallView* radiogeddon_waterfall_view_alloc(void) {

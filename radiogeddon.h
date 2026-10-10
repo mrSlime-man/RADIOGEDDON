@@ -43,6 +43,7 @@
 #include "views/radiogeddon_db_view.h"
 #include "views/radiogeddon_spectrum_view.h"
 #include "views/radiogeddon_waterfall_view.h"
+#include "views/radiogeddon_bits_view.h"
 
 #define RADIOGEDDON_TEXT_INPUT_BUFFER_SIZE 64
 #define RADIOGEDDON_TAG                    "RadioGeddon"
@@ -62,6 +63,7 @@ typedef enum {
     RadioGeddonViewNumberInput, // added only while a custom frequency is typed
     RadioGeddonViewSpectrum, // Full: added only while the Range Scanner is open
     RadioGeddonViewWaterfall, // Full: added only while the Waterfall is open
+    RadioGeddonViewBits, // Full: added only while the Bitstream Explorer is open
 } RadioGeddonView;
 
 /** What a frequency typed on the number keyboard is for. */
@@ -188,6 +190,12 @@ struct RadioGeddonApp {
     uint16_t wf_cursor; // column under the cursor, kept across a trip to Receive
     uint8_t wf_span_index; // sensitivity (radiogeddon_waterfall_spans)
     bool wf_noise_comp;
+#endif
+#if RG_FEATURE_BITSTREAM
+    // Bitstream Explorer: the analysis of the open capture and its screen,
+    // only while the explorer is open.
+    RadioGeddonBitsView* bits_view;
+    RgAnalysis* bits_doc;
 #endif
 };
 

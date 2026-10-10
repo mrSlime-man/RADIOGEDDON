@@ -34,3 +34,6 @@ ADD_SCENE(radiogeddon, bands, Bands)
 #if RG_FEATURE_WATERFALL
 ADD_SCENE(radiogeddon, waterfall, Waterfall)
 #endif
+#if RG_FEATURE_BITSTREAM
+ADD_SCENE(radiogeddon, bitstream, Bitstream)
+#endif

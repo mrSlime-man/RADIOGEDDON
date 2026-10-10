@@ -5,6 +5,7 @@ typedef enum {
     SavedInfoIndexDecode,
     SavedInfoIndexUnknown,
     SavedInfoIndexTimeline,
+    SavedInfoIndexBitstream, // Full edition
     SavedInfoIndexCrypto,
     SavedInfoIndexCompare,
     SavedInfoIndexReplay,
@@ -106,6 +107,14 @@ static void radiogeddon_scene_saved_info_show_menu(RadioGeddonApp* app) {
             SavedInfoIndexTimeline,
             radiogeddon_scene_saved_info_cb,
             app);
+#if RG_FEATURE_BITSTREAM
+        submenu_add_item(
+            submenu,
+            "Bitstream Explorer",
+            SavedInfoIndexBitstream,
+            radiogeddon_scene_saved_info_cb,
+            app);
+#endif
     }
     submenu_add_item(
         submenu, "Crypto Analysis", SavedInfoIndexCrypto, radiogeddon_scene_saved_info_cb, app);
@@ -178,6 +187,12 @@ bool radiogeddon_scene_saved_info_on_event(void* context, SceneManagerEvent even
             scene_manager_next_scene(app->scene_manager, RadioGeddonSceneTimeline);
             consumed = true;
             break;
+#if RG_FEATURE_BITSTREAM
+        case SavedInfoIndexBitstream:
+            scene_manager_next_scene(app->scene_manager, RadioGeddonSceneBitstream);
+            consumed = true;
+            break;
+#endif
         case SavedInfoIndexCrypto:
             scene_manager_next_scene(app->scene_manager, RadioGeddonSceneCrypto);
             consumed = true;
