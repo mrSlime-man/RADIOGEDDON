@@ -22,3 +22,12 @@ ADD_SCENE(radiogeddon, compare_result, CompareResult)
 ADD_SCENE(radiogeddon, replay, Replay)
 ADD_SCENE(radiogeddon, about, About)
 ADD_SCENE(radiogeddon, message, Message)
+#if RG_EDITION_FULL
+ADD_SCENE(radiogeddon, range_setup, RangeSetup)
+ADD_SCENE(radiogeddon, range_scan, RangeScan)
+ADD_SCENE(radiogeddon, profiles, Profiles)
+ADD_SCENE(radiogeddon, profile_name, ProfileName)
+ADD_SCENE(radiogeddon, favorites, Favorites)
+ADD_SCENE(radiogeddon, favorite_options, FavoriteOptions)
+ADD_SCENE(radiogeddon, bands, Bands)
+#endif

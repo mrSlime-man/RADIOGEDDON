@@ -110,6 +110,8 @@ static void radiogeddon_scene_receiver_view_cb(RadioGeddonReceiverEvent event, v
 
 void radiogeddon_scene_receiver_on_enter(void* context) {
     RadioGeddonApp* app = context;
+    bool autorecord = app->receiver_autorecord;
+    app->receiver_autorecord = false;
 
     // Clear the session list only on a fresh entry, not when returning from the
     // save-name screen (so saving one decode does not discard the others).
@@ -140,6 +142,10 @@ void radiogeddon_scene_receiver_on_enter(void* context) {
         if(!radiogeddon_scene_radio_memory_ok(app)) return;
         radiogeddon_subghz_rx_start(app->subghz, radiogeddon_scene_receiver_decode_cb, app);
         radiogeddon_memdiag_sample("Receiver");
+        // Long OK on a scanner screen: start recording straight away.
+        if(autorecord && radiogeddon_subghz_is_rx_running(app->subghz)) {
+            radiogeddon_scene_receiver_start_recording(app);
+        }
     } else {
         // No radio: show a clear message instead of pretending to receive.
         popup_reset(app->popup);

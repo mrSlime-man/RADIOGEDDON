@@ -2,8 +2,10 @@
 
 typedef enum {
     StartIndexScanner,
+    StartIndexRange, // Full edition
     StartIndexReceiver,
     StartIndexHopper,
+    StartIndexFavorites, // Full edition
     StartIndexDatabase,
     StartIndexSettings,
     StartIndexAbout,
@@ -29,10 +31,14 @@ void radiogeddon_scene_start_on_enter(void* context) {
     }
     Submenu* submenu = app->submenu;
     submenu_reset(submenu);
-    submenu_set_header(submenu, "RadioGeddon");
+    submenu_set_header(submenu, RG_EDITION_FULL ? "RadioGeddon Full" : "RadioGeddon");
 
     submenu_add_item(
         submenu, "Scanner", StartIndexScanner, radiogeddon_scene_start_submenu_callback, app);
+#if RG_FEATURE_RANGE_SCAN
+    submenu_add_item(
+        submenu, "Range Scanner", StartIndexRange, radiogeddon_scene_start_submenu_callback, app);
+#endif
     submenu_add_item(
         submenu,
         "Receive & Record",
@@ -45,6 +51,10 @@ void radiogeddon_scene_start_on_enter(void* context) {
         StartIndexHopper,
         radiogeddon_scene_start_submenu_callback,
         app);
+#if RG_FEATURE_FAVORITES
+    submenu_add_item(
+        submenu, "Favorites", StartIndexFavorites, radiogeddon_scene_start_submenu_callback, app);
+#endif
     submenu_add_item(
         submenu, "Database", StartIndexDatabase, radiogeddon_scene_start_submenu_callback, app);
     submenu_add_item(
@@ -72,6 +82,18 @@ bool radiogeddon_scene_start_on_event(void* context, SceneManagerEvent event) {
         case StartIndexReceiver:
             scene_manager_next_scene(app->scene_manager, RadioGeddonSceneReceiver);
             break;
+#if RG_FEATURE_RANGE_SCAN
+        case StartIndexRange:
+            scene_manager_set_scene_state(app->scene_manager, RadioGeddonSceneRangeSetup, 0);
+            scene_manager_next_scene(app->scene_manager, RadioGeddonSceneRangeSetup);
+            break;
+#endif
+#if RG_FEATURE_FAVORITES
+        case StartIndexFavorites:
+            scene_manager_set_scene_state(app->scene_manager, RadioGeddonSceneFavorites, 0);
+            scene_manager_next_scene(app->scene_manager, RadioGeddonSceneFavorites);
+            break;
+#endif
         case StartIndexHopper:
             scene_manager_next_scene(app->scene_manager, RadioGeddonSceneHopper);
             break;

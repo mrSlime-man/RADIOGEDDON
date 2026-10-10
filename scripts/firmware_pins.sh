@@ -11,6 +11,12 @@
 # therefore targets one firmware family; the *_API values below are asserted
 # against both the SDK and the built .fap.
 #
+# Release artifacts (scripts/build_target.sh <target>):
+#   catalog-official   Catalog edition, Official SDK
+#   full-roguemaster   Full edition, RogueMaster source tree
+#   full-momentum      Full edition, Momentum SDK
+#   full-unleashed     Full edition, Unleashed SDK
+#
 # To move to a newer firmware: update URL + SHA256 (+ API) here, rebuild, run
 # the hardware checklist, and note the change in CHANGELOG.md.
 
@@ -36,6 +42,18 @@ UNLEASHED_SDK_URL="https://unleashedflip.com/fw/unlshd-093/flipper-z-f7-sdk-unls
 UNLEASHED_SDK_SHA256="1eebdcf8cb1ffad4266bc084f872d2b79b0c26b98bc86162865e89aa1b375e66"
 UNLEASHED_FW_LABEL="Unleashed unlshd-093"
 UNLEASHED_API="88.9"
+
+# Momentum firmware mntm-012 (release channel). Momentum publishes its SDK with
+# each GitHub release; the same file and SHA-256 are listed in its update
+# index (https://up.momentum-fw.dev/firmware/directory.json, channel release).
+# Momentum numbers its API like Official (87.1) but exports its own symbol
+# table, so a .fap built against another SDK is not a Momentum build.
+MOMENTUM_SDK_URL="https://github.com/Next-Flip/Momentum-Firmware/releases/download/mntm-012/flipper-z-f7-sdk-mntm-012.zip"
+MOMENTUM_SDK_SHA256="c90530c3e0aa7bc4356b8521df20d23d7b4a5435ab58a2530ffb696200408cc2"
+MOMENTUM_FW_LABEL="Momentum mntm-012"
+MOMENTUM_API="87.1"
+# Source commit of tag mntm-012 (recorded for provenance; the build uses the SDK).
+MOMENTUM_SOURCE_COMMIT="e1784e7418d8b074e971983ceb6fef0f37e52ae4"
 
 # RogueMaster publishes no standalone SDK zip, so the app is compiled inside
 # the RogueMaster source tree with its own fbt, pinned to an exact commit.

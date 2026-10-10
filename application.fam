@@ -1,15 +1,22 @@
+# RadioGeddon Catalog edition: the Official firmware / Flipper Apps Catalog
+# build. A plain `ufbt` in this folder builds it, which is how the Apps Catalog
+# builds the app. The Full edition (RogueMaster, Momentum, Unleashed) is built
+# from a copy written by scripts/stage_edition.py, which changes only the
+# appid, name, description and edition define below (see radiogeddon_edition.h).
 App(
     appid="radiogeddon",
     name="RadioGeddon",
     apptype=FlipperAppType.EXTERNAL,
     entry_point="radiogeddon_app",
     stack_size=4 * 1024,
+    cdefines=["RADIOGEDDON_EDITION_CATALOG"],
     fap_category="Sub-GHz",
     fap_author="Georgii",
     fap_version="1.0",
-    fap_description="Standalone Sub-GHz radio analysis toolkit: scan, hop, record, decode, analyze, compare and replay signals on-device.",
+    fap_description="Sub-GHz signal analysis toolkit: scan, hop, record, decode, analyze, compare and replay signals on-device.",
     fap_icon="assets/icon_10px.png",
     fap_icon_assets="assets",
+    fap_weburl="https://github.com/mrSlime-man/RADIOGEDDON",
     # Each entry is matched recursively from the app root, so they must not
     # overlap (that would compile a file twice). The lone root file is named
     # explicitly and the host-only test/ directory is intentionally excluded.

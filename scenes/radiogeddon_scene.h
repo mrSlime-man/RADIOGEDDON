@@ -46,6 +46,19 @@ void radiogeddon_scene_progress_end(RadioGeddonApp* app);
  */
 void radiogeddon_scene_show_message(RadioGeddonApp* app, const char* header, const char* text);
 
+/**
+ * Ask before a destructive action: @p header, @p text (copied), and Cancel /
+ * @p yes_label buttons that post @p event_no / @p event_yes. Back cancels
+ * through the scene's own Back handling.
+ */
+void radiogeddon_scene_show_confirm(
+    RadioGeddonApp* app,
+    const char* header,
+    const char* text,
+    const char* yes_label,
+    uint32_t event_yes,
+    uint32_t event_no);
+
 /** Free the Database index and list view, if they exist. */
 void radiogeddon_scene_db_release(RadioGeddonApp* app);
 
@@ -67,3 +80,26 @@ bool radiogeddon_scene_decoders_fit(RadioGeddonApp* app);
 
 /** After a receive session: keep its measured cost for the next check. */
 void radiogeddon_scene_radio_memory_learn(RadioGeddonApp* app);
+
+#if RG_EDITION_FULL
+/** The favorites, read from the card the first time they are needed. */
+RadioGeddonFavorites* radiogeddon_scene_favorites(RadioGeddonApp* app);
+
+/** Measure the bands the radio in use accepts into app->bands. */
+void radiogeddon_scene_probe_bands(RadioGeddonApp* app);
+
+/** Plan the range in the settings over app->bands into app->range. */
+RgRangeResult radiogeddon_scene_plan_range(RadioGeddonApp* app);
+#endif
+
+/**
+ * Fill @p out with the frequencies a Scanner or Hopper source gives (the
+ * built-in list under @p mask, or the favorites in the Full edition), keeping
+ * only those the radio in use can tune. Returns how many, at most @p max.
+ */
+size_t radiogeddon_scene_build_list(
+    RadioGeddonApp* app,
+    uint8_t source,
+    uint32_t mask,
+    uint32_t* out,
+    size_t max);

@@ -21,6 +21,8 @@
 #include "radiogeddon_recorder.h"
 #include "rg_decode.h"
 #include "radiogeddon_bands.h"
+#include "rg_range.h"
+#include "rg_txpolicy.h"
 
 typedef struct RadioGeddonSubGhz RadioGeddonSubGhz;
 
@@ -83,6 +85,13 @@ void radiogeddon_subghz_set_preset(RadioGeddonSubGhz* instance, uint8_t preset_i
  * subghz_devices_set_tx() at transmit time.
  */
 bool radiogeddon_subghz_is_frequency_allowed(RadioGeddonSubGhz* instance, uint32_t frequency);
+
+/**
+ * The receive bands the radio in use accepts, measured by asking its driver
+ * (rg_range_probe_bands over the CC1101's three bands). Cheap: a few dozen
+ * driver checks, no radio access.
+ */
+void radiogeddon_subghz_probe_bands(RadioGeddonSubGhz* instance, RgBandSet* out); // Full edition
 
 /**
  * Begin receiving. When @p decode_callback is non-NULL the configured protocol
@@ -187,7 +196,21 @@ typedef enum {
     RadioGeddonTxErrorNoDevice,
     RadioGeddonTxErrorBusy,
     RadioGeddonTxErrorPreset, /* custom preset damaged or writing a command strobe */
+    RadioGeddonTxErrorPolicy, /* the app's transmit check refused: see _tx_verdict() */
 } RadioGeddonTxResult;
+
+/**
+ * The app's transmit check for @p frequency (rg_txpolicy with the firmware's
+ * region facts and the edition's RG_FEATURE_REGION_TX_GATE). Changes nothing;
+ * tx_start runs the same check before it touches the radio.
+ */
+RgTxVerdict radiogeddon_subghz_tx_check(RadioGeddonSubGhz* instance, uint32_t frequency);
+
+/** Verdict and frequency of the last tx_start, for explaining a refusal. */
+RgTxVerdict radiogeddon_subghz_tx_verdict(RadioGeddonSubGhz* instance, uint32_t* frequency);
+
+/** The firmware's region name ("EU"), or "--" when it has none. */
+const char* radiogeddon_subghz_region_name(void);
 
 typedef void (*RadioGeddonTxCompleteCallback)(void* context);
 

@@ -30,7 +30,28 @@ typedef struct {
     bool ext_power; // switch on 5 V (GPIO pin 1) for the external module
     uint32_t radio_heap; // heap the last measured receive session took (0: none)
     uint32_t radio_heap_fw; // firmware it was measured on (rg_mem_firmware_tag)
+    // Full edition. Both editions read and write these, so a settings file
+    // keeps them when the other edition saves it.
+    uint32_t range_start_hz; // range scanner: first frequency
+    uint32_t range_end_hz; // range scanner: last frequency
+    uint32_t range_step_hz; // range scanner: grid step
+    uint16_t range_dwell_ms; // range scanner: listening time per point
+    bool range_hold_on_hit; // range scanner: pause on the point that became active
+    uint8_t scan_source; // RadioGeddonSource: Scanner frequencies
+    uint8_t hop_source; // RadioGeddonSource: Hopper frequencies
+    uint32_t freq_step_hz; // Settings frequency step (0: step through the list)
 } RadioGeddonSettings;
+
+/** Where the Scanner and the Hopper take their frequencies from. */
+typedef enum {
+    RadioGeddonSourceList, // the built-in list, filtered by the scan/hop mask
+    RadioGeddonSourceFavorites, // the favorites file (Full edition)
+    RadioGeddonSourceCount,
+} RadioGeddonSource;
+
+#define RADIOGEDDON_RANGE_DEFAULT_START 433000000UL
+#define RADIOGEDDON_RANGE_DEFAULT_END   435000000UL
+#define RADIOGEDDON_RANGE_DEFAULT_STEP  25000UL
 
 /** Default hopper list: the frequencies in radiogeddon_hopper_frequencies. */
 uint32_t radiogeddon_settings_default_hop_mask(void);

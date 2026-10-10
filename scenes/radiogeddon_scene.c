@@ -29,6 +29,49 @@ const SceneManagerHandlers radiogeddon_scene_handlers = {
     .scene_num = RadioGeddonSceneNum,
 };
 
+static uint32_t radiogeddon_confirm_yes;
+static uint32_t radiogeddon_confirm_no;
+
+static void radiogeddon_scene_confirm_cb(GuiButtonType result, InputType type, void* context) {
+    RadioGeddonApp* app = context;
+    if(type != InputTypeShort) return;
+    if(result == GuiButtonTypeLeft) {
+        view_dispatcher_send_custom_event(app->view_dispatcher, radiogeddon_confirm_no);
+    } else if(result == GuiButtonTypeRight) {
+        view_dispatcher_send_custom_event(app->view_dispatcher, radiogeddon_confirm_yes);
+    }
+}
+
+void radiogeddon_scene_show_confirm(
+    RadioGeddonApp* app,
+    const char* header,
+    const char* text,
+    const char* yes_label,
+    uint32_t event_yes,
+    uint32_t event_no) {
+    radiogeddon_confirm_yes = event_yes;
+    radiogeddon_confirm_no = event_no;
+    Widget* widget = app->widget;
+    widget_reset(widget);
+    widget_add_string_element(widget, 64, 4, AlignCenter, AlignTop, FontPrimary, header);
+    furi_string_set(app->temp_str, text);
+    widget_add_text_box_element(
+        widget,
+        0,
+        18,
+        128,
+        30,
+        AlignCenter,
+        AlignCenter,
+        furi_string_get_cstr(app->temp_str),
+        false);
+    widget_add_button_element(
+        widget, GuiButtonTypeLeft, "Cancel", radiogeddon_scene_confirm_cb, app);
+    widget_add_button_element(
+        widget, GuiButtonTypeRight, yes_label, radiogeddon_scene_confirm_cb, app);
+    view_dispatcher_switch_to_view(app->view_dispatcher, RadioGeddonViewWidget);
+}
+
 void radiogeddon_scene_show_busy(RadioGeddonApp* app, const char* text) {
     popup_reset(app->popup);
     popup_set_header(app->popup, text, 64, 32, AlignCenter, AlignCenter);
@@ -148,4 +191,57 @@ void radiogeddon_scene_db_release(RadioGeddonApp* app) {
     app->db = NULL;
     app->db_keep = false;
     app->db_dirty = false;
+}
+
+#if RG_EDITION_FULL
+RadioGeddonFavorites* radiogeddon_scene_favorites(RadioGeddonApp* app) {
+    if(!app->favorites_loaded) {
+        radiogeddon_favorites_load(app->storage, &app->favorites);
+        app->favorites_loaded = true;
+    }
+    return &app->favorites;
+}
+
+void radiogeddon_scene_probe_bands(RadioGeddonApp* app) {
+    radiogeddon_subghz_probe_bands(app->subghz, &app->bands);
+}
+
+RgRangeResult radiogeddon_scene_plan_range(RadioGeddonApp* app) {
+    app->range_result = rg_range_plan(
+        &app->range,
+        app->settings.range_start_hz,
+        app->settings.range_end_hz,
+        app->settings.range_step_hz,
+        &app->bands,
+        RG_RANGE_MAX_POINTS);
+    return app->range_result;
+}
+#endif
+
+size_t radiogeddon_scene_build_list(
+    RadioGeddonApp* app,
+    uint8_t source,
+    uint32_t mask,
+    uint32_t* out,
+    size_t max) {
+    size_t n = 0;
+#if RG_FEATURE_FAVORITES
+    if(source == RadioGeddonSourceFavorites) {
+        const RadioGeddonFavorites* fav = radiogeddon_scene_favorites(app);
+        for(size_t i = 0; i < fav->count && n < max; i++) {
+            if(radiogeddon_subghz_is_frequency_allowed(app->subghz, fav->freq[i])) {
+                out[n++] = fav->freq[i];
+            }
+        }
+        return n;
+    }
+#else
+    UNUSED(source); // only the built-in list in this edition
+#endif
+    for(size_t i = 0; i < radiogeddon_frequencies_count && i < 32 && n < max; i++) {
+        if(!(mask & (1u << i))) continue;
+        uint32_t f = radiogeddon_frequencies[i];
+        if(radiogeddon_subghz_is_frequency_allowed(app->subghz, f)) out[n++] = f;
+    }
+    return n;
 }

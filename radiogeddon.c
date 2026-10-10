@@ -151,6 +151,10 @@ void radiogeddon_app_free(RadioGeddonApp* app) {
 
     if(app->scanner) radiogeddon_scanner_free(app->scanner);
     if(app->hopper) radiogeddon_hopper_free(app->hopper);
+#if RG_FEATURE_RANGE_SCAN
+    // Normally freed when the Range Scanner screen closes.
+    if(app->rangescan) radiogeddon_rangescan_free(app->rangescan);
+#endif
     radiogeddon_history_free(app->history);
     furi_mutex_free(app->history_mutex);
     radiogeddon_subghz_free(app->subghz);

@@ -38,12 +38,34 @@ typedef enum {
     ConfigItemHopRecord,
     ConfigItemRadio,
     ConfigItemExtPower,
+    // Full edition only (last, so the indices above are the same in both).
+    ConfigItemScanSource,
+    ConfigItemHopSource,
+    ConfigItemFreqStep,
+    ConfigItemBands,
 } ConfigItem;
 
 #define ConfigCustomEditScanList 600
 #define ConfigCustomEditHopList  601
 #define ConfigCustomExtMissing   602
 #define ConfigCustomFrequency    603
+#define ConfigCustomRebuild      604
+#define ConfigCustomBands        605
+
+#if RG_FEATURE_FREQ_STEP
+/* Frequency steps for Left/Right on "Frequency MHz"; 0 steps through the list. */
+static const uint32_t config_freq_steps_hz[] =
+    {0, 1000, 5000, 10000, 12500, 25000, 100000, 1000000};
+static const char* const config_freq_step_text[] =
+    {"List", "1 kHz", "5 kHz", "10 kHz", "12.5 kHz", "25 kHz", "100 kHz", "1 MHz"};
+/* In step mode the item has three values and sits on the middle one: Left
+ * and Right move it off the middle, the change is applied, and it goes back. */
+#define CONFIG_STEP_MIDDLE 1
+#endif
+
+#if RG_FEATURE_FAVORITES
+static const char* const config_source_text[RadioGeddonSourceCount] = {"List", "Favorites"};
+#endif
 
 static uint32_t radiogeddon_config_band_mask(size_t band) {
     return rg_scan_band_mask(
@@ -63,8 +85,20 @@ static size_t radiogeddon_config_current_band(uint32_t mask) {
 static void radiogeddon_scene_config_freq_changed(VariableItem* item) {
     RadioGeddonApp* app = variable_item_get_context(item);
     uint8_t index = variable_item_get_current_value_index(item);
-    uint32_t hz = radiogeddon_frequencies[index];
     char text[RG_FREQ_TEXT_SIZE];
+#if RG_FEATURE_FREQ_STEP
+    if(app->settings.freq_step_hz) {
+        // Step within the bands the radio accepts, jumping over the gaps.
+        int32_t delta = (int32_t)app->settings.freq_step_hz;
+        if(index < CONFIG_STEP_MIDDLE) delta = -delta;
+        app->frequency = rg_range_step(&app->bands, app->frequency, delta);
+        variable_item_set_current_value_index(item, CONFIG_STEP_MIDDLE);
+        rg_freq_text(app->frequency, text, sizeof(text));
+        variable_item_set_current_value_text(item, text);
+        return;
+    }
+#endif
+    uint32_t hz = radiogeddon_frequencies[index];
     rg_freq_text(hz, text, sizeof(text));
     variable_item_set_current_value_text(item, text);
     app->frequency = hz;
@@ -212,8 +246,42 @@ static void radiogeddon_scene_config_ext_power_changed(VariableItem* item) {
     }
 }
 
+#if RG_EDITION_FULL
+static void radiogeddon_scene_config_scan_source_changed(VariableItem* item) {
+    RadioGeddonApp* app = variable_item_get_context(item);
+    uint8_t index = variable_item_get_current_value_index(item);
+    app->settings.scan_source = index;
+    variable_item_set_current_value_text(item, config_source_text[index]);
+}
+
+static void radiogeddon_scene_config_hop_source_changed(VariableItem* item) {
+    RadioGeddonApp* app = variable_item_get_context(item);
+    uint8_t index = variable_item_get_current_value_index(item);
+    app->settings.hop_source = index;
+    variable_item_set_current_value_text(item, config_source_text[index]);
+}
+
+static void radiogeddon_scene_config_freq_step_changed(VariableItem* item) {
+    RadioGeddonApp* app = variable_item_get_context(item);
+    uint8_t index = variable_item_get_current_value_index(item);
+    bool was_list = app->settings.freq_step_hz == 0;
+    app->settings.freq_step_hz = config_freq_steps_hz[index];
+    variable_item_set_current_value_text(item, config_freq_step_text[index]);
+    // Between list and step mode the Frequency row changes its value count.
+    if(was_list != (app->settings.freq_step_hz == 0)) {
+        view_dispatcher_send_custom_event(app->view_dispatcher, ConfigCustomRebuild);
+    }
+}
+#endif
+
 static void radiogeddon_scene_config_enter_cb(void* context, uint32_t index) {
     RadioGeddonApp* app = context;
+#if RG_FEATURE_BAND_INFO
+    if(index == ConfigItemBands) {
+        view_dispatcher_send_custom_event(app->view_dispatcher, ConfigCustomBands);
+        return;
+    }
+#endif
     if(index == ConfigItemFrequency) {
         view_dispatcher_send_custom_event(app->view_dispatcher, ConfigCustomFrequency);
     } else if(index == ConfigItemEditScanList) {
@@ -246,17 +314,28 @@ void radiogeddon_scene_config_on_enter(void* context) {
     char text[16];
 
     // Frequency
+    bool step_mode = false;
+#if RG_FEATURE_FREQ_STEP
+    radiogeddon_scene_probe_bands(app);
+    step_mode = app->settings.freq_step_hz != 0;
+#endif
     VariableItem* item = variable_item_list_add(
         list,
         "Frequency MHz",
-        radiogeddon_frequencies_count,
+        step_mode ? 3 : radiogeddon_frequencies_count,
         radiogeddon_scene_config_freq_changed,
         app);
-    // A custom frequency (OK opens the keyboard) is shown as it is; left and
-    // right then step from the nearest one in the list.
-    size_t freq_index =
-        rg_freq_nearest(radiogeddon_frequencies, radiogeddon_frequencies_count, app->frequency);
-    variable_item_set_current_value_index(item, (uint8_t)freq_index);
+    if(step_mode) {
+#if RG_FEATURE_FREQ_STEP
+        variable_item_set_current_value_index(item, CONFIG_STEP_MIDDLE);
+#endif
+    } else {
+        // A custom frequency (OK opens the keyboard) is shown as it is; left
+        // and right then step from the nearest one in the list.
+        size_t freq_index = rg_freq_nearest(
+            radiogeddon_frequencies, radiogeddon_frequencies_count, app->frequency);
+        variable_item_set_current_value_index(item, (uint8_t)freq_index);
+    }
     rg_freq_text(app->frequency, text, sizeof(text));
     variable_item_set_current_value_text(item, text);
 
@@ -375,6 +454,43 @@ void radiogeddon_scene_config_on_enter(void* context) {
     variable_item_set_current_value_index(item, app->settings.ext_power ? 1 : 0);
     variable_item_set_current_value_text(item, app->settings.ext_power ? "On" : "Off");
 
+#if RG_EDITION_FULL
+    // Scanner and Hopper: built-in list or the favorites.
+    item = variable_item_list_add(
+        list,
+        "Scan source",
+        RadioGeddonSourceCount,
+        radiogeddon_scene_config_scan_source_changed,
+        app);
+    variable_item_set_current_value_index(item, app->settings.scan_source);
+    variable_item_set_current_value_text(item, config_source_text[app->settings.scan_source]);
+    item = variable_item_list_add(
+        list,
+        "Hop source",
+        RadioGeddonSourceCount,
+        radiogeddon_scene_config_hop_source_changed,
+        app);
+    variable_item_set_current_value_index(item, app->settings.hop_source);
+    variable_item_set_current_value_text(item, config_source_text[app->settings.hop_source]);
+
+    // Left/Right step on "Frequency MHz".
+    item = variable_item_list_add(
+        list,
+        "Freq step",
+        COUNT_OF_ARRAY(config_freq_steps_hz),
+        radiogeddon_scene_config_freq_step_changed,
+        app);
+    uint8_t fi = 0;
+    for(size_t i = 0; i < COUNT_OF_ARRAY(config_freq_steps_hz); i++) {
+        if(config_freq_steps_hz[i] == app->settings.freq_step_hz) fi = (uint8_t)i;
+    }
+    variable_item_set_current_value_index(item, fi);
+    variable_item_set_current_value_text(item, config_freq_step_text[fi]);
+
+    item = variable_item_list_add(list, "Radio bands", 1, NULL, app);
+    variable_item_set_current_value_text(item, ">");
+#endif
+
     variable_item_list_set_enter_callback(list, radiogeddon_scene_config_enter_cb, app);
     variable_item_list_set_selected_item(
         list, scene_manager_get_scene_state(app->scene_manager, RadioGeddonSceneConfig));
@@ -392,7 +508,21 @@ bool radiogeddon_scene_config_on_event(void* context, SceneManagerEvent event) {
             "No CC1101 module answered\non the GPIO pins. Using\nthe internal radio.");
         return true;
     }
+#if RG_EDITION_FULL
+    if(event.type == SceneManagerEventTypeCustom && event.event == ConfigCustomRebuild) {
+        scene_manager_set_scene_state(
+            app->scene_manager, RadioGeddonSceneConfig, ConfigItemFreqStep);
+        radiogeddon_scene_config_on_enter(app);
+        return true;
+    }
+    if(event.type == SceneManagerEventTypeCustom && event.event == ConfigCustomBands) {
+        scene_manager_set_scene_state(app->scene_manager, RadioGeddonSceneConfig, ConfigItemBands);
+        scene_manager_next_scene(app->scene_manager, RadioGeddonSceneBands);
+        return true;
+    }
+#endif
     if(event.type == SceneManagerEventTypeCustom && event.event == ConfigCustomFrequency) {
+        app->freq_target = RadioGeddonFreqTargetReceive;
         scene_manager_set_scene_state(
             app->scene_manager, RadioGeddonSceneConfig, ConfigItemFrequency);
         scene_manager_set_scene_state(app->scene_manager, RadioGeddonSceneFrequency, 0);

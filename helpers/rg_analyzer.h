@@ -50,8 +50,12 @@
 /* A high at least this many times Te also ends a frame (and is not data). */
 #define RG_ANALYZER_HIGH_GAP_FACTOR   14
 /* Timing peaks below this are receiver glitches, never Te or a bit width. The
- * shortest base unit among the firmware's remote protocols is 160 us. */
-#define RG_ANALYZER_MIN_TE_US         100u
+ * shortest base unit among the firmware's remote protocols is 160 us (Honeywell
+ * WDB; only the RAW and BinRAW capture handlers list less). Noisy captures
+ * show glitch peaks at 66 and 132 us (multiples of the receiver's ~33 us
+ * sampling step), so the floor sits between 132 and 160 with room for
+ * jitter on a 160 us signal. */
+#define RG_ANALYZER_MIN_TE_US         140u
 /* Bursts shorter than this are counted as noise, not frames. */
 #define RG_ANALYZER_MIN_FRAME_SAMPLES 8
 /* Decode fit (percent of symbols matching the grammar) for a frame to count. */
@@ -103,6 +107,10 @@ typedef struct {
     uint8_t group; /* index into RgAnalysis.groups, or RG_ANALYZER_NO_GROUP */
     int8_t shift; /* bits this frame is offset from its group's pattern */
     bool truncated; /* longer than RG_ANALYZER_FRAME_SAMPLES; tail not decoded */
+    /* Repeats sent back to back with no gap long enough to cut them: the
+     * decoded bits repeat every bit_count bits (see rg_analyzer_repeat_period)
+     * and only the first repeat is kept. 0 when the frame was not cut so. */
+    uint16_t repeat_bits; /* bits decoded before cutting */
     uint8_t bits[RG_ANALYZER_MAX_BITS / 8];
 } RgFrame;
 
@@ -236,6 +244,23 @@ size_t rg_analyzer_align(
     int max_shift,
     int* shift,
     size_t* overlap);
+
+/* A frame is searched for back-to-back repeats only when its decode filled
+ * RG_ANALYZER_MAX_BITS or it was cut off: then the gap that should have ended
+ * it was missing. The repeat must match itself on this share of the bits. */
+#define RG_ANALYZER_REPEAT_MATCH_PCT 97
+#define RG_ANALYZER_MIN_REPEAT_BITS  8
+
+/**
+ * Smallest period p (RG_ANALYZER_MIN_REPEAT_BITS .. n / 2) at which the bit
+ * string @p bits ('0'/'1', length @p n) repeats itself: bits[i] == bits[i + p]
+ * for at least RG_ANALYZER_REPEAT_MATCH_PCT percent of i. The repeated unit
+ * must carry information: at least two 0s, two 1s and three changes, and a
+ * string that already repeats at fewer than RG_ANALYZER_MIN_REPEAT_BITS bits
+ * (a square wave, a preamble, a run of one level) has no period. Returns 0 if
+ * there is none.
+ */
+size_t rg_analyzer_repeat_period(const char* bits, size_t n);
 
 /** Unpack a frame's bits into '0'/'1' characters (NUL-terminated). */
 void rg_analyzer_frame_bits(const RgFrame* frame, char* out);

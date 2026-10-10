@@ -89,19 +89,6 @@ static void radiogeddon_scene_hopper_view_cb(RadioGeddonReceiverEvent event, voi
     view_dispatcher_send_custom_event(app->view_dispatcher, custom);
 }
 
-// Build the hop list from the saved mask, skipping frequencies the radio
-// cannot tune.
-static size_t radiogeddon_scene_hopper_build_list(RadioGeddonApp* app, uint32_t* out) {
-    size_t n = 0;
-    for(size_t i = 0; i < radiogeddon_frequencies_count && i < 32; i++) {
-        if(!(app->settings.hop_mask & (1u << i))) continue;
-        uint32_t f = radiogeddon_frequencies[i];
-        if(!radiogeddon_subghz_is_frequency_allowed(app->subghz, f)) continue;
-        if(n < RG_HOP_MAX_CHANNELS) out[n++] = f;
-    }
-    return n;
-}
-
 static void
     radiogeddon_scene_hopper_show_popup(RadioGeddonApp* app, const char* h, const char* t) {
     popup_reset(app->popup);
@@ -171,9 +158,11 @@ void radiogeddon_scene_hopper_on_enter(void* context) {
     }
 
     uint32_t list[RG_HOP_MAX_CHANNELS];
-    size_t count = radiogeddon_scene_hopper_build_list(app, list);
+    size_t count = radiogeddon_scene_build_list(
+        app, app->settings.hop_source, app->settings.hop_mask, list, RG_HOP_MAX_CHANNELS);
     if(count == 0) {
-        radiogeddon_scene_hopper_show_popup(app, "No frequencies", "Check Settings >\nHop list.");
+        radiogeddon_scene_hopper_show_popup(
+            app, "No frequencies", "Check Settings >\nHop list or source.");
         return;
     }
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Static analysis of the app's device code, compiled exactly as the .fap is.
 
-    UFBT_HOME=<sdk home> scripts/static_analysis.py [--jobs N] [--skip-cdb]
+    UFBT_HOME=<sdk home> scripts/static_analysis.py [--jobs N] [--skip-cdb] [--root DIR]
 
 Runs two independent analysers over every app source file listed in the
 ufbt compile database (`ufbt cdb`, written to .vscode/compile_commands.json):
@@ -16,7 +16,10 @@ ufbt compile database (`ufbt cdb`, written to .vscode/compile_commands.json):
    clang targeting arm-none-eabi and the SDK's newlib headers.
 
 Any finding from either fails the run (exit 1). The SDK must already be
-installed in UFBT_HOME (scripts/build_target.sh official does that).
+installed in UFBT_HOME (scripts/build_target.sh catalog-official does that).
+
+--root analyses another copy of the app, such as the Full edition written by
+scripts/stage_edition.py, so edition-specific code is analysed as it is built.
 """
 import argparse
 import concurrent.futures
@@ -31,6 +34,13 @@ import sys
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CDB = os.path.join(ROOT, ".vscode", "compile_commands.json")
 WORK = os.path.join(ROOT, "build", "static_analysis")
+
+
+def set_root(root):
+    global ROOT, CDB, WORK
+    ROOT = root
+    CDB = os.path.join(ROOT, ".vscode", "compile_commands.json")
+    WORK = os.path.join(ROOT, "build", "static_analysis")
 
 GCC_ANALYZER = [
     "-fanalyzer",
@@ -121,8 +131,11 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--jobs", type=int, default=os.cpu_count() or 2)
     ap.add_argument("--skip-cdb", action="store_true", help="reuse .vscode/compile_commands.json")
+    ap.add_argument("--root", help="app folder to analyse (default: this checkout)")
     args = ap.parse_args()
 
+    if args.root:
+        set_root(os.path.abspath(args.root))
     if not args.skip_cdb:
         subprocess.run(["ufbt", "cdb"], cwd=ROOT, check=True, stdout=subprocess.DEVNULL)
     entries = app_entries()
