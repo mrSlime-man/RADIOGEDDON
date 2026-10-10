@@ -31,3 +31,15 @@ void radiogeddon_scene_show_busy(RadioGeddonApp* app, const char* text) {
     popup_set_header(app->popup, text, 64, 32, AlignCenter, AlignCenter);
     view_dispatcher_switch_to_view(app->view_dispatcher, RadioGeddonViewPopup);
 }
+
+void radiogeddon_scene_db_release(RadioGeddonApp* app) {
+    if(app->db_view) {
+        view_dispatcher_remove_view(app->view_dispatcher, RadioGeddonViewDb);
+        radiogeddon_db_view_free(app->db_view);
+        app->db_view = NULL;
+    }
+    radiogeddon_db_free(app->db);
+    app->db = NULL;
+    app->db_keep = false;
+    app->db_dirty = false;
+}

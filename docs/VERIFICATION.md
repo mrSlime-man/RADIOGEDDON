@@ -33,12 +33,13 @@ locally.
 | Sample-ring unit tests | `make -C test check` → `test_ring` | Pass — 47 checks |
 | RAW-writer unit tests | `make -C test check` → `test_rawfmt` | Pass — 18 checks |
 | Recorder tests (stub Furi/Storage) | `make -C test check` → `test_recorder` | Pass — 29 checks |
+| Database-index unit tests | `make -C test check` → `test_db` | Pass — 59 checks |
 | Thread safety of ring and recorder | `make -C test tsan` (ThreadSanitizer; optional, not in CI) | Pass — no reports |
 | Memory safety of tested code | tests built `-Werror` under `-fsanitize=address,undefined` | Pass — no ASan/UBSan reports |
 | Documentation links | `scripts/check_links.py` (offline link + anchor check) | Pass |
 | `.fap` metadata | `scripts/verify_fap.py` parses `.fapmeta` and asserts magic, API, target, name, version, icon | Pass for all three artifacts |
 
-Host-test total: **364 checks, 0 failures.** What the suite covers (synthetic
+Host-test total: **423 checks, 0 failures.** What the suite covers (synthetic
 signals, not real captures):
 
 - `test_dsp` — RAW `RAW_Data` parsing (incl. whitespace, signs, out-of-range),
@@ -90,6 +91,15 @@ signals, not real captures):
   reaching the card; open, memory and write failures (no further writes, error
   reported). Host timing is not the Flipper's: this shows the logic, not the
   device's throughput.
+- `test_db` — the database index: decoded and RAW headers (frequency,
+  protocol, bits, key hashed regardless of spacing or case), CRLF lines, a
+  leading comment, an unreadable frequency, a long protocol name, a last line
+  cut off at the 512-byte limit (not trusted), damaged files (empty, plain
+  text, another `Filetype`, `Filetype` not on the first line, binary, a first
+  line cut off), the name pool and entry table filling up, duplicates (a
+  different frequency is not one; RAW only with equal size and content hash;
+  stale marks cleared), every filter, the name search, each sort order with
+  its tie-breaks, and the protocol list.
 
 ## Release-pipeline integrity
 
@@ -156,6 +166,9 @@ Everything about on-device radio behaviour, and the end-to-end workflow. See the
   slow card loses samples on noisy input, behaviour when the card is removed
   mid-recording, and that the stock Sub-GHz app opens and replays the files
   (checklist F6–F6e).
+- The Database list on a real card: how long indexing takes for a large
+  folder, memory left for analysis while it is open, and the list, options
+  and re-read after a delete (checklist F11–F11e).
 - The internal-radio presence fix (defect 1) actually resolving "No radio" on a
   device.
 - The analysis engine's inferences against real captured signals (host tests use

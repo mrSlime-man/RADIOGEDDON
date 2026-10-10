@@ -32,6 +32,7 @@
 #include "views/radiogeddon_scanner_view.h"
 #include "views/radiogeddon_receiver_view.h"
 #include "views/radiogeddon_timeline_view.h"
+#include "views/radiogeddon_db_view.h"
 
 #define RADIOGEDDON_TEXT_INPUT_BUFFER_SIZE 64
 #define RADIOGEDDON_TAG                    "RadioGeddon"
@@ -47,6 +48,7 @@ typedef enum {
     RadioGeddonViewScanner,
     RadioGeddonViewReceiver,
     RadioGeddonViewTimeline, // added only while the Pulse Timeline is open
+    RadioGeddonViewDb, // added only while the Database is open
 } RadioGeddonView;
 
 typedef struct RadioGeddonApp RadioGeddonApp;
@@ -73,6 +75,12 @@ struct RadioGeddonApp {
     // Pulse Timeline: view and open file exist only while that scene runs.
     RadioGeddonTimelineView* timeline_view;
     RadioGeddonRawFile* timeline_file;
+    // Database index and list: exist while the Database or a screen opened
+    // from it is shown, and are freed on returning to the main menu.
+    RadioGeddonDb* db;
+    RadioGeddonDbView* db_view;
+    bool db_keep; // leaving the list for a screen opened from it
+    bool db_dirty; // files changed: re-index on return to the list
 
     // Radio subsystem wrapper
     RadioGeddonSubGhz* subghz;

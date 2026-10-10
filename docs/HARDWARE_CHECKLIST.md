@@ -65,7 +65,13 @@ region's rules.
 | F6d | Card removed while recording. | The recording stops with `SD card write failed`; no crash; after reinserting the card, recording works again. |
 | F6e | Hopper auto-record with long activity (hold a remote for 10 s on a hop frequency). | One `HOP_*.sub` with all of it; the hopper resumes afterwards. |
 | F7 | Custom-preset replay: a stock-app RAW `.sub` saved with a custom preset. | Replays on the correct modulation, or is cleanly refused (`Unsupported file`) — never sent on the wrong modulation. |
-| F8 | Delete: choose Delete on a saved file. | Confirmation shown; Cancel/Back keeps the file; Delete removes it. |
+| F8 | Delete: choose Delete on a saved file. | Confirmation shown; Cancel/Back keeps the file; Delete removes it; back in the Database the file is gone and the highlight stays near where it was. |
+| F11 | Database list: open Database with a mix of decoded, RAW and stock-app `.sub` files. | `Loading...`, then every file newest first with the right type, frequency and date; the counts at the top match the folder. |
+| F11a | Sort and filter: press Left through the sort orders; in Options try each `Show` value and a protocol. | Each order and filter lists the expected files; leaving with Back and reopening a file keeps the order and filter until the main menu. |
+| F11b | Search: Options → `Search name`, type part of a name in either case; then save an empty text. | Only matching names, `*` in the header; empty text lists all again. |
+| F11c | Duplicates: copy a decoded `.sub` and a RAW capture with qFlipper under new names, then `Reload from SD`. | Both pairs show `=` and `=1`; `Show: Duplicates` lists the four files. |
+| F11d | Damaged file: copy a text file renamed to `bad.sub` and a `.sub` cut to 20 bytes into the folder. | Both listed as `BAD` with "Not a readable .sub file"; opening one gives the error tone, no crash. |
+| F11e | Large folder and memory: 200+ files; open Database, then `Unknown Protocol Analysis` and `Pulse Timeline` on a long RAW capture from it. | Indexing time noted; the analyses run (or report not enough memory) without a crash; free heap returns to baseline after leaving to the main menu. |
 | F9 | SD card removed mid-session. | Save/open fail gracefully with an error tone; no crash. |
 | F10 | Memory: several capture/save/open/replay cycles. | Free heap (CLI `free` or the log) returns to baseline; no growth across cycles. |
 

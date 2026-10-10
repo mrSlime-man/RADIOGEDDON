@@ -54,6 +54,14 @@ to follow [Semantic Versioning](https://semver.org/) (pre-1.0.0 releases use
   with `SD card write failed`.
 - **Save result screen**: after saving, a popup shows the file name and, for
   RAW captures, the sample count, duration and any lost samples.
+- **Signal Database list** replaces the file browser: every `.sub` with its
+  type (protocol, `RAW`, other kind or `BAD` for damaged files), frequency and
+  date; sort by date, name, frequency or protocol (Left cycles); Options
+  (Right) to filter by RAW, decoded, one protocol, duplicates or damaged
+  files, search names, and reload. Duplicates are marked with `=` (decoded:
+  same protocol, frequency, bits and key; RAW: identical contents). The index
+  is sized to the folder and the free heap, exists only while the Database is
+  open, and is re-read after a delete.
 
 ### Changed
 - Saving never overwrites an existing file: a name that is taken gets `_2`,

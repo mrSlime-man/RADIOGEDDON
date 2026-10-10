@@ -28,7 +28,7 @@ Buttons work the same way everywhere:
 | `Scanner` | Live RSSI sweep across common frequencies |
 | `Receive & Record` | Live decoding of known protocols and RAW recording on one frequency |
 | `Frequency Hopper` | Live decoding while hopping across a list of frequencies |
-| `Database` | Browse, analyse, compare, replay and delete saved recordings |
+| `Database` | List, sort, filter and search saved recordings; analyse, compare, replay and delete them |
 | `Settings` | Choose the frequency and modulation |
 | `About` | Version, modules, label legend and storage location |
 
@@ -215,8 +215,52 @@ The modulation comes from **Settings**.
 
 ## Database
 
-Opens the file browser in `/ext/apps_data/radiogeddon/signals`, listing `.sub`
-files. Choose a file to open its action menu (titled with the file name):
+Lists the `.sub` files in `/ext/apps_data/radiogeddon/signals`, newest first.
+It shows `Loading...` while it reads the start of each file (and, for RAW
+captures of exactly the same size, the whole file to check for copies).
+
+```
+Signals              Date 12/14
+RG_20261009_141205          RAW
+garage_left            =Princet
+porch_remote            Princet
+old_capture                 BAD
+433.92  10-09 14:12
+```
+
+- The top line shows what is listed (`Signals` for everything, a filter or a
+  protocol, after a `*` when a name search is active), the sort order, and how many
+  files are shown out of how many are in the folder.
+- Each row shows the name (without `.sub`) and its type: the protocol (first
+  7 letters) for a decoded signal, `RAW` for a capture, `?` for a Sub-GHz
+  file without a protocol and `BAD` for a file that is not a readable `.sub`. A leading `=` marks a
+  duplicate: a decoded signal with the same protocol, frequency, bit count and
+  key as another file, or a RAW capture whose contents are identical to
+  another one.
+- The bottom line shows the highlighted file's frequency in MHz and its date,
+  and `=N` when it has N duplicates.
+
+| Key | Action |
+|-----|--------|
+| **Up / Down** | Move (hold to scroll; wraps around) |
+| **OK** | Open the file's action menu |
+| **Left** | Next sort order: Date (newest first), Name, Freq, Protocol |
+| **Right** | Options |
+| **Back** | Main menu |
+
+**Options** (Right):
+
+| Option | Values |
+|--------|--------|
+| `Sort by` | `Date`, `Name`, `Freq` (lowest first; files without one last), `Protocol` (damaged files last) |
+| `Show` | `All`, `RAW`, `Decoded`, `Duplicates`, `Damaged` (unreadable or other `.sub` types), then one value per protocol found |
+| `Search name` | OK opens the keyboard; lists only names containing the text, ignoring case. Save an empty text to clear it |
+| `Reload from SD` | OK re-reads the folder (after copying files in with qFlipper, for example) |
+| `Files indexed` | How many files are listed. When memory is short only part of a very large folder is indexed, and this shows `N of M` |
+
+The sort, filter and search last until you return to the main menu. After a
+delete the list is re-read and keeps your place. Choose a file to open its
+action menu (titled with the file name):
 
 | Action | What you get |
 |--------|--------------|

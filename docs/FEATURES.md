@@ -9,7 +9,7 @@ verified, and its known limits. For step-by-step use, see the
 **Every feature below is implemented, compiles for all three firmware
 families, and passes CI. None has yet been verified on a physical Flipper
 Zero.** "Unit-tested" means the feature's firmware-independent logic is covered
-by the host test suite (364 checks); radio behaviour can only be confirmed on a
+by the host test suite (423 checks); radio behaviour can only be confirmed on a
 device ([VERIFICATION.md](VERIFICATION.md)).
 
 | Feature | Implemented | Unit-tested logic | Verified on hardware |
@@ -25,7 +25,7 @@ device ([VERIFICATION.md](VERIFICATION.md)).
 | [Device ID Candidate Detection](#device-id-candidate-detection) | ✅ | ✅ constant/changing fields | ⏳ pending |
 | [Rolling Code Classification](#rolling-code-classification) | ✅ | ✅ field-map logic | ⏳ pending |
 | [Cryptographic Structure Heuristics](#cryptographic-structure-heuristics) | ✅ | ✅ key-byte statistics | ⏳ pending |
-| [Signal Database](#signal-database) | ✅ | — | ⏳ pending |
+| [Signal Database](#signal-database) | ✅ | ✅ index, duplicates, sort/filter/search | ⏳ pending |
 | [Authorized Signal Replay](#authorized-signal-replay) | ✅ | — | ⏳ pending |
 
 ## Sub-GHz Scanner
@@ -211,8 +211,24 @@ manufacturer keystore to identify KeeLoq-family signals.)
   copied in for analysis.
 - Saved files get a timestamped default name (`RG_YYYYMMDD_HHMMSS`) that you can
   edit; empty names are rejected.
-- Browse with the firmware file browser, then analyse, compare, replay or delete;
-  deleting asks for confirmation.
+- **Database list** of every `.sub` in the folder with its type (protocol,
+  `RAW`, other `.sub` kind, or damaged), frequency and date, read from the
+  first 512 bytes of each file.
+- **Sort** by date (newest first), name, frequency or protocol; **filter** to
+  RAW, decoded, a single protocol, duplicates or damaged files; **search**
+  names (case-insensitive substring).
+- **Duplicate detection**: decoded signals with the same protocol, frequency,
+  bit count and key; RAW captures with identical contents (compared by size,
+  then a 32-bit hash of the whole file, only where sizes match).
+- **Damaged files** (whose first line is not a Flipper Sub-GHz `Filetype`) are
+  listed as `BAD` instead of being hidden; Sub-GHz files without a protocol
+  are listed as `?`.
+- Memory is sized to the folder (about 60 bytes a file, up to 500 files) and
+  kept within the free heap; a folder too large to fit is indexed in part and
+  says so (`Files indexed: N of M`). The index exists only while the Database
+  is open.
+- Open a file to analyse, compare, replay or delete it; deleting asks for
+  confirmation and the list is re-read afterwards.
 - The receiver keeps up to 32 decoded signals per session, listing identical
   consecutive repeats once.
 

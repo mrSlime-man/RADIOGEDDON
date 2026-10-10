@@ -16,7 +16,9 @@ static void radiogeddon_scene_start_submenu_callback(void* context, uint32_t ind
 
 void radiogeddon_scene_start_on_enter(void* context) {
     RadioGeddonApp* app = context;
-    // Back at the main menu: scanner results are no longer needed.
+    // Back at the main menu: scanner results and the Database index are no
+    // longer needed.
+    radiogeddon_scene_db_release(app);
     if(app->scanner) {
         radiogeddon_scanner_free(app->scanner);
         app->scanner = NULL;

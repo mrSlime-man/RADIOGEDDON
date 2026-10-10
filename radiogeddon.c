@@ -115,6 +115,7 @@ void radiogeddon_app_free(RadioGeddonApp* app) {
     view_dispatcher_remove_view(app->view_dispatcher, RadioGeddonViewTextBox);
     view_dispatcher_remove_view(app->view_dispatcher, RadioGeddonViewScanner);
     view_dispatcher_remove_view(app->view_dispatcher, RadioGeddonViewReceiver);
+    radiogeddon_scene_db_release(app);
 
     submenu_free(app->submenu);
     widget_free(app->widget);
