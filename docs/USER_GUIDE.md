@@ -392,7 +392,7 @@ If the recording can't be sent, you'll see `Error` with one of:
 | `Blocked by region` | Your Flipper's region settings don't allow transmitting on this frequency. |
 | `Protected/rolling code` | The protocol is dynamic (rolling code), can't be transmitted by the firmware, or isn't known to it. Such files are never replayed. |
 | `Unsupported file` | The file couldn't be read, or its modulation preset isn't recognised. |
-| `Bad custom preset` | The file's own CC1101 register list is damaged, or writes something other than a setting (a radio command). Nothing was sent to the radio. |
+| `Bad custom preset` | The file's own CC1101 register list is missing or damaged, or writes something other than a setting (a radio command). Nothing was sent to the radio. A key saved by `1.0.0-beta.4` or earlier shows this; [Troubleshooting](TROUBLESHOOTING.md#a-saved-key-wont-open) says how to fix the file. |
 | `File not found` | The file no longer exists. |
 | `No radio device` | The radio isn't available. |
 | `Radio busy` | Another radio operation is still running; go back and try again. |

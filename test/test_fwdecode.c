@@ -27,6 +27,11 @@
  * child process, like every capture, so a crash is reported with the
  * protocol it was describing).
  *
+ * Every decode of the expected protocol is also saved as the app saves a key
+ * (radiogeddon_decode_preset), once on each of the app's presets: the file
+ * must name that preset, as the stock app and Replay read it, and carry no
+ * custom preset.
+ *
  * Informational, not checked: whether the key of the folder's key file for
  * the same protocol is among those decoded, and how many more (or fewer)
  * decodes a quiet line after the capture would give (a second receiver, fed
@@ -36,6 +41,7 @@
 #include "../helpers/rg_decode.h"
 #include "../helpers/rg_raw.h"
 #include "../helpers/radiogeddon_decode_text.h"
+#include "../helpers/radiogeddon_bands.h"
 
 #include <lib/subghz/receiver.h>
 #include <lib/subghz/environment.h>
@@ -258,6 +264,9 @@ typedef struct {
     DecodedKey key[MAX_KEYS]; /* distinct keys of the expected protocol */
     size_t keys;
     bool key_unread; /* one could not be read back from its .sub form */
+    uint32_t saves; /* keys saved as the app saves them, one per app preset */
+    uint32_t saves_wrong; /* ... that do not name their preset */
+    char wrong_preset[48]; /* the first such file's Preset */
     uint32_t tail_decodes; /* decodes with a quiet line after the capture */
 } RunResult;
 
@@ -319,10 +328,48 @@ static void count_protocol(RunResult* r, const char* name) {
     c->count = 1;
 }
 
+/* Save the decode as the app saves a key, on each of the app's presets: the
+ * file must name that preset (the stock app and Replay look it up by that
+ * name) and carry no custom preset, which the firmware writes for any preset
+ * name it does not know. */
+static void check_saved_presets(RunResult* r, SubGhzProtocolDecoderBase* decoder_base) {
+    FuriString* value = furi_string_alloc();
+    for(size_t i = 0; i < radiogeddon_presets_count; i++) {
+        FlipperFormat* ff = flipper_format_string_alloc();
+        SubGhzRadioPreset preset;
+        radiogeddon_decode_preset(&preset, i, 433920000);
+        bool saved = subghz_protocol_decoder_base_serialize(decoder_base, ff, &preset) ==
+                     SubGhzProtocolStatusOk;
+        bool named = saved && flipper_format_rewind(ff) &&
+                     flipper_format_read_string(ff, "Preset", value) &&
+                     radiogeddon_preset_find_file_name(furi_string_get_cstr(value)) == (int32_t)i;
+        bool custom =
+            saved && flipper_format_rewind(ff) &&
+            (flipper_format_key_exist(ff, "Custom_preset_module") ||
+             (flipper_format_rewind(ff) && flipper_format_key_exist(ff, "Custom_preset_data")));
+        r->saves++;
+        if(!named || custom) {
+            if(!r->saves_wrong) {
+                snprintf(
+                    r->wrong_preset,
+                    sizeof(r->wrong_preset),
+                    "%s",
+                    saved ? furi_string_get_cstr(value) : "(not saved)");
+            }
+            r->saves_wrong++;
+        }
+        furi_string_free(preset.name);
+        flipper_format_free(ff);
+    }
+    furi_string_free(value);
+}
+
 /* The decode's Bit and Key, from its .sub form (as the app saves it). */
 static void note_key(RunResult* r, SubGhzProtocolDecoderBase* decoder_base) {
+    check_saved_presets(r, decoder_base);
     FlipperFormat* ff = flipper_format_string_alloc();
-    SubGhzRadioPreset preset = {furi_string_alloc_set_str("AM650"), 433920000, NULL, 0};
+    SubGhzRadioPreset preset;
+    radiogeddon_decode_preset(&preset, 1, 433920000); /* AM 650, the app's default */
     uint32_t bits = 0;
     uint8_t bytes[8];
     bool ok = subghz_protocol_decoder_base_serialize(decoder_base, ff, &preset) ==
@@ -632,6 +679,7 @@ static void print_key_file(const RunResult* r, const KeyFile* k, bool match) {
 typedef struct {
     unsigned decoded, data_only, failed;
     unsigned key_files, key_match, tail_differs;
+    unsigned saves, saves_wrong;
 } Totals;
 
 static void test_pairs(RunResult* r, Totals* t) {
@@ -672,6 +720,20 @@ static void test_pairs(RunResult* r, Totals* t) {
             if(r->tail_decodes != r->log.decodes) t->tail_differs++;
         }
         CHECK(decoded, "the expected protocol decodes and is described, through the log");
+        if(decoded) {
+            if(r->saves_wrong) {
+                printf(
+                    "      saved keys naming the wrong preset: %lu of %lu (first: %s)\n",
+                    (unsigned long)r->saves_wrong,
+                    (unsigned long)r->saves,
+                    r->wrong_preset);
+            }
+            CHECK(
+                r->saves > 0 && r->saves_wrong == 0,
+                "saved as the app saves a key, on each app preset, it names that preset");
+            t->saves += r->saves;
+            t->saves_wrong += r->saves_wrong;
+        }
         t->decoded += decoded;
         t->failed += !decoded;
         CHECK(
@@ -769,6 +831,11 @@ int main(void) {
         "key files for the same protocol: %u, their key also decoded from the capture: %u\n",
         t.key_files,
         t.key_match);
+    printf(
+        "keys saved on the app's %zu presets: %u, naming another or a custom preset: %u\n",
+        radiogeddon_presets_count,
+        t.saves,
+        t.saves_wrong);
     printf("captures where a quiet line after the end changes the count: %u\n", t.tail_differs);
     printf("%d checks, %d failures (%.1f s)\n", g_checks, g_failures, secs);
     if(g_failures) {

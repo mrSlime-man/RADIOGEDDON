@@ -53,7 +53,7 @@ DEC_STUB_HDRS := $(STUB_HDRS) stubs/furi_hal.h
 # custom preset check (test_fwpreset; also run by `make decoders`).
 FWPRESET_SRC := test_fwpreset.c ../helpers/rg_preset.c
 FWDECODE_SRC := test_fwdecode.c stubs/furi_stub.c stubs/subghz_stub.c ../helpers/rg_decode.c \
-		../helpers/rg_raw.c ../helpers/radiogeddon_decode_text.c
+		../helpers/rg_raw.c ../helpers/radiogeddon_decode_text.c ../helpers/radiogeddon_bands.c
 
 # Analyzer tests on real captures: rg_analyzer over the firmware's RAW test
 # captures, scored against each protocol's timing in its decoder source
@@ -192,7 +192,7 @@ $(BUILD)/fwdec/%.o: $(FW)/%.c $(DEC_STUB_HDRS)
 	$(CC) $(CFLAGS) $(SAN) -fno-sanitize=shift-base -D_GNU_SOURCE $(DEC_INC) -c -o $@ $<
 
 $(BUILD)/test_fwdecode: $(FWDECODE_SRC) $(DEC_STUB_HDRS) ../helpers/rg_decode.h ../helpers/rg_raw.h \
-		../helpers/radiogeddon_decode_text.h \
+		../helpers/radiogeddon_decode_text.h ../helpers/radiogeddon_bands.h \
 		$(DEC_FW_OBJ) | $(BUILD)
 	$(CC) $(CFLAGS) $(SAN) -D_GNU_SOURCE $(DEC_INC) -pthread \
 		-o $@ $(FWDECODE_SRC) $(DEC_FW_OBJ) -lm

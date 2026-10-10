@@ -39,9 +39,9 @@ locally.
 | RAW-to-decoder feeding tests | `make -C test check` → `test_decode` | Pass — 68 checks |
 | Frequency text and range tests | `make -C test check` → `test_freq` | Pass — 32 checks |
 | Custom preset check | `make -C test check` → `test_preset` | Pass — 20 checks |
-| Format tests (firmware code, real files) | `make -C test formats` → `test_formats`: the firmware's FlipperFormat and stream code and its 85 Sub-GHz test files, from the commit of Official 1.4.3 | Pass — 566 checks |
+| Format tests (firmware code, real files) | `make -C test formats` → `test_formats`: the firmware's FlipperFormat and stream code and its 85 Sub-GHz test files, from the commit of Official 1.4.3 | Pass — 569 checks |
 | Analyzer on real captures | `make -C test captures` → `test_fwanalyze`: `rg_analyzer` on the firmware's 50 paired RAW test captures, scored against each protocol's decoder source | Pass — 354 checks; Te right for 48, encoding family for 41, frame length for 29 (see below) |
-| Decoder tests (firmware code, real captures) | `make -C test decoders` → `test_fwdecode`: the firmware's Sub-GHz receiver and all its protocol decoders, fed its 50 RAW test captures through `rg_decode` | Pass — 213 checks; all 50 decode and are described as the app describes them (see below) |
+| Decoder tests (firmware code, real captures) | `make -C test decoders` → `test_fwdecode`: the firmware's Sub-GHz receiver and all its protocol decoders, fed its 50 RAW test captures through `rg_decode` | Pass — 263 checks; all 50 decode and are described as the app describes them, and every decode saved as the app saves a key names its preset (see below) |
 | Preset check on the firmware's presets | `make -C test decoders` → `test_fwpreset`: `rg_preset_check` on the firmware's six built-in CC1101 presets and the custom presets in its example settings file | Pass — 26 checks; all eight pass and end where the firmware ends them |
 | Fuzz corpus replay | `make -C test check` → `replay_fuzz_raw`, `replay_fuzz_db`, `replay_fuzz_samples` | Pass — every committed input |
 | Fuzzing | `make -C test fuzz` (libFuzzer with ASan/UBSan; 60 s per target in CI) | Pass — no crash, sanitizer report or broken invariant |
@@ -207,8 +207,9 @@ captured or checked on our hardware. The suite covers:
 - every file loading with the kind, protocol, frequency, preset, bit count,
   key, RAW sample count and shortest/longest duration that an independent
   reading of the file finds; the Database index and the streaming RAW reader
-  agreeing with it; the analyzer completing on all 51 RAW files with figures
-  in range; and every byte and file handle returned;
+  agreeing with it; its preset being one Replay finds by name (all 85); the
+  analyzer completing on all 51 RAW files with figures in range; and every
+  byte and file handle returned;
 - settings saved and read back field by field, written as the firmware
   writes Flipper Format; a custom frequency kept and one outside every
   firmware's range refused; out-of-range values, the limits themselves, extra
@@ -264,6 +265,21 @@ Ending a capture with a quiet line changes no count. The decoded file next to
 a capture is compared for information only: 17 of 34 keys also decode from
 the capture; the others hold other codes (another button, counter or
 remote).
+
+Every decode of the expected protocol is also saved as the app saves a key
+(`radiogeddon_decode_preset`, then the decoder's own serializer), once on
+each of the app's four presets: 4,116 saves. Each must name its preset by
+the name the stock app and Replay look up, and carry no custom preset. This
+check came after reading the save code: up to `v1.0.0-beta.4` the app handed
+the decoders the preset's file name (`FuriHalSubGhzPresetOok650Async`)
+where the firmware expects its short name (`AM650`). The firmware writes any
+name it does not know as a custom preset with the register list it is given,
+here none (`lib/subghz/blocks/generic.c`, the same in Unleashed and
+RogueMaster). So every key saved from Receive or the Hopper said
+`Preset: FuriHalSubGhzPresetCustom` with an empty `Custom_preset_data`: the
+stock app's loader refuses that, and Replay refused it as an unsupported
+file. With the old name, all 4,116 saves fail the check. Opening a saved key
+in the stock app on a device is hardware check F6g.
 
 `test_fwpreset` (also run by `make -C test decoders`) compiles the
 firmware's built-in CC1101 register arrays (`cc1101_configs.c`: AM 270,
@@ -377,6 +393,10 @@ Everything about on-device radio behaviour, and the end-to-end workflow. See the
   heap. The host tests feed the firmware's decoders its own test captures
   through `rg_decode` (`test_fwdecode`), but they do not run this screen,
   the keystore or the device's heap.
+- Keys saved from Receive and the Hopper opening in the stock Sub-GHz app on
+  a device (checklist F6g). The host tests save them with the firmware's
+  own serializer and read them back with its FlipperFormat code, but they do
+  not run the stock app's loader.
 - The internal-radio presence fix (defect 1) actually resolving "No radio" on a
   device.
 - The analysis engine's inferences on signals captured with this app: the

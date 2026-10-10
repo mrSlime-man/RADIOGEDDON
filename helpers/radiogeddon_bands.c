@@ -1,13 +1,23 @@
 #include "radiogeddon_bands.h"
 
+#include <string.h>
+
 const RadioGeddonPreset radiogeddon_presets[] = {
-    {"AM 270", "FuriHalSubGhzPresetOok270Async", FuriHalSubGhzPresetOok270Async},
-    {"AM 650", "FuriHalSubGhzPresetOok650Async", FuriHalSubGhzPresetOok650Async},
-    {"FM 2.38k", "FuriHalSubGhzPreset2FSKDev238Async", FuriHalSubGhzPreset2FSKDev238Async},
-    {"FM 47.6k", "FuriHalSubGhzPreset2FSKDev476Async", FuriHalSubGhzPreset2FSKDev476Async},
+    {"AM 270", "FuriHalSubGhzPresetOok270Async", "AM270", FuriHalSubGhzPresetOok270Async},
+    {"AM 650", "FuriHalSubGhzPresetOok650Async", "AM650", FuriHalSubGhzPresetOok650Async},
+    {"FM 2.38k", "FuriHalSubGhzPreset2FSKDev238Async", "FM238", FuriHalSubGhzPreset2FSKDev238Async},
+    {"FM 47.6k", "FuriHalSubGhzPreset2FSKDev476Async", "FM476", FuriHalSubGhzPreset2FSKDev476Async},
 };
 const size_t radiogeddon_presets_count =
     sizeof(radiogeddon_presets) / sizeof(radiogeddon_presets[0]);
+
+int32_t radiogeddon_preset_find_file_name(const char* file_name) {
+    if(!file_name) return -1;
+    for(size_t i = 0; i < radiogeddon_presets_count; i++) {
+        if(strcmp(file_name, radiogeddon_presets[i].file_name) == 0) return (int32_t)i;
+    }
+    return -1;
+}
 
 // Common Sub-GHz frequencies (Hz). Region validity is checked before use.
 const uint32_t radiogeddon_frequencies[] = {

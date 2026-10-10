@@ -122,9 +122,40 @@ then to the new spelling.
 | `Blocked by region` | Your Flipper's region settings forbid transmitting on this frequency. This is enforced by the firmware; only transmit where you are legally allowed to. |
 | `Protected/rolling code` | Rolling-code (dynamic) protocols and protocols the firmware can't encode are never replayed. This is intentional. |
 | `Unsupported file` | The file couldn't be read, or its modulation preset isn't one RadioGeddon recognises (standard AM/FM presets or a stored custom register set). |
-| `Bad custom preset` | The file stores its own CC1101 register list (`Custom_preset_data`) and it is cut short, has no `00 00` end, or names an address above `0x2E` (a radio command, not a setting). Re-save the recording from the app that made it; don't edit the list by hand. |
+| `Bad custom preset` | The file stores its own CC1101 register list (`Custom_preset_data`) and it is empty, cut short, has no `00 00` end, or names an address above `0x2E` (a radio command, not a setting). Re-save the recording from the app that made it; don't edit the list by hand. An empty list is what a key saved by `1.0.0-beta.4` or earlier has: see [A saved key won't open](#a-saved-key-wont-open). |
 | `File not found` | The file was moved or deleted; reopen it from the Database. |
 | `No radio device` / `Radio busy` | Go back, wait a moment and try again; reboot if it persists. |
+
+## A saved key won't open
+
+Keys saved from *Receive & Record* or the Hopper (OK on a decode) by
+`1.0.0-beta.1` to `1.0.0-beta.4` don't say which modulation they were
+received on. They show `Bad custom preset` in Replay (`Unsupported file` up
+to beta 4), and the stock Sub-GHz app says `Cannot parse file`. RAW
+recordings are not affected, and keys saved by later versions are fine.
+
+To fix one, open the `.sub` file in a text editor (qFlipper's file manager,
+or the SD card on a computer) and replace these three lines:
+
+```
+Preset: FuriHalSubGhzPresetCustom
+Custom_preset_module: CC1101
+Custom_preset_data:
+```
+
+with the one line for the modulation you received it on (`Modulation` in
+Settings at the time; `AM 650` unless you changed it):
+
+| Modulation | Line |
+|------------|------|
+| `AM 270` | `Preset: FuriHalSubGhzPresetOok270Async` |
+| `AM 650` | `Preset: FuriHalSubGhzPresetOok650Async` |
+| `FM 2.38k` | `Preset: FuriHalSubGhzPreset2FSKDev238Async` |
+| `FM 47.6k` | `Preset: FuriHalSubGhzPreset2FSKDev476Async` |
+
+Only do this for files whose `Custom_preset_data:` line is empty. A file
+with values there was saved with a real custom preset, by the stock app or
+another tool.
 
 ## Replay said `Signal sent` but the device didn't react
 
