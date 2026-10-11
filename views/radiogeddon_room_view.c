@@ -195,7 +195,7 @@ static void room_draw(Canvas* canvas, void* model) {
             canvas_draw_str(canvas, 49, y + 8, rack_names[i]);
             canvas_set_color(canvas, ColorBlack);
         }
-        room_hint(canvas, NULL, "Up/Down, OK: open");
+        room_hint(canvas, NULL, "OK: open the tool");
         break;
     }
     case RadioGeddonRoomCorner: {

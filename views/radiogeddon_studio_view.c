@@ -159,7 +159,7 @@ static void studio_draw_wave(Canvas* canvas, StudioModel* m) {
         if(x < last + 6 && b != sel) continue;
         char c[2] = {(f->map[b] & RG_BITMAP_UNSURE) ? '?' : f->bits[b], '\0'};
         if(b == sel) {
-            canvas_draw_box(canvas, x - 1, BITS_Y - 8, 7, 9);
+            canvas_draw_box(canvas, x > 0 ? x - 1 : 0, BITS_Y - 8, 7, 9);
             canvas_set_color(canvas, ColorWhite);
         }
         canvas_draw_str(canvas, x, BITS_Y, c);
@@ -334,19 +334,21 @@ static void studio_draw_timing(Canvas* canvas, StudioModel* m) {
     }
     canvas_set_font(canvas, FontSecondary);
     canvas_draw_line(canvas, 0, 36, 127, 36);
-    canvas_draw_str(canvas, 1, 19, "pulses");
-    canvas_draw_str(canvas, 1, 52, "gaps");
+    // Pulses above the line, gaps below, in half-Te bins.
+    canvas_draw_str(canvas, 1, 22, "hi");
+    canvas_draw_str(canvas, 1, 46, "lo");
     for(size_t k = 0; k < RG_STUDIO_HIST; k++) {
-        int32_t x = 6 + (int32_t)k * 7;
+        int32_t x = 14 + (int32_t)k * 7;
         int32_t h = hi[k] * 22 / most, l = lo[k] * 14 / most;
         if(h > 0) canvas_draw_box(canvas, x, 36 - h, 5, (size_t)h);
         if(l > 0) canvas_draw_box(canvas, x, 37, 5, (size_t)l);
     }
     // Te steps: 1, 2, 4 and 8 Te.
     static const uint8_t ticks[] = {1, 3, 7, 15};
-    static const char* const labels[] = {"1", "2", "4", "8T"};
+    static const char* const labels[] = {"1", "2", "4", "8"};
+    canvas_draw_str(canvas, 1, 63, "Te");
     for(size_t i = 0; i < 4; i++)
-        canvas_draw_str(canvas, 6 + ticks[i] * 7, 63, labels[i]);
+        canvas_draw_str(canvas, 14 + ticks[i] * 7, 63, labels[i]);
 }
 
 static void studio_draw(Canvas* canvas, void* model) {
