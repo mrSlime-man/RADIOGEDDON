@@ -41,6 +41,7 @@
 #include "helpers/rg_multi.h"
 #include "helpers/radiogeddon_sessions.h"
 #include "helpers/radiogeddon_ui.h"
+#include "helpers/radiogeddon_research.h"
 #include "views/radiogeddon_scanner_view.h"
 #include "views/radiogeddon_receiver_view.h"
 #include "views/radiogeddon_timeline_view.h"
@@ -233,6 +234,18 @@ struct RadioGeddonApp {
     RadioGeddonUi ui;
     // The Dolphin Lab room: its screen (from a module) while it is open.
     RadioGeddonRoomView* room_view;
+#endif
+#if RG_FEATURE_JOURNAL
+    // Research workflow: the recording in context, the journal, the tips.
+    RadioGeddonResearch research;
+#endif
+#if RG_FEATURE_PULSE_STUDIO
+    // Pulse Studio: its screen (from a module) while it is open.
+    struct RadioGeddonStudioView* studio_view;
+#endif
+#if RG_FEATURE_ACTIVITY_LOG
+    // RF Activity Logger: its state while it runs (module memory).
+    void* actlog;
 #endif
 };
 

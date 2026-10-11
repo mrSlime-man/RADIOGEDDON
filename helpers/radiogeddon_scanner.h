@@ -18,6 +18,8 @@
 #include <storage/storage.h>
 #include "radiogeddon_subghz.h"
 #include "rg_scan.h"
+#include "rg_adapt.h"
+#include "../radiogeddon_edition.h"
 
 #define RADIOGEDDON_SCANNER_MAX_CHANNELS 24
 
@@ -36,7 +38,28 @@ typedef struct {
     bool paused;
     uint32_t sweep_ms; // duration of the last complete sweep (0 until known)
     uint8_t threshold_db;
+    // Adaptive Scanner (Full edition): the mode, each channel's share of the
+    // visits (percent) and the longest wait any channel had between visits.
+    uint8_t mode; // RgAdaptMode (Standard without the feature)
+    uint8_t share[RADIOGEDDON_SCANNER_MAX_CHANNELS];
+    uint32_t worst_gap_ms;
 } RadioGeddonScannerSnapshot;
+
+/**
+ * Told about every visit as it ends (scanner thread, with the scanner's
+ * lock held: keep it short, never wait): channel @p index, whether it was
+ * active and whether this visit started an activity period, the reading and
+ * the channel's noise floor (dBm), how long it was measured and when.
+ */
+typedef void (*RadioGeddonScannerObserver)(
+    void* context,
+    size_t index,
+    bool active,
+    bool started,
+    int16_t rssi_dbm,
+    int16_t floor_dbm,
+    uint16_t dwell_ms,
+    uint32_t now_ms);
 
 RadioGeddonScanner* radiogeddon_scanner_alloc(RadioGeddonSubGhz* subghz);
 void radiogeddon_scanner_free(RadioGeddonScanner* instance);
@@ -57,6 +80,29 @@ void radiogeddon_scanner_set_callback(
     RadioGeddonScanner* instance,
     RadioGeddonScannerHitCallback callback,
     void* context);
+
+#if RG_FEATURE_ADAPTIVE_SCAN
+/**
+ * Scheduling mode (RgAdaptMode): Standard is the classic round robin; the
+ * adaptive modes learn from activity (helpers/rg_adapt.h). Must be called
+ * while stopped; a changed mode starts learning afresh.
+ */
+void radiogeddon_scanner_set_mode(RadioGeddonScanner* instance, uint8_t mode);
+/** Forget what the adaptive schedule learned (and the peaks, as Reset). */
+void radiogeddon_scanner_reset_learning(RadioGeddonScanner* instance);
+/** Custom mode: priority 0..3 of channel @p index. */
+void radiogeddon_scanner_set_priority(RadioGeddonScanner* instance, size_t index, uint8_t prio);
+#endif
+
+/** Visit observer (NULL: none). Must be called while stopped. */
+void radiogeddon_scanner_set_observer(
+    RadioGeddonScanner* instance,
+    RadioGeddonScannerObserver observer,
+    void* context);
+
+/** Hold the scanner's lock (to read what an observer wrote); keep it short. */
+void radiogeddon_scanner_lock(RadioGeddonScanner* instance);
+void radiogeddon_scanner_unlock(RadioGeddonScanner* instance);
 
 /** Start the sweep thread (radio session is opened by the thread). */
 void radiogeddon_scanner_start(RadioGeddonScanner* instance);

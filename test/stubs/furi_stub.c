@@ -715,6 +715,17 @@ FS_Error storage_common_timestamp(Storage* storage, const char* path, uint32_t* 
     return FSE_OK;
 }
 
+FS_Error storage_common_stat(Storage* storage, const char* path, FileInfo* fileinfo) {
+    (void)storage;
+    struct stat st;
+    if(stat(path, &st) != 0) return FSE_NOT_EXIST;
+    if(fileinfo) {
+        fileinfo->flags = S_ISDIR(st.st_mode) ? FSF_DIRECTORY : 0;
+        fileinfo->size = S_ISDIR(st.st_mode) ? 0 : (uint64_t)st.st_size;
+    }
+    return FSE_OK;
+}
+
 void storage_file_free(File* file) {
     /* As in the firmware: freeing an open file closes it. */
     if(file->fp) storage_file_close(file);

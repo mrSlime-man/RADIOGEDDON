@@ -26,6 +26,12 @@ struct RadioGeddonScanner {
 
     RadioGeddonScannerHitCallback callback;
     void* context;
+    RadioGeddonScannerObserver observer;
+    void* observer_ctx;
+#if RG_FEATURE_ADAPTIVE_SCAN
+    uint8_t mode; // RgAdaptMode
+    RgAdapt* adapt; // only in an adaptive mode
+#endif
 };
 
 RadioGeddonScanner* radiogeddon_scanner_alloc(RadioGeddonSubGhz* subghz) {
@@ -44,8 +50,64 @@ RadioGeddonScanner* radiogeddon_scanner_alloc(RadioGeddonSubGhz* subghz) {
 void radiogeddon_scanner_free(RadioGeddonScanner* instance) {
     furi_assert(instance);
     radiogeddon_scanner_stop(instance);
+#if RG_FEATURE_ADAPTIVE_SCAN
+    free(instance->adapt);
+#endif
     furi_mutex_free(instance->mutex);
     free(instance);
+}
+
+#if RG_FEATURE_ADAPTIVE_SCAN
+/* (Re)start the schedule for the current list and mode (lock held). */
+static void radiogeddon_scanner_adapt_init(RadioGeddonScanner* instance) {
+    if(instance->mode == RgAdaptStandard) {
+        free(instance->adapt);
+        instance->adapt = NULL;
+        return;
+    }
+    if(!instance->adapt) instance->adapt = malloc(sizeof(RgAdapt));
+    rg_adapt_init(instance->adapt, (RgAdaptMode)instance->mode, instance->count, instance->dwell_ms);
+}
+
+void radiogeddon_scanner_set_mode(RadioGeddonScanner* instance, uint8_t mode) {
+    furi_assert(!instance->thread);
+    if(mode >= RgAdaptModeCount) mode = RgAdaptStandard;
+    furi_mutex_acquire(instance->mutex, FuriWaitForever);
+    if(mode != instance->mode || (mode != RgAdaptStandard && !instance->adapt)) {
+        instance->mode = mode;
+        radiogeddon_scanner_adapt_init(instance);
+    }
+    furi_mutex_release(instance->mutex);
+}
+
+void radiogeddon_scanner_reset_learning(RadioGeddonScanner* instance) {
+    furi_mutex_acquire(instance->mutex, FuriWaitForever);
+    if(instance->adapt) rg_adapt_reset(instance->adapt);
+    furi_mutex_release(instance->mutex);
+}
+
+void radiogeddon_scanner_set_priority(RadioGeddonScanner* instance, size_t index, uint8_t prio) {
+    furi_mutex_acquire(instance->mutex, FuriWaitForever);
+    if(instance->adapt) rg_adapt_set_priority(instance->adapt, index, prio);
+    furi_mutex_release(instance->mutex);
+}
+#endif
+
+void radiogeddon_scanner_set_observer(
+    RadioGeddonScanner* instance,
+    RadioGeddonScannerObserver observer,
+    void* context) {
+    furi_assert(!instance->thread);
+    instance->observer = observer;
+    instance->observer_ctx = context;
+}
+
+void radiogeddon_scanner_lock(RadioGeddonScanner* instance) {
+    furi_mutex_acquire(instance->mutex, FuriWaitForever);
+}
+
+void radiogeddon_scanner_unlock(RadioGeddonScanner* instance) {
+    furi_mutex_release(instance->mutex);
 }
 
 void radiogeddon_scanner_configure(
@@ -75,6 +137,12 @@ void radiogeddon_scanner_configure(
     instance->params.threshold_db = (float)threshold_db;
     instance->hold_on_hit = hold_on_hit;
     if(!hold_on_hit) instance->hold_index = -1;
+#if RG_FEATURE_ADAPTIVE_SCAN
+    // A new list or dwell is a new schedule.
+    if(instance->mode != RgAdaptStandard &&
+       (!same_list || !instance->adapt || instance->adapt->base_dwell_ms != dwell_ms))
+        radiogeddon_scanner_adapt_init(instance);
+#endif
     furi_mutex_release(instance->mutex);
 }
 
@@ -107,21 +175,41 @@ static int32_t radiogeddon_scanner_thread(void* context) {
         }
 
         size_t index = (hold >= 0 && (size_t)hold < count) ? (size_t)hold : next;
-        uint32_t freq = instance->frequencies[index];
         furi_mutex_acquire(instance->mutex, FuriWaitForever);
+#if RG_FEATURE_ADAPTIVE_SCAN
+        // The adaptive schedule picks the channel and its dwell (a hold
+        // still stays where it is).
+        if(instance->adapt && hold < 0) {
+            index = rg_adapt_next(instance->adapt);
+            if(index >= count) index = 0;
+            dwell = rg_adapt_dwell(instance->adapt, index);
+        }
+#endif
         instance->measuring = (int32_t)index;
         furi_mutex_release(instance->mutex);
+        uint32_t freq = instance->frequencies[index];
         float rssi = radiogeddon_subghz_probe_rssi_dwell(instance->subghz, freq, dwell);
 
         bool started = false;
         furi_mutex_acquire(instance->mutex, FuriWaitForever);
         // The list cannot change while running (configure requires stop), so
         // index is still valid here.
-        started = rg_scan_channel_update(
-            &instance->channels[index], rssi, &instance->params, furi_get_tick());
+        uint32_t now = furi_get_tick();
+        RgScanChannel* ch = &instance->channels[index];
+        started = rg_scan_channel_update(ch, rssi, &instance->params, now);
         if(started && instance->hold_on_hit && instance->hold_index < 0) {
             instance->hold_index = (int32_t)index;
         }
+        int16_t dbm = (int16_t)(rssi < -127.0f ? -127 : rssi > 0.0f ? 0 : (int)(rssi - 0.5f));
+        int16_t floor_dbm = ch->samples >= RG_SCAN_WARMUP_SAMPLES ?
+                                (int16_t)(ch->floor < -127.0f ? -127 : (int)(ch->floor - 0.5f)) :
+                                (int16_t)-127;
+#if RG_FEATURE_ADAPTIVE_SCAN
+        if(instance->adapt) rg_adapt_observe(instance->adapt, index, ch->active, started, dbm, dwell, now);
+#endif
+        if(instance->observer)
+            instance->observer(
+                instance->observer_ctx, index, ch->active, started, dbm, floor_dbm, dwell, now);
         furi_mutex_release(instance->mutex);
 
         if(started && instance->callback) instance->callback(index, instance->context);
@@ -200,6 +288,17 @@ void radiogeddon_scanner_snapshot(RadioGeddonScanner* instance, RadioGeddonScann
     out->paused = instance->paused;
     out->sweep_ms = instance->sweep_ms;
     out->threshold_db = instance->threshold_db;
+    out->mode = 0;
+    out->worst_gap_ms = 0;
+    memset(out->share, 0, sizeof(out->share));
+#if RG_FEATURE_ADAPTIVE_SCAN
+    out->mode = instance->mode;
+    if(instance->adapt) {
+        for(size_t i = 0; i < instance->count; i++)
+            out->share[i] = rg_adapt_share(instance->adapt, i);
+        out->worst_gap_ms = rg_adapt_worst_gap(instance->adapt, furi_get_tick());
+    }
+#endif
     furi_mutex_release(instance->mutex);
 }
 

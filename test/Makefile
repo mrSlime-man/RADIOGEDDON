@@ -54,6 +54,12 @@ FORMATS_SRC := test_formats.c stubs/furi_stub.c ../helpers/radiogeddon_storage.c
 		../helpers/radiogeddon_dsp.c ../helpers/rg_range.c ../helpers/radiogeddon_profiles.c \
 		../helpers/rg_db.c ../helpers/rg_raw.c ../helpers/rg_analyzer.c ../helpers/rg_ui.c
 
+# Fingerprint index tests: Find Similar Signals over real files through the
+# stub Storage, the recordings parsed by the firmware's FlipperFormat code.
+FPINDEX_SRC := test_fpindex.c stubs/furi_stub.c ../helpers/radiogeddon_fp.c ../helpers/rg_fp.c \
+		../helpers/rg_crc.c ../helpers/radiogeddon_analysis_run.c ../helpers/radiogeddon_storage.c \
+		../helpers/rg_raw.c ../helpers/rg_analyzer.c ../helpers/radiogeddon_dsp.c
+
 # Decoder tests: the firmware's own Sub-GHz receiver and protocol decoders
 # (lib/subghz, every protocol it registers) run over its own RAW test captures
 # through rg_decode, fetched like the format tests. `make decoders`.
@@ -96,7 +102,8 @@ FUZZ_TIME ?= 60
 LIFECYCLE_SRC := test_lifecycle.c stubs/furi_stub.c stubs/radio_fake.c \
 		../helpers/radiogeddon_scanner.c ../helpers/radiogeddon_rangescan.c \
 		../helpers/radiogeddon_hopper.c ../helpers/rg_scan.c ../helpers/rg_hop.c \
-		../helpers/rg_range.c ../helpers/rg_spectrum.c ../helpers/rg_freq.c ../helpers/rg_waterfall.c
+		../helpers/rg_range.c ../helpers/rg_spectrum.c ../helpers/rg_freq.c ../helpers/rg_waterfall.c \
+		../helpers/rg_adapt.c
 
 # Offline UI tests: the Waterfall and Bitstream Explorer screens drawn into
 # a host 128x64 canvas with the firmware's own u8g2 fonts (ui/fetch_fonts.sh,
@@ -112,7 +119,7 @@ UI_SRC := test_ui.c ui/canvas_host.c ../views/radiogeddon_waterfall_view.c \
 UI_HDRS := ui/canvas_host.h ui/stubs/gui/view.h ui/stubs/gui/canvas.h ui/stubs/gui/elements.h \
 		../views/radiogeddon_waterfall_view.h ../views/radiogeddon_bits_view.h synth.h
 
-.PHONY: check clean tsan fuzz formats decoders captures lifecycle ui
+.PHONY: check clean tsan fuzz formats decoders captures lifecycle ui fpindex
 check: $(BUILD)/test_dsp $(BUILD)/test_analyzer $(BUILD)/test_scan $(BUILD)/test_hop $(BUILD)/test_raw \
 		$(BUILD)/test_timeline $(BUILD)/test_ring $(BUILD)/test_rawfmt $(BUILD)/test_recorder \
 		$(BUILD)/test_db $(BUILD)/test_memstat $(BUILD)/test_dbload $(BUILD)/test_decode $(BUILD)/test_freq $(BUILD)/test_preset $(BUILD)/test_range \
@@ -329,6 +336,14 @@ $(BUILD)/fwobj/%.o: $(FW)/%.c $(STUB_HDRS)
 $(BUILD)/test_formats: $(FORMATS_SRC) $(STUB_HDRS) $(FW_OBJ) | $(BUILD)
 	$(CC) $(CFLAGS) $(SAN) -D_GNU_SOURCE -I$(FW) -I$(FW)/lib -Istubs -DSTUB_TRACK_ALLOC -DRADIOGEDDON_EDITION_FULL -pthread \
 		-o $@ $(FORMATS_SRC) $(FW_OBJ)
+
+fpindex: $(BUILD)/test_fpindex
+	$(BUILD)/test_fpindex
+
+$(BUILD)/test_fpindex: $(FPINDEX_SRC) $(STUB_HDRS) $(FW_OBJ) ../helpers/radiogeddon_fp.h \
+		../helpers/rg_fp.h | $(BUILD)
+	$(CC) $(CFLAGS) $(SAN) -D_GNU_SOURCE -I$(FW) -I$(FW)/lib -I$(FW)/lib/mlib -Istubs \
+		-DSTUB_TRACK_ALLOC -DRADIOGEDDON_EDITION_FULL -pthread -o $@ $(FPINDEX_SRC) $(FW_OBJ)
 
 decoders: $(BUILD)/test_fwdecode $(BUILD)/test_fwpreset
 	$(BUILD)/test_fwdecode

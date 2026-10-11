@@ -23,6 +23,9 @@ static void radiogeddon_tick_event_callback(void* context) {
 #if RG_FEATURE_DOLPHIN_LAB
     radiogeddon_ui_tick(app);
 #endif
+#if RG_FEATURE_JOURNAL
+    radiogeddon_research_tick(app);
+#endif
     scene_manager_handle_tick_event(app->scene_manager);
 }
 
@@ -59,6 +62,9 @@ RadioGeddonApp* radiogeddon_app_alloc(void) {
 #endif
     radiogeddon_loaded_signal_init(&app->loaded);
     radiogeddon_loaded_signal_init(&app->loaded_b);
+#if RG_FEATURE_JOURNAL
+    radiogeddon_research_alloc(app);
+#endif
 
     app->subghz = radiogeddon_subghz_alloc();
     // An external module is used only if it answers now; otherwise the
@@ -149,6 +155,9 @@ void radiogeddon_app_free(RadioGeddonApp* app) {
     view_dispatcher_remove_view(app->view_dispatcher, RadioGeddonViewReceiver);
 #if RG_FEATURE_DOLPHIN_LAB
     radiogeddon_ui_free(app);
+#endif
+#if RG_FEATURE_JOURNAL
+    radiogeddon_research_free(app);
 #endif
     radiogeddon_scene_db_release(app);
 
