@@ -13,7 +13,7 @@
 #include "../helpers/rg_journal.h"
 
 /** Level, counted events, identified protocols and the recent history. */
-size_t radiogeddon_journal_text(const RgJournal* journal, char* out, size_t size);
+size_t radiogeddon_journal_text(const RgJournal* journal, bool xp_on, char* out, size_t size);
 
 /** Badges earned (with when; @p fresh marked new), open ones with hints,
  * and the decorations by level. */

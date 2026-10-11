@@ -54,6 +54,7 @@ void radiogeddon_settings_default(RadioGeddonSettings* settings) {
     // Beta 9: a settings file from before has none of these.
     settings->ui_animation = RgAnimNormal;
     settings->assistant = true;
+    settings->research_xp = true;
     RgMascotLook look;
     rg_mascot_look_default(&look);
     memcpy(settings->look, &look, sizeof(settings->look));
@@ -131,6 +132,7 @@ static const SettingsField settings_fields[] = {
     F("Log_interval_s", log_interval_s, FieldU16, 10, 3600),
     F("Log_minutes", log_minutes, FieldU16, 0, 1440),
     F("Log_max_kb", log_max_kb, FieldU16, 16, 4096),
+    F("Research_xp", research_xp, FieldBool, 0, 1),
 };
 
 #undef F

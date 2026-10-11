@@ -45,7 +45,11 @@ void radiogeddon_scene_room_on_enter(void* context) {
     view_dispatcher_add_view(
         app->view_dispatcher, RadioGeddonViewRoom, radiogeddon_room_view_get_view(app->room_view));
     radiogeddon_room_view_set_callback(app->room_view, radiogeddon_scene_room_cb, app);
-    radiogeddon_room_load_terminal(app->room_view, &app->research.journal, version_get_version(NULL));
+    radiogeddon_room_load_terminal(
+        app->room_view,
+        &app->research.journal,
+        app->settings.research_xp,
+        version_get_version(NULL));
     // The workbench and the oscilloscope: the recording in context.
     char session[RG_SESSION_NAME_MAX] = "";
 #if RG_FEATURE_SESSIONS
@@ -57,7 +61,7 @@ void radiogeddon_scene_room_on_enter(void* context) {
     if(have && app->research.ctx_raw)
         radiogeddon_room_load_scope(app->room_view, app->storage, furi_string_get_cstr(ctx));
     furi_string_free(ctx);
-    uint8_t level = rg_journal_level(rg_journal_xp(&app->research.journal));
+    uint8_t level = rg_journal_unlock_level(&app->research.journal, app->settings.research_xp);
     radiogeddon_room_view_set_decoration(
         app->room_view,
         rg_decoration_unlocked((RgDecoration)app->settings.decoration, level) ?

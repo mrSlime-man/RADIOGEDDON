@@ -75,11 +75,13 @@ void radiogeddon_room_view_set_scope(
 
 #include <storage/storage.h>
 #include "../helpers/rg_journal.h"
-/** The research terminal: the journal's level and counts, firmware @p fw
- * (version_get_version) and the app's version. Reads nothing from the card. */
+/** The research terminal: the journal's level (with Research XP on, @p xp_on)
+ * and counts, firmware @p fw (version_get_version) and the app's version.
+ * Reads nothing from the card. */
 void radiogeddon_room_load_terminal(
     RadioGeddonRoomView* instance,
     const RgJournal* journal,
+    bool xp_on,
     const char* fw);
 
 /** The workbench: the recording in context and the active session ("" none). */

@@ -114,6 +114,12 @@ uint32_t rg_journal_level_xp(uint8_t level);
 /** Distinct research tools used (bits of RgJournalEvent). */
 uint8_t rg_journal_tools_used(const RgJournal* j);
 
+/** The level that unlocks things: with Research XP off (@p xp_on false)
+ * there is nothing to earn, so everything is unlocked. */
+static inline uint8_t rg_journal_unlock_level(const RgJournal* j, bool xp_on) {
+    return xp_on ? rg_journal_level(rg_journal_xp(j)) : RG_JOURNAL_MAX_LEVEL;
+}
+
 /** Achievements that hold for the counters now (bits). */
 uint32_t rg_journal_achievements_due(const RgJournal* j);
 

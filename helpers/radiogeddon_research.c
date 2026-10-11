@@ -96,7 +96,7 @@ void radiogeddon_research_record(
     r->dirty = true;
     r->dirty_tick = furi_get_tick();
     bool up = rg_journal_level(rg_journal_xp(&r->journal)) > level;
-    if(fresh || up) {
+    if((fresh || up) && app->settings.research_xp) {
         r->fresh_achievements |= fresh;
 #if RG_FEATURE_DOLPHIN_LAB
         radiogeddon_ui_event(app, RgMascotEventAchievement, 0);

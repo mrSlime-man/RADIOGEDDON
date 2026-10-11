@@ -30,7 +30,7 @@ static const char* const customize_accessory[RgLookAccessoryCount] = {"None", "B
 
 static uint8_t customize_level(RadioGeddonApp* app) {
 #if RG_FEATURE_JOURNAL
-    return rg_journal_level(rg_journal_xp(&app->research.journal));
+    return rg_journal_unlock_level(&app->research.journal, app->settings.research_xp);
 #else
     UNUSED(app);
     return 1;

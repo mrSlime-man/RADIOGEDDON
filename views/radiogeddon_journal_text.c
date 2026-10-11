@@ -43,14 +43,18 @@ static void jtime(char* out, size_t size, uint32_t ts) {
     snprintf(out, size, "%02u-%02u %02u:%02u", dt.month, dt.day, dt.hour, dt.minute);
 }
 
-size_t radiogeddon_journal_text(const RgJournal* j, char* out, size_t size) {
+size_t radiogeddon_journal_text(const RgJournal* j, bool xp_on, char* out, size_t size) {
     JText t = {out, size, 0};
     if(size) out[0] = '\0';
-    uint32_t xp = rg_journal_xp(j);
-    uint8_t level = rg_journal_level(xp);
-    jcat(&t, "Research level %u, %lu XP\n", (unsigned)level, (unsigned long)xp);
-    if(level < RG_JOURNAL_MAX_LEVEL)
-        jcat(&t, "Next level at %lu XP\n", (unsigned long)rg_journal_level_xp(level + 1));
+    if(xp_on) {
+        uint32_t xp = rg_journal_xp(j);
+        uint8_t level = rg_journal_level(xp);
+        jcat(&t, "Research level %u, %lu XP\n", (unsigned)level, (unsigned long)xp);
+        if(level < RG_JOURNAL_MAX_LEVEL)
+            jcat(&t, "Next level at %lu XP\n", (unsigned long)rg_journal_level_xp(level + 1));
+    } else {
+        jcat(&t, "Research Journal\n");
+    }
     if(j->recovered) jcat(&t, "(journal file was damaged;\nstarted over)\n");
     jcat(&t, "\nCounted events:\n");
     static const uint8_t order[] = {

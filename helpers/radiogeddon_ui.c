@@ -334,14 +334,15 @@ void radiogeddon_ui_show_home(
 #endif
 #if RG_FEATURE_JOURNAL
         // A badge earned and not yet seen in the Research Journal.
-        if(!right[0] && app->research.fresh_achievements) strlcpy(right, "New badge!", sizeof(right));
+        if(!right[0] && app->research.fresh_achievements && app->settings.research_xp)
+            strlcpy(right, "New badge!", sizeof(right));
 #endif
         if(!right[0])
             strlcpy(right, cyber ? RG_EDITION_NAME " EDITION" : RG_EDITION_NAME, sizeof(right));
     }
 #if RG_FEATURE_JOURNAL
     // A decoration shows only while its level is reached.
-    uint8_t level = rg_journal_level(rg_journal_xp(&app->research.journal));
+    uint8_t level = rg_journal_unlock_level(&app->research.journal, app->settings.research_xp);
     radiogeddon_lab_view_set_decoration(
         ui->lab,
         rg_decoration_unlocked((RgDecoration)app->settings.decoration, level) ?

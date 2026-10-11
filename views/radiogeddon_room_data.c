@@ -18,18 +18,28 @@
 void radiogeddon_room_load_terminal(
     RadioGeddonRoomView* instance,
     const RgJournal* j,
+    bool xp_on,
     const char* fw) {
     // The journal's counts: nothing is read from the card for them.
     char lines[RADIOGEDDON_ROOM_LINES][RADIOGEDDON_ROOM_LINE_LEN];
     uint32_t xp = rg_journal_xp(j);
     snprintf(lines[0], sizeof(lines[0]), "RadioGeddon %s", RADIOGEDDON_VERSION);
     snprintf(lines[1], sizeof(lines[1]), "%s %s", rg_ui_fw_family(fw), fw ? fw : "");
-    snprintf(
-        lines[2],
-        sizeof(lines[2]),
-        "Level %u, %lu XP",
-        (unsigned)rg_journal_level(xp),
-        (unsigned long)xp);
+    if(xp_on) {
+        snprintf(
+            lines[2],
+            sizeof(lines[2]),
+            "Level %u, %lu XP",
+            (unsigned)rg_journal_level(xp),
+            (unsigned long)xp);
+    } else {
+        snprintf(
+            lines[2],
+            sizeof(lines[2]),
+            "Studio %lu, similar %lu",
+            (unsigned long)j->counters[RgJrnStudio],
+            (unsigned long)j->counters[RgJrnSimilar]);
+    }
     snprintf(
         lines[3],
         sizeof(lines[3]),
@@ -39,13 +49,22 @@ void radiogeddon_room_load_terminal(
     uint32_t badges = 0;
     for(size_t a = 0; a < RgAchCount; a++)
         if(j->achievements & (1u << a)) badges++;
-    snprintf(
-        lines[4],
-        sizeof(lines[4]),
-        "Badges %lu/%u, logs %lu",
-        (unsigned long)badges,
-        (unsigned)RgAchCount,
-        (unsigned long)j->counters[RgJrnActlog]);
+    if(xp_on) {
+        snprintf(
+            lines[4],
+            sizeof(lines[4]),
+            "Badges %lu/%u, logs %lu",
+            (unsigned long)badges,
+            (unsigned)RgAchCount,
+            (unsigned long)j->counters[RgJrnActlog]);
+    } else {
+        snprintf(
+            lines[4],
+            sizeof(lines[4]),
+            "Reports %lu, logs %lu",
+            (unsigned long)j->counters[RgJrnReport],
+            (unsigned long)j->counters[RgJrnActlog]);
+    }
     radiogeddon_room_view_set_terminal(
         instance, (const char(*)[RADIOGEDDON_ROOM_LINE_LEN])lines, j->counters[RgJrnCapture]);
 }

@@ -47,22 +47,29 @@ static void journal_show_menu(RadioGeddonApp* app, uint32_t selected) {
     Submenu* submenu = app->submenu;
     submenu_reset(submenu);
     const RgJournal* j = &app->research.journal;
-    uint32_t xp = rg_journal_xp(j);
+    bool xp_on = app->settings.research_xp;
     char header[32];
-    snprintf(
-        header,
-        sizeof(header),
-        "Journal: Lv %u, %lu XP",
-        (unsigned)rg_journal_level(xp),
-        (unsigned long)xp);
+    if(xp_on) {
+        uint32_t xp = rg_journal_xp(j);
+        snprintf(
+            header,
+            sizeof(header),
+            "Journal: Lv %u, %lu XP",
+            (unsigned)rg_journal_level(xp),
+            (unsigned long)xp);
+    } else {
+        strlcpy(header, "Research Journal", sizeof(header));
+    }
     submenu_set_header(submenu, header);
     submenu_add_item(submenu, "History & statistics", JournalItemJournal, journal_cb, app);
-    submenu_add_item(
-        submenu,
-        app->research.fresh_achievements ? "Achievements (new!)" : "Achievements",
-        JournalItemAchievements,
-        journal_cb,
-        app);
+    // Research XP off: no achievements to show.
+    if(xp_on)
+        submenu_add_item(
+            submenu,
+            app->research.fresh_achievements ? "Achievements (new!)" : "Achievements",
+            JournalItemAchievements,
+            journal_cb,
+            app);
 #if RG_FEATURE_DOLPHIN_LAB
     submenu_add_item(submenu, "Customize dolphin", JournalItemCustomize, journal_cb, app);
 #endif
@@ -81,7 +88,8 @@ static void journal_show_page(RadioGeddonApp* app, bool achievements) {
             &r->journal, r->fresh_achievements, journal_text, JOURNAL_TEXT_SIZE);
         r->fresh_achievements = 0; // seen
     } else {
-        radiogeddon_journal_text(&r->journal, journal_text, JOURNAL_TEXT_SIZE);
+        radiogeddon_journal_text(
+            &r->journal, app->settings.research_xp, journal_text, JOURNAL_TEXT_SIZE);
     }
     scene_manager_set_scene_state(app->scene_manager, RadioGeddonSceneJournal, JournalModeText);
     text_box_reset(app->text_box);

@@ -397,7 +397,7 @@ static bool same_settings(const RadioGeddonSettings* a, const RadioGeddonSetting
            a->assistant == b->assistant && memcmp(a->look, b->look, sizeof(a->look)) == 0 &&
            a->decoration == b->decoration && a->scan_mode == b->scan_mode &&
            a->log_interval_s == b->log_interval_s && a->log_minutes == b->log_minutes &&
-           a->log_max_kb == b->log_max_kb;
+           a->log_max_kb == b->log_max_kb && a->research_xp == b->research_xp;
 }
 
 static RadioGeddonSettings custom_settings(void) {
@@ -431,6 +431,7 @@ static RadioGeddonSettings custom_settings(void) {
     s.ui_transitions = false;
     s.ui_animation = RgAnimFull;
     s.assistant = false;
+    s.research_xp = false;
     s.look[0] = 0;
     s.look[1] = RgLookGogglesAlways;
     s.look[2] = RgLookAntennaDish;
@@ -532,7 +533,8 @@ static void test_settings_editions(void) {
     radiogeddon_settings_load(CARD, &got);
     CHECK(
         got.ui_style == RgUiStyleCyberLab && got.ui_animation == RgAnimNormal && got.assistant &&
-            got.look[0] == 1 && got.scan_mode == RgAdaptStandard && got.log_interval_s == 60,
+            got.look[0] == 1 && got.scan_mode == RgAdaptStandard && got.log_interval_s == 60 &&
+            got.research_xp,
         "beta.8 file: Beta 9 defaults");
     reset_card();
     write_settings_text("Filetype: RadioGeddon Settings\nVersion: 1\nUi_animation: 9\n"

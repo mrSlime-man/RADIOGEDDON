@@ -53,6 +53,7 @@ typedef struct {
     uint16_t log_interval_s; // RF Activity Logger: seconds per logged row set
     uint16_t log_minutes; // RF Activity Logger: observation length, 0 = until stopped
     uint16_t log_max_kb; // RF Activity Logger: size of one log part
+    bool research_xp; // Research XP, levels and achievements shown
 } RadioGeddonSettings;
 
 /** Where the Scanner and the Hopper take their frequencies from. */
