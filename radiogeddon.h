@@ -38,6 +38,7 @@
 #include "helpers/radiogeddon_profiles.h"
 #include "helpers/radiogeddon_rangescan.h"
 #include "helpers/radiogeddon_multi.h"
+#include "helpers/radiogeddon_sessions.h"
 #include "views/radiogeddon_scanner_view.h"
 #include "views/radiogeddon_receiver_view.h"
 #include "views/radiogeddon_timeline_view.h"
@@ -205,6 +206,14 @@ struct RadioGeddonApp {
     uint8_t multi_count;
     char multi_header[32];
     char* multi_report;
+#endif
+#if RG_FEATURE_SESSIONS
+    // Sessions: the list and the open session exist only while the
+    // Sessions screens are shown (freed on returning to the main menu).
+    RadioGeddonSessionList* session_list;
+    RgSession* session;
+    char session_name[RG_SESSION_NAME_MAX]; // the session opened from the list
+    uint8_t session_name_mode; // what the name keyboard is for (SessionNameMode)
 #endif
 };
 

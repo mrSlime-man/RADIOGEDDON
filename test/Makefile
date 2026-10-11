@@ -23,6 +23,7 @@ SPECTRUM_SRC := test_spectrum.c ../helpers/rg_spectrum.c ../helpers/rg_scan.c
 CHECKSUM_SRC := test_checksum.c ../helpers/rg_checksum.c
 BITS_SRC := test_bits.c ../helpers/rg_bits.c ../helpers/rg_analyzer.c
 MULTI_SRC := test_multi.c ../helpers/rg_multi.c ../helpers/rg_analyzer.c
+SESSION_SRC := test_session.c ../helpers/rg_session.c
 WATERFALL_SRC := test_waterfall.c ../helpers/rg_waterfall.c ../helpers/rg_range.c
 MEMSTAT_SRC := test_memstat.c ../helpers/rg_memstat.c
 DECODE_SRC := test_decode.c ../helpers/rg_decode.c ../helpers/rg_raw.c
@@ -103,7 +104,7 @@ UI_HDRS := ui/canvas_host.h ui/stubs/gui/view.h ui/stubs/gui/canvas.h ui/stubs/g
 check: $(BUILD)/test_dsp $(BUILD)/test_analyzer $(BUILD)/test_scan $(BUILD)/test_hop $(BUILD)/test_raw \
 		$(BUILD)/test_timeline $(BUILD)/test_ring $(BUILD)/test_rawfmt $(BUILD)/test_recorder \
 		$(BUILD)/test_db $(BUILD)/test_memstat $(BUILD)/test_dbload $(BUILD)/test_decode $(BUILD)/test_freq $(BUILD)/test_preset $(BUILD)/test_range \
-		$(BUILD)/test_txpolicy $(BUILD)/test_spectrum $(BUILD)/test_checksum $(BUILD)/test_waterfall $(BUILD)/test_bits $(BUILD)/test_multi $(BUILD)/test_edition_full $(BUILD)/test_edition_catalog \
+		$(BUILD)/test_txpolicy $(BUILD)/test_spectrum $(BUILD)/test_checksum $(BUILD)/test_waterfall $(BUILD)/test_bits $(BUILD)/test_multi $(BUILD)/test_session $(BUILD)/test_edition_full $(BUILD)/test_edition_catalog \
 		$(BUILD)/test_edition_default $(BUILD)/edition_conflict.ok \
 		$(addprefix $(BUILD)/replay_,$(FUZZ_TARGETS))
 	$(BUILD)/test_dsp
@@ -128,6 +129,7 @@ check: $(BUILD)/test_dsp $(BUILD)/test_analyzer $(BUILD)/test_scan $(BUILD)/test
 	$(BUILD)/test_waterfall
 	$(BUILD)/test_bits
 	$(BUILD)/test_multi
+	$(BUILD)/test_session
 	$(BUILD)/test_edition_full
 	$(BUILD)/test_edition_catalog
 	$(BUILD)/test_edition_default
@@ -189,6 +191,9 @@ $(BUILD)/test_bits: $(BITS_SRC) ../helpers/rg_bits.h ../helpers/rg_analyzer.h sy
 
 $(BUILD)/test_multi: $(MULTI_SRC) ../helpers/rg_multi.h ../helpers/rg_analyzer.h synth.h | $(BUILD)
 	$(CC) $(CFLAGS) $(SAN) -DRADIOGEDDON_EDITION_FULL -o $@ $(MULTI_SRC)
+
+$(BUILD)/test_session: $(SESSION_SRC) ../helpers/rg_session.h | $(BUILD)
+	$(CC) $(CFLAGS) $(SAN) -DRADIOGEDDON_EDITION_FULL -o $@ $(SESSION_SRC)
 
 # The edition switches, built as each edition and with none defined.
 $(BUILD)/test_edition_full: test_edition.c ../radiogeddon_edition.h | $(BUILD)

@@ -59,6 +59,12 @@ static const uint8_t range_threshold_db[] = {6, 8, 10, 15, 20, 30};
 
 static VariableItem* range_plan_item;
 
+#if RG_FEATURE_WATERFALL
+uint32_t radiogeddon_scene_range_setup_waterfall_item(void) {
+    return RangeItemWaterfall;
+}
+#endif
+
 static void radiogeddon_range_step_text(uint32_t hz, char* out, size_t size) {
     if(hz >= 1000000 && hz % 1000000 == 0) {
         snprintf(out, size, "%lu MHz", (unsigned long)(hz / 1000000));

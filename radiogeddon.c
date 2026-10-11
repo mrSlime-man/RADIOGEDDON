@@ -165,6 +165,9 @@ void radiogeddon_app_free(RadioGeddonApp* app) {
 #if RG_FEATURE_BITSTREAM
     free(app->bits_doc); // normally freed when the explorer closes
 #endif
+#if RG_FEATURE_SESSIONS
+    radiogeddon_scene_sessions_release(app);
+#endif
 #if RG_FEATURE_MULTI_COMPARE
     radiogeddon_multi_clear(app);
     free(app->multi_report);

@@ -99,7 +99,19 @@ bool radiogeddon_multi_add(RadioGeddonApp* app, const char* path);
 void radiogeddon_multi_clear(RadioGeddonApp* app);
 #endif
 
+#if RG_FEATURE_SESSIONS
+/** What the session name keyboard is for. */
+typedef enum {
+    RadioGeddonSessionNameNew,
+    RadioGeddonSessionNameRename,
+} RadioGeddonSessionNameMode;
+/** Free the session list and the open session (back at the main menu). */
+void radiogeddon_scene_sessions_release(RadioGeddonApp* app);
+#endif
+
 #if RG_FEATURE_WATERFALL
+/** Range Scanner setup's "Start waterfall" row (its scene state selects it). */
+uint32_t radiogeddon_scene_range_setup_waterfall_item(void);
 /** Smallest Waterfall history for @p points points (one screen of rows). */
 size_t radiogeddon_scene_waterfall_min_bytes(uint32_t points);
 /** The Waterfall's heap besides its history (engine and screen). */
