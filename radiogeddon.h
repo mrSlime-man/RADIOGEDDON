@@ -37,6 +37,7 @@
 #include "helpers/rg_range.h"
 #include "helpers/radiogeddon_profiles.h"
 #include "helpers/radiogeddon_rangescan.h"
+#include "helpers/radiogeddon_multi.h"
 #include "views/radiogeddon_scanner_view.h"
 #include "views/radiogeddon_receiver_view.h"
 #include "views/radiogeddon_timeline_view.h"
@@ -196,6 +197,14 @@ struct RadioGeddonApp {
     // only while the explorer is open.
     RadioGeddonBitsView* bits_view;
     RgAnalysis* bits_doc;
+#endif
+#if RG_FEATURE_MULTI_COMPARE
+    // Multi-Capture Compare: the chosen recordings (paths only) and, while
+    // the result is shown, its report text.
+    FuriString* multi_paths[RG_MULTI_MAX_CAPTURES];
+    uint8_t multi_count;
+    char multi_header[32];
+    char* multi_report;
 #endif
 };
 

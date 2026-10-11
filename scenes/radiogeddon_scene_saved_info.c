@@ -8,6 +8,7 @@ typedef enum {
     SavedInfoIndexBitstream, // Full edition
     SavedInfoIndexCrypto,
     SavedInfoIndexCompare,
+    SavedInfoIndexMulti, // Full edition
     SavedInfoIndexReplay,
     SavedInfoIndexDetails,
     SavedInfoIndexRename,
@@ -120,6 +121,10 @@ static void radiogeddon_scene_saved_info_show_menu(RadioGeddonApp* app) {
         submenu, "Crypto Analysis", SavedInfoIndexCrypto, radiogeddon_scene_saved_info_cb, app);
     submenu_add_item(
         submenu, "Compare with...", SavedInfoIndexCompare, radiogeddon_scene_saved_info_cb, app);
+#if RG_FEATURE_MULTI_COMPARE
+    submenu_add_item(
+        submenu, "Compare several...", SavedInfoIndexMulti, radiogeddon_scene_saved_info_cb, app);
+#endif
     submenu_add_item(
         submenu, "Replay (TX)", SavedInfoIndexReplay, radiogeddon_scene_saved_info_cb, app);
     submenu_add_item(
@@ -221,6 +226,21 @@ bool radiogeddon_scene_saved_info_on_event(void* context, SceneManagerEvent even
             consumed = true;
             break;
         }
+#if RG_FEATURE_MULTI_COMPARE
+        case SavedInfoIndexMulti:
+            // This file joins the list (if not on it), then the list opens.
+            if(radiogeddon_multi_add(app, furi_string_get_cstr(app->file_path))) {
+                scene_manager_set_scene_state(app->scene_manager, RadioGeddonSceneMulti, 0);
+                scene_manager_next_scene(app->scene_manager, RadioGeddonSceneMulti);
+            } else {
+                radiogeddon_scene_show_message(
+                    app,
+                    "List is full",
+                    "At most 8 recordings.\nRemove one from the\nlist first.");
+            }
+            consumed = true;
+            break;
+#endif
         case SavedInfoIndexReplay:
             scene_manager_next_scene(app->scene_manager, RadioGeddonSceneReplay);
             consumed = true;

@@ -92,6 +92,13 @@ void radiogeddon_scene_probe_bands(RadioGeddonApp* app);
 RgRangeResult radiogeddon_scene_plan_range(RadioGeddonApp* app);
 #endif
 
+#if RG_FEATURE_MULTI_COMPARE
+/** Put @p path on the Multi-Compare list (no duplicates); false when full. */
+bool radiogeddon_multi_add(RadioGeddonApp* app, const char* path);
+/** Empty the Multi-Compare list (recordings are untouched). */
+void radiogeddon_multi_clear(RadioGeddonApp* app);
+#endif
+
 #if RG_FEATURE_WATERFALL
 /** Smallest Waterfall history for @p points points (one screen of rows). */
 size_t radiogeddon_scene_waterfall_min_bytes(uint32_t points);

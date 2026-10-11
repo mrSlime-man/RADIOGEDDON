@@ -165,6 +165,10 @@ void radiogeddon_app_free(RadioGeddonApp* app) {
 #if RG_FEATURE_BITSTREAM
     free(app->bits_doc); // normally freed when the explorer closes
 #endif
+#if RG_FEATURE_MULTI_COMPARE
+    radiogeddon_multi_clear(app);
+    free(app->multi_report);
+#endif
     radiogeddon_history_free(app->history);
     furi_mutex_free(app->history_mutex);
     radiogeddon_subghz_free(app->subghz);

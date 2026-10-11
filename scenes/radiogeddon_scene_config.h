@@ -37,3 +37,7 @@ ADD_SCENE(radiogeddon, waterfall, Waterfall)
 #if RG_FEATURE_BITSTREAM
 ADD_SCENE(radiogeddon, bitstream, Bitstream)
 #endif
+#if RG_FEATURE_MULTI_COMPARE
+ADD_SCENE(radiogeddon, multi, Multi)
+ADD_SCENE(radiogeddon, multi_result, MultiResult)
+#endif
