@@ -172,12 +172,17 @@ void radiogeddon_storage_raw_close(RadioGeddonRawFile* file) {
 }
 
 void radiogeddon_storage_make_scan_path(FuriString* out) {
+    radiogeddon_storage_make_scan_path_prefix(out, "SCAN");
+}
+
+void radiogeddon_storage_make_scan_path_prefix(FuriString* out, const char* prefix) {
     DateTime dt;
     furi_hal_rtc_get_datetime(&dt);
     furi_string_printf(
         out,
-        "%s/SCAN_%04u%02u%02u_%02u%02u%02u.csv",
+        "%s/%s_%04u%02u%02u_%02u%02u%02u.csv",
         RADIOGEDDON_SCANS_FOLDER,
+        prefix,
         dt.year,
         dt.month,
         dt.day,

@@ -45,7 +45,10 @@ static void test_stat(void) {
 
 static void test_session(void) {
     printf("test_session\n");
-    CHECK(rg_mem_session_fits(5000, 0, 6000), "unmeasured cost never refuses");
+    CHECK(
+        rg_mem_session_fits(RG_MEM_MIN_SESSION_COST, 0, 6000),
+        "unmeasured: allowed above the floor");
+    CHECK(!rg_mem_session_fits(5000, 0, 6000), "unmeasured: refused when no session could fit");
     CHECK(rg_mem_session_fits(30000, 20000, 6000), "fits with margin");
     CHECK(rg_mem_session_fits(26000, 20000, 6000), "exactly cost plus margin fits");
     CHECK(!rg_mem_session_fits(25999, 20000, 6000), "one byte short is refused");

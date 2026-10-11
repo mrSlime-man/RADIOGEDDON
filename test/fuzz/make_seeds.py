@@ -94,3 +94,40 @@ write(
 )
 pwm = [350, -1050, 1050, -350] * 12 + [350, -11000]
 write("fuzz_samples", "pwm_frames", bytes([0, 0, 0, 0, 0, 0, 1, 2]) + struct.pack("<%di" % (len(pwm) * 3), *(pwm * 3)))
+
+
+# fuzz_session: 0 + a session file, or 1 + a module (ELF) file.
+SESSION = (
+    b"# RadioGeddon session\nVersion: 1\nName: Garage remote\nCreated: 2026-10-11 12:00\n"
+    b"Signal: btn1.sub\nSignal: btn2.sub\n"
+)
+write("fuzz_session", "session", b"\x00" + SESSION)
+write(
+    "fuzz_session",
+    "session_odd",
+    b"\x00# RadioGeddon session\r\nName:   \r\nSignal: a.sub\r\nSignal: a.sub\r\n"
+    b"Signal: ../x.sub\r\nSignal: " + b"y" * 80 + b".sub\r\nColour: red\r\nName: Two",
+)
+
+
+def elf32(sections, entsize=40):
+    shoff = 0x40
+    head = bytearray(52)
+    head[0:4] = b"\x7fELF"
+    head[4] = 1
+    head[5] = 1
+    struct.pack_into("<I", head, 32, shoff)
+    struct.pack_into("<HH", head, 46, entsize, len(sections))
+    body = bytearray(shoff - len(head))
+    table = bytearray()
+    for flags, size in sections:
+        sh = bytearray(entsize)
+        struct.pack_into("<I", sh, 8, flags)
+        struct.pack_into("<I", sh, 20, size)
+        table += sh
+    return bytes(head + body + table)
+
+
+write("fuzz_session", "elf", b"\x01" + elf32([(0, 0), (6, 5604), (2, 870), (3, 8), (3, 396), (0, 9000)]))
+write("fuzz_session", "elf_big", b"\x01" + elf32([(2, 0xFFFFFFFF)] * 3, entsize=48))
+

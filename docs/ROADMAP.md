@@ -4,7 +4,17 @@ Where RadioGeddon is headed. This is a plan, not a promise — priorities shift
 with what hardware testing finds and what contributors pick up. Dates are
 deliberately omitted.
 
-## Now — `1.0.0-beta.6`
+## Now — `1.0.0-beta.7`
+
+`1.0.0-beta.7` adds research tools to the Full edition: a **waterfall** (RSSI
+sweep history of the Range Scanner), the **Bitstream Explorer**,
+**Multi-Capture Compare** and **Research Sessions**, loaded as modules only
+while in use so the resident app grows by 9.7 KB instead of 33.6 KB, and a
+main menu grouped into Scan, Receive & Record, Analyze, Database and Sessions.
+Unknown Protocol Analysis tells pulse-width codes from Manchester by how
+pulses pair with gaps (encoding right on 43 of the firmware's 50 test
+captures, frame length on 35), and the screens are tested on a host canvas
+with the firmware's fonts. None of it is verified on hardware yet.
 
 `1.0.0-beta.6` splits RadioGeddon into two editions from one source tree:
 **Full** for RogueMaster, Momentum (its first build) and Unleashed, with a
@@ -46,6 +56,8 @@ all four firmware families and both editions and record evidence in
       Momentum included.
 - [ ] Full edition: Range Scanner, favorites and profiles (R1–R11) and its
       memory headroom (M1–M3).
+- [ ] Full edition: the beta 7 research tools and modules (B1–B9) and memory
+      with modules (M4–M5).
 - [ ] Catalog edition: region refusal on a device (C1–C3), then qFlipper
       screenshots and the Apps Catalog submission.
 - [ ] Receive/decode, RAW capture fidelity, and authorized replay confirmed
@@ -136,6 +148,23 @@ still needs.
       validation with the catalog's own bundler are ready; blocked on
       qFlipper screenshots from a real device.
 
+## Beta 7: research tools (Full edition)
+
+- [x] **Waterfall**: RSSI sweep history of the Range Scanner, missing
+      measurements shown as such, CSV export (hardware checks B1–B3 pending).
+- [x] **Bitstream Explorer**: frames, bits, bytes from any offset, diff and
+      fields of a RAW capture (hardware check B4 pending).
+- [x] **Multi-Capture Compare** of up to 8 recordings, one at a time
+      (hardware check B5 pending).
+- [x] **Research Sessions** with safe saves and grouping suggestions
+      (hardware checks B6–B8 pending).
+- [x] **Modules**: the optional tools load only while used (hardware check
+      M4 pending).
+- [x] **Grouped Full main menu**; the Catalog edition's is unchanged.
+- [x] **Analyzer**: pulse/gap pairing, every encoding's fit shown, repeat
+      timing (hardware check B9 pending).
+- [x] **Offline UI tests** on a host canvas with the firmware's fonts.
+
 ## Toward a stable 1.0.0
 
 - [ ] Fix whatever hardware testing surfaces.
@@ -149,8 +178,11 @@ still needs.
       F1f pending).
 - [ ] A custom modulation/preset editor.
 - [x] CRC/checksum structure guesses (Full edition, beta 6).
-- [ ] Richer analysis: more encodings, bit-field views across several captures.
-- [ ] Range Scanner zoom and a waterfall of past sweeps.
+- [x] Bit-field views across several captures (Bitstream Explorer and
+      Multi-Capture Compare, beta 7).
+- [ ] Richer analysis: more encodings.
+- [x] A waterfall of past sweeps (beta 7).
+- [ ] Range Scanner zoom.
 - [ ] A larger library of reference captures for regression testing.
 - [ ] Localisation of on-screen text.
 

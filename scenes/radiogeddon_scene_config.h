@@ -31,3 +31,24 @@ ADD_SCENE(radiogeddon, favorites, Favorites)
 ADD_SCENE(radiogeddon, favorite_options, FavoriteOptions)
 ADD_SCENE(radiogeddon, bands, Bands)
 #endif
+#if RG_FEATURE_WATERFALL
+ADD_SCENE(radiogeddon, waterfall, Waterfall)
+#endif
+#if RG_FEATURE_BITSTREAM
+ADD_SCENE(radiogeddon, bitstream, Bitstream)
+#endif
+#if RG_FEATURE_MULTI_COMPARE
+ADD_SCENE(radiogeddon, multi, Multi)
+ADD_SCENE(radiogeddon, multi_result, MultiResult)
+#endif
+#if RG_EDITION_FULL
+ADD_SCENE(radiogeddon, scan_menu, ScanMenu)
+ADD_SCENE(radiogeddon, analyze_menu, AnalyzeMenu)
+#endif
+#if RG_FEATURE_SESSIONS
+ADD_SCENE(radiogeddon, sessions, Sessions)
+ADD_SCENE(radiogeddon, session_name, SessionName)
+ADD_SCENE(radiogeddon, session_menu, SessionMenu)
+ADD_SCENE(radiogeddon, session_signals, SessionSignals)
+ADD_SCENE(radiogeddon, session_groups, SessionGroups)
+#endif

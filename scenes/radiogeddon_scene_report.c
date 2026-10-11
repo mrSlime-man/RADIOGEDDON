@@ -24,6 +24,8 @@ void radiogeddon_scene_report_on_enter(void* context) {
         radiogeddon_scene_decoders_fit(app) ? app->subghz : NULL,
         furi_string_get_cstr(app->file_path),
         &app->loaded,
+        &(RadioGeddonUnknownProvider){
+            radiogeddon_scene_unknown_begin, radiogeddon_scene_unknown_end, app},
         app->temp_str,
         path);
     radiogeddon_scene_progress_end(app);

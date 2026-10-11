@@ -36,8 +36,8 @@ static void radiogeddon_db_view_tag(const RgDbEntry* e, char* out, size_t size) 
         t = "RAW";
         break;
     default:
-        strncpy(proto, e->protocol, sizeof(proto) - 1);
-        proto[sizeof(proto) - 1] = '\0';
+        // The tag column fits a short protocol name: cut it there.
+        snprintf(proto, sizeof(proto), "%.*s", (int)(sizeof(proto) - 1), e->protocol);
         t = proto;
         break;
     }

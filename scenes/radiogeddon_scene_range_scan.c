@@ -14,6 +14,7 @@ typedef enum {
     RangeScanEventReset,
     RangeScanEventSave,
     RangeScanEventPopupDone,
+    RangeScanEventFailed, // on_enter could not start: leave, then explain
     // + point index; clear of every other scene's events, because a hit
     // posted just as the scene closes is delivered to the next one.
     RangeScanEventHitBase = 10000,
@@ -49,8 +50,9 @@ void radiogeddon_scene_range_scan_on_enter(void* context) {
     // bands again in case the radio changed meanwhile.
     radiogeddon_scene_probe_bands(app);
     if(radiogeddon_scene_plan_range(app) != RgRangeOk) {
-        radiogeddon_scene_show_message(
-            app, "Bad range", "Check the range in\nRange Scanner setup.");
+        // Leave from the event loop: a message shown from here would return
+        // to this scene, which would fail again.
+        view_dispatcher_send_custom_event(app->view_dispatcher, RangeScanEventFailed);
         return;
     }
 
@@ -117,7 +119,15 @@ static void radiogeddon_scene_range_scan_save(RadioGeddonApp* app) {
 
 bool radiogeddon_scene_range_scan_on_event(void* context, SceneManagerEvent event) {
     RadioGeddonApp* app = context;
-    if(!app->rangescan) return false;
+    if(!app->rangescan) {
+        if(event.type == SceneManagerEventTypeCustom && event.event == RangeScanEventFailed) {
+            scene_manager_previous_scene(app->scene_manager);
+            radiogeddon_scene_show_message(
+                app, "Bad range", "Check the range in\nRange Scanner setup.");
+            return true;
+        }
+        return false;
+    }
 
     if(event.type == SceneManagerEventTypeTick) {
         radiogeddon_spectrum_view_update(app->spectrum_view, app->rangescan);

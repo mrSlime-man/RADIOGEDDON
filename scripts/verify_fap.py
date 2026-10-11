@@ -12,9 +12,14 @@ manifest magic, hardware target, application name and application version.
 
 Standard library only, so it runs on any CI runner without extra installs.
 
+Modules (plugins packed into the .fap's ``.fapassets`` section, the Full
+edition's optional tools) are unpacked and checked the same way: present,
+same API version and target, and every import exported by the SDK.
+
 Usage:
     verify_fap.py FAP --api 87.1 [--target 7] [--name RadioGeddon]
-                      [--version 1.0] [--symbols api_symbols.csv] [--json]
+                      [--version 1.0] [--symbols api_symbols.csv]
+                      [--modules plugins/a.fal,plugins/b.fal] [--json]
 
 Exit status is non-zero if the file is malformed or any expectation fails.
 """
@@ -116,8 +121,57 @@ def exported_symbols(csv_path: Path) -> set:
     return result
 
 
+ASSETS_MAGIC = 0x4F4C5A44
+ASSETS_VERSION = 1
+
+
+def embedded_assets(data: bytes) -> dict:
+    """Files packed in the ``.fapassets`` section ({path: bytes}); {} if none.
+
+    Layout (lib/flipper_application/application_assets.c): header (magic,
+    version, dirs, files: u32 each); signature (u32 length + bytes); each
+    directory (u32 length + name); each file (u32 length + name, u32 size,
+    contents).
+    """
+    try:
+        blob = read_section(data, ".fapassets")
+    except FapError:
+        return {}
+    magic, version, dirs, files = struct.unpack_from("<IIII", blob, 0)
+    if magic != ASSETS_MAGIC or version != ASSETS_VERSION:
+        raise FapError(f"bad assets header 0x{magic:08X} v{version}")
+    pos = 16
+
+    def chunk():
+        nonlocal pos
+        (length,) = struct.unpack_from("<I", blob, pos)
+        start = pos + 4
+        pos = start + length
+        if pos > len(blob):
+            raise FapError("assets section truncated")
+        return blob[start:pos]
+
+    chunk()  # signature
+    for _ in range(dirs):
+        chunk()
+    result = {}
+    for _ in range(files):
+        name = chunk().split(b"\0", 1)[0].decode("utf-8", "replace")
+        (size,) = struct.unpack_from("<I", blob, pos)
+        pos += 4
+        if pos + size > len(blob):
+            raise FapError(f"asset {name} truncated")
+        result[name] = blob[pos : pos + size]
+        pos += size
+    return result
+
+
 def parse_manifest(path: Path) -> dict:
     data = path.read_bytes()
+    return parse_manifest_bytes(data, str(path))
+
+
+def parse_manifest_bytes(data: bytes, label: str) -> dict:
     meta = read_section(data, ".fapmeta")
     if len(meta) < MANIFEST_V1.size:
         raise FapError(f".fapmeta too small ({len(meta)} < {MANIFEST_V1.size})")
@@ -134,7 +188,7 @@ def parse_manifest(path: Path) -> dict:
         _icon,
     ) = MANIFEST_V1.unpack_from(meta)
     return {
-        "file": str(path),
+        "file": label,
         "size": len(data),
         "magic": magic,
         "manifest_version": manifest_version,
@@ -155,6 +209,11 @@ def main(argv: list[str]) -> int:
     ap.add_argument("--name", default=None, help="expected application name")
     ap.add_argument("--version", default=None, help="expected app version, e.g. 1.0")
     ap.add_argument("--symbols", type=Path, default=None, help="SDK api_symbols.csv every import must be in")
+    ap.add_argument(
+        "--modules",
+        default=None,
+        help="comma-separated asset paths of modules (.fal) that must be packed in the .fap",
+    )
     ap.add_argument("--json", action="store_true", help="print the manifest as JSON")
     args = ap.parse_args(argv)
 
@@ -190,6 +249,34 @@ def main(argv: list[str]) -> int:
             for name in missing:
                 problems.append(f"imports {name}, which {args.symbols} does not export")
 
+    if args.modules:
+        try:
+            assets = embedded_assets(args.fap.read_bytes())
+        except (OSError, FapError, struct.error, ValueError) as exc:
+            problems.append(f"assets: {exc}")
+            assets = {}
+        exported = exported_symbols(args.symbols) if args.symbols is not None else None
+        m["modules"] = []
+        for name in [n for n in args.modules.split(",") if n]:
+            blob = assets.get(name)
+            if blob is None:
+                problems.append(f"module {name} is not packed in the .fap")
+                continue
+            try:
+                mm = parse_manifest_bytes(blob, name)
+                if mm["api"] != args.api:
+                    problems.append(f"module {name}: API {mm['api']} != expected {args.api}")
+                if mm["hardware_target"] != args.target:
+                    problems.append(f"module {name}: hardware target {mm['hardware_target']}")
+                if exported is not None:
+                    imports = imported_symbols(blob)
+                    for sym in sorted(imports - exported):
+                        problems.append(f"module {name} imports {sym}, which the SDK does not export")
+                    mm["imports"] = len(imports)
+                m["modules"].append(mm)
+            except (FapError, struct.error, ValueError) as exc:
+                problems.append(f"module {name}: {exc}")
+
     if args.json:
         print(json.dumps(m, indent=2))
     if problems:
@@ -200,6 +287,7 @@ def main(argv: list[str]) -> int:
         f"OK   {args.fap}: {m['name']} v{m['app_version']} "
         f"api={m['api']} target=f{m['hardware_target']} ({m['size']} bytes)"
         + (f", {m['imports']} imports resolved" if "imports" in m else "")
+        + (f", {len(m['modules'])} modules verified" if m.get("modules") else "")
     )
     return 0
 

@@ -62,6 +62,14 @@ static void
         const char* p = furi_string_get_cstr(path);
         const char* slash = strrchr(p, '/');
         furi_string_cat_str(app->temp_str, slash ? slash + 1 : p);
+#if RG_FEATURE_SESSIONS
+        // The active session collects what is saved here.
+        char session[RG_SESSION_NAME_MAX];
+        if(radiogeddon_session_capture_saved(
+               app->storage, slash ? slash + 1 : p, session, sizeof(session))) {
+            furi_string_cat_printf(app->temp_str, "\n+ session %s", session);
+        }
+#endif
         if(app->save_is_raw) {
             RadioGeddonRecordStats st;
             radiogeddon_subghz_record_status(app->subghz, &st);

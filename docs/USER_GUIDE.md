@@ -25,20 +25,28 @@ Buttons work the same way everywhere:
 
 RadioGeddon comes in two editions (see
 [Features → Editions](FEATURES.md#editions)). The **Catalog** edition (Official
-firmware) shows the items below without the two marked *Full*; the **Full**
-edition (RogueMaster, Momentum, Unleashed) is titled `RadioGeddon Full` and
-shows them all.
+firmware) lists its tools directly:
 
 | Item | What it does |
 |------|--------------|
-| `Scanner` | Live RSSI sweep across common frequencies (Full: or your favorites) |
-| `Range Scanner` *(Full)* | RSSI sweep over a start / end / step range across every band the radio tunes |
-| `Favorites` *(Full)* | Your favorite frequencies: receive, record, scan or hop them |
+| `Scanner` | Live RSSI sweep across common frequencies |
 | `Receive & Record` | Live decoding of known protocols and RAW recording on one frequency |
 | `Frequency Hopper` | Live decoding while hopping across a list of frequencies |
 | `Database` | List, sort, filter and search saved recordings; analyse, compare, replay and delete them |
 | `Settings` | Choose the frequency and modulation |
 | `About` | Version, modules, label legend and storage location |
+
+The **Full** edition (RogueMaster, Momentum, Unleashed) is titled
+`RadioGeddon Full` and groups its tools:
+
+| Item | What it holds |
+|------|---------------|
+| `Scan` | `Frequency Scanner` (common frequencies or your favorites), [`Range Scanner`](#range-scanner-full-edition), [`Waterfall`](#waterfall-full-edition), `Frequency Hopper`, [`Favorites`](#favorites-full-edition) |
+| `Receive & Record` | Live decoding and RAW recording on one frequency |
+| `Analyze` | Pick a recording for `Open recording...` (its whole menu), [`Bitstream Explorer...`](#bitstream-explorer-full-edition), [`Multi-Capture Compare`](#comparing-several-recordings-full-edition), `Unknown Analysis...`, `Decode with Firmware...` or `Pulse Timeline...` |
+| `Database` | The recordings list, as in the Catalog edition |
+| `Sessions` | [Research sessions](#research-sessions-full-edition): named groups of recordings |
+| `Settings`, `About` | As in the Catalog edition |
 
 ## Settings
 
@@ -223,6 +231,33 @@ floor.
 
 A sweep visits one point at a time, so a short burst on a point the sweep is
 not on can be missed; the sweep time tells you how long a full pass takes.
+
+## Waterfall (Full edition)
+
+Open it from **Scan → Waterfall** (the Range Scanner's setup, with
+`Start waterfall` at the bottom) or `Start waterfall` there. It sweeps the
+same range and stacks the sweeps: newest on top, older ones moving down,
+frequency across. It is an **RSSI sweep history**: one frequency measured at
+a time, not a wideband capture.
+
+- Darker means stronger above the noise floor; solid means over the Range
+  Scanner's threshold. A sparse dotted pattern marks a point not measured in
+  that sweep (never a guessed level).
+- The footer: the cursor's frequency, its latest dBm (in the top row shown),
+  its peak over the history, and the sweep time.
+
+| Button | Action |
+|--------|--------|
+| Left / Right | Move the cursor (hold to move faster) |
+| Up / Down | Scroll four sweeps newer / older (`-N` in the header while scrolled) |
+| OK | Pause / resume |
+| Hold OK | Menu: `Receive here`, `Cursor to peak`, `Newest sweeps`, `Sensitivity` (Left/Right: 6–40 dB), `Floor comp` (Left/Right: On/Off), `Save history CSV` |
+| Back | Close the menu; otherwise return to the setup |
+
+`Receive here` opens Receive & Record on the strongest point under the
+cursor; coming back starts a new history. `Save history CSV` writes
+`scans/WF_<date>.csv`, one row per sweep. If the history does not fit in
+memory, `Not enough memory` appears before anything starts.
 
 ## Favorites (Full edition)
 
@@ -411,6 +446,32 @@ return to the action menu. Every result is labelled `[CONFIRMED]`,
 `[OBSERVED]`, `[HEURISTIC]` or `[HYPOTHESIS]` — see
 [Protocol Analysis](PROTOCOL_ANALYSIS.md) for what each report means.
 
+### Bitstream Explorer (Full edition)
+
+`Bitstream Explorer` on a RAW capture's menu (or **Analyze → Bitstream
+Explorer...**) reads the capture once (`Analyzing...`) and shows the frames
+the analyzer found. **OK** cycles the view; pick a frame in `FRAMES` and the
+other views show it; **Back** returns.
+
+| View | Shows | Keys |
+|------|-------|------|
+| `FRAMES` | Each frame: number, start time, bits, pattern letter, repeats, similarity to the reference | Up / Down: pick the frame |
+| `BITS` | 24 bits a line with positions | Left / Right: bit cursor; Up / Down: a line; hold OK: start a field at the cursor |
+| `HEX` | Bytes from the chosen offset; bits outside whole bytes shown apart | Left / Right: byte; Up / Down: a row; hold OK: shift the byte grid one bit (0–7) |
+| `DIFF` | Bits over markers: `.` same in all comparable frames, `X` changes, `?` too few frames | Up / Down: scroll |
+| `FIELD` | A bit range in binary, hex and decimal | Up / Down: its start; Left / Right: its end |
+
+The bits are the analyzer's `[HYPOTHESIS]`; the header shows the encoding and
+its confidence.
+
+### Comparing several recordings (Full edition)
+
+`Compare several...` on a recording's menu starts a list with that recording;
+`Add recording...` adds more (up to 8), `Clear list` empties it, and
+`Compare now` analyses them one at a time (`Recording N of M`) and opens a
+report. See [Features → Multi-Capture Compare](FEATURES.md#multi-capture-compare-full-edition)
+for what it contains. **Analyze → Multi-Capture Compare** opens the same list.
+
 ### Pulse Timeline
 
 Shows a RAW capture as a waveform: carrier-on pulses on the upper line,
@@ -476,9 +537,30 @@ RAW recordings are replayed exactly as captured. Decoded static protocols are
 re-generated by the firmware's encoder and sent as a short burst of repeated
 frames, like a single button press.
 
+## Research Sessions (Full edition)
+
+**Sessions** lists your sessions (`*` marks the active one), then `New
+session` and `Suggest groups`. A session is a named list of recordings; the
+recordings stay where they are and nothing here deletes or changes them.
+
+| Session menu | What it does |
+|--------------|--------------|
+| `Recordings (N)` | The list; choose one for its usual menu. `?` marks a file that is gone or renamed outside the app |
+| `Add recording...`, `Remove recording...` | Edit the list (at most 24); removing only takes it off the list |
+| `Collect new captures` / `Stop collecting` | While active, recordings saved in Receive & Record join this session |
+| `Compare recordings` | Multi-Capture Compare on the first 8 |
+| `Export report` | The list and that comparison, to `reports/` |
+| `Rename`, `Delete session` | Delete asks first and keeps the recordings |
+
+`Suggest groups` looks for recordings with the same frequency (within
+50 kHz), protocol and frame length saved within 30 minutes of each other and
+offers each group; choose one to create a session from it. Nothing is grouped
+until you do. Sessions are files in `apps_data/radiogeddon/sessions/`; a save
+interrupted by a power cut leaves the previous version.
+
 ## About
 
-Shows the edition and version (`RadioGeddon Full`, `Version: 1.0.0-beta.6`),
+Shows the edition and version (`RadioGeddon Full`, `Version: 1.0.0-beta.7`),
 the radio device, the firmware's region, memory figures, the list of modules, the meaning of the analysis labels, where
 recordings are stored, and the project address.
 

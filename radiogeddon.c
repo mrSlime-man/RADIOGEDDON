@@ -50,6 +50,10 @@ RadioGeddonApp* radiogeddon_app_alloc(void) {
     app->fw_tag = rg_mem_firmware_tag(version_get_version(NULL), version_get_githash(NULL));
     app->frequency = app->settings.frequency;
     app->preset_index = app->settings.preset_index;
+#if RG_FEATURE_WATERFALL
+    app->wf_span_index = 2; // 20 dB
+    app->wf_noise_comp = true;
+#endif
     radiogeddon_loaded_signal_init(&app->loaded);
     radiogeddon_loaded_signal_init(&app->loaded_b);
 
@@ -154,6 +158,19 @@ void radiogeddon_app_free(RadioGeddonApp* app) {
 #if RG_FEATURE_RANGE_SCAN
     // Normally freed when the Range Scanner screen closes.
     if(app->rangescan) radiogeddon_rangescan_free(app->rangescan);
+#endif
+#if RG_FEATURE_WATERFALL
+    free(app->wf_buf); // normally freed when the Waterfall closes
+#endif
+#if RG_FEATURE_BITSTREAM
+    free(app->bits_doc); // normally freed when the explorer closes
+#endif
+#if RG_FEATURE_SESSIONS
+    radiogeddon_scene_sessions_release(app);
+#endif
+#if RG_FEATURE_MULTI_COMPARE
+    radiogeddon_multi_clear(app);
+    free(app->multi_report);
 #endif
     radiogeddon_history_free(app->history);
     furi_mutex_free(app->history_mutex);

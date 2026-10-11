@@ -203,6 +203,17 @@ static uint32_t rg_shortest_major(const RgPeak* p, size_t n) {
     return 0;
 }
 
+/* A duration as Manchester half-cells: 1 or 2 Te, else 0 (as the decoder). */
+static int rg_cells(uint32_t d, uint32_t te) {
+    if(d * 2u >= te && d * 2u <= te * 3u) return 1;
+    if(d * 2u > te * 3u && d * 10u <= te * 26u) return 2;
+    return 0;
+}
+
+/* A run of at least this many single-Te cells is a square wave (a preamble,
+ * or a separator between frames), not data. */
+#define RG_ANALYZER_PREAMBLE_MIN 8u
+
 /* ---- trial decoders ----------------------------------------------------- */
 
 /*
@@ -233,6 +244,18 @@ static size_t rg_decode_pairs_phase(
         i++; /* a frame may open with the tail of the idle low */
     if(phase == 1) i++;
     for(; i + 1 < n; i += 2) {
+        if(p->skip_square) {
+            size_t run = i;
+            while(run < n && rg_cells(rg_abs32(s[run]), p->te_us) == 1)
+                run++;
+            if(run - i >= RG_ANALYZER_PREAMBLE_MIN) {
+                // Resume on the next pair of this phase (the loop adds 2).
+                i = run;
+                if((s[i < n ? i : n - 1] > 0) != (phase == 0)) i++;
+                i -= 2;
+                continue;
+            }
+        }
         pairs++;
         int32_t hs = phase == 1 ? s[i + 1] : s[i];
         int32_t ls = phase == 1 ? s[i] : s[i + 1];
@@ -241,7 +264,12 @@ static size_t rg_decode_pairs_phase(
         uint32_t l = rg_abs32(ls);
         bool ok;
         char bit;
-        if(enc == RgEncodingPWM) {
+        if(enc == RgEncodingPWM && p->pwm_equal) {
+            // The gap repeats the pulse: short+short or long+long.
+            ok = (rg_near(h, p->pwm_short_us, 30) && rg_near(l, p->pwm_short_us, 30)) ||
+                 (rg_near(h, p->pwm_long_us, 30) && rg_near(l, p->pwm_long_us, 30));
+            bit = h > split ? '1' : '0';
+        } else if(enc == RgEncodingPWM) {
             ok = (rg_near(h, p->pwm_short_us, 30) || rg_near(h, p->pwm_long_us, 30)) &&
                  rg_near(h + l, period, 25);
             bit = h > split ? '1' : '0';
@@ -420,6 +448,37 @@ size_t rg_analyzer_align(
     return best_m;
 }
 
+/* ---- pulse / gap pairing ---------------------------------------------------- */
+
+/* Count how each high pulse pairs with the gap after it. Square-wave runs
+ * (preambles, also one between frames sent with no gap) are skipped: their
+ * equal pairs belong to no bit. */
+static void rg_count_pairs(RgAnalyzer* a, const int32_t* s, size_t n, uint32_t te) {
+    size_t i = 0;
+    while(i + 1 < n) {
+        size_t run = i;
+        while(run < n && rg_cells(rg_abs32(s[run]), te) == 1)
+            run++;
+        if(run - i >= RG_ANALYZER_PREAMBLE_MIN) {
+            i = run;
+            continue;
+        }
+        if(s[i] <= 0 || s[i + 1] >= 0) {
+            i++;
+            continue;
+        }
+        int h = rg_cells(rg_abs32(s[i]), te);
+        int l = rg_cells(rg_abs32(s[i + 1]), te);
+        i += 2;
+        if(!h || !l) continue;
+        if(h == l)
+            a->pair_same++;
+        else
+            a->pair_opposite++;
+        if(h == 2) a->pair_long++;
+    }
+}
+
 /* ---- streaming passes ---------------------------------------------------- */
 
 static bool rg_repeats_at(const char* bits, size_t n, size_t p) {
@@ -498,6 +557,7 @@ static void rg_frame_end(RgAnalyzer* a) {
             a->candidate_frames++;
             for(int e = RgEncodingPWM; e < RgEncodingCount; e++)
                 a->enc_fit_sum[e] += (uint64_t)fits[e] * weight;
+            rg_count_pairs(a, a->frame, a->frame_n, r->params.te_us);
         }
     } else if(a->pass == 3) {
         int fit = 0;
@@ -697,6 +757,7 @@ static void rg_finish_encoding(RgAnalyzer* a) {
     int best = RgEncodingUnknown, second = RgEncodingUnknown;
     for(int e = RgEncodingPWM; e < RgEncodingCount; e++) {
         score[e] = (int)(a->enc_fit_sum[e] / a->candidates);
+        r->encoding_fit[e] = (uint8_t)(score[e] > 100 ? 100 : score[e]);
         if(best == RgEncodingUnknown || score[e] > score[best]) {
             second = best;
             best = e;
@@ -717,6 +778,40 @@ static void rg_finish_encoding(RgAnalyzer* a) {
     }
     if(a->candidate_frames < 2) conf -= 10;
     r->encoding_confidence = conf;
+
+    uint32_t pairs = a->pair_same + a->pair_opposite;
+    r->pair_count = pairs;
+    if(pairs) {
+        r->pair_same_pct = (uint8_t)(a->pair_same * 100u / pairs);
+        r->pair_opposite_pct = (uint8_t)(a->pair_opposite * 100u / pairs);
+    }
+    /* Manchester's half-cells fit any stream of 1 and 2 Te durations, so a
+     * pulse-width code with a 1:2 ratio fits it too. What tells them apart:
+     * in Manchester a pulse's length says nothing about the gap after it
+     * (data mixes equal and opposite pairs), while a pulse-width code pairs
+     * them by rule, always opposite (constant period) or always equal (the
+     * gap repeats the pulse). With enough pairs of both lengths keeping to
+     * one rule, the pulse-width reading is taken and Manchester kept as the
+     * alternative. */
+    if(r->encoding == RgEncodingManchester && pairs >= RG_ANALYZER_PAIR_MIN) {
+        uint32_t ruled = a->pair_same > a->pair_opposite ? a->pair_same : a->pair_opposite;
+        uint32_t long_pct = a->pair_long * 100u / pairs;
+        bool equal = a->pair_same > a->pair_opposite;
+        bool widths = r->params.pwm_short_us && r->params.pwm_long_us;
+        if(ruled * 100u >= pairs * RG_ANALYZER_PAIR_RULE_PCT && long_pct >= 10u &&
+           long_pct <= 90u && widths) {
+            r->alternative = RgEncodingManchester;
+            r->alternative_fit = score[RgEncodingManchester];
+            r->encoding = RgEncodingPWM;
+            r->params.pwm_equal = equal;
+            // In a constant-period code a square wave is never data; where the gap
+            // repeats the pulse it is a run of 0 bits.
+            r->params.skip_square = !equal;
+            r->encoding_by_pairing = true;
+            /* Inferred from a structure rule, not a grammar fit: cap it. */
+            r->encoding_confidence = conf > 70 ? 70 : conf;
+        }
+    }
 }
 
 /* Pass 3 done: group, align and compare the kept frames. */
@@ -879,6 +974,7 @@ static void rg_finish_frames(RgAnalyzer* a) {
     int conf = r->encoding_confidence;
     if(r->group_count > 0 && r->groups[0].exact >= 2) conf += 5;
     if(modal < 8 && conf > 40) conf = 40;
+    if(r->encoding_by_pairing && conf > 70) conf = 70; /* a structure rule, not a fit */
     if(conf < 0) conf = 0;
     if(conf > 95) conf = 95;
     r->encoding_confidence = conf;
@@ -927,6 +1023,37 @@ void rg_analyzer_run(const int32_t* samples, size_t count, RgAnalysis* out) {
     } while(rg_analyzer_next_pass(a));
     memcpy(out, &a->result, sizeof(*out));
     free(a);
+}
+
+bool rg_analyzer_repeat_timing(const RgAnalysis* r, uint8_t group, RgRepeatTiming* out) {
+    uint32_t iv[RG_ANALYZER_MAX_FRAMES];
+    uint32_t n = 0;
+    const RgFrame* prev = NULL;
+    memset(out, 0, sizeof(*out));
+    for(size_t i = 0; i < r->frames_kept; i++) {
+        const RgFrame* f = &r->frames[i];
+        if(f->group != group) continue;
+        if(prev && f->start_us > prev->start_us) {
+            uint64_t d = f->start_us - prev->start_us;
+            if(d <= RG_ANALYZER_REPEAT_MAX_US) iv[n++] = (uint32_t)d;
+        }
+        prev = f;
+    }
+    if(n == 0) return false;
+    for(uint32_t i = 1; i < n; i++) {
+        uint32_t key = iv[i];
+        uint32_t j = i;
+        while(j > 0 && iv[j - 1] > key) {
+            iv[j] = iv[j - 1];
+            j--;
+        }
+        iv[j] = key;
+    }
+    out->intervals = n;
+    out->median_us = iv[(n - 1) / 2];
+    out->min_us = iv[0];
+    out->max_us = iv[n - 1];
+    return true;
 }
 
 const char* rg_analyzer_encoding_name(RgEncoding e) {
