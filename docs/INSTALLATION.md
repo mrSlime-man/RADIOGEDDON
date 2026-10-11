@@ -37,16 +37,22 @@ Using a different fork? See [Firmware Compatibility](FIRMWARE_COMPATIBILITY.md).
 
 ## Step 2 — Download
 
-From the [**v1.0.0-beta.6 release page**](https://github.com/mrSlime-man/RADIOGEDDON/releases/tag/v1.0.0-beta.6),
+From the [**v1.0.0-beta.7 release page**](https://github.com/mrSlime-man/RADIOGEDDON/releases/tag/v1.0.0-beta.7),
 or directly:
 
-- [radiogeddon-catalog-official.fap](https://github.com/mrSlime-man/RADIOGEDDON/releases/download/v1.0.0-beta.6/radiogeddon-catalog-official.fap) — Official firmware
-- [radiogeddon-full-roguemaster.fap](https://github.com/mrSlime-man/RADIOGEDDON/releases/download/v1.0.0-beta.6/radiogeddon-full-roguemaster.fap) — RogueMaster
-- [radiogeddon-full-momentum.fap](https://github.com/mrSlime-man/RADIOGEDDON/releases/download/v1.0.0-beta.6/radiogeddon-full-momentum.fap) — Momentum
-- [radiogeddon-full-unleashed.fap](https://github.com/mrSlime-man/RADIOGEDDON/releases/download/v1.0.0-beta.6/radiogeddon-full-unleashed.fap) — Unleashed
+- [radiogeddon-catalog-official.fap](https://github.com/mrSlime-man/RADIOGEDDON/releases/download/v1.0.0-beta.7/radiogeddon-catalog-official.fap) — Official firmware
+- [radiogeddon-full-roguemaster.fap](https://github.com/mrSlime-man/RADIOGEDDON/releases/download/v1.0.0-beta.7/radiogeddon-full-roguemaster.fap) — RogueMaster
+- [radiogeddon-full-momentum.fap](https://github.com/mrSlime-man/RADIOGEDDON/releases/download/v1.0.0-beta.7/radiogeddon-full-momentum.fap) — Momentum
+- [radiogeddon-full-unleashed.fap](https://github.com/mrSlime-man/RADIOGEDDON/releases/download/v1.0.0-beta.7/radiogeddon-full-unleashed.fap) — Unleashed
 
 The Catalog edition is being prepared for the official Flipper Apps Catalog;
 until it is accepted there, install it from this page.
+
+The Full edition's optional tools (Waterfall, Bitstream Explorer,
+Multi-Capture Compare, Unknown Protocol Analysis, Sessions) are modules
+packed inside its `.fap`; the firmware unpacks them to
+`apps_assets/radiogeddon_full/plugins/` when the app starts. There is
+nothing extra to copy. Updating from an earlier beta: replace the `.fap`.
 
 ### Optional: verify the download
 

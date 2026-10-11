@@ -7,6 +7,90 @@ to follow [Semantic Versioning](https://semver.org/) (pre-1.0.0 releases use
 
 ## [Unreleased]
 
+## [1.0.0-beta.7] - 2026-10-11
+
+Research tools for the Full edition (waterfall, Bitstream Explorer,
+multi-capture comparison, research sessions), loaded as modules only while in
+use; a grouped Full main menu; a better Unknown Protocol Analysis; offline UI
+tests. Not yet verified on hardware.
+
+### Added
+- **Waterfall** (Full): an RSSI sweep history of the Range Scanner — each
+  complete sweep one row, newest on top, intensity as ordered dither over the
+  noise floor with readings over the threshold solid, unmeasured cells drawn
+  as their own pattern and never filled in (`rg_waterfall`). Cursor, peak,
+  scroll back, pause, sensitivity, floor compensation, receive at the
+  cursor's strongest point and CSV export of the history. Labelled `RSSI
+  sweep`: sequential narrowband readings, not a wideband capture. History
+  buffer at most 8 KB, sized from the free heap and refused before anything
+  is allocated.
+- **Bitstream Explorer** (Full): a RAW capture's inferred frames as a frame
+  list, bits, bytes from any bit offset (leftover bits shown apart, never
+  padded), a diff against every comparable frame (`.` same, `X` changes, `?`
+  too few frames) and a field view with binary, hex and decimal (`rg_bits`).
+  Reuses the analyzer; no bit is inferred beyond its result.
+- **Multi-Capture Compare** (Full): 2 to 8 recordings analysed one at a time
+  into ~200-byte summaries; a report labelled `[OBSERVED]`, `[HEURISTIC]` and
+  `[HYPOTHESIS]` with frequency, preset, Te, encoding and length consistency,
+  identical frames, constant and changing bits, runs classified as constant,
+  button-like, counter-like or no simple rule, and a noise check
+  (`rg_multi`). A constant field is never called a verified serial.
+- **Research Sessions** (Full): named groups of recordings in
+  `apps_data/radiogeddon/sessions/` (`rg_session`). Add, remove, open,
+  compare and export; an active session collects new captures; renaming a
+  recording in the app updates the sessions naming it. Saves are written
+  beside the old file, read back and swapped in, with a backup restored after
+  an interrupted save. *Suggest groups* proposes recordings with the same
+  frequency, protocol and frame length saved close together; nothing is
+  grouped without confirmation, and recordings are never deleted or moved.
+- **Modules** (Full): the Waterfall, Bitstream Explorer, comparison, Unknown
+  Protocol Analysis and Sessions code are plugins embedded in the `.fap`,
+  loaded when their screen opens and unloaded when it closes. A module is
+  loaded only when its code and work fit the free heap (`rg_elf` reads its
+  size); otherwise `Not enough memory`.
+- **Full main menu** grouped into Scan, Receive & Record, Analyze, Database,
+  Sessions, Settings and About. The Catalog edition's menu is unchanged.
+- **Unknown Protocol Analysis** lists every encoding's fit, explains a
+  pulse/gap pairing decision, names the frames a checksum hypothesis was
+  tested on, and reports how often the main patterns repeat within a press.
+- **Offline UI tests** (`make -C test ui`, in CI): screens drawn on a host
+  canvas with the firmware's own fonts, checked for text off screen and
+  overlaps, keys driven through each screen; synthetic previews uploaded as a
+  CI artifact, marked as not hardware screenshots.
+- **Tests**: waterfall, bits, multi, session and ELF-size unit tests; the
+  waterfall engine in the lifecycle tests; a session-file fuzz target
+  (`fuzz_session`) and the module size estimate fuzzed. Host checks: 1,962
+  (was 1,548).
+- `scripts/fap_size.py` (resident size of a `.fap` or module) and
+  `scripts/verify_fap.py --modules` (unpacks and checks the embedded
+  modules); every Full build verifies its five modules.
+
+### Changed
+- **Unknown Protocol Analysis**: when Manchester's grammar fits but every
+  pulse pairs with its gap by one rule (always opposite, or always equal),
+  the pulse-width reading is taken; its confidence is then capped at 70.
+  Encoding family right on 43 of the firmware's 50 RAW test captures (was
+  41), frame length on 35 (was 33), Te still 50; no capture got worse. The
+  capture test's floors rise to match.
+- **Receive and Hopper memory check**: before the first measurement, a
+  session is refused only when less than 16 KB is free.
+- Footers sit one pixel higher so descenders are not cut off.
+
+### Fixed
+- The Range Scanner's setup and scan screens no longer loop back into a
+  failing start when the scan cannot start; they return with the message.
+- Two uninitialised-value paths found by static analysis in new code, and a
+  session name with a trailing space (found by fuzzing) that did not survive
+  a save and load.
+
+### Measured
+- Resident code (allocated ELF sections, from the built files): Catalog
+  77,173 B (beta 6: 75,704 B), Full 104,388 B (beta 6: 94,676 B). Built
+  into the app, the new tools made the Full edition 128,309 B; as modules
+  they leave it 9,712 B larger than beta 6 (most of it analyzer work shared
+  with the Catalog edition), and each module takes 2,740 to 16,383 B only
+  while in use.
+
 ## [1.0.0-beta.6] - 2026-10-10
 
 Two editions from one source tree, a Momentum build, a range scanner,
