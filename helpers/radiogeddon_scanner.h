@@ -32,6 +32,7 @@ typedef struct {
     RgScanChannel channels[RADIOGEDDON_SCANNER_MAX_CHANNELS];
     float global_floor; // median floor, or RG_SCAN_RSSI_NONE
     int32_t hold_index; // channel the sweep is holding on, or -1
+    int32_t measuring; // channel being measured, or -1 (paused, not started)
     bool paused;
     uint32_t sweep_ms; // duration of the last complete sweep (0 until known)
     uint8_t threshold_db;
@@ -81,6 +82,9 @@ bool radiogeddon_scanner_save_csv(
     Storage* storage,
     const char* path,
     const char* preset_label);
+
+/** True while the sweep is paused by the user. */
+bool radiogeddon_scanner_is_paused(RadioGeddonScanner* instance);
 
 /** Channel the sweep is holding on after a hit, or -1. */
 int32_t radiogeddon_scanner_hold_index(RadioGeddonScanner* instance);

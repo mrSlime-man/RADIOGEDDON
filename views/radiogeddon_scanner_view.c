@@ -1,6 +1,9 @@
 #include "radiogeddon_scanner_view.h"
 #include <gui/elements.h>
 #include <furi.h>
+#if RG_FEATURE_DOLPHIN_LAB
+#include "radiogeddon_mascot_draw.h"
+#endif
 
 #define RSSI_FLOOR   (-110.0f)
 #define RSSI_CEIL    (-30.0f)
@@ -21,6 +24,11 @@ typedef struct {
     size_t selected;
     size_t top; // first visible row
     bool external; // the external CC1101 module is in use
+#if RG_FEATURE_DOLPHIN_LAB
+    RgMascotFrame badge;
+    bool badge_on;
+    bool badge_cyber;
+#endif
 } RadioGeddonScannerModel;
 
 static int32_t radiogeddon_scanner_bar_pos(float dbm) {
@@ -55,6 +63,18 @@ static void radiogeddon_scanner_view_draw_header(Canvas* canvas, RadioGeddonScan
     }
     canvas_draw_str_aligned(canvas, 126, 9, AlignRight, AlignBottom, right);
     canvas_draw_line(canvas, 0, 11, 127, 11);
+    // The sweep's position along the list: a thick mark on the line under
+    // the header, at the channel being measured right now.
+    if(s->measuring >= 0 && (size_t)s->measuring < s->count && s->count > 0) {
+        int32_t w = (int32_t)(128 / s->count);
+        if(w < 3) w = 3;
+        int32_t x = (int32_t)((size_t)s->measuring * 128 / s->count);
+        if(x + w > 128) x = 128 - w;
+        canvas_draw_box(canvas, x, 10, (size_t)w, 2);
+    }
+#if RG_FEATURE_DOLPHIN_LAB
+    if(m->badge_on) rg_draw_badge(canvas, 56, 1, m->badge_cyber, &m->badge);
+#endif
 }
 
 static void radiogeddon_scanner_view_draw_row(
@@ -200,6 +220,7 @@ RadioGeddonScannerView* radiogeddon_scanner_view_alloc(void) {
         {
             memset(m, 0, sizeof(*m));
             m->snap.hold_index = -1;
+            m->snap.measuring = -1;
             m->snap.global_floor = RG_SCAN_RSSI_NONE;
         },
         false);
@@ -253,3 +274,20 @@ size_t radiogeddon_scanner_view_get_selected(RadioGeddonScannerView* instance) {
     with_view_model(instance->view, RadioGeddonScannerModel * m, { sel = m->selected; }, false);
     return sel;
 }
+
+#if RG_FEATURE_DOLPHIN_LAB
+void radiogeddon_scanner_view_set_badge(
+    RadioGeddonScannerView* instance,
+    const RgMascotFrame* frame,
+    bool cyber) {
+    with_view_model(
+        instance->view,
+        RadioGeddonScannerModel * m,
+        {
+            m->badge_on = frame != NULL;
+            if(frame) m->badge = *frame;
+            m->badge_cyber = cyber;
+        },
+        true);
+}
+#endif

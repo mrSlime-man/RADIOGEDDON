@@ -55,6 +55,18 @@ void radiogeddon_spectrum_view_set_external(RadioGeddonSpectrumView* instance, b
 /** Put the cursor on point @p index (e.g. the point the sweep holds on). */
 void radiogeddon_spectrum_view_set_cursor(RadioGeddonSpectrumView* instance, uint32_t index);
 
+/** True while the sweep collects data (not paused, points to scan). */
+bool radiogeddon_spectrum_view_sweeping(RadioGeddonSpectrumView* instance);
+
+#if RG_FEATURE_DOLPHIN_LAB
+#include "../helpers/rg_mascot.h"
+/** Dolphin Lab badge in the header (@p frame NULL: none, as in Classic). */
+void radiogeddon_spectrum_view_set_badge(
+    RadioGeddonSpectrumView* instance,
+    const RgMascotFrame* frame,
+    bool cyber);
+#endif
+
 /** Point under the cursor. */
 uint32_t radiogeddon_spectrum_view_get_cursor(RadioGeddonSpectrumView* instance);
 

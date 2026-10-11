@@ -5,6 +5,9 @@
 #include <gui/elements.h>
 #include <furi.h>
 #include "../helpers/rg_freq.h"
+#if RG_FEATURE_DOLPHIN_LAB
+#include "radiogeddon_mascot_draw.h"
+#endif
 
 #define GRAPH_TOP    11
 #define GRAPH_BOTTOM 51 // inclusive
@@ -26,6 +29,11 @@ typedef struct {
     int8_t col_last[GRAPH_W];
     int8_t col_peak[GRAPH_W];
     uint8_t col_flags[GRAPH_W];
+#if RG_FEATURE_DOLPHIN_LAB
+    RgMascotFrame badge;
+    bool badge_on;
+    bool badge_cyber;
+#endif
 } RadioGeddonSpectrumModel;
 
 static int32_t radiogeddon_spectrum_y(int32_t dbm) {
@@ -57,6 +65,11 @@ static void radiogeddon_spectrum_view_draw(Canvas* canvas, void* model) {
         snprintf(text, sizeof(text), "NF%d T+%u", (int)s->floor, (unsigned)s->threshold_db);
     }
     canvas_draw_str_aligned(canvas, 127, 8, AlignRight, AlignBottom, text);
+#if RG_FEATURE_DOLPHIN_LAB
+    // Only when the state word leaves room (not "CALIBRATING").
+    if(m->badge_on && canvas_string_width(canvas, state) < 50)
+        rg_draw_badge(canvas, 52, 0, m->badge_cyber, &m->badge);
+#endif
 
     if(s->count == 0) {
         canvas_draw_str(canvas, 0, 32, "No points to scan.");
@@ -79,10 +92,26 @@ static void radiogeddon_spectrum_view_draw(Canvas* canvas, void* model) {
         }
         if(m->col_flags[x] & RgSpectrumActive) canvas_draw_line(canvas, x, 9, x, 10);
     }
-    // Sweep position: a tick under the graph. Cursor: a dashed line.
+    // Sweep position: a small marker under the graph, moving with the
+    // point being measured (still while paused). Cursor: a dashed line
+    // with a cap, so the selected frequency stands out.
     size_t pos_col = rg_spectrum_column_of(s->position, s->count, GRAPH_W);
-    canvas_draw_dot(canvas, (int32_t)pos_col, GRAPH_BOTTOM + 1);
+    int32_t px = (int32_t)pos_col;
+    canvas_draw_dot(canvas, px, GRAPH_BOTTOM + 1);
+    if(!s->paused) {
+        canvas_draw_line(
+            canvas,
+            px > 0 ? px - 1 : 0,
+            GRAPH_BOTTOM + 2,
+            px < 127 ? px + 1 : 127,
+            GRAPH_BOTTOM + 2);
+    }
     size_t cur_col = rg_spectrum_column_of(m->cursor, s->count, GRAPH_W);
+    {
+        int32_t cx = (int32_t)cur_col;
+        canvas_draw_line(
+            canvas, cx > 0 ? cx - 1 : 0, GRAPH_TOP - 1, cx < 127 ? cx + 1 : 127, GRAPH_TOP - 1);
+    }
     for(int32_t y = GRAPH_TOP; y <= GRAPH_BOTTOM; y += 2) {
         canvas_invert_color(canvas);
         canvas_draw_dot(canvas, (int32_t)cur_col, y);
@@ -270,5 +299,32 @@ uint32_t radiogeddon_spectrum_view_get_cursor(RadioGeddonSpectrumView* instance)
     with_view_model(instance->view, RadioGeddonSpectrumModel * m, { cursor = m->cursor; }, false);
     return cursor;
 }
+
+bool radiogeddon_spectrum_view_sweeping(RadioGeddonSpectrumView* instance) {
+    bool on = false;
+    with_view_model(
+        instance->view,
+        RadioGeddonSpectrumModel * m,
+        { on = m->snap.count > 0 && !m->snap.paused; },
+        false);
+    return on;
+}
+
+#if RG_FEATURE_DOLPHIN_LAB
+void radiogeddon_spectrum_view_set_badge(
+    RadioGeddonSpectrumView* instance,
+    const RgMascotFrame* frame,
+    bool cyber) {
+    with_view_model(
+        instance->view,
+        RadioGeddonSpectrumModel * m,
+        {
+            m->badge_on = frame != NULL;
+            if(frame) m->badge = *frame;
+            m->badge_cyber = cyber;
+        },
+        true);
+}
+#endif
 
 #endif

@@ -2,6 +2,9 @@
 #include "../helpers/rg_freq.h"
 #include <gui/elements.h>
 #include <furi.h>
+#if RG_FEATURE_DOLPHIN_LAB
+#include "radiogeddon_mascot_draw.h"
+#endif
 
 #define RSSI_FLOOR (-100.0f)
 #define RSSI_CEIL  (-30.0f)
@@ -28,6 +31,11 @@ typedef struct {
     float threshold;
     char status[26];
     bool external; // the external CC1101 module is in use
+#if RG_FEATURE_DOLPHIN_LAB
+    RgMascotFrame badge;
+    bool badge_on;
+    bool badge_cyber;
+#endif
 } RadioGeddonReceiverModel;
 
 /* "12345", or "123k" from 100000 up, so the REC line stays short. */
@@ -54,7 +62,11 @@ static void radiogeddon_receiver_view_draw(Canvas* canvas, void* model) {
         canvas_set_font(canvas, FontSecondary);
         canvas_draw_str_aligned(canvas, 126, 9, AlignRight, AlignBottom, "EXT");
     }
-    canvas_draw_line(canvas, 0, 11, 128, 11);
+#if RG_FEATURE_DOLPHIN_LAB
+    // Listening, recording (its lamp follows the recorder) or alerted.
+    if(m->badge_on) rg_draw_badge(canvas, 92, 1, m->badge_cyber, &m->badge);
+#endif
+    canvas_draw_line(canvas, 0, 11, 127, 11);
 
     // RSSI meter
     canvas_set_font(canvas, FontSecondary);
@@ -119,7 +131,7 @@ static void radiogeddon_receiver_view_draw(Canvas* canvas, void* model) {
     } else {
         canvas_draw_str(canvas, 2, 33, m->status[0] ? m->status : "Left: record RAW");
     }
-    canvas_draw_line(canvas, 0, 36, 128, 36);
+    canvas_draw_line(canvas, 0, 36, 127, 36);
 
     // Decoded signals
     char dec[28];
@@ -325,3 +337,20 @@ void radiogeddon_receiver_view_set_status(RadioGeddonReceiverView* instance, con
         },
         true);
 }
+
+#if RG_FEATURE_DOLPHIN_LAB
+void radiogeddon_receiver_view_set_badge(
+    RadioGeddonReceiverView* instance,
+    const RgMascotFrame* frame,
+    bool cyber) {
+    with_view_model(
+        instance->view,
+        RadioGeddonReceiverModel * m,
+        {
+            m->badge_on = frame != NULL;
+            if(frame) m->badge = *frame;
+            m->badge_cyber = cyber;
+        },
+        true);
+}
+#endif

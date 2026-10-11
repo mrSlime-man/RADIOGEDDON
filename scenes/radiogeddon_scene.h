@@ -67,6 +67,16 @@ void radiogeddon_scene_show_confirm(
 RadioGeddonUnknownFn radiogeddon_scene_unknown_begin(void* context);
 void radiogeddon_scene_unknown_end(void* context);
 
+/**
+ * Show a finished report in the text box (already filled): in the lab
+ * styles a short reveal of its first lines comes first (@p title, @p text);
+ * otherwise at once.
+ */
+void radiogeddon_scene_show_report(RadioGeddonApp* app, const char* title, const char* text);
+
+/** Dolphin Lab: refresh the receiver view's header badge (none in Classic). */
+void radiogeddon_scene_receiver_badge(RadioGeddonApp* app);
+
 /** Free the Database index and list view, if they exist. */
 void radiogeddon_scene_db_release(RadioGeddonApp* app);
 

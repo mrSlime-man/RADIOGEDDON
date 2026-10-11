@@ -71,6 +71,7 @@ static void radiogeddon_scene_receiver_start_recording(RadioGeddonApp* app) {
         notification_message(app->notifications, &sequence_blink_red_100);
         char note[28];
         snprintf(note, sizeof(note), "REC: %s", radiogeddon_recorder_error_text(err));
+        radiogeddon_ui_event(app, RgMascotEventOperationFailed, 0);
         radiogeddon_scene_receiver_note(app, note);
     }
 }
@@ -161,6 +162,7 @@ void radiogeddon_scene_receiver_on_enter(void* context) {
         return;
     }
 
+    radiogeddon_scene_receiver_badge(app);
     view_dispatcher_switch_to_view(app->view_dispatcher, RadioGeddonViewReceiver);
 }
 
@@ -189,6 +191,7 @@ bool radiogeddon_scene_receiver_on_event(void* context, SceneManagerEvent event)
             }
             radiogeddon_scene_receiver_show_selected(app);
         }
+        radiogeddon_scene_receiver_badge(app);
         consumed = true;
     } else if(event.type == SceneManagerEventTypeBack) {
         // Back while recording stops the capture and asks for a name; Back on
@@ -202,6 +205,7 @@ bool radiogeddon_scene_receiver_on_event(void* context, SceneManagerEvent event)
         case ReceiverCustomDecoded:
             radiogeddon_scene_receiver_refresh_history(app);
             notification_message(app->notifications, &sequence_blink_green_10);
+            radiogeddon_ui_event(app, RgMascotEventSignalActivity, 0);
             consumed = true;
             break;
         case ReceiverCustomSave: {

@@ -199,6 +199,7 @@ bool radiogeddon_scene_hopper_on_event(void* context, SceneManagerEvent event) {
             radiogeddon_scene_hopper_refresh_status(app);
             radiogeddon_scene_hopper_show_selected(app);
         }
+        radiogeddon_scene_receiver_badge(app);
         consumed = true;
     } else if(event.type == SceneManagerEventTypeCustom) {
         consumed = true;
@@ -207,9 +208,11 @@ bool radiogeddon_scene_hopper_on_event(void* context, SceneManagerEvent event) {
         case HopperCustomDecoded:
             radiogeddon_scene_hopper_refresh_history(app);
             notification_message(app->notifications, &sequence_blink_green_10);
+            radiogeddon_ui_event(app, RgMascotEventSignalActivity, 0);
             break;
         case HopperCustomActivity:
             notification_message(app->notifications, &sequence_blink_cyan_10);
+            radiogeddon_ui_event(app, RgMascotEventSignalActivity, 0);
             radiogeddon_scene_hopper_refresh_status(app);
             break;
         case HopperCustomRetuned:
@@ -217,9 +220,11 @@ bool radiogeddon_scene_hopper_on_event(void* context, SceneManagerEvent event) {
             break;
         case HopperCustomRecordSaved:
             notification_message(app->notifications, &sequence_success);
+            radiogeddon_ui_event(app, RgMascotEventSaveCompleted, 0);
             break;
         case HopperCustomRecordFailed:
             notification_message(app->notifications, &sequence_error);
+            radiogeddon_ui_event(app, RgMascotEventOperationFailed, 0);
             break;
         case HopperCustomLock:
             radiogeddon_hopper_toggle_lock(app->hopper);

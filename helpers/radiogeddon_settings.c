@@ -3,6 +3,7 @@
 #include "rg_db.h"
 #include "rg_freq.h"
 #include "rg_range.h"
+#include "rg_ui.h"
 
 #include <lib/flipper_format/flipper_format.h>
 
@@ -39,6 +40,13 @@ void radiogeddon_settings_default(RadioGeddonSettings* settings) {
     settings->scan_source = RadioGeddonSourceList;
     settings->hop_source = RadioGeddonSourceList;
     settings->freq_step_hz = 0;
+    // A settings file from before beta 8 has none of these: the Full edition
+    // starts in Dolphin Lab. The Catalog edition has only the Classic menus
+    // and ignores the style, but keeps the same default, so whichever
+    // edition writes the file first leaves the Full edition's default.
+    settings->ui_style = RgUiStyleDolphinLab;
+    settings->ui_feedback = RgUiFeedbackOff;
+    settings->ui_transitions = true;
 }
 
 uint32_t radiogeddon_settings_default_hop_mask(void) {
@@ -149,6 +157,14 @@ void radiogeddon_settings_load(Storage* storage, RadioGeddonSettings* settings) 
         flipper_format_rewind(ff);
         if(flipper_format_read_uint32(ff, "Freq_step", &v, 1) && v <= 1000000u)
             settings->freq_step_hz = v;
+        flipper_format_rewind(ff);
+        if(flipper_format_read_uint32(ff, "Ui_style", &v, 1) && v < RgUiStyleCount)
+            settings->ui_style = (uint8_t)v;
+        flipper_format_rewind(ff);
+        if(flipper_format_read_uint32(ff, "Ui_feedback", &v, 1) && v < RgUiFeedbackCount)
+            settings->ui_feedback = (uint8_t)v;
+        flipper_format_rewind(ff);
+        if(flipper_format_read_bool(ff, "Ui_transitions", &b, 1)) settings->ui_transitions = b;
     } while(false);
 
     furi_string_free(type);
@@ -209,6 +225,12 @@ bool radiogeddon_settings_save(Storage* storage, const RadioGeddonSettings* sett
         if(!flipper_format_write_uint32(ff, "Hop_source", &v, 1)) break;
         v = settings->freq_step_hz;
         if(!flipper_format_write_uint32(ff, "Freq_step", &v, 1)) break;
+        v = settings->ui_style;
+        if(!flipper_format_write_uint32(ff, "Ui_style", &v, 1)) break;
+        v = settings->ui_feedback;
+        if(!flipper_format_write_uint32(ff, "Ui_feedback", &v, 1)) break;
+        b = settings->ui_transitions;
+        if(!flipper_format_write_bool(ff, "Ui_transitions", &b, 1)) break;
         ok = true;
     } while(false);
     ok = flipper_format_file_close(ff) && ok;

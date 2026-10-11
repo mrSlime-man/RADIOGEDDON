@@ -11,6 +11,7 @@
 #pragma once
 
 #include <gui/view.h>
+#include "../radiogeddon_edition.h"
 #include "../helpers/radiogeddon_scanner.h"
 
 typedef struct RadioGeddonScannerView RadioGeddonScannerView;
@@ -42,6 +43,15 @@ void radiogeddon_scanner_view_set_selected(RadioGeddonScannerView* instance, siz
 
 /** Header reads "RSSI EXT" while the external CC1101 module is in use. */
 void radiogeddon_scanner_view_set_external(RadioGeddonScannerView* instance, bool external);
+
+#if RG_FEATURE_DOLPHIN_LAB
+#include "../helpers/rg_mascot.h"
+/** Dolphin Lab badge in the header (@p frame NULL: none, as in Classic). */
+void radiogeddon_scanner_view_set_badge(
+    RadioGeddonScannerView* instance,
+    const RgMascotFrame* frame,
+    bool cyber);
+#endif
 
 /** Index currently highlighted by the user. */
 size_t radiogeddon_scanner_view_get_selected(RadioGeddonScannerView* instance);

@@ -63,6 +63,18 @@ static void radiogeddon_scene_scanner_show_message(
     view_dispatcher_switch_to_view(app->view_dispatcher, RadioGeddonViewPopup);
 }
 
+// Dolphin Lab: the header badge follows the mascot (nothing in Classic).
+static void radiogeddon_scene_scanner_badge(RadioGeddonApp* app) {
+#if RG_FEATURE_DOLPHIN_LAB
+    RgMascotFrame f;
+    bool cyber = false;
+    bool on = radiogeddon_ui_badge(app, &f, &cyber);
+    radiogeddon_scanner_view_set_badge(app->scanner_view, on ? &f : NULL, cyber);
+#else
+    UNUSED(app);
+#endif
+}
+
 void radiogeddon_scene_scanner_on_enter(void* context) {
     RadioGeddonApp* app = context;
     app->scanner_running = false;
@@ -101,6 +113,9 @@ void radiogeddon_scene_scanner_on_enter(void* context) {
         radiogeddon_scanner_start(app->scanner);
         app->scanner_running = true;
     }
+    radiogeddon_ui_set_scanning(
+        app, app->scanner_running && !radiogeddon_scanner_is_paused(app->scanner));
+    radiogeddon_scene_scanner_badge(app);
     radiogeddon_memdiag_sample("Scanner");
     view_dispatcher_switch_to_view(app->view_dispatcher, RadioGeddonViewScanner);
 }
@@ -114,6 +129,7 @@ static void radiogeddon_scene_scanner_save(RadioGeddonApp* app) {
         app->storage,
         furi_string_get_cstr(path),
         radiogeddon_presets[app->preset_index].label);
+    radiogeddon_ui_event(app, ok ? RgMascotEventSaveCompleted : RgMascotEventOperationFailed, 0);
     if(ok) {
         notification_message(app->notifications, &sequence_success);
         // Show only the file name; the folder is always apps_data/radiogeddon/scans.
@@ -134,7 +150,12 @@ bool radiogeddon_scene_scanner_on_event(void* context, SceneManagerEvent event) 
     bool consumed = false;
 
     if(event.type == SceneManagerEventTypeTick) {
-        if(app->scanner_running) radiogeddon_scanner_view_update(app->scanner_view, app->scanner);
+        if(app->scanner_running) {
+            radiogeddon_scanner_view_update(app->scanner_view, app->scanner);
+            // Collecting data only while the sweep runs, not when paused.
+            radiogeddon_ui_set_scanning(app, !radiogeddon_scanner_is_paused(app->scanner));
+            radiogeddon_scene_scanner_badge(app);
+        }
         consumed = true;
     } else if(event.type == SceneManagerEventTypeCustom) {
         consumed = true;
@@ -143,6 +164,7 @@ bool radiogeddon_scene_scanner_on_event(void* context, SceneManagerEvent event) 
         if(event.event >= ScannerCustomHitBase) {
             size_t index = event.event - ScannerCustomHitBase;
             notification_message(app->notifications, &sequence_blink_cyan_10);
+            radiogeddon_ui_event(app, RgMascotEventSignalActivity, index);
             // When the sweep holds on a hit, move the highlight there so OK
             // goes straight to the receiver on that frequency.
             if(radiogeddon_scanner_hold_index(app->scanner) == (int32_t)index) {
@@ -189,6 +211,7 @@ bool radiogeddon_scene_scanner_on_event(void* context, SceneManagerEvent event) 
 void radiogeddon_scene_scanner_on_exit(void* context) {
     RadioGeddonApp* app = context;
     app->scanner_running = false;
+    radiogeddon_ui_set_scanning(app, false);
     if(app->scanner) radiogeddon_scanner_stop(app->scanner);
     popup_reset(app->popup);
 }

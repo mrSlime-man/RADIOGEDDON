@@ -52,6 +52,8 @@ FULL_MODULE_ONLY = (
     "scenes/radiogeddon_scene_session_menu.c",
     "scenes/radiogeddon_scene_session_signals.c",
     "scenes/radiogeddon_scene_session_groups.c",
+    "views/radiogeddon_room_view.c",
+    "views/radiogeddon_room_data.c",
 )
 FULL_MODULES_FAM = "modules/modules.fam"
 

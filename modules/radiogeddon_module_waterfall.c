@@ -15,6 +15,8 @@ static const RadioGeddonWaterfallModule radiogeddon_waterfall_module = {
     .get_cursor_hz = radiogeddon_waterfall_view_get_cursor_hz,
     .get_cursor = radiogeddon_waterfall_view_get_cursor,
     .set_cursor = radiogeddon_waterfall_view_set_cursor,
+    .set_reveal = radiogeddon_waterfall_view_set_reveal,
+    .set_badge = radiogeddon_waterfall_view_set_badge,
 };
 
 static const FlipperAppPluginDescriptor radiogeddon_waterfall_descriptor = {

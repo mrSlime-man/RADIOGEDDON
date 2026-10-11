@@ -16,6 +16,25 @@ static void radiogeddon_scene_message_cb(void* context) {
 void radiogeddon_scene_message_on_enter(void* context) {
     RadioGeddonApp* app = context;
     notification_message(app->notifications, &sequence_error);
+#if RG_FEATURE_DOLPHIN_LAB
+    radiogeddon_ui_event(
+        app,
+        rg_ui_message_is_notice(app->message_header) ? RgMascotEventSaveCompleted :
+                                                       RgMascotEventOperationFailed,
+        0);
+#endif
+#if RG_FEATURE_DOLPHIN_LAB
+    // The same text on a card, with the dolphin when it fits beside it.
+    if(radiogeddon_ui_card(
+           app,
+           RadioGeddonLabCardMessage,
+           app->message_header ? app->message_header : "",
+           app->message_text ? app->message_text : "",
+           MESSAGE_SHOW_MS,
+           MessageEventDone,
+           true))
+        return;
+#endif
     popup_reset(app->popup);
     popup_set_header(
         app->popup,
@@ -44,6 +63,7 @@ bool radiogeddon_scene_message_on_event(void* context, SceneManagerEvent event) 
 
 void radiogeddon_scene_message_on_exit(void* context) {
     RadioGeddonApp* app = context;
+    radiogeddon_ui_cancel(app);
     popup_reset(app->popup);
     app->message_header = NULL;
     app->message_text = NULL;

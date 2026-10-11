@@ -88,6 +88,20 @@ static void
         furi_string_set(app->temp_str, "Could not write\nto the SD card.");
     }
 
+    radiogeddon_ui_event(app, ok ? RgMascotEventSaveCompleted : RgMascotEventOperationFailed, 0);
+#if RG_FEATURE_DOLPHIN_LAB
+    // The dolphin celebrates (or worries) beside the same text, then the
+    // card returns by itself like the popup.
+    if(radiogeddon_ui_card(
+           app,
+           RadioGeddonLabCardSaved,
+           ok ? "Saved" : "Save failed",
+           furi_string_get_cstr(app->temp_str),
+           SAVE_NAME_RESULT_MS,
+           SaveNameEventDone,
+           true))
+        return;
+#endif
     popup_reset(app->popup);
     popup_set_header(app->popup, ok ? "Saved" : "Save failed", 64, 10, AlignCenter, AlignCenter);
     popup_set_text(
@@ -125,6 +139,7 @@ bool radiogeddon_scene_save_name_on_event(void* context, SceneManagerEvent event
 
 void radiogeddon_scene_save_name_on_exit(void* context) {
     RadioGeddonApp* app = context;
+    radiogeddon_ui_cancel(app);
     text_input_reset(app->text_input);
     popup_reset(app->popup);
     // Leaving without saving (Back, or a failed save) drops the RAW capture.

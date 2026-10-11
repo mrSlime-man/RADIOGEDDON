@@ -26,7 +26,7 @@ void radiogeddon_scene_decode_on_enter(void* context) {
     text_box_reset(app->text_box);
     text_box_set_font(app->text_box, TextBoxFontText);
     text_box_set_text(app->text_box, furi_string_get_cstr(app->temp_str));
-    view_dispatcher_switch_to_view(app->view_dispatcher, RadioGeddonViewTextBox);
+    radiogeddon_scene_show_report(app, "Firmware decode", furi_string_get_cstr(app->temp_str));
 }
 
 bool radiogeddon_scene_decode_on_event(void* context, SceneManagerEvent event) {
@@ -37,5 +37,6 @@ bool radiogeddon_scene_decode_on_event(void* context, SceneManagerEvent event) {
 
 void radiogeddon_scene_decode_on_exit(void* context) {
     RadioGeddonApp* app = context;
+    radiogeddon_ui_cancel(app);
     text_box_reset(app->text_box);
 }

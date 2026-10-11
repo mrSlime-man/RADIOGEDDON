@@ -158,6 +158,13 @@ void radiogeddon_rangescan_stop(RadioGeddonRangeScan* instance) {
     instance->thread = NULL;
 }
 
+bool radiogeddon_rangescan_is_paused(RadioGeddonRangeScan* instance) {
+    furi_mutex_acquire(instance->mutex, FuriWaitForever);
+    bool paused = instance->paused;
+    furi_mutex_release(instance->mutex);
+    return paused;
+}
+
 void radiogeddon_rangescan_toggle_pause(RadioGeddonRangeScan* instance) {
     furi_mutex_acquire(instance->mutex, FuriWaitForever);
     if(!instance->paused && instance->hold_index >= 0) {

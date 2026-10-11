@@ -73,6 +73,9 @@ void radiogeddon_scene_show_confirm(
 }
 
 void radiogeddon_scene_show_busy(RadioGeddonApp* app, const char* text) {
+#if RG_FEATURE_DOLPHIN_LAB
+    if(radiogeddon_ui_card(app, RadioGeddonLabCardBusy, text, NULL, 0, 0, false)) return;
+#endif
     popup_reset(app->popup);
     popup_set_header(app->popup, text, 64, 32, AlignCenter, AlignCenter);
     view_dispatcher_switch_to_view(app->view_dispatcher, RadioGeddonViewPopup);
@@ -83,12 +86,16 @@ void radiogeddon_scene_show_busy(RadioGeddonApp* app, const char* text) {
 #define RADIOGEDDON_PROGRESS_NONE   0xFFu
 
 void radiogeddon_scene_show_progress(RadioGeddonApp* app, const char* text) {
-    popup_reset(app->popup);
-    popup_set_header(app->popup, text, 64, 24, AlignCenter, AlignCenter);
     radiogeddon_memdiag_sample(text);
     app->progress_pct = RADIOGEDDON_PROGRESS_NONE;
     app->progress_tick = 0;
     radiogeddon_analysis_set_progress(radiogeddon_scene_progress, app);
+    radiogeddon_ui_event(app, RgMascotEventAnalysisStarted, 0);
+#if RG_FEATURE_DOLPHIN_LAB
+    if(radiogeddon_ui_card(app, RadioGeddonLabCardProgress, text, NULL, 0, 0, false)) return;
+#endif
+    popup_reset(app->popup);
+    popup_set_header(app->popup, text, 64, 24, AlignCenter, AlignCenter);
     view_dispatcher_switch_to_view(app->view_dispatcher, RadioGeddonViewPopup);
 }
 
@@ -105,6 +112,12 @@ void radiogeddon_scene_progress(void* context, uint32_t done, uint32_t total) {
         return;
     app->progress_pct = (uint8_t)pct;
     app->progress_tick = now;
+#if RG_FEATURE_DOLPHIN_LAB
+    if(radiogeddon_ui_active(app)) {
+        radiogeddon_ui_card_progress(app, (uint8_t)pct);
+        return;
+    }
+#endif
     app->progress_slot ^= 1;
     char* text = app->progress_text[app->progress_slot];
     snprintf(text, sizeof(app->progress_text[0]), "%lu%%", (unsigned long)pct);
@@ -114,7 +127,28 @@ void radiogeddon_scene_progress(void* context, uint32_t done, uint32_t total) {
 void radiogeddon_scene_progress_end(RadioGeddonApp* app) {
     radiogeddon_analysis_set_progress(NULL, NULL);
     radiogeddon_memdiag_sample(NULL);
+    radiogeddon_ui_event(app, RgMascotEventAnalysisCompleted, 0);
+}
+
+void radiogeddon_scene_receiver_badge(RadioGeddonApp* app) {
+#if RG_FEATURE_DOLPHIN_LAB
+    RgMascotFrame f;
+    bool cyber = false;
+    bool on = radiogeddon_ui_badge(app, &f, &cyber);
+    radiogeddon_receiver_view_set_badge(app->receiver_view, on ? &f : NULL, cyber);
+#else
     UNUSED(app);
+#endif
+}
+
+void radiogeddon_scene_show_report(RadioGeddonApp* app, const char* title, const char* text) {
+#if RG_FEATURE_DOLPHIN_LAB
+    radiogeddon_ui_reveal(app, title, text, RadioGeddonViewTextBox);
+#else
+    UNUSED(title);
+    UNUSED(text);
+    view_dispatcher_switch_to_view(app->view_dispatcher, RadioGeddonViewTextBox);
+#endif
 }
 
 /* Free heap kept on top of a receive session's measured cost (history, texts,
@@ -148,6 +182,14 @@ static bool radiogeddon_scene_session_memory_ok(RadioGeddonApp* app, const char*
         what,
         (unsigned long)((cost + RADIOGEDDON_RADIO_MARGIN + 1023) / 1024),
         (unsigned long)(free_now / 1024));
+    radiogeddon_ui_event(app, RgMascotEventLowMemory, 0);
+#if RG_FEATURE_DOLPHIN_LAB
+    if(radiogeddon_ui_card(
+           app, RadioGeddonLabCardMessage, "Not enough memory", app->memory_text, 0, 0, false)) {
+        notification_message(app->notifications, &sequence_error);
+        return false;
+    }
+#endif
     popup_reset(app->popup);
     popup_set_header(app->popup, "Not enough memory", 64, 12, AlignCenter, AlignCenter);
     popup_set_text(app->popup, app->memory_text, 64, 39, AlignCenter, AlignCenter);
@@ -229,6 +271,12 @@ bool radiogeddon_scene_module_load(RadioGeddonApp* app, const char* file, size_t
         return true;
     }
     radiogeddon_module_error(status, &app->message_header, &app->message_text);
+    // Not enough memory for a tool is the app's normal refusal, not a crash.
+    radiogeddon_ui_event(
+        app,
+        status == RadioGeddonModuleNoMemory ? RgMascotEventLowMemory :
+                                              RgMascotEventOperationFailed,
+        0);
     return false;
 }
 

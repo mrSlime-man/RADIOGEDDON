@@ -78,6 +78,8 @@ void radiogeddon_rangescan_stop(RadioGeddonRangeScan* instance);
 
 /** Release a hold if holding; otherwise pause or resume. */
 void radiogeddon_rangescan_toggle_pause(RadioGeddonRangeScan* instance);
+/** True while the sweep is paused by the user. */
+bool radiogeddon_rangescan_is_paused(RadioGeddonRangeScan* instance);
 /** Clear peak holds and counters (noise floors kept). */
 void radiogeddon_rangescan_reset_peaks(RadioGeddonRangeScan* instance);
 /** Forget every point's noise floor and measure it again (calibration). */

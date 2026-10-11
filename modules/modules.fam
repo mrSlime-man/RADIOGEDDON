@@ -49,6 +49,8 @@ App(
     sources=[
         "modules/radiogeddon_module_waterfall.c",
         "views/radiogeddon_waterfall_view.c",
+        "views/radiogeddon_mascot_draw.c",
+        "helpers/rg_sprites.c",
         "helpers/rg_freq.c",
     ],
     fal_embedded=True,
@@ -94,6 +96,25 @@ App(
         "helpers/radiogeddon_dsp.c",
         "helpers/rg_raw.c",
         "helpers/rg_freq.c",
+    ],
+    fal_embedded=True,
+)
+
+App(
+    appid="radiogeddon_lab",
+    apptype=FlipperAppType.PLUGIN,
+    entry_point="radiogeddon_lab_module_ep",
+    requires=["radiogeddon_full"],
+    cdefines=["RADIOGEDDON_EDITION_FULL"],
+    sources=[
+        "modules/radiogeddon_module_lab.c",
+        "views/radiogeddon_room_view.c",
+        "views/radiogeddon_room_data.c",
+        "views/radiogeddon_mascot_draw.c",
+        "helpers/rg_sprites.c",
+        "helpers/rg_mascot.c",
+        "helpers/rg_ui.c",
+        "helpers/rg_raw.c",
     ],
     fal_embedded=True,
 )
