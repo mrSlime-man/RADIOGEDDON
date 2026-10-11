@@ -44,6 +44,15 @@ typedef struct {
     uint8_t ui_style; // RgUiStyle
     uint8_t ui_feedback; // RgUiFeedbackLevel
     bool ui_transitions; // screen transitions in the lab styles
+    // Beta 9 (Full edition; kept by both, like the fields above).
+    uint8_t ui_animation; // RgAnimLevel
+    bool assistant; // Dolphin Assistant tips
+    uint8_t look[6]; // RgMascotLook: phones, goggles, antenna, tool, expression, accessory
+    uint8_t decoration; // RgDecoration on the lab wall (when unlocked)
+    uint8_t scan_mode; // RgAdaptMode of the Frequency Scanner
+    uint16_t log_interval_s; // RF Activity Logger: seconds per logged row set
+    uint16_t log_minutes; // RF Activity Logger: observation length, 0 = until stopped
+    uint16_t log_max_kb; // RF Activity Logger: size of one log part
 } RadioGeddonSettings;
 
 /** Where the Scanner and the Hopper take their frequencies from. */

@@ -4,6 +4,9 @@
 #include "rg_freq.h"
 #include "rg_range.h"
 #include "rg_ui.h"
+#include "rg_mascot.h"
+#include "rg_adapt.h"
+#include "rg_journal.h"
 
 #include <lib/flipper_format/flipper_format.h>
 
@@ -47,6 +50,17 @@ void radiogeddon_settings_default(RadioGeddonSettings* settings) {
     settings->ui_style = RgUiStyleDolphinLab;
     settings->ui_feedback = RgUiFeedbackOff;
     settings->ui_transitions = true;
+    // Beta 9: a settings file from before has none of these.
+    settings->ui_animation = RgAnimNormal;
+    settings->assistant = true;
+    RgMascotLook look;
+    rg_mascot_look_default(&look);
+    memcpy(settings->look, &look, sizeof(settings->look));
+    settings->decoration = RgDecoNone;
+    settings->scan_mode = RgAdaptStandard;
+    settings->log_interval_s = 60;
+    settings->log_minutes = 60;
+    settings->log_max_kb = 256;
 }
 
 uint32_t radiogeddon_settings_default_hop_mask(void) {
@@ -165,6 +179,40 @@ void radiogeddon_settings_load(Storage* storage, RadioGeddonSettings* settings) 
             settings->ui_feedback = (uint8_t)v;
         flipper_format_rewind(ff);
         if(flipper_format_read_bool(ff, "Ui_transitions", &b, 1)) settings->ui_transitions = b;
+        flipper_format_rewind(ff);
+        if(flipper_format_read_uint32(ff, "Ui_animation", &v, 1) && v < RgAnimCount)
+            settings->ui_animation = (uint8_t)v;
+        flipper_format_rewind(ff);
+        if(flipper_format_read_bool(ff, "Assistant", &b, 1)) settings->assistant = b;
+        flipper_format_rewind(ff);
+        uint32_t look[6];
+        if(flipper_format_read_uint32(ff, "Dolphin_look", look, 6)) {
+            RgMascotLook l = {
+                .phones = (uint8_t)(look[0] > 1 ? 1 : look[0]),
+                .goggles = (uint8_t)(look[1] < 256 ? look[1] : 255),
+                .antenna = (uint8_t)(look[2] < 256 ? look[2] : 255),
+                .tool = (uint8_t)(look[3] < 256 ? look[3] : 255),
+                .expression = (uint8_t)(look[4] < 256 ? look[4] : 255),
+                .accessory = (uint8_t)(look[5] < 256 ? look[5] : 255),
+            };
+            rg_mascot_look_sanitize(&l);
+            memcpy(settings->look, &l, sizeof(settings->look));
+        }
+        flipper_format_rewind(ff);
+        if(flipper_format_read_uint32(ff, "Lab_decoration", &v, 1) && v < RgDecoCount)
+            settings->decoration = (uint8_t)v;
+        flipper_format_rewind(ff);
+        if(flipper_format_read_uint32(ff, "Scan_mode", &v, 1) && v < RgAdaptModeCount)
+            settings->scan_mode = (uint8_t)v;
+        flipper_format_rewind(ff);
+        if(flipper_format_read_uint32(ff, "Log_interval_s", &v, 1) && v >= 10 && v <= 3600)
+            settings->log_interval_s = (uint16_t)v;
+        flipper_format_rewind(ff);
+        if(flipper_format_read_uint32(ff, "Log_minutes", &v, 1) && v <= 1440)
+            settings->log_minutes = (uint16_t)v;
+        flipper_format_rewind(ff);
+        if(flipper_format_read_uint32(ff, "Log_max_kb", &v, 1) && v >= 16 && v <= 4096)
+            settings->log_max_kb = (uint16_t)v;
     } while(false);
 
     furi_string_free(type);
@@ -231,6 +279,24 @@ bool radiogeddon_settings_save(Storage* storage, const RadioGeddonSettings* sett
         if(!flipper_format_write_uint32(ff, "Ui_feedback", &v, 1)) break;
         b = settings->ui_transitions;
         if(!flipper_format_write_bool(ff, "Ui_transitions", &b, 1)) break;
+        v = settings->ui_animation;
+        if(!flipper_format_write_uint32(ff, "Ui_animation", &v, 1)) break;
+        b = settings->assistant;
+        if(!flipper_format_write_bool(ff, "Assistant", &b, 1)) break;
+        uint32_t look[6];
+        for(size_t i = 0; i < 6; i++)
+            look[i] = settings->look[i];
+        if(!flipper_format_write_uint32(ff, "Dolphin_look", look, 6)) break;
+        v = settings->decoration;
+        if(!flipper_format_write_uint32(ff, "Lab_decoration", &v, 1)) break;
+        v = settings->scan_mode;
+        if(!flipper_format_write_uint32(ff, "Scan_mode", &v, 1)) break;
+        v = settings->log_interval_s;
+        if(!flipper_format_write_uint32(ff, "Log_interval_s", &v, 1)) break;
+        v = settings->log_minutes;
+        if(!flipper_format_write_uint32(ff, "Log_minutes", &v, 1)) break;
+        v = settings->log_max_kb;
+        if(!flipper_format_write_uint32(ff, "Log_max_kb", &v, 1)) break;
         ok = true;
     } while(false);
     ok = flipper_format_file_close(ff) && ok;

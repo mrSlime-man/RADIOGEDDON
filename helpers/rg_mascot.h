@@ -215,10 +215,26 @@ typedef enum {
     RgAnimCount,
 } RgAnimLevel;
 
-/** The default look: headphones, goggles as posed, classic antenna. */
-void rg_mascot_look_default(RgMascotLook* look);
+/** The default look: headphones, goggles as posed, classic antenna. (Inline:
+ * the settings of both editions use it.) */
+static inline void rg_mascot_look_default(RgMascotLook* look) {
+    look->phones = 1;
+    look->goggles = RgLookGogglesAuto;
+    look->antenna = RgLookAntennaClassic;
+    look->tool = RgLookToolNone;
+    look->expression = RgLookExpressionNormal;
+    look->accessory = RgLookAccessoryNone;
+}
+
 /** Clamp every field into range (a damaged setting reads as the default). */
-void rg_mascot_look_sanitize(RgMascotLook* look);
+static inline void rg_mascot_look_sanitize(RgMascotLook* look) {
+    if(look->phones > 1) look->phones = 1;
+    if(look->goggles >= RgLookGogglesCount) look->goggles = RgLookGogglesAuto;
+    if(look->antenna >= RgLookAntennaCount) look->antenna = RgLookAntennaClassic;
+    if(look->tool >= RgLookToolCount) look->tool = RgLookToolNone;
+    if(look->expression >= RgLookExpressionCount) look->expression = RgLookExpressionNormal;
+    if(look->accessory >= RgLookAccessoryCount) look->accessory = RgLookAccessoryNone;
+}
 
 /**
  * Apply @p look and animation level @p anim to a pose @p f of a state shown

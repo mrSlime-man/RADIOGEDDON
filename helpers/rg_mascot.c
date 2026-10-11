@@ -360,20 +360,6 @@ void rg_mascot_pose(
     }
 }
 
-void rg_mascot_look_default(RgMascotLook* look) {
-    memset(look, 0, sizeof(*look));
-    look->phones = 1;
-}
-
-void rg_mascot_look_sanitize(RgMascotLook* look) {
-    if(look->phones > 1) look->phones = 1;
-    if(look->goggles >= RgLookGogglesCount) look->goggles = RgLookGogglesAuto;
-    if(look->antenna >= RgLookAntennaCount) look->antenna = RgLookAntennaClassic;
-    if(look->tool >= RgLookToolCount) look->tool = RgLookToolNone;
-    if(look->expression >= RgLookExpressionCount) look->expression = RgLookExpressionNormal;
-    if(look->accessory >= RgLookAccessoryCount) look->accessory = RgLookAccessoryNone;
-}
-
 void rg_mascot_style(RgMascotFrame* f, const RgMascotLook* look, uint8_t anim, uint32_t t) {
     f->phones = look->phones ? 1 : 0;
     f->goggles_mode = look->goggles < RgLookGogglesCount ? look->goggles : 0;
