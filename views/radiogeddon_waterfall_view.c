@@ -138,7 +138,11 @@ static void radiogeddon_waterfall_view_draw(Canvas* canvas, void* model) {
         canvas_draw_dot(canvas, cx, y + 1);
     }
     canvas_draw_line(
-        canvas, cx - 1, WF_TOP + RADIOGEDDON_WF_VIEW_H, cx + 1, WF_TOP + RADIOGEDDON_WF_VIEW_H);
+        canvas,
+        cx > 0 ? cx - 1 : 0,
+        WF_TOP + RADIOGEDDON_WF_VIEW_H,
+        cx < (int32_t)RADIOGEDDON_WF_VIEW_W - 1 ? cx + 1 : cx,
+        WF_TOP + RADIOGEDDON_WF_VIEW_H);
 
     // Footer: cursor frequency, reading in the top visible row, column peak.
     char freq[RG_FREQ_TEXT_SIZE];
@@ -147,7 +151,7 @@ static void radiogeddon_waterfall_view_draw(Canvas* canvas, void* model) {
     radiogeddon_waterfall_dbm(now, sizeof(now), "", f->cursor_dbm);
     radiogeddon_waterfall_dbm(peak, sizeof(peak), "p", f->cursor_peak);
     snprintf(text, sizeof(text), "%s %s %s", freq, now, peak);
-    canvas_draw_str(canvas, 0, 63, text);
+    canvas_draw_str(canvas, 0, 61, text);
     if(f->scroll > 0 && f->filled) {
         radiogeddon_waterfall_seconds(text, sizeof(text), f->top_age_ms, "-");
     } else if(f->sweep_ms) {
@@ -155,7 +159,7 @@ static void radiogeddon_waterfall_view_draw(Canvas* canvas, void* model) {
     } else {
         radiogeddon_waterfall_seconds(text, sizeof(text), f->estimate_ms, "~");
     }
-    canvas_draw_str_aligned(canvas, 127, 63, AlignRight, AlignBottom, text);
+    canvas_draw_str_aligned(canvas, 127, 61, AlignRight, AlignBottom, text);
 
     if(m->menu_open) {
         // Action menu: a framed list over the picture.

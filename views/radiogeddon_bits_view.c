@@ -134,14 +134,19 @@ static void radiogeddon_bits_header(Canvas* canvas, const RadioGeddonBitsModel* 
 static void radiogeddon_bits_draw_frames(Canvas* canvas, const RadioGeddonBitsModel* m) {
     const RgAnalysis* r = m->r;
     char text[40];
+    // "+" when the capture had more frames than the analyzer keeps.
     snprintf(
-        text, sizeof(text), "FRAMES %u/%u", (unsigned)r->frames_kept, (unsigned)r->frame_count);
+        text,
+        sizeof(text),
+        "FRAMES %u%s",
+        (unsigned)r->frames_kept,
+        r->frame_count > r->frames_kept ? "+" : "");
     canvas_draw_str(canvas, 0, 8, text);
     snprintf(
         text,
         sizeof(text),
-        "%s c%d HYP",
-        rg_analyzer_encoding_name(r->encoding),
+        "%s? c%d",
+        r->encoding == RgEncodingManchester ? "Manch" : rg_analyzer_encoding_name(r->encoding),
         r->encoding_confidence);
     canvas_draw_str_aligned(canvas, 127, 8, AlignRight, AlignBottom, text);
 
@@ -150,7 +155,7 @@ static void radiogeddon_bits_draw_frames(Canvas* canvas, const RadioGeddonBitsMo
         uint16_t i = (uint16_t)(m->frame_top + line);
         if(i >= r->frames_kept) break;
         const RgFrame* f = &r->frames[i];
-        int32_t y = 18 + line * 9;
+        int32_t y = 17 + line * 9; // footer descenders end on the last row
         uint32_t ms = (uint32_t)(f->start_us / 1000u);
         if(!rg_bits_usable(f)) {
             snprintf(
@@ -184,11 +189,11 @@ static void radiogeddon_bits_draw_frames(Canvas* canvas, const RadioGeddonBitsMo
     }
     // Footer: what the columns mean, and the reference.
     if(ref) {
-        snprintf(text, sizeof(text), "# time bits pat xN sim/F%u", (unsigned)(m->ref + 1u));
+        snprintf(text, sizeof(text), "HYP: t bits pat xN sim/F%u", (unsigned)(m->ref + 1u));
     } else {
         snprintf(text, sizeof(text), "No clean frame.");
     }
-    canvas_draw_str(canvas, 0, 63, text);
+    canvas_draw_str(canvas, 0, 61, text);
 }
 
 static void radiogeddon_bits_draw_bits(Canvas* canvas, const RadioGeddonBitsModel* m) {
@@ -216,7 +221,7 @@ static void radiogeddon_bits_draw_bits(Canvas* canvas, const RadioGeddonBitsMode
     } else {
         snprintf(text, sizeof(text), "No bits in this frame.");
     }
-    canvas_draw_str(canvas, 0, 63, text);
+    canvas_draw_str(canvas, 0, 61, text);
 }
 
 static void radiogeddon_bits_draw_hex(Canvas* canvas, const RadioGeddonBitsModel* m) {
@@ -276,7 +281,7 @@ static void radiogeddon_bits_draw_hex(Canvas* canvas, const RadioGeddonBitsModel
             v,
             v,
             bin);
-        canvas_draw_str(canvas, 0, 63, text);
+        canvas_draw_str(canvas, 0, 61, text);
     }
 }
 
@@ -309,7 +314,7 @@ static void radiogeddon_bits_draw_diff(Canvas* canvas, const RadioGeddonBitsMode
             (unsigned)m->n_unknown,
             (unsigned)m->comparable);
     }
-    canvas_draw_str(canvas, 0, 63, text);
+    canvas_draw_str(canvas, 0, 61, text);
 }
 
 static void radiogeddon_bits_draw_field(Canvas* canvas, const RadioGeddonBitsModel* m) {
@@ -338,22 +343,27 @@ static void radiogeddon_bits_draw_field(Canvas* canvas, const RadioGeddonBitsMod
         (unsigned)fld.end,
         (unsigned)fld.length,
         fld.length == 1 ? "" : "s");
-    canvas_draw_str(canvas, 0, 27, text);
+    canvas_draw_str(canvas, 0, 25, text);
     char bin[26];
     rg_bits_field_binary(f, &fld, bin, sizeof(bin));
     snprintf(text, sizeof(text), "BIN %s", bin);
-    canvas_draw_str(canvas, 0, 36, text);
+    canvas_draw_str(canvas, 0, 34, text);
     if(fld.has_value) {
         char hex[20];
         rg_bits_field_hex(&fld, hex, sizeof(hex));
         snprintf(text, sizeof(text), "HEX %s", hex);
-        canvas_draw_str(canvas, 0, 45, text);
-        snprintf(text, sizeof(text), "DEC %llu", (unsigned long long)fld.value);
-        canvas_draw_str(canvas, 0, 54, text);
+        canvas_draw_str(canvas, 0, 43, text);
+        // Up to 15 digits fit the line; a longer field reads in hex.
+        if(fld.length <= 48) {
+            snprintf(text, sizeof(text), "DEC %llu", (unsigned long long)fld.value);
+        } else {
+            snprintf(text, sizeof(text), "DEC: over 48 bits, see HEX");
+        }
+        canvas_draw_str(canvas, 0, 52, text);
     } else {
-        canvas_draw_str(canvas, 0, 45, "Over 64 bits: no number.");
+        canvas_draw_str(canvas, 0, 43, "Over 64 bits: no number.");
     }
-    canvas_draw_str(canvas, 0, 63, "Up/Dn start  L/R end");
+    canvas_draw_str(canvas, 0, 61, "Up/Dn start  L/R end");
 }
 
 static void radiogeddon_bits_view_draw(Canvas* canvas, void* model) {

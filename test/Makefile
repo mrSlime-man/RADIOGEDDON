@@ -86,7 +86,19 @@ LIFECYCLE_SRC := test_lifecycle.c stubs/furi_stub.c stubs/radio_fake.c \
 		../helpers/radiogeddon_hopper.c ../helpers/rg_scan.c ../helpers/rg_hop.c \
 		../helpers/rg_range.c ../helpers/rg_spectrum.c ../helpers/rg_freq.c ../helpers/rg_waterfall.c
 
-.PHONY: check clean tsan fuzz formats decoders captures lifecycle
+# Offline UI tests: the Waterfall and Bitstream Explorer screens drawn into
+# a host 128x64 canvas with the firmware's own u8g2 fonts (ui/fetch_fonts.sh,
+# pinned and checksum-verified), driven with key events; every state is
+# checked for drawing off the screen and written as a synthetic preview
+# (build/ui/previews, PNG via ui/previews.py). `make ui`.
+UI_FONTS := $(BUILD)/ui/fonts.inc
+UI_SRC := test_ui.c ui/canvas_host.c ../views/radiogeddon_waterfall_view.c \
+		../views/radiogeddon_bits_view.c ../helpers/rg_waterfall.c ../helpers/rg_bits.c \
+		../helpers/rg_glyph.c ../helpers/rg_analyzer.c ../helpers/rg_range.c ../helpers/rg_freq.c
+UI_HDRS := ui/canvas_host.h ui/stubs/gui/view.h ui/stubs/gui/canvas.h ui/stubs/gui/elements.h \
+		../views/radiogeddon_waterfall_view.h ../views/radiogeddon_bits_view.h synth.h
+
+.PHONY: check clean tsan fuzz formats decoders captures lifecycle ui
 check: $(BUILD)/test_dsp $(BUILD)/test_analyzer $(BUILD)/test_scan $(BUILD)/test_hop $(BUILD)/test_raw \
 		$(BUILD)/test_timeline $(BUILD)/test_ring $(BUILD)/test_rawfmt $(BUILD)/test_recorder \
 		$(BUILD)/test_db $(BUILD)/test_memstat $(BUILD)/test_dbload $(BUILD)/test_decode $(BUILD)/test_freq $(BUILD)/test_preset $(BUILD)/test_range \
@@ -205,6 +217,22 @@ lifecycle: $(BUILD)/test_lifecycle
 $(BUILD)/test_lifecycle: $(LIFECYCLE_SRC) $(STUB_HDRS) $(FW)/.fetched | $(BUILD)
 	$(CC) $(CFLAGS) $(SAN) -D_GNU_SOURCE -I$(FW) -I$(FW)/lib -I$(FW)/lib/mlib -Istubs \
 		-DSTUB_TRACK_ALLOC -DRADIOGEDDON_EDITION_FULL -pthread -o $@ $(LIFECYCLE_SRC)
+
+ui: $(BUILD)/test_ui
+	mkdir -p $(BUILD)/ui/previews
+	rm -f $(BUILD)/ui/previews/*
+	$(BUILD)/test_ui
+	python3 ui/previews.py $(BUILD)/ui/previews
+
+$(UI_FONTS): ui/fetch_fonts.sh ui/extract_fonts.py ../scripts/firmware_pins.sh
+	ui/fetch_fonts.sh $@
+
+# The stand-in gui headers come first; the firmware's Sub-GHz headers are
+# only for the range engine's types the Waterfall view's header names.
+$(BUILD)/test_ui: $(UI_SRC) $(UI_HDRS) $(UI_FONTS) $(FW)/.fetched | $(BUILD)
+	$(CC) $(CFLAGS) $(SAN) -D_GNU_SOURCE -Iui/stubs -Iui -I$(FW) -I$(FW)/lib -I$(FW)/lib/mlib \
+		-Istubs -DRADIOGEDDON_EDITION_FULL -DFONTS_INC='"$(abspath $(UI_FONTS))"' \
+		-o $@ $(UI_SRC)
 
 formats: $(BUILD)/test_formats
 	$(BUILD)/test_formats
