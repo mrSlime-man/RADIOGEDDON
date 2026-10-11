@@ -17,12 +17,15 @@ static const RgGlyph rg_glyphs[] = {
     {':', {0, 2, 0, 2, 0}}, {'+', {0, 2, 7, 2, 0}}, {' ', {0, 0, 0, 0, 0}},
 };
 
+/* The '?' entry, drawn for any character without a glyph. */
+#define RG_GLYPH_UNKNOWN 18u
+
 const uint8_t* rg_glyph_rows(char c) {
     if(c >= 'a' && c <= 'f') c = (char)(c - 'a' + 'A');
     if(c == 'x') c = 'X';
     for(unsigned i = 0; i < sizeof(rg_glyphs) / sizeof(rg_glyphs[0]); i++)
         if(rg_glyphs[i].c == c) return rg_glyphs[i].rows;
-    return rg_glyph_rows('?');
+    return rg_glyphs[RG_GLYPH_UNKNOWN].rows;
 }
 
 bool rg_glyph_pixel(char c, uint8_t x, uint8_t y) {

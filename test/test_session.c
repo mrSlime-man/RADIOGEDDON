@@ -299,6 +299,14 @@ static void test_suggest(void) {
         g[5] == -1 && g[6] == -1 && g[7] == -1 && g[8] == -1,
         "singles, late, unknown, other length");
     CHECK(rg_session_suggest(it, 0, g, groups) == 0, "no items");
+    // A group whose first recording has no time: the next one still joins
+    // (an unknown time never splits a group).
+    RgSessionItem t[] = {
+        {"a.sub", 315000000, "RAW", 0, 0},
+        {"b.sub", 315000000, "RAW", 0, 5000},
+        {"c.sub", 315000000, "RAW", 0, 5100},
+    };
+    CHECK(rg_session_suggest(t, 3, g, groups) == 1 && groups[0].count == 3, "unknown time joins");
 }
 
 int main(void) {

@@ -365,6 +365,7 @@ void rg_multi_report(const RgMultiCapture* caps, size_t count, const RgMultiResu
     const RgMultiCapture* first = NULL;
     for(size_t i = 0; i < count && !first; i++)
         if(caps[i].patterns) first = &caps[i];
+    if(!first) return; // usable > 0 means one exists
 
     rg_text_printf(t, "[OBSERVED] Frequency:\n %s", res->same_frequency ? "same, " : "differs\n");
     if(res->same_frequency) {
@@ -401,7 +402,8 @@ void rg_multi_report(const RgMultiCapture* caps, size_t count, const RgMultiResu
         "[HYPOTHESIS] Frames:\n %u different of %u\n",
         (unsigned)res->distinct_frames,
         (unsigned)res->usable);
-    for(char g = 'A'; g < 'A' + (char)res->distinct_frames; g++) {
+    for(size_t k = 0; k < res->distinct_frames && k < 26; k++) {
+        char g = (char)('A' + k);
         rg_text_printf(t, " %c:", g);
         for(size_t i = 0; i < count; i++)
             if(res->same_as[i] == g) rg_text_printf(t, " %u", (unsigned)(i + 1));

@@ -6,7 +6,7 @@
 // a recording (its usual file menu: analysis, explorer, compare, replay);
 // 1: OK takes it out of the session (the file itself stays).
 
-#define SESSION_SIGNALS_BUSY_BYTES (32u * 1024u)
+#define SESSION_SIGNALS_BUSY_BYTES 32768u
 
 static void radiogeddon_scene_session_signals_cb(void* context, uint32_t index) {
     RadioGeddonApp* app = context;

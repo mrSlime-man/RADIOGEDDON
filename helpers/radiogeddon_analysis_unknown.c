@@ -261,6 +261,7 @@ static void radiogeddon_report_checksums(const RgAnalysis* r, FuriString* out) {
     // Which frames are the evidence: the distinct ones of the modal length
     // (a frame repeated twice is one frame; repeats prove nothing).
     uint8_t used[RG_CHECKSUM_MAX_FRAMES];
+    memset(used, 0, sizeof(used));
     size_t clean = 0;
     for(size_t i = 0; i < r->frames_kept; i++) {
         const RgFrame* f = &r->frames[i];

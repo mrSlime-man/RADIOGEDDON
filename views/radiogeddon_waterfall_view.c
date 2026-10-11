@@ -167,7 +167,7 @@ static void radiogeddon_waterfall_view_draw(Canvas* canvas, void* model) {
         canvas_draw_box(canvas, 10, 8, 108, 56);
         canvas_set_color(canvas, ColorBlack);
         canvas_draw_frame(canvas, 10, 8, 108, 56);
-        for(uint8_t i = 0; i < WfMenuCount; i++) {
+        for(int i = 0; i < WfMenuCount; i++) {
             int32_t y = 17 + i * 9;
             switch(i) {
             case WfMenuReceive:

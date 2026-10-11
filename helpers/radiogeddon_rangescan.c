@@ -346,7 +346,7 @@ void radiogeddon_rangescan_waterfall_frame(
 
     // Per-column floors: the lowest trusted floor of the column's points.
     for(uint16_t c = 0; c < RG_WF_MAX_COLUMNS; c++)
-        floors[c] = RG_WF_NO_FLOOR;
+        floors[c] = (int8_t)RG_WF_NO_FLOOR;
     for(uint32_t i = 0; i < instance->range.points; i++) {
         const RgScanChannel* ch = &instance->channels[i];
         if(ch->samples < RG_SCAN_WARMUP_SAMPLES) {
@@ -358,8 +358,8 @@ void radiogeddon_rangescan_waterfall_frame(
         if(floors[c] == RG_WF_NO_FLOOR || f < floors[c]) floors[c] = f;
     }
     float global = rg_scan_global_floor(instance->channels, instance->range.points);
-    out->floor = global <= RG_SCAN_RSSI_NONE ? RG_WF_NO_FLOOR :
-                                               radiogeddon_rangescan_floor8(global);
+    out->floor = (int8_t)RG_WF_NO_FLOOR;
+    if(global > RG_SCAN_RSSI_NONE) out->floor = radiogeddon_rangescan_floor8(global);
 
     if(!instance->waterfall_on || wf->columns == 0) {
         furi_mutex_release(instance->mutex);

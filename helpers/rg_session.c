@@ -128,15 +128,18 @@ RgSessionParse rg_session_parse(RgSession* s, const char* text, size_t len) {
         size_t n = end - pos;
         if(n && line[n - 1] == '\r') n--;
         size_t vlen = 0;
-        const char* v;
+        const char* name = header ? rg_session_value(line, n, "Name", &vlen) : NULL;
+        const char* created = header && !name ? rg_session_value(line, n, "Created", &vlen) : NULL;
+        const char* v = header && !name && !created ? rg_session_value(line, n, "Signal", &vlen) :
+                                                      NULL;
         if(!header) {
             header = n == strlen(RG_SESSION_HEADER) && memcmp(line, RG_SESSION_HEADER, n) == 0;
             if(!header) return RgSessionParseNotSession;
-        } else if((v = rg_session_value(line, n, "Name", &vlen)) != NULL) {
-            rg_session_copy(s->name, sizeof(s->name), v, vlen);
-        } else if((v = rg_session_value(line, n, "Created", &vlen)) != NULL) {
-            rg_session_copy(s->created, sizeof(s->created), v, vlen);
-        } else if((v = rg_session_value(line, n, "Signal", &vlen)) != NULL) {
+        } else if(name) {
+            rg_session_copy(s->name, sizeof(s->name), name, vlen);
+        } else if(created) {
+            rg_session_copy(s->created, sizeof(s->created), created, vlen);
+        } else if(v) {
             char file[RG_SESSION_SIGNAL_MAX];
             if(vlen < sizeof(file)) {
                 rg_session_copy(file, sizeof(file), v, vlen);
@@ -267,6 +270,7 @@ size_t rg_session_suggest(
             work[open].first = (uint16_t)i;
             work[open].bits = it->bits;
             work[open].count = 0;
+            work[open].last_time = 0;
             work[open].protocol = it->protocol ? it->protocol : "";
             open++;
         }

@@ -125,6 +125,7 @@ bool rg_waterfall_peak(const RgWaterfall* wf, uint16_t* column, uint16_t* age, i
     uint8_t best = 0;
     for(uint16_t a = 0; a < wf->filled; a++) {
         const uint8_t* row = rg_waterfall_row(wf, a);
+        if(!row) break; // a < filled: never, but say so
         for(uint16_t c = 0; c < wf->columns; c++) {
             if(row[c] > best) {
                 best = row[c];
@@ -143,9 +144,9 @@ uint8_t rg_waterfall_level(int16_t dbm, int8_t floor, const RgWaterfallStyle* st
     int32_t ref = RG_WF_ABS_REF_DBM;
     if(style->noise_comp) {
         if(floor != RG_WF_NO_FLOOR) {
-            ref = floor;
+            ref = (int32_t)floor; // dBm, not a character
         } else if(style->floor_all != RG_WF_NO_FLOOR) {
-            ref = style->floor_all;
+            ref = (int32_t)style->floor_all;
         }
     }
     int32_t excess = (int32_t)dbm - ref;
@@ -227,7 +228,8 @@ uint16_t rg_waterfall_render(
             if(row[c] == 0) {
                 on = rg_waterfall_missing_dot(x, (uint16_t)age);
             } else {
-                int8_t floor = style->floors ? style->floors[c] : RG_WF_NO_FLOOR;
+                int8_t floor = (int8_t)RG_WF_NO_FLOOR;
+                if(style->floors) floor = style->floors[c];
                 int16_t dbm = (int16_t)((int16_t)row[c] - RG_WF_CELL_BIAS);
                 // Dither on the row's age, so a pattern scrolls with its sweep.
                 on = rg_waterfall_dither(rg_waterfall_level(dbm, floor, style), x, (uint16_t)age);

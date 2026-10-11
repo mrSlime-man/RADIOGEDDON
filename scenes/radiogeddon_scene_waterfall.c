@@ -93,7 +93,7 @@ void radiogeddon_scene_waterfall_on_enter(void* context) {
                       free_block - fixed - WATERFALL_HEAP_MARGIN :
                       0;
     size_t bytes = room < WATERFALL_BUF_MAX ? room : WATERFALL_BUF_MAX;
-    if(bytes < radiogeddon_scene_waterfall_min_bytes(points)) {
+    if(bytes == 0 || bytes < radiogeddon_scene_waterfall_min_bytes(points)) {
         app->message_header = "Not enough memory";
         app->message_text = "Free memory is too low\nfor the waterfall.\nUse fewer points.";
         radiogeddon_scene_module_unload(app);
