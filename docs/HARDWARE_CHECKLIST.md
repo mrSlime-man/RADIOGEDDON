@@ -142,6 +142,28 @@ These run as modules loaded from the `.fap`; a failure to load reads
 | B8 | Pull the SD card's power (or reboot) while a session is being saved (add a recording, then reset at once); open Sessions after restarting. | The session opens with either the old or the new list, never damaged; no `.tmp` left in use. |
 | B9 | Unknown Protocol Analysis on a RAW capture of a PWM remote (Princeton, CAME, Nice). | The `[HYPOTHESIS] structure` section names PWM; the `Fits:` line gives every reading's score; an `[OBSERVED] A repeats every … ms` line gives how often the pattern repeats. |
 
+## Dolphin Lab (Full edition, new in beta 8)
+
+None of these is verified yet. Record the firmware, and for timing items how
+you measured (a phone's slow-motion video of the screen works).
+
+| ID | Check | Pass when |
+|----|-------|-----------|
+| D1 | Launch the Full edition after a reboot. | The dashboard: the dolphin at its desk on the left, the menu on the right, the status bar with the frequency, preset and `Full`; a short wipe on first entry only. Note how the dolphin looks on the real screen (legible? recognisable?). |
+| D2 | Leave the dashboard idle for 10 s, then 50 s, then 2.5 min without pressing anything. | Blinks, breathing, a tail flick, looking around now and then (calm, not flickering); after about 45 s sleepy eyes; after 2 min asleep with `z`s. Any key wakes it at once and is handled (the menu moves). |
+| D3 | Up/Down through the whole menu, Left/Right, OK on every item, Back from each, long OK on Scan and on Receive. | Wraps at both ends; Left/Right jump a page; every item opens its screen (`Dolphin Lab` the room); long OK on Scan opens the Frequency Scanner, on Receive starts receiving and recording at once. No key is lost or delayed by the animation. |
+| D4 | Settings → UI style → Cyber Lab, Back; then Classic, Back; then Dolphin Lab, Back. Restart the app after each. | The new style shows at once and after a restart (it is saved); Classic is the beta 7 menu with no dolphin or animation; radio behaviour (frequency, preset, scans) is unchanged by any style. |
+| D5 | Scanner with Hold on hit off; press a 433.92 MHz remote. | The header badge shows the dolphin's head; a `!` on each detection; the dashboard afterwards shows no leftover scanning. The thick mark under the header moves with the sweep and stops when paused (Left). |
+| D6 | Receive & Record: listen, then Left to record, then Left to stop and save. | The badge listens (waves) while receiving; the lamp blinks only while `REC` shows in the receiver; on save the `Saved` card shows the dolphin cheering with the file name and samples, and returns by itself after 2.5 s (or on OK). Repeat with the SD card write-protected: `Save failed`, worried dolphin, the message in full. |
+| D7 | A recording that cannot start (fill the card, or force low memory as in F15b) and Back. | The receiver's note or `Not enough memory` with the figures, the dolphin worried; never a REC lamp. |
+| D8 | Database → a long RAW capture → Unknown Protocol Analysis, and Decode with Firmware. | A progress card with the dolphin at its terminal and a rising percentage; then a short reveal of the report's first lines and the full report; any key during the reveal opens it at once. |
+| D9 | Animation rate: film the dashboard during a scan (Scanner open, Back to it) and in the room's radar station. | Note the frame rate you see (target about 8 per second while active, about 2 idle) and whether anything flickers. |
+| D10 | Dolphin Lab room: walk all stations with Left/Right; OK on Oscilloscope and pick a RAW recording; OK on Terminal; Up/Down in the Gallery. | Short wipes between stations; the oscilloscope shows the recording's first pulses with the time span; the terminal's counts match the SD card (recordings in `signals`, `.txt` files in `reports` and `sessions`); every pose in the gallery. The radio is not used (no LED, no RSSI activity). |
+| D11 | From the room: OK on Radar (Scanner), Back; OK on Antenna (Receive), Back; repeat 10 times; open About. | The real tools open and work; no crash; `Free now` returns close to `At app start` (the room's module is unloaded before each tool). |
+| D12 | Memory: note About's figures on a fresh start in Dolphin Lab and in Classic (restart between). | Note both; the difference should be small (the lab view's few hundred bytes). Compare `At app start` with beta 7 if you have it (about 15 KB less is expected: the larger resident code). |
+| D13 | Settings → UI feedback → Minimal, then Full; record, run an analysis, browse the menu, scan with a busy remote. | Minimal: a short vibration when a recording starts and when an analysis finishes. Full: also short sounds, a menu click and at most one blip every 2 s on detections. Off: as beta 7. |
+| D14 | Leave the dashboard open for 30 minutes on battery, then the same in Classic. | Note the battery drop of each; the dashboard should not drain noticeably more (it redraws only on changes). |
+
 ## Catalog edition transmit check (Official)
 
 | ID | Check | Pass when |

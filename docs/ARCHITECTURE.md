@@ -53,14 +53,17 @@ flowchart LR
 
 ```
 radiogeddon.c / .h          App context: allocates services, views and scenes; 100 ms UI tick
+                            (which also drives Dolphin Lab, radiogeddon_ui_tick) 
 radiogeddon_version.h       Release version string (checked against the release tag)
 application.fam             Flipper app manifest (appid, category, icon, sources)
 scenes/                     One file per screen; the scene list is generated from
                             radiogeddon_scene_config.h (X-macros)
 views/                      Custom canvas views: scanner sweep, live receiver, pulse timeline,
-                            database list, waterfall [Full], bitstream explorer [Full]
+                            database list, waterfall [Full], bitstream explorer [Full],
+                            Dolphin Lab dashboard and cards, mascot drawing, lab room [Full]
 modules/                    Full-only plugins (.fal) built from the sources below, and their
-                            manifest (modules.fam): waterfall, bits, multi, unknown, sessions
+                            manifest (modules.fam): waterfall, bits, multi, unknown, sessions, lab
+art/dolphin/                The mascot, props and icons as editable text art (Dolphin Lab)
 helpers/
   radiogeddon_subghz.*      Radio wrapper: device, decoders, RAW capture, hopper retune, TX
   radiogeddon_bands.*       Modulation presets and frequency lists (no radio SDK needed)
@@ -105,14 +108,21 @@ helpers/
   radiogeddon_module.c      Module loader: memory check, load, unload, error text [Full]
   radiogeddon_modules.h     The structs each module returns, and their file names [Full]
   radiogeddon_host*.h       The app helpers handed to the Sessions module [Full]
+  rg_mascot.*               Pure mascot state machine: events, levels, priorities, poses [Full]
+  rg_ui.*                   Pure UI logic: styles, feedback limiter, transitions, dither, wrap,
+                            menu window, oscilloscope trace, firmware family [Full]
+  rg_sprites.*              Generated sprite bitmaps (tools/dolphin/build_sprites.py) [Full]
+  radiogeddon_ui.*          Dolphin Lab bridge: events in, level sync on the tick, cards,
+                            reveal, dashboard status, feedback cues [Full]
 radiogeddon_edition.h       The edition (Full / Catalog) and its RG_FEATURE_* switches
 catalog/                    Apps Catalog description, changelog, manifest template, screenshots
 assets/                     10x10 launcher icon (compiled into the .fap)
-test/                       Host unit tests (1,962 checks), format, decoder, capture, lifecycle and
+test/                       Host unit tests (2,115 checks), format, decoder, capture, lifecycle and
                             offline UI tests (test/ui: host canvas, firmware fonts), fuzz, fixtures
 scripts/                    Edition staging, pinned builds, manifest and import verification, packaging,
                             catalog checks, link check
 tools/brand/                Generator for the logo, banner and social preview
+tools/dolphin/              Sprite generator: art/dolphin/*.txt -> helpers/rg_sprites.c
 .github/workflows/          CI (ci.yml), shared build pipeline (build.yml), release.yml
 ```
 
@@ -166,11 +176,12 @@ compiled into each module that needs them as well.
 
 | Module | Contents | Resident while loaded |
 |--------|----------|-----------------------|
-| `radiogeddon_wf.fal` | Waterfall view | 2,740 B |
+| `radiogeddon_wf.fal` | Waterfall view (with the Dolphin Lab badge and entry reveal) | 4,315 B |
 | `radiogeddon_bits.fal` | Bitstream Explorer view, `rg_bits`, glyphs | 6,484 B |
 | `radiogeddon_unknown.fal` | Unknown Protocol Analysis report, checksum hypotheses | 15,608 B |
 | `radiogeddon_multi.fal` | `rg_multi`, comparison over files | 15,960 B |
-| `radiogeddon_sessions.fal` | Sessions scenes, `rg_session`, the Database list code they use | 16,383 B |
+| `radiogeddon_sessions.fal` | Sessions scenes, `rg_session`, the Database list code they use | 16,380 B |
+| `radiogeddon_lab.fal` | Dolphin Lab room: its screen, SD-card counts, the oscilloscope's reader | 8,830 B |
 
 Built into the app (as measured just before the move), the tools made the
 resident Full edition 128,309 B, 33,633 B more than beta 6; as modules it is
@@ -178,6 +189,64 @@ resident Full edition 128,309 B, 33,633 B more than beta 6; as modules it is
 the Range Scanner engine, the active session's hook on saving, the loader,
 and analyzer work shared with the Catalog edition). The Unknown Protocol
 Analysis report, resident in beta 6, now loads only while it runs.
+
+## Dolphin Lab (Full edition)
+
+```mermaid
+flowchart LR
+    subgraph Real["Real state (read, never driven)"]
+        RX["rx running / recorder<br/>(radiogeddon_subghz)"]
+        SW["sweep collecting<br/>(scene sets on its tick)"]
+        HEAP["free heap vs. a<br/>receive session's cost"]
+        EV["hits, decodes, saves,<br/>analysis progress, errors"]
+    end
+    TICK["app tick, 100 ms<br/>radiogeddon_ui_tick"] --> SYNC["rg_mascot_sync<br/>(levels)"]
+    RX --> SYNC
+    SW --> SYNC
+    HEAP --> SYNC
+    EV --> EVT["rg_mascot_event<br/>(deadlines)"]
+    SYNC --> SM["rg_mascot<br/>state by priority"]
+    EVT --> SM
+    SM --> POSE["rg_mascot_frame<br/>(pose, pure)"]
+    POSE --> LAB["lab view: dashboard, cards<br/>(redraw only on change,<br/>only while on screen)"]
+    POSE --> BADGE["radio screens' header badge"]
+    EVT --> FB["rg_ui_feedback<br/>(rate-limited cues)"]
+```
+
+- **State machine** (`rg_mascot`, pure, host-tested and fuzzed). Activities
+  that last (scanning, receiving, recording, analysing, low memory) are
+  levels; reactions (a detection, a save, an error) are deadlines, so a burst
+  of events moves one deadline and never queues. The state is the most
+  important that applies: Error > Low memory > Recording > Receiving >
+  Signal detected > Scanning > Analyzing > Saved > Asleep > Bored > Idle.
+  `rg_mascot_pose(state, t)` turns a state and the time since it began into
+  a pose (eyes, flipper, flukes, headphones, antenna, prop, effect) with
+  one-byte fields, so two frames compare with `memcmp`.
+- **Real events only.** The tick reads `radiogeddon_subghz_is_rx_running`,
+  `radiogeddon_subghz_is_recording` and the heap; scenes report hits,
+  decodes, saves, refusals and analysis progress. The UI never calls into the
+  radio, and the REC indicator follows the recorder's own pointer, so it
+  cannot show a recording that failed or stopped.
+- **Drawing.** `views/radiogeddon_mascot_draw.c` composes the dolphin from the
+  generated sprites (`canvas_draw_xbm` with transparency, so overlays never
+  erase) and draws props with canvas primitives; nothing is allocated and
+  there is no frame buffer of its own. The art is text in `art/dolphin/`;
+  `tools/dolphin/build_sprites.py` regenerates `helpers/rg_sprites.c` (373
+  bytes) and `make -C test check` fails if it is stale.
+- **Timing and power.** No timer is added: the app's existing 100 ms tick
+  advances the lab view, which redraws only when the frame changed and only
+  while it is on screen (its enter/exit callbacks). Idle animation changes
+  about twice a second; active states up to 8 times. Transitions
+  (`rg_transition`) are levels computed from the tick's time, so a key ends
+  one at once and is handled as usual.
+- **Memory.** The lab view (a View and a ~400-byte model) exists only while
+  the style is not Classic, which is also what runs when less than 8 KB is
+  free at start. The room is a module (`radiogeddon_lab.fal`) loaded only
+  while it is open and refused, as any module, when it would not fit; it is
+  unloaded before any tool it opens starts. Cards replace popups without new
+  allocations. Resident cost: Full 119,428 B (beta 7: 104,388 B); the
+  Catalog edition compiles all of this out (77,782 B, +610 B for the
+  Scanner's sweep cursor and the shared settings fields).
 
 ## Screens and navigation
 

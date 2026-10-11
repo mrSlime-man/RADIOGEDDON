@@ -48,6 +48,94 @@ The **Full** edition (RogueMaster, Momentum, Unleashed) is titled
 | `Sessions` | [Research sessions](#research-sessions-full-edition): named groups of recordings |
 | `Settings`, `About` | As in the Catalog edition |
 
+In the Full edition's **Dolphin Lab** and **Cyber Lab** styles these items
+are on the [Dolphin Lab dashboard](#dolphin-lab-full-edition), with one more,
+`Dolphin Lab` (the lab room); in the **Classic** style they are the plain
+list above.
+
+## Dolphin Lab (Full edition)
+
+The Full edition opens on the **Dolphin Lab dashboard**: on the left the lab,
+with the RadioGeddon dolphin at its desk; on the right the main menu; at the
+bottom a status bar.
+
+| Key | On the dashboard |
+|-----|------------------|
+| **Up / Down** | Move through the menu (it wraps around) |
+| **Left / Right** | Move a page up or down |
+| **OK** | Open the highlighted item |
+| **Long OK** | On `Scan`: open the `Frequency Scanner` directly. On `Receive`: start receiving and recording at once. Elsewhere: the same as OK |
+| **Back** | Leave the app |
+
+The **status bar** shows the frequency and modulation Receive will use (and
+`EXT` with an external radio), and on the right the active research session
+(`S:name`), or `MEM LOW` (inverted) when there is not enough free memory for a
+receive session right now, or the edition.
+
+**The dolphin** shows what the app is doing, and only what it is really
+doing:
+
+| You see | It means |
+|---------|----------|
+| Blinking, breathing, looking around, flicking its tail, examining a radio | Nothing is running (idle) |
+| Watching a radar, adjusting its antenna | A Scanner, Range Scanner or Waterfall sweep is collecting data (not while paused) |
+| Wide eyes, headphones up, pointing, a `!` bubble | Activity was just detected or a signal decoded (shows for 1.5 s) |
+| Eyes closed, waves off its antenna | Receive or the Hopper is listening |
+| At the reel recorder with `REC` and a blinking lamp | A RAW recording is running (never shown when it is not) |
+| At the terminal, a bar and percentage | An analysis or long file job; the bar only when the job reports its progress |
+| Cheering with sparkles | A save just completed |
+| Worried, a `?` bubble | An operation failed (the message itself is always shown in full) |
+| Worried, a memory chip | Memory is low (a receive session would be refused) |
+| Sleepy, then asleep with `z`s | No key and nothing happening for 45 s, then 2 minutes. This is not a radio fault; any key wakes it |
+
+In the radio screens (Scanner, Receive, Hopper, Range Scanner, Waterfall)
+a small **badge** in the header shows the same: the dolphin's head calm,
+alert (`!`), listening (with waves), or with the recording lamp.
+
+**Cards.** Messages, `Please wait` screens, progress, save results and
+finished analyses appear as cards: the same text as before, with the dolphin
+beside it when it fits (otherwise across the screen). A finished report is
+revealed by an oscilloscope line for under a second before the full text
+opens; any key opens it at once.
+
+### UI styles
+
+`Settings > UI style`:
+
+- **Dolphin Lab** — the dashboard, cards, reactions and transitions above.
+- **Cyber Lab** — the same menu as a technical console: a turning radar,
+  free memory, radio and frequency readouts, and only the dolphin's head.
+- **Classic** — the menus and popups of beta 7: no mascot, no animation, and
+  the dashboard is not even loaded. Choose it to save memory and battery.
+
+The style changes as soon as you leave Settings and is remembered. It never
+changes what the radio does. If memory is very short when the app starts
+(less than 8 KB free), that session runs in Classic whatever the setting.
+
+`Transitions` switches the short wipes on or off. `UI feedback` adds sounds
+and vibration: **Minimal** vibrates briefly when a recording starts and when
+an analysis finishes; **Full** adds short sounds for those, a click for menu
+choices and a blip when activity is detected (at most one every 2 s).
+Saves and errors keep the sounds they always had.
+
+### The Dolphin Lab room
+
+`Dolphin Lab` on the dashboard opens a small lab. **Left / Right** walk
+between its stations; **OK** uses one; **Back** leaves.
+
+| Station | What it shows | OK |
+|---------|---------------|----|
+| `Radar` | A sweeping radar. It is an illustration, labelled so, not a measurement | Opens the real `Frequency Scanner` |
+| `Oscilloscope` | The first 512 samples of a RAW recording you pick, carrier on (high) and off (low) as recorded, with the time they span | Pick a recording |
+| `Antenna` | An antenna with waves (an illustration) | Opens `Receive & Record` |
+| `Recorder` | How many recordings are in `signals` | Opens the `Database` |
+| `Terminal` | The app version, firmware, and counts of recordings, saved reports and sessions, read from the SD card | Counts again |
+| `Gallery` | Every pose of the dolphin; **Up / Down** change it | — |
+
+The room never uses the radio. Its code is loaded only while it is open; if
+it does not fit in memory, `Not enough memory` is shown and nothing else is
+affected.
+
 ## Settings
 
 | Setting | Values | Default |
@@ -70,6 +158,9 @@ The **Full** edition (RogueMaster, Momentum, Unleashed) is titled
 | `Hop source` *(Full)* | **`List`** (the hop list above), `Favorites` | List |
 | `Freq step` *(Full)* | **`List`**, `1 kHz`, `5 kHz`, `10 kHz`, `12.5 kHz`, `25 kHz`, `100 kHz`, `1 MHz` | List |
 | `Radio bands` *(Full)* | Press **OK**: the receive bands the radio in use accepts and the firmware region's transmit bands | |
+| `UI style` *(Full)* | **`Dolphin Lab`**, `Cyber Lab`, `Classic` (see [Dolphin Lab](#dolphin-lab-full-edition)) | Dolphin Lab |
+| `UI feedback` *(Full)* | **`Off`**, `Minimal`, `Full` | Off |
+| `Transitions` *(Full)* | `Off`, **`On`** | On |
 
 With `Freq step` set to a step, **Left / Right** on `Frequency MHz` move the
 frequency by that step instead of through the list, staying inside the bands

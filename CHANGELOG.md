@@ -7,6 +7,98 @@ to follow [Semantic Versioning](https://semver.org/) (pre-1.0.0 releases use
 
 ## [Unreleased]
 
+## [1.0.0-beta.8] - 2026-10-11
+
+Dolphin Lab: an original animated dolphin mascot, a dashboard home screen,
+three interface styles, cards and transitions, reactions to what the radio
+really does, optional UI feedback and an interactive lab room (Full edition).
+Not yet verified on hardware.
+
+### Added
+- **The RadioGeddon dolphin** (Full): an original monochrome pixel-art
+  character drawn for this project, a dolphin lab engineer with headphones,
+  an antenna and lab goggles. The art is text in `art/dolphin/*.txt`;
+  `tools/dolphin/build_sprites.py` turns it into `helpers/rg_sprites.c`
+  (373 bytes of bitmaps: body, flukes, flipper and eye poses, headphones,
+  goggles, props, menu icons and the header badge), and `make -C test check`
+  fails when the generated file is stale.
+- **Mascot state machine** (`rg_mascot`, pure C, host-tested): Idle, Bored,
+  Asleep, Saved, Analyzing, Scanning, Signal detected, Receiving, Recording,
+  Low memory and Error, chosen by priority (Error > Low memory > Recording >
+  Receiving > Signal detected > Scanning > Analyzing > Saved > idle states).
+  Ongoing activity is a level synced from the real state on every tick (the
+  receive session, the recorder, the sweep, the heap); reactions are
+  deadlines, so repeated detections move a deadline and never queue. REC is
+  shown only while the recorder runs. Idle animation is calm (blinks,
+  breathing, a tail flick, looking around, examining a radio); a long quiet
+  time makes it bored, then asleep, which is never read as a radio fault.
+- **Dashboard home screen** (Full, Dolphin Lab and Cyber Lab styles): the lab
+  scene with the animated dolphin, the main menu with icons (Scan, Receive,
+  Analyze, Database, Sessions, Dolphin Lab, Settings, About) and a status bar
+  (frequency, preset, external radio, the active research session, a memory
+  warning when a receive session would be refused, the edition). Up/Down
+  move (wrapping), Left/Right a page, OK opens, long OK on Scan opens the
+  Frequency Scanner and on Receive starts receiving and recording.
+- **UI styles** (Settings > UI style): *Dolphin Lab* (default in Full),
+  *Cyber Lab* (a radar, technical readouts, minimal mascot) and *Classic*
+  (the Beta 7 menus and popups: no mascot, no animation, the lab view not
+  even allocated). Saved in `settings.txt` (`Ui_style`, `Ui_feedback`,
+  `Ui_transitions`); a Beta 7 file keeps working and gets the defaults. Below
+  8 KB of free heap at start the session runs in Classic.
+- **Cards** (lab styles): messages, busy and progress screens, save results
+  and analysis reveals are drawn with the dolphin beside the text when it fits
+  (else across the screen, never shortened). A progress card shows a
+  percentage and bar only when the work reports one. Every message the app
+  shows is checked on the host to fit whole.
+- **Reactions to real events**: Scanner, Range Scanner and Waterfall hits,
+  Receive and Hopper decodes and activity, recording starts and stops,
+  analysis start, progress and completion, saves, refusals for memory and
+  errors. A small badge in the radio screens' headers (the dolphin's head:
+  calm, alert, listening, recording lamp; a radar in Cyber Lab) follows the
+  same state.
+- **Transitions** (Settings > Transitions): an oscilloscope-line wipe into
+  the dashboard (once per run), into analysis reports (a 0.7 s reveal of the
+  report's first lines, any key skips it), into the Waterfall and between the
+  lab room's stations. Driven by the existing 100 ms tick, never blocking; a
+  key ends a transition at once and is handled as usual.
+- **Dolphin Lab room** (Full, a module of 8,830 B loaded only while open):
+  a radar (an illustration, labelled so; OK opens the real Scanner), an
+  oscilloscope showing a saved RAW recording's first 512 samples as recorded,
+  an antenna (OK: Receive), a recorder (the number of recordings; OK: the
+  Database), a terminal (recordings, saved reports and sessions counted on the
+  SD card, the firmware family and version, the app version) and a gallery of
+  every pose. The room never uses the radio.
+- **UI feedback** (Settings > UI feedback: Off, Minimal, Full): Minimal adds
+  a short vibration when a recording starts and when an analysis completes;
+  Full adds short sounds, a menu click and a blip on detected activity (at
+  most one every 2 s). Saves and errors keep their existing sounds and get
+  nothing more. Every cue is rate limited (`rg_ui_feedback`). Off (the
+  default) leaves the app as Beta 7.
+- **Scanner**: a mark on the line under the header follows the frequency
+  being measured (both editions). **Range Scanner**: the sweep marker is
+  larger while sweeping, and the cursor has a cap.
+- **Tests**: `test_mascot` (state machine, priorities, deadlines, clock wrap,
+  styles, feedback rate limits, transitions, dither, menu window, text wrap,
+  firmware family, sprites), `test_ui_lab` (the dashboard in both styles for
+  every state, every app message on a card, progress, saves, transitions,
+  badges on the Scanner, Receive, Range Scanner and Waterfall screens, the
+  room), a `fuzz_ui` target, Beta 7 settings files in the format tests, and
+  host canvas support for circles, discs, rounded boxes and bitmap
+  transparency as the firmware draws them.
+
+### Changed
+- The module API version is 2 (the Waterfall's screen gained the badge and
+  the entry reveal); a stale `.fal` is refused as before.
+- The receiver's separator lines end at the screen's last column.
+
+### Measured
+- Resident code (allocated ELF sections, from the built files): Catalog
+  77,782 B (beta 7: 77,172 B), Full 119,428 B (beta 7: 104,388 B). The lab
+  room module is 8,830 B and the Waterfall module 4,315 B (was 2,740 B),
+  each only while open. The dashboard frame draws in about 30 µs on the host
+  (a wipe adds about 15 µs, the dither 25 µs): host figures for comparing the
+  kinds, not device timings.
+
 ## [1.0.0-beta.7] - 2026-10-11
 
 Research tools for the Full edition (waterfall, Bitstream Explorer,

@@ -23,14 +23,14 @@ Sub-GHz signals — entirely on the device, with no computer, phone or network.
 
 > [!WARNING]
 > **Public beta.** Every feature is implemented and the builds pass all
-> automated checks (lint, 1,962 host-test checks, format, decoder, capture,
+> automated checks (lint, 2,115 host-test checks, format, decoder, capture,
 > engine-lifecycle and offline UI tests, fuzzing, static analysis of both
 > editions, four firmware builds with API, manifest, imported-symbol and
 > module verification). On physical hardware there is only one tester report
 > so far, for the beta 2 code (RogueMaster: launches and works); **nothing in
-> betas 3 to 7 is verified on a device yet** — including the Waterfall,
-> Bitstream Explorer, Multi-Capture Compare, Sessions and the on-demand
-> modules that beta 7 adds. Expect rough edges, and see
+> betas 3 to 8 is verified on a device yet** — including the Dolphin Lab
+> interface that beta 8 adds and the research tools and on-demand modules of
+> beta 7. Expect rough edges, and see
 > [VERIFICATION.md](docs/VERIFICATION.md) for exactly what has and hasn't been
 > tested. Testing on real hardware is the single most useful thing you can
 > contribute — the [hardware checklist](docs/HARDWARE_CHECKLIST.md) shows how.
@@ -62,9 +62,9 @@ RadioGeddon comes in two editions built from one source tree
   every band the radio tunes, an RSSI sweep-history **Waterfall**, the
   **Bitstream Explorer**, **Multi-Capture Compare**, research **Sessions**,
   scan profiles, favorite frequencies, fine frequency stepping and
-  checksum-structure hypotheses. Its optional tools load from the SD card
-  only while their screen is open. Transmitting follows the installed
-  firmware's own rules.
+  checksum-structure hypotheses, and the **Dolphin Lab** interface. Its
+  optional tools load from the SD card only while their screen is open.
+  Transmitting follows the installed firmware's own rules.
 - **RadioGeddon Catalog** — the **Official firmware** edition, prepared for the
   Flipper Apps Catalog. The full receive and analysis toolkit; before any
   transmission it asks the firmware for its region and refuses (and says why)
@@ -88,25 +88,55 @@ RadioGeddon comes in two editions built from one source tree
 | **Bitstream Explorer** (frames, bits, hex, diff, fields) | — | ✓ |
 | **Multi-Capture Compare** (up to 8 recordings) | — | ✓ |
 | **Research Sessions** (groups of recordings, grouping suggestions) | — | ✓ |
+| **Dolphin Lab** (animated mascot, dashboard, Cyber Lab / Classic styles, lab room) | Classic menus | ✓ |
 | App name / appid | RadioGeddon / `radiogeddon` | RadioGeddon Full / `radiogeddon_full` |
 
 Both editions keep their data in `/ext/apps_data/radiogeddon`, so recordings,
 settings, favorites and profiles carry over when you switch — see
 [Features → Editions](docs/FEATURES.md#editions).
 
+## 🐬 Dolphin Lab
+
+The Full edition opens on **Dolphin Lab**: a small radio laboratory with an
+original animated dolphin engineer (headphones, antenna, lab goggles) beside
+the main menu. The dolphin reacts to what the radio really does — it watches
+the radar while a scan runs, jumps at a detection, listens while receiving,
+runs the recorder (REC shows only while the recorder does), works at the
+terminal during an analysis (a percentage only when the work reports one),
+celebrates a save, worries at an error or low memory, and dozes off when
+nothing happens for a while. A small badge in the radio screens' headers
+follows the same state.
+
+- **Three styles** (Settings > UI style): *Dolphin Lab*, the technical
+  *Cyber Lab*, and *Classic* — the Beta 7 menus with no mascot and no
+  animation. *Transitions* and optional *UI feedback* (Off / Minimal / Full)
+  are settings too, and none of them changes what the radio does.
+- **Dolphin Lab room** (main menu > Dolphin Lab): a radar, an oscilloscope
+  that shows a saved RAW recording's first pulses, an antenna, a recorder, a
+  terminal with counts read from your SD card, and a gallery of every pose.
+  It never uses the radio; OK on a station opens the real tool.
+- Animation runs on the app's existing 100 ms tick, redraws only when the
+  picture changes, never delays a key, and stops when the screen is not
+  shown. The room's code is a module loaded only while it is open.
+
+<img src="docs/assets/dolphin-lab-previews.png" alt="Synthetic previews of the Dolphin Lab dashboard (idle, scanning, recording), Cyber Lab, a save card, an analysis progress card, the lab room's terminal and the Scanner's header badge" width="100%">
+
+<sub>Synthetic development previews drawn by the host UI tests (`make -C test ui`)
+with the firmware's own fonts — not screenshots of a Flipper Zero.</sub>
+
 ## ⬇ Download
 
 Grab the build that matches your firmware from the
-[**v1.0.0-beta.7 release**](https://github.com/mrSlime-man/RADIOGEDDON/releases/tag/v1.0.0-beta.7),
+[**v1.0.0-beta.8 release**](https://github.com/mrSlime-man/RADIOGEDDON/releases/tag/v1.0.0-beta.8),
 then copy it to `apps/Sub-GHz/` on the SD card (full steps in
 [Installation](docs/INSTALLATION.md)).
 
 | Your firmware | Edition | Download this file |
 |---------------|---------|--------------------|
-| **Official** (flipperzero.one) | Catalog | [`radiogeddon-catalog-official.fap`](https://github.com/mrSlime-man/RADIOGEDDON/releases/download/v1.0.0-beta.7/radiogeddon-catalog-official.fap) |
-| **RogueMaster** | Full | [`radiogeddon-full-roguemaster.fap`](https://github.com/mrSlime-man/RADIOGEDDON/releases/download/v1.0.0-beta.7/radiogeddon-full-roguemaster.fap) |
-| **Momentum** | Full | [`radiogeddon-full-momentum.fap`](https://github.com/mrSlime-man/RADIOGEDDON/releases/download/v1.0.0-beta.7/radiogeddon-full-momentum.fap) |
-| **Unleashed** | Full | [`radiogeddon-full-unleashed.fap`](https://github.com/mrSlime-man/RADIOGEDDON/releases/download/v1.0.0-beta.7/radiogeddon-full-unleashed.fap) |
+| **Official** (flipperzero.one) | Catalog | [`radiogeddon-catalog-official.fap`](https://github.com/mrSlime-man/RADIOGEDDON/releases/download/v1.0.0-beta.8/radiogeddon-catalog-official.fap) |
+| **RogueMaster** | Full | [`radiogeddon-full-roguemaster.fap`](https://github.com/mrSlime-man/RADIOGEDDON/releases/download/v1.0.0-beta.8/radiogeddon-full-roguemaster.fap) |
+| **Momentum** | Full | [`radiogeddon-full-momentum.fap`](https://github.com/mrSlime-man/RADIOGEDDON/releases/download/v1.0.0-beta.8/radiogeddon-full-momentum.fap) |
+| **Unleashed** | Full | [`radiogeddon-full-unleashed.fap`](https://github.com/mrSlime-man/RADIOGEDDON/releases/download/v1.0.0-beta.8/radiogeddon-full-unleashed.fap) |
 
 Each firmware family has its own SDK and symbol table, so **install the file
 for your firmware** — the wrong one is refused ("Outdated App / Firmware" or

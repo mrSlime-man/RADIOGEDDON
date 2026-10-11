@@ -46,7 +46,7 @@ side by side (different app ids).
 **Every feature below is implemented, compiles for its editions and firmware
 families, and passes CI. None has yet been verified on a physical Flipper
 Zero.** "Unit-tested" means the feature's firmware-independent logic is covered
-by the host test suite (1,962 checks, plus format, decoder, capture, engine
+by the host test suite (2,115 checks, plus format, decoder, capture, engine
 lifecycle and offline UI tests); radio behaviour and the screens' real look
 can only be confirmed on a device ([VERIFICATION.md](VERIFICATION.md)).
 
@@ -223,6 +223,48 @@ stock Sub-GHz app opens them as before.
   then swapped in (old → `.bak`, new → name, backup removed); an interrupted
   save leaves the last complete version, restored on the next load. Renaming
   a recording in the app updates the sessions that name it.
+
+## Dolphin Lab (Full edition)
+
+An interface built around an original animated dolphin: a lab engineer with
+headphones, an antenna and goggles, drawn for RadioGeddon as text art
+(`art/dolphin/`) and generated into 373 bytes of bitmaps.
+
+- **Dashboard home screen**: the lab scene with the dolphin, the main menu
+  with icons and a status bar (frequency, preset, radio, active session,
+  memory warning, edition); long OK shortcuts into the Scanner and into
+  receiving with recording.
+- **States from the real app** (`rg_mascot`): idle, bored and asleep after a
+  quiet while (never read as a radio fault), scanning while a sweep collects
+  data, signal detected on a real hit or decode, receiving, recording (only
+  while the recorder runs), analysing (a percentage only when reported),
+  saved, error and low memory. Error > Low memory > Recording > Receiving >
+  Signal detected > Scanning > Analyzing > Saved > idle states. Repeated
+  events never queue.
+- **Badges** in the Scanner, Receive, Hopper, Range Scanner and Waterfall
+  headers follow the same state.
+- **Cards** replace popups for messages, progress, saves and analysis
+  reveals; the text is never shortened (it moves across the screen when the
+  dolphin would not leave room).
+- **Styles**: Dolphin Lab, Cyber Lab (radar and readouts, minimal mascot),
+  Classic (beta 7's menus; nothing of this loaded). Saved with the settings;
+  Classic for the session when less than 8 KB is free at start.
+- **Transitions**: oscilloscope-line wipes (dashboard, report reveals,
+  Waterfall entry, the room's stations); a key ends one at once.
+- **UI feedback**: Off, Minimal (short vibrations on a recording start and an
+  analysis end) or Full (also short sounds, menu clicks and rate-limited
+  detection blips). Saves and errors keep their own sounds.
+- **Dolphin Lab room**: a radar and an antenna (illustrations, labelled so;
+  OK opens the real tool), an oscilloscope showing a saved RAW recording's
+  first samples as recorded, a recorder and a terminal with counts from the
+  SD card, and a gallery of every pose. A module, loaded only while open; it
+  never uses the radio.
+- **Scanner sweep cursor** (both editions): a mark under the header follows
+  the frequency being measured.
+
+Animation uses the app's existing 100 ms tick, redraws only on a change and
+only while on screen, and adds no timer. Resident cost: 15,040 B in the Full
+edition; the room is an 8,830-byte module.
 
 ## Modules (Full edition)
 
