@@ -108,7 +108,7 @@ static void test_repeated_events_do_not_queue(void) {
     m.detections = UINT32_MAX;
     rg_mascot_event(&m, RgMascotEventSignalActivity, 0, 5000);
     CHECK(m.detections == UINT32_MAX, "count saturates");
-    CHECK(sizeof(RgMascot) < 64, "fixed size state");
+    CHECK(sizeof(RgMascot) < 96, "fixed size state");
 }
 
 static void test_boredom_and_sleep(void) {
@@ -122,7 +122,12 @@ static void test_boredom_and_sleep(void) {
     rg_mascot_frame(&m, RG_MASCOT_ASLEEP_MS + 100, &f);
     CHECK(f.eyes == RgMascotEyesShut && f.fx == RgMascotFxZzz, "asleep pose");
     rg_mascot_event(&m, RgMascotEventUserInput, 0, RG_MASCOT_ASLEEP_MS + 200);
-    CHECK(rg_mascot_state(&m, RG_MASCOT_ASLEEP_MS + 200) == RgMascotStateIdle, "a key wakes it");
+    CHECK(rg_mascot_state(&m, RG_MASCOT_ASLEEP_MS + 200) == RgMascotStateGreet, "a key wakes it");
+    CHECK(
+        rg_mascot_state(&m, RG_MASCOT_ASLEEP_MS + 200 + RG_MASCOT_GREET_MS) == RgMascotStateIdle,
+        "a short welcome, then idle");
+    rg_mascot_event(&m, RgMascotEventUserInput, 0, RG_MASCOT_ASLEEP_MS + 2000);
+    CHECK(rg_mascot_state(&m, RG_MASCOT_ASLEEP_MS + 2000) == RgMascotStateIdle, "no welcome while awake");
 
     // A long scan with nothing on the air is not "no signal": it scans.
     rg_mascot_init(&m, 0, 9);
@@ -425,7 +430,86 @@ static void test_sprites(void) {
     CHECK(RG_SPRITE_BYTES < 1024, "under 1 KB of art");
 }
 
+/* Beta 9: celebrations, the look and the animation levels. */
+static void test_celebrate_look_anim(void) {
+    printf("test_celebrate_look_anim\n");
+    RgMascot m;
+    rg_mascot_init(&m, 0, 3);
+    rg_mascot_event(&m, RgMascotEventAchievement, 0, 1000);
+    CHECK(rg_mascot_state(&m, 1100) == RgMascotStateCelebrate, "an achievement celebrates");
+    rg_mascot_event(&m, RgMascotEventSaveCompleted, 0, 1200);
+    CHECK(rg_mascot_state(&m, 1300) == RgMascotStateCelebrate, "celebrate outranks saved");
+    rg_mascot_sync(&m, false, false, true, false, 1400);
+    CHECK(rg_mascot_state(&m, 1500) == RgMascotStateRecording, "recording outranks celebrate");
+    rg_mascot_sync(&m, false, false, false, false, 1600);
+    CHECK(rg_mascot_state(&m, 1000 + RG_MASCOT_CELEBRATE_MS) != RgMascotStateCelebrate, "short");
+    rg_mascot_event(&m, RgMascotEventMatch, 0, 9000);
+    CHECK(rg_mascot_state(&m, 9001) == RgMascotStateCelebrate, "a match celebrates");
+    CHECK(strcmp(rg_mascot_state_name(RgMascotStateGreet), "Welcome back") == 0, "names");
+
+    // The look is copied into every frame; a damaged look is sanitized.
+    RgMascotLook look;
+    rg_mascot_look_default(&look);
+    CHECK(look.phones == 1 && look.antenna == RgLookAntennaClassic, "default look");
+    look.goggles = RgLookGogglesOff;
+    look.antenna = 99;
+    look.accessory = RgLookAccessoryBowtie;
+    look.expression = RgLookExpressionCheerful;
+    rg_mascot_init(&m, 0, 3);
+    rg_mascot_set_look(&m, &look, RgAnimNormal);
+    CHECK(m.look.antenna == RgLookAntennaClassic, "out of range antenna sanitized");
+    RgMascotFrame f;
+    rg_mascot_frame(&m, 10, &f);
+    CHECK(f.accessory == RgLookAccessoryBowtie && f.goggles == 0, "look applied");
+    CHECK(f.eyes == RgMascotEyesHappy || f.eyes == RgMascotEyesBlink, "cheerful idle eyes");
+    rg_mascot_event(&m, RgMascotEventOperationFailed, 0, 20);
+    rg_mascot_frame(&m, 30, &f);
+    CHECK(f.eyes == RgMascotEyesWorried, "reactions keep their own eyes");
+
+    // Off: a still frame per state, information kept.
+    rg_mascot_init(&m, 0, 3);
+    rg_mascot_look_default(&look);
+    rg_mascot_set_look(&m, &look, RgAnimOff);
+    RgMascotFrame first, now;
+    rg_mascot_frame(&m, 0, &first);
+    bool still = true;
+    for(uint32_t t = 100; t < RG_MASCOT_BORED_MS - 100; t += 100) {
+        rg_mascot_frame(&m, t, &now);
+        if(rg_mascot_frame_changed(&first, &now)) still = false;
+    }
+    CHECK(still, "Off: idle never changes the picture");
+    rg_mascot_sync(&m, false, false, true, false, 50000);
+    rg_mascot_frame(&m, 50000, &first);
+    rg_mascot_frame(&m, 50600, &now);
+    CHECK(first.fx == RgMascotFxRec && first.fx_on && now.fx_on, "Off: REC stays lit");
+    CHECK(!rg_mascot_frame_changed(&first, &now), "Off: recording is still too");
+    // Minimal changes less often than Normal; Full at least as often.
+    uint32_t changes[RgAnimCount] = {0};
+    for(uint8_t level = 0; level < RgAnimCount; level++) {
+        rg_mascot_init(&m, 0, 77);
+        rg_mascot_set_look(&m, &look, level);
+        RgMascotFrame prev;
+        rg_mascot_frame(&m, 0, &prev);
+        for(uint32_t t = 100; t < 40000; t += 100) {
+            rg_mascot_frame(&m, t, &now);
+            if(rg_mascot_frame_changed(&prev, &now)) changes[level]++;
+            prev = now;
+        }
+    }
+    printf(
+        "  idle redraws in 40 s: Off %u, Minimal %u, Normal %u, Full %u\n",
+        (unsigned)changes[0],
+        (unsigned)changes[1],
+        (unsigned)changes[2],
+        (unsigned)changes[3]);
+    CHECK(changes[RgAnimOff] == 0, "Off: no idle redraws");
+    CHECK(changes[RgAnimMinimal] < changes[RgAnimNormal], "Minimal redraws less");
+    CHECK(changes[RgAnimFull] >= changes[RgAnimNormal], "Full redraws at least as much");
+    CHECK(strcmp(rg_anim_level_name(RgAnimMinimal), "Minimal") == 0, "level names");
+}
+
 int main(void) {
+    test_celebrate_look_anim();
     test_idle_and_priorities();
     test_recording_follows_the_recorder();
     test_repeated_events_do_not_queue();

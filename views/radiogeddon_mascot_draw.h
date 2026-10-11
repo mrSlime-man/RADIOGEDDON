@@ -57,6 +57,13 @@ void rg_draw_prop(
     uint8_t phase,
     uint8_t progress);
 
+/**
+ * A lab decoration (RgDecoration of helpers/rg_journal.h: plant, poster,
+ * lamp, mug, trophy) with its top left at (@p x, @p y), at most 11 x 10
+ * pixels. 0 draws nothing.
+ */
+void rg_draw_decoration(Canvas* canvas, int32_t x, int32_t y, uint8_t decoration);
+
 /** A radar scope of radius @p r at (@p cx, @p cy), its sweep at @p phase (0..15). */
 void rg_draw_radar(Canvas* canvas, int32_t cx, int32_t cy, int32_t r, uint8_t phase);
 

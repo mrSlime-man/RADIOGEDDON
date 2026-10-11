@@ -27,6 +27,14 @@ void rg_mascot_init(RgMascot* m, uint32_t now, uint32_t seed) {
     m->seed = seed;
     m->state = RgMascotStateIdle;
     m->progress = RG_MASCOT_PROGRESS_NONE;
+    m->anim = RgAnimNormal;
+    rg_mascot_look_default(&m->look);
+}
+
+void rg_mascot_set_look(RgMascot* m, const RgMascotLook* look, uint8_t anim) {
+    m->look = *look;
+    rg_mascot_look_sanitize(&m->look);
+    m->anim = anim < RgAnimCount ? anim : RgAnimNormal;
 }
 
 void rg_mascot_event(RgMascot* m, RgMascotEvent event, uint32_t arg, uint32_t now) {
@@ -82,6 +90,17 @@ void rg_mascot_event(RgMascot* m, RgMascotEvent event, uint32_t arg, uint32_t no
         m->low_memory = 0;
         break;
     case RgMascotEventUserInput:
+        // Back after a long quiet time: a short welcome.
+        if(now - m->quiet_since >= RG_MASCOT_BORED_MS && (int32_t)(now - m->quiet_since) > 0) {
+            m->greet_until = now + RG_MASCOT_GREET_MS;
+            m->greet_live = 1;
+        }
+        break;
+    case RgMascotEventAchievement:
+    case RgMascotEventMatch:
+    case RgMascotEventMilestone:
+        m->celebrate_until = now + RG_MASCOT_CELEBRATE_MS;
+        m->celebrate_live = 1;
         break;
     default:
         return; // unknown: ignored, not even counted as activity
@@ -114,6 +133,8 @@ RgMascotState rg_mascot_state(RgMascot* m, uint32_t now) {
     if(m->detect_live && rg_mascot_reached(now, m->detect_until)) m->detect_live = 0;
     if(m->saved_live && rg_mascot_reached(now, m->saved_until)) m->saved_live = 0;
     if(m->error_live && rg_mascot_reached(now, m->error_until)) m->error_live = 0;
+    if(m->celebrate_live && rg_mascot_reached(now, m->celebrate_until)) m->celebrate_live = 0;
+    if(m->greet_live && rg_mascot_reached(now, m->greet_until)) m->greet_live = 0;
 
     RgMascotState s;
     if(m->error_live) {
@@ -130,8 +151,12 @@ RgMascotState rg_mascot_state(RgMascot* m, uint32_t now) {
         s = RgMascotStateScanning;
     } else if(m->analyzing) {
         s = RgMascotStateAnalyzing;
+    } else if(m->celebrate_live) {
+        s = RgMascotStateCelebrate;
     } else if(m->saved_live) {
         s = RgMascotStateSaved;
+    } else if(m->greet_live) {
+        s = RgMascotStateGreet;
     } else {
         uint32_t quiet = now - m->quiet_since;
         // A clock that went backwards is not a long quiet time.
@@ -198,6 +223,7 @@ void rg_mascot_pose(
     f->fin = RgMascotFinRest;
     f->antenna = 4;
     f->progress = RG_MASCOT_PROGRESS_NONE;
+    f->phones = 1; // the default look (rg_mascot_style sets the chosen one)
 
     switch(state) {
     case RgMascotStateIdle:
@@ -309,16 +335,125 @@ void rg_mascot_pose(
         f->fx_phase = (uint8_t)((t / 400u) & 1u);
         f->fx_on = 1;
         break;
+    case RgMascotStateCelebrate:
+        // A little dance: cheer with both ends, sparkles all round.
+        f->eyes = RgMascotEyesHappy;
+        f->fin = ((t / 300u) & 1u) ? RgMascotFinCheer : RgMascotFinPoint;
+        f->fluke_flick = (uint8_t)((t / 200u) & 1u);
+        f->body_dy = (uint8_t)((t / 300u) & 1u);
+        f->phones_lift = (uint8_t)((t / 600u) & 1u);
+        f->antenna = (uint8_t)(4u + (t / 150u) % 3u);
+        f->fx = RgMascotFxSparkle;
+        f->fx_phase = (uint8_t)((t / 120u) & 3u);
+        f->fx_on = 1;
+        break;
+    case RgMascotStateGreet:
+        // Wakes, blinks and waves.
+        f->eyes = t < 300u ? RgMascotEyesBlink : RgMascotEyesHappy;
+        f->fin = ((t / 400u) & 1u) ? RgMascotFinCheer : RgMascotFinRest;
+        f->goggles = 1;
+        f->eye_dx = 1;
+        break;
     default:
         f->state = RgMascotStateIdle;
         break;
     }
 }
 
+void rg_mascot_look_default(RgMascotLook* look) {
+    memset(look, 0, sizeof(*look));
+    look->phones = 1;
+}
+
+void rg_mascot_look_sanitize(RgMascotLook* look) {
+    if(look->phones > 1) look->phones = 1;
+    if(look->goggles >= RgLookGogglesCount) look->goggles = RgLookGogglesAuto;
+    if(look->antenna >= RgLookAntennaCount) look->antenna = RgLookAntennaClassic;
+    if(look->tool >= RgLookToolCount) look->tool = RgLookToolNone;
+    if(look->expression >= RgLookExpressionCount) look->expression = RgLookExpressionNormal;
+    if(look->accessory >= RgLookAccessoryCount) look->accessory = RgLookAccessoryNone;
+}
+
+void rg_mascot_style(RgMascotFrame* f, const RgMascotLook* look, uint8_t anim, uint32_t t) {
+    f->phones = look->phones ? 1 : 0;
+    f->goggles_mode = look->goggles < RgLookGogglesCount ? look->goggles : 0;
+    f->antenna_kind = look->antenna < RgLookAntennaCount ? look->antenna : 0;
+    f->tool = look->tool < RgLookToolCount ? look->tool : 0;
+    f->accessory = look->accessory < RgLookAccessoryCount ? look->accessory : 0;
+    if(f->goggles_mode == RgLookGogglesAlways) f->goggles = 1;
+    if(f->goggles_mode == RgLookGogglesOff) f->goggles = 0;
+    // Expressions colour the calm states only; reactions keep their eyes.
+    bool calm = f->state == RgMascotStateIdle || f->state == RgMascotStateBored;
+    if(calm && f->eyes == RgMascotEyesOpen) {
+        if(look->expression == RgLookExpressionCheerful) f->eyes = RgMascotEyesHappy;
+        if(look->expression == RgLookExpressionFocused) f->eyes = RgMascotEyesFocus;
+    }
+    switch(anim) {
+    case RgAnimOff:
+        // One still pose per state: nothing moves, so nothing is redrawn.
+        f->body_dy = 0;
+        f->fluke_flick = 0;
+        f->prop_phase = 0;
+        f->fx_phase = 0;
+        if(f->eyes == RgMascotEyesBlink) f->eyes = RgMascotEyesOpen;
+        if(calm) {
+            f->eye_dx = 0;
+            f->eye_dy = 0;
+            f->prop = RgMascotPropNone;
+            f->fin = RgMascotFinRest;
+        }
+        if(f->state == RgMascotStateAnalyzing) f->fin = RgMascotFinRest;
+        if(f->state == RgMascotStateCelebrate || f->state == RgMascotStateGreet)
+            f->fin = RgMascotFinCheer;
+        if(f->state == RgMascotStateCelebrate) {
+            f->antenna = 4;
+            f->phones_lift = 0;
+        }
+        if(f->state == RgMascotStateScanning) {
+            f->antenna = 4;
+            f->eye_dy = 0;
+            f->eye_dx = 1;
+            f->eyes = RgMascotEyesOpen;
+            f->fin = RgMascotFinRest;
+        }
+        // Information stays visible, steadily.
+        if(f->fx != RgMascotFxNone) f->fx_on = 1;
+        break;
+    case RgAnimMinimal:
+        f->body_dy = 0;
+        f->fluke_flick = 0;
+        if(calm) {
+            f->eye_dx = 0;
+            f->eye_dy = 0;
+        }
+        f->prop_phase = (uint8_t)(f->prop_phase & 0x0Cu); // a quarter of the steps
+        break;
+    case RgAnimFull: {
+        // The antenna sways and the tail answers now and then.
+        bool sway = f->state == RgMascotStateIdle || f->state == RgMascotStateScanning ||
+                    f->state == RgMascotStateReceiving;
+        if(sway && f->antenna >= 4 && ((t / 400u) & 3u) == 1u) f->antenna = (uint8_t)(f->antenna + 1u);
+        if(f->state == RgMascotStateIdle && (t / 700u) % 7u == 3u) f->fluke_flick = 1;
+        if(f->state == RgMascotStateReceiving && f->eyes == RgMascotEyesOpen)
+            f->eye_dx = (int8_t)(((t / 900u) & 1u) ? 1 : 0);
+        break;
+    }
+    default:
+        break;
+    }
+}
+
+const char* rg_anim_level_name(RgAnimLevel level) {
+    static const char* const names[RgAnimCount] = {"Off", "Minimal", "Normal", "Full"};
+    return (unsigned)level < RgAnimCount ? names[level] : "?";
+}
+
 void rg_mascot_frame(RgMascot* m, uint32_t now, RgMascotFrame* out) {
     RgMascotState s = rg_mascot_state(m, now);
     bool flash = m->detect_live && (s == RgMascotStateReceiving || s == RgMascotStateRecording);
-    rg_mascot_pose(s, now - m->state_since, m->seed, m->progress, flash, out);
+    uint32_t t = now - m->state_since;
+    rg_mascot_pose(s, t, m->seed, m->progress, flash, out);
+    rg_mascot_style(out, &m->look, m->anim, t);
 }
 
 bool rg_mascot_frame_changed(const RgMascotFrame* a, const RgMascotFrame* b) {
@@ -338,6 +473,8 @@ const char* rg_mascot_state_name(RgMascotState state) {
         "Recording",
         "Low memory",
         "Error",
+        "Celebrate",
+        "Welcome back",
     };
     return (unsigned)state < RgMascotStateCount ? names[state] : "?";
 }

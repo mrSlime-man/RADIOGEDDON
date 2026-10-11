@@ -44,6 +44,20 @@ typedef enum {
     RgSpriteMiniCalm,
     RgSpriteMiniAlert,
     RgSpriteMiniListen,
+    RgSpriteBowtie,
+    RgSpriteScarf,
+    RgSpriteIdBadge,
+    RgSpriteWrench,
+    RgSpriteProbe,
+    RgSpriteNotebook,
+    RgSpriteDish,
+    RgSpriteDecoPlant,
+    RgSpriteDecoPoster,
+    RgSpriteDecoLamp,
+    RgSpriteDecoMug,
+    RgSpriteDecoTrophy,
+    RgSpriteIconTip,
+    RgSpriteIconJournal,
     RgSpriteCount,
 } RgSpriteId;
 
@@ -57,4 +71,4 @@ extern const RgSprite rg_sprites[RgSpriteCount];
 extern const uint8_t rg_sprite_bits[];
 
 /* Bytes of sprite data in all. */
-#define RG_SPRITE_BYTES 373u
+#define RG_SPRITE_BYTES 496u

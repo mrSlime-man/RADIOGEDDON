@@ -160,14 +160,54 @@ void rg_draw_mascot(
         canvas, x + EYE_X + f->eye_dx, y + EYE_Y + f->eye_dy, rg_eye_sprite[eyes], clip_y);
     if(f->goggles) rg_draw_clipped(canvas, x + GOGGLES_X, y + GOGGLES_Y, RgSpriteGoggles, clip_y);
     int32_t lift = f->phones_lift > 4 ? 4 : f->phones_lift;
-    rg_draw_clipped(canvas, x + PHONES_X, y + PHONES_Y - lift, RgSpritePhones, clip_y);
+    // Without headphones the antenna stands on the head itself.
+    if(f->phones) {
+        rg_draw_clipped(canvas, x + PHONES_X, y + PHONES_Y - lift, RgSpritePhones, clip_y);
+    } else {
+        lift = -1;
+    }
+    // Accessories at the throat and chest.
+    if(f->accessory == RgLookAccessoryBowtie)
+        rg_draw_clipped(canvas, x + 19, y + 16, RgSpriteBowtie, clip_y);
+    if(f->accessory == RgLookAccessoryScarf)
+        rg_draw_clipped(canvas, x + 7, y + 15, RgSpriteScarf, clip_y);
+    if(f->accessory == RgLookAccessoryBadge)
+        rg_draw_clipped(canvas, x + 15, y + 19, RgSpriteIdBadge, clip_y);
 
-    // Antenna: a mast leaning back from the band, a knob on top.
-    int32_t len = f->antenna < 3 ? 3 : (f->antenna > 6 ? 6 : f->antenna);
+    // Antenna: a mast leaning back from the band, a knob on top (or a long
+    // whip, or a small dish).
+    int32_t len = f->antenna < 3 ? 3 : (f->antenna > 7 ? 7 : f->antenna);
     int32_t ax0 = x + ANTENNA_X, ay0 = y + ANTENNA_Y - lift;
     int32_t ax = ax0 - len / 2, ay = ay0 - len;
-    canvas_draw_line(canvas, ax0, ay0, ax, ay);
-    canvas_draw_box(canvas, ax - 1, ay - 2, 2, 2);
+    switch(f->antenna_kind) {
+    case RgLookAntennaWhip:
+        ax = ax0 - (len + 3) / 2;
+        ay = ay0 - (len + 3);
+        canvas_draw_line(canvas, ax0, ay0, ax, ay);
+        canvas_draw_dot(canvas, ax, ay - 1);
+        break;
+    case RgLookAntennaDish:
+        canvas_draw_line(canvas, ax0, ay0, ax, ay);
+        rg_draw_sprite(canvas, ax - 2, ay - 4, RgSpriteDish);
+        ay -= 2;
+        break;
+    case RgLookAntennaNone:
+        ax = ax0;
+        ay = ay0;
+        break;
+    default:
+        canvas_draw_line(canvas, ax0, ay0, ax, ay);
+        canvas_draw_box(canvas, ax - 1, ay - 2, 2, 2);
+        break;
+    }
+
+    // A tool at the flipper's tip, when it holds nothing else.
+    if(f->prop == RgMascotPropNone && f->fin != RgMascotFinCheer) {
+        static const uint8_t tools[RgLookToolCount] = {
+            0, RgSpriteWrench, RgSpriteProbe, RgSpriteNotebook};
+        if(f->tool > RgLookToolNone && f->tool < RgLookToolCount)
+            rg_draw_clipped(canvas, x + 23, y + 17, (RgSpriteId)tools[f->tool], clip_y);
+    }
 
     if(f->prop == RgMascotPropRadio) {
         // Held up in the flipper.
@@ -179,8 +219,8 @@ void rg_draw_mascot(
 
 void rg_draw_mascot_fx(Canvas* canvas, int32_t x, int32_t y, const RgMascotFrame* f) {
     y += f->body_dy;
-    int32_t lift = f->phones_lift > 4 ? 4 : f->phones_lift;
-    int32_t len = f->antenna < 3 ? 3 : (f->antenna > 6 ? 6 : f->antenna);
+    int32_t lift = f->phones ? (f->phones_lift > 4 ? 4 : f->phones_lift) : -1;
+    int32_t len = f->antenna < 3 ? 3 : (f->antenna > 7 ? 7 : f->antenna);
     canvas_set_color(canvas, ColorBlack);
     rg_draw_fx(canvas, x, y, f, x + ANTENNA_X - len / 2, y + ANTENNA_Y - lift - len - 2);
 }
@@ -256,6 +296,20 @@ void rg_draw_prop(
     default:
         break;
     }
+}
+
+void rg_draw_decoration(Canvas* canvas, int32_t x, int32_t y, uint8_t decoration) {
+    static const uint8_t sprites[] = {
+        0,
+        RgSpriteDecoPlant,
+        RgSpriteDecoPoster,
+        RgSpriteDecoLamp,
+        RgSpriteDecoMug,
+        RgSpriteDecoTrophy,
+    };
+    if(decoration == 0 || decoration >= sizeof(sprites)) return;
+    canvas_set_color(canvas, ColorBlack);
+    rg_draw_sprite(canvas, x, y, (RgSpriteId)sprites[decoration]);
 }
 
 void rg_draw_badge(Canvas* canvas, int32_t x, int32_t y, bool cyber, const RgMascotFrame* f) {
