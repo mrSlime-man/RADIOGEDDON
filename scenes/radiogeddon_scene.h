@@ -59,6 +59,14 @@ void radiogeddon_scene_show_confirm(
     uint32_t event_yes,
     uint32_t event_no);
 
+/**
+ * The Unknown Protocol Analysis for a RadioGeddonUnknownProvider (context:
+ * the app): the app's own in the Catalog edition, a module loaded for the
+ * run in the Full edition (NULL when it does not fit).
+ */
+RadioGeddonUnknownFn radiogeddon_scene_unknown_begin(void* context);
+void radiogeddon_scene_unknown_end(void* context);
+
 /** Free the Database index and list view, if they exist. */
 void radiogeddon_scene_db_release(RadioGeddonApp* app);
 
@@ -92,6 +100,45 @@ void radiogeddon_scene_probe_bands(RadioGeddonApp* app);
 RgRangeResult radiogeddon_scene_plan_range(RadioGeddonApp* app);
 #endif
 
+#if RG_EDITION_FULL
+/**
+ * Load module @p file into app->module / app->module_api, leaving
+ * @p extra_heap free for its work. On failure sets app->message_header /
+ * message_text to the reason and returns false.
+ */
+bool radiogeddon_scene_module_load(RadioGeddonApp* app, const char* file, size_t extra_heap);
+/** Unload app->module (its views must be removed already). */
+void radiogeddon_scene_module_unload(RadioGeddonApp* app);
+#endif
+
+#if RG_FEATURE_MULTI_COMPARE
+/** Heap a comparison of @p count files takes besides its module. */
+size_t radiogeddon_scene_multi_memory(size_t count);
+/** Put @p path on the Multi-Compare list (no duplicates); false when full. */
+bool radiogeddon_multi_add(RadioGeddonApp* app, const char* path);
+/** Empty the Multi-Compare list (recordings are untouched). */
+void radiogeddon_multi_clear(RadioGeddonApp* app);
+#endif
+
+#if RG_FEATURE_SESSIONS
+/** What the session name keyboard is for. */
+typedef enum {
+    RadioGeddonSessionNameNew,
+    RadioGeddonSessionNameRename,
+} RadioGeddonSessionNameMode;
+/** Free the session list and the open session (back at the main menu). */
+void radiogeddon_scene_sessions_release(RadioGeddonApp* app);
+#endif
+
+#if RG_FEATURE_WATERFALL
+/** Range Scanner setup's "Start waterfall" row (its scene state selects it). */
+uint32_t radiogeddon_scene_range_setup_waterfall_item(void);
+/** Smallest Waterfall history for @p points points (one screen of rows). */
+size_t radiogeddon_scene_waterfall_min_bytes(uint32_t points);
+/** The Waterfall's heap besides its history (engine and screen). */
+size_t radiogeddon_scene_waterfall_fixed_bytes(uint32_t points);
+#endif
+
 /**
  * Fill @p out with the frequencies a Scanner or Hopper source gives (the
  * built-in list under @p mask, or the favorites in the Full edition), keeping
@@ -103,3 +150,8 @@ size_t radiogeddon_scene_build_list(
     uint32_t mask,
     uint32_t* out,
     size_t max);
+
+#if RG_EDITION_FULL
+/* In a module build, the helpers above come from the app's table. */
+#include "../helpers/radiogeddon_host_map.h"
+#endif

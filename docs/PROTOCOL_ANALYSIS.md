@@ -196,6 +196,24 @@ The report opens with what the labels mean, then has three parts.
    60 % are *signal frames*; the encoding with the highest mean fit over them,
    weighted by each frame's length, wins, and the runner-up is shown as *Alt*
    when it fits at least 30 %.
+
+   The report lists every encoding's fit (`Fits: PWM n% PPM n% Manchester
+   n%`), so an ambiguous capture shows as one.
+
+   **Pulse/gap pairing.** Manchester's half-bit cells fit any stream of 1 Te
+   and 2 Te durations, so a pulse-width code with a 1:2 ratio fits it too.
+   What tells them apart is how each pulse pairs with the gap after it: in
+   Manchester data a pulse's length says nothing about the next gap (equal
+   and opposite pairs mix), while a pulse-width code pairs them by rule —
+   always *opposite* (short pulse, long gap: constant period) or always
+   *equal* (the gap repeats the pulse). When Manchester wins but there are at
+   least 24 pairs, at least 93 % keep to one rule, 10–90 % of them are long,
+   and two pulse widths were found, the pulse-width reading is taken (with
+   the matching pairing), Manchester becomes the *Alt*, and the report says
+   so: `Chosen by pulse/gap pairing: n% of N pairs opposite`. Runs of 8 or
+   more single-Te durations (a preamble) are left out of the count. The
+   confidence is then at most 70 %: it rests on a structure rule, not a
+   grammar fit.
 3. **Confidence** starts at the winner's mean fit, loses 20 points when the
    runner-up is within 10 (10 points when within 25), loses 10 when only one
    frame fits any encoding, gains 5 when a pattern repeats exactly, is capped at
@@ -225,6 +243,12 @@ One line per frame (the first 48): start time, bit count, pattern letter,
 and the shift when a frame was aligned (`A+3`). Frames that fit no encoding
 show as `noise`; frames longer than 520 pulses are decoded up to that point
 and marked `long`; frames cut to one gapless repeat are marked `rep`.
+
+Above the list, for the two largest patterns: `[OBSERVED] A repeats every
+n ms (N gaps, min-max ms)`, the median start-to-start time between
+consecutive frames of that pattern (exact or shifted), measured from the
+recording; gaps longer than a press's repeats (between separate presses)
+are left out.
 
 ### Checksum structure — Full edition, `[HYPOTHESIS]`
 
@@ -287,19 +311,22 @@ protocol's decoder source:
 | Hypothesis | Counted right when | Right |
 |------------|--------------------|-------|
 | Base Te | within the decoder's own tolerance (`te_delta`) of its `te_short` | 50 of 50 |
-| Encoding | Manchester exactly when the decoder uses the firmware's Manchester decoder; PWM and PPM both count for the others | 41 of 50 (3 give no guess) |
-| Bit length | within one bit of the decoder's `min_count_bit_for_found` | 33 of 50 |
+| Encoding | Manchester exactly when the decoder uses the firmware's Manchester decoder; PWM and PPM both count for the others | 43 of 50 (3 give no guess) |
+| Bit length | within one bit of the decoder's `min_count_bit_for_found` | 35 of 50 |
 
 Before the rules above for glitches, pairing, preambles and separators, the
-same scores were 39, 33 and 16; in beta 5 they were 48, 41 and 29. Beta 6's
-140 µs glitch floor fixed Te on Holtek and Phoenix V2, and cutting gapless
-repeats fixed the frame length on FAAC SLH, Power Smart, Honeywell WDB and
-Revers RB2. No rule names a protocol or a capture; each has a synthetic
+same scores were 39, 33 and 16; in beta 5 they were 48, 41 and 29, in beta 6
+50, 41 and 33. Beta 6's 140 µs glitch floor fixed Te on Holtek and Phoenix
+V2, and cutting gapless repeats fixed the frame length on FAAC SLH, Power
+Smart, Honeywell WDB and Revers RB2. Beta 7's pulse/gap pairing rule fixed
+the encoding and the frame length on Nero Radio and Cenmax; no capture's
+score went down. No rule names a protocol or a capture; each has a synthetic
 regression test that fails without it.
 
-Remaining misses: encoding on Nero Radio, Scher-Khan, Cenmax, Holtek,
-Holtek HT12X and Phoenix V2 (equal-width pulse codes read as Manchester), no
-encoding guess on Linear Delta-3, Hollarm and Marantec24; frame length on 17
+Remaining misses: encoding on Scher-Khan, Holtek, Holtek HT12X and Phoenix
+V2 (pulse-width codes still read as Manchester: too few pairs, or pairs that
+are not consistent enough for the pairing rule), no
+encoding guess on Linear Delta-3, Hollarm and Marantec24; frame length on 15
 captures, mostly protocols that send a long preamble or sync inside the frame
 (Nero Sketch reads 89 bits for the decoder's 40), count bits differently from
 the frame on air (Nice FLO 24 for 12, Megacode, Clemsa), or repeat without a

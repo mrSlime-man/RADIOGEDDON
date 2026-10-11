@@ -64,8 +64,12 @@ release_version="$(sed -n 's/^#define RADIOGEDDON_VERSION "\(.*\)"$/\1/p' radiog
 
 if [ "${edition}" = full ]; then
     appid=radiogeddon_full app_name="RadioGeddon Full"
+    # The Full edition's optional tools, packed in the .fap (modules/modules.fam).
+    modules="$(sed -n 's/^    appid="\(radiogeddon_[a-z]*\)",$/plugins\/\1.fal/p' modules/modules.fam | paste -sd, -)"
+    [ -n "${modules}" ] || die "no modules listed in modules/modules.fam"
 else
     appid=radiogeddon app_name="RadioGeddon"
+    modules=""
 fi
 
 source_rev="$(git rev-parse HEAD 2>/dev/null || echo unknown)"
@@ -188,7 +192,7 @@ esac
 log "verifying manifest and imported symbols"
 python3 "${PROJECT_DIR}/scripts/verify_fap.py" "${artifact}" \
     --api "${pinned_api}" --name "${app_name}" --version "${app_version}" \
-    --symbols "${symbols_csv}"
+    --symbols "${symbols_csv}" ${modules:+--modules "${modules}"}
 
 fap_sha="$(sha256sum "${artifact}" | cut -d' ' -f1)"
 cat > "${out_dir}/radiogeddon-${target}.build-info" << EOF
@@ -204,5 +208,6 @@ sdk: ${sdk_ref}
 ufbt: ${UFBT_VERSION}
 source: ${source_rev}
 sha256: ${fap_sha}
+modules: ${modules:-none}
 EOF
 log "done: ${artifact} (API ${pinned_api}, sha256 ${fap_sha})"

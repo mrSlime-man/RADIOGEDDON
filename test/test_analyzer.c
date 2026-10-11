@@ -563,6 +563,114 @@ static void test_similarity(void) {
     CHECK(rg_similarity_score(&s) == 50, "streamed: longer tail halves the score");
 }
 
+/* StarLine-style pulse widths: every bit's gap repeats its pulse (0 = Te
+ * high + Te low, 1 = 2Te + 2Te). Only 1 and 2 Te durations, so Manchester's
+ * grammar fits it perfectly; the pulse/gap pairing tells them apart. */
+static void emit_equal_pwm(int32_t* buf, size_t* pos, const char* bits) {
+    // Header as StarLine sends it: long pulse/gap pairs (4 Te), no data.
+    for(int i = 0; i < 6; i++) {
+        buf[(*pos)++] = 1000;
+        buf[(*pos)++] = -1000;
+    }
+    for(const char* b = bits; *b; b++) {
+        int32_t d = (*b == '1') ? 500 : 250;
+        buf[(*pos)++] = d + (int32_t)(rng() % 31) - 15;
+        buf[(*pos)++] = -(d + (int32_t)(rng() % 31) - 15);
+    }
+    buf[(*pos)++] = -12000;
+}
+
+static void test_pairing_equal(void) {
+    printf("test_pairing_equal\n");
+    static int32_t buf[8000];
+    size_t pos = 0;
+    const char* code = "1011001110001010111100001100101011001101011110000101101001110010";
+    for(int i = 0; i < 6; i++)
+        emit_equal_pwm(buf, &pos, code);
+    rg_analyzer_run(buf, pos, &g_a);
+    CHECK(g_a.encoding == RgEncodingPWM, "pulse widths, not Manchester");
+    CHECK(g_a.encoding_by_pairing && g_a.params.pwm_equal, "read from the pairing, gap = pulse");
+    CHECK(g_a.alternative == RgEncodingManchester, "Manchester kept as the other reading");
+    CHECK(g_a.encoding_fit[RgEncodingManchester] >= 90, "Manchester's grammar did fit");
+    CHECK(g_a.pair_same_pct >= 95 && g_a.pair_count >= 100, "pairs keep to one rule");
+    CHECK(g_a.encoding_confidence <= 70, "confidence capped for a rule-based reading");
+    // The last bit's gap runs into the frame gap, so its pulse looks like a
+    // stop pulse: one bit short, as a protocol-blind reading must be.
+    CHECK(g_a.bit_count + 1 == strlen(code), "frame length from the data bits, less the last");
+    CHECK(strncmp(g_a.bits, code, g_a.bit_count) == 0, "bits recovered (1 = long pulse and gap)");
+}
+
+/* A 1:2 pulse-width code (constant period) after a long square-wave
+ * preamble and a sync pulse, some frames sent back to back: the preamble is
+ * no data and the pulses pair opposite their gaps. */
+static void test_pairing_opposite(void) {
+    printf("test_pairing_opposite\n");
+    static int32_t buf[12000];
+    size_t pos = 0;
+    const char* code = "11010010001100101101110100101011001010110100101100";
+    for(int f = 0; f < 8; f++) {
+        for(int i = 0; i < 24; i++) {
+            buf[pos++] = 200 + (int32_t)(rng() % 21) - 10;
+            buf[pos++] = -(200 + (int32_t)(rng() % 21) - 10);
+        }
+        buf[pos++] = 850;
+        buf[pos++] = -200;
+        for(const char* b = code; *b; b++) {
+            buf[pos++] = (*b == '1') ? 400 : 200;
+            buf[pos++] = (*b == '1') ? -200 : -400;
+        }
+        buf[pos++] = 200;
+        buf[pos++] = (f % 3 == 2) ? -300 : -9000; // every third frame: no gap after it
+    }
+    rg_analyzer_run(buf, pos, &g_a);
+    CHECK(g_a.encoding == RgEncodingPWM, "PWM");
+    CHECK(g_a.encoding_by_pairing && !g_a.params.pwm_equal, "opposite pairs: constant period");
+    CHECK(g_a.pair_opposite_pct >= 95, "pairs opposite");
+    CHECK(g_a.bit_count == strlen(code) + 1 || g_a.bit_count == strlen(code), "data bits only");
+    CHECK(strncmp(g_a.bits, code, strlen(code)) == 0 || strstr(g_a.bits, code) != NULL, "bits");
+}
+
+/* Real Manchester data mixes equal and opposite pairs: never overridden. */
+static void test_pairing_keeps_manchester(void) {
+    printf("test_pairing_keeps_manchester\n");
+    static int32_t buf[12000];
+    size_t pos = 0;
+    for(int f = 0; f < 10; f++) {
+        char bits[49];
+        for(int i = 0; i < 48; i++)
+            bits[i] = (rng() & 1) ? '1' : '0';
+        bits[48] = '\0';
+        emit_manchester(buf, &pos, bits);
+    }
+    rg_analyzer_run(buf, pos, &g_a);
+    CHECK(g_a.encoding == RgEncodingManchester, "stays Manchester");
+    CHECK(!g_a.encoding_by_pairing, "no override");
+    CHECK(g_a.pair_same_pct < 93 && g_a.pair_opposite_pct < 93, "pairs mixed");
+    CHECK(
+        g_a.encoding_fit[RgEncodingManchester] >= g_a.encoding_fit[RgEncodingPWM], "fits listed");
+}
+
+static void test_repeat_timing(void) {
+    printf("test_repeat_timing\n");
+    // Frame A every 24 bits of PWM (24 x 4 Te + stop + 31 Te sync) twice,
+    // a long pause (a new press), then twice more.
+    static int32_t buf[4000];
+    size_t pos = 0;
+    const char* a = "101100111000101011110001";
+    emit_pwm(buf, &pos, a, 0);
+    emit_pwm(buf, &pos, a, 0);
+    buf[pos - 1] -= 3000000; // 3 s pause after the second frame
+    emit_pwm(buf, &pos, a, 0);
+    emit_pwm(buf, &pos, a, 0);
+    rg_analyzer_run(buf, pos, &g_a);
+    RgRepeatTiming t;
+    CHECK(rg_analyzer_repeat_timing(&g_a, 0, &t), "pattern A repeats");
+    uint32_t period = (24u * 4u + 1u + 31u) * TE;
+    CHECK(t.intervals == 2, "the 3 s pause is a new press, not a repeat");
+    CHECK(t.median_us == period && t.min_us == period && t.max_us == period, "interval");
+    CHECK(!rg_analyzer_repeat_timing(&g_a, 5, &t) && t.intervals == 0, "no such pattern");
+}
+
 static void test_degenerate(void) {
     printf("test_degenerate\n");
     rg_analyzer_run(NULL, 0, &g_a);
@@ -592,6 +700,10 @@ static void test_degenerate(void) {
 }
 
 int main(void) {
+    test_pairing_equal();
+    test_pairing_opposite();
+    test_pairing_keeps_manchester();
+    test_repeat_timing();
     test_pwm_identification();
     test_fixed_code_fields();
     test_changing_fields();

@@ -101,6 +101,12 @@ static void radiogeddon_scene_rename_apply(RadioGeddonApp* app) {
         FS_Error err = storage_common_rename(
             app->storage, furi_string_get_cstr(app->file_path), furi_string_get_cstr(path));
         if(err == FSE_OK) {
+#if RG_FEATURE_SESSIONS
+            // Sessions name recordings by file name: follow the rename.
+            const char* from = strrchr(furi_string_get_cstr(app->file_path), '/');
+            const char* to = strrchr(furi_string_get_cstr(path), '/');
+            if(from && to) radiogeddon_sessions_rename_signal(app->storage, from + 1, to + 1);
+#endif
             furi_string_set(app->file_path, path);
             rg_db_strip_ext(app->text_store, RADIOGEDDON_SUB_EXTENSION);
             furi_string_set(app->loaded.name, app->text_store);

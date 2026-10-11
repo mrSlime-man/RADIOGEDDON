@@ -19,13 +19,13 @@ region's rules.
 | S2 | Copy `test/fixtures/*.sub` to `/ext/apps_data/radiogeddon/signals/` (create the folder, or launch the app once first). |
 | S3 | Optional but helpful: open a device log — connect USB, run `ufbt cli`, type `log`, keep it running. |
 | S4 | Note your firmware family and version (Settings → About) and your device's region. |
-| S5 | Note the edition and version RadioGeddon's About screen shows (`RadioGeddon Catalog` or `RadioGeddon Full`, `1.0.0-beta.6`). |
+| S5 | Note the edition and version RadioGeddon's About screen shows (`RadioGeddon Catalog` or `RadioGeddon Full`, `1.0.0-beta.7`). |
 
 ## End-to-end workflow
 
 | ID | Step | Pass when |
 |----|------|-----------|
-| W1 | Launch: Apps → Sub-GHz → RadioGeddon (Catalog) or RadioGeddon Full. | Catalog: the menu lists Scanner, Receive & Record, Frequency Hopper, Database, Settings, About. Full: also Range Scanner and Favorites, header `RadioGeddon Full`. No error in the log. |
+| W1 | Launch: Apps → Sub-GHz → RadioGeddon (Catalog) or RadioGeddon Full. | Catalog: the menu lists Scanner, Receive & Record, Frequency Hopper, Database, Settings, About. Full: header `RadioGeddon Full` and Scan, Receive & Record, Analyze, Database, Sessions, Settings, About (Scan holds Frequency Scanner, Range Scanner, Waterfall, Frequency Hopper, Favorites). No error in the log. |
 | W2 | Start the receiver: Settings `433.92`, `AM 650`; open `Receive & Record`. | Header reads `433.92 AM 650`; RSSI bar reacts to a nearby remote; `Listening...` (not `No radio`). |
 | W3 | Capture a supported transmission: a fixed-code remote, or send `princeton_ref_a.sub` from a second Flipper. | `Decoded: 1` with `[1] <protocol>`; green LED blink. |
 | W4 | Review decoded info: Up/Down through the list. | Each entry shows its protocol name; newest stays selected. |
@@ -101,11 +101,11 @@ region's rules.
 | F9 | SD card removed mid-session. | Save/open fail gracefully with an error tone; no crash. |
 | F10 | Memory: several capture/save/open/replay cycles. | Free heap (CLI `free` or the log) returns to baseline; no growth across cycles. |
 
-## Editions (new in beta 6)
+## Editions (beta 6)
 
 | ID | Check | Pass when |
 |----|-------|-----------|
-| E1 | About on each edition. | `RadioGeddon Catalog` / `RadioGeddon Full`, `Edition:` line, version `1.0.0-beta.6`, `Region:` with your device's region (or `--`). |
+| E1 | About on each edition. | `RadioGeddon Catalog` / `RadioGeddon Full`, `Edition:` line, version `1.0.0-beta.7`, `Region:` with your device's region (or `--`). |
 | E2 | Shared data: with recordings, favorites and a profile made in the Full edition, install the Catalog edition (on a device where both can run, or by moving the SD card), open its Database and Settings, change a setting, then go back to the Full edition. | The Catalog edition lists the same recordings; nothing is deleted or renamed; back in Full, favorites, profiles and the range settings are unchanged. |
 | E3 | Updating from beta 5: on RogueMaster or Unleashed, install the Full edition next to the old beta 5 file, then delete the old file. | Both appear in the Apps menu until the old one is deleted; the Full edition opens the beta 5 recordings and settings. |
 
@@ -125,6 +125,23 @@ region's rules.
 | R10 | Fine step: Settings → Freq step `1 MHz`, then Left/Right on `Frequency MHz` past 361 MHz; then `List`. | Steps by 1 MHz and jumps 361 → 378 MHz (CFW) without stopping in the gap; back on `List`, Left/Right steps through the frequency list again. |
 | R11 | Checksum hypotheses: record several different button presses of a fixed-code remote into one RAW capture; run Unknown Protocol Analysis. | A `Checksum structure` section: either a fit with `fits n/n` or `No common checksum`, or a note that more different frames are needed. Compare with what is known about the remote. |
 
+## Research tools (Full edition, new in beta 7)
+
+These run as modules loaded from the `.fap`; a failure to load reads
+`Tool missing` or `Tool not loaded` (please report it with the firmware).
+
+| ID | Check | Pass when |
+|----|-------|-----------|
+| B1 | Scan → Waterfall (Start 433000, End 435000, Step 25 kHz); press a 433.92 MHz remote a few times. | Header `RSSI sweep` (state `CAL`, then `LIVE`); rows appear on top and move down; the bursts show as dense or solid marks near 433.92 MHz; columns not measured in a sweep show the dotted pattern, not a level. Note the sweep time in the footer. |
+| B2 | Waterfall keys: Left/Right, Up/Down, OK; hold OK and try each menu item. | The cursor moves (faster when held); Up/Down scroll with `-N` in the header; OK pauses and resumes; *Receive here* opens Receive on the strongest point under the cursor; *Save history CSV* writes `scans/WF_*.csv` with one row per sweep and empty cells where nothing was measured. |
+| B3 | Enter and leave the Waterfall ten times with a 256-point range, then open About. | No crash, no `Not enough memory` on a fresh start; `Free now` returns close to `At app start`. |
+| B4 | Bitstream Explorer on a RAW capture of a fixed-code remote (Database → file → Bitstream Explorer); cycle the views with OK. | FRAMES lists frames with matching letters for repeats; BITS, HEX (hold OK shifts the offset 0–7), DIFF (`.` for a fixed-code repeat, `X` where frames differ) and FIELD (Up/Down/Left/Right move the range) agree with each other. |
+| B5 | Record 4–8 presses of different buttons of one remote as separate RAW files; Compare several… on one, add the others, Compare now. | A report with `[OBSERVED]` and `[HYPOTHESIS]` lines; the button bits classified as changing (button-like) and the rest constant; nothing called a verified serial. |
+| B6 | Sessions → New session, Collect new captures, record twice in Receive; open the session's Recordings; Export report. | Both new recordings are listed; opening one shows its usual menu; the report is in `reports/`; the `.sub` files are unchanged and open in the stock Sub-GHz app. |
+| B7 | Sessions → Suggest groups after recording several captures of one remote within a few minutes. | Groups are offered, not created; a group becomes a session only after confirming. |
+| B8 | Pull the SD card's power (or reboot) while a session is being saved (add a recording, then reset at once); open Sessions after restarting. | The session opens with either the old or the new list, never damaged; no `.tmp` left in use. |
+| B9 | Unknown Protocol Analysis on a RAW capture of a PWM remote (Princeton, CAME, Nice). | The `[HYPOTHESIS] structure` section names PWM; the `Fits:` line gives every reading's score; an `[OBSERVED] A repeats every … ms` line gives how often the pattern repeats. |
+
 ## Catalog edition transmit check (Official)
 
 | ID | Check | Pass when |
@@ -133,13 +150,15 @@ region's rules.
 | C2 | Replay on an allowed frequency (only where authorized). | `Transmitting`, then `Signal sent`. |
 | C3 | If you have a device without a provisioned region (`--` in About; for example after a factory reset before the region is fetched). | Every Send is refused with `Firmware has no region info, so TX is off`. |
 
-## Memory and repeated use (beta 6)
+## Memory and repeated use (beta 6, beta 7)
 
 | ID | Check | Pass when |
 |----|-------|-----------|
 | M1 | Launch the Full edition right after a reboot and open About. | Launches (no `Out of memory`); note `At app start` and the largest free block, and compare with the Catalog edition on Official if you have both. |
 | M2 | Enter and leave the Range Scanner ten times with 256 points, then the Scanner, Receive and the Hopper ten times each, with a device log open; open About. | No crash; `Free now` returns close to `At app start`. |
 | M3 | With a 256-point range, open the Range Scanner, then Receive from it, then back, five times. | No `Not enough memory` on a freshly started app; no crash. |
+| M4 | Full edition: open and close each module screen (Waterfall, Bitstream Explorer, a comparison, Unknown Protocol Analysis, Sessions) five times each, then open About. | No crash; `Free now` returns close to `At app start` (modules are freed on close). |
+| M5 | Full edition, low memory: start the app with another large app's memory in use (or with `Radio_heap` raised as in F15b), open the Waterfall and Sessions. | `Not enough memory` with Back returning, never a crash. |
 
 ## Per-firmware load check
 

@@ -38,6 +38,7 @@ RadioGeddonReportResult radiogeddon_report_save(
     RadioGeddonSubGhz* subghz,
     const char* sub_path,
     const RadioGeddonLoadedSignal* sig,
+    const RadioGeddonUnknownProvider* unknown,
     FuriString* scratch,
     FuriString* out_path) {
     storage_common_mkdir(storage, RADIOGEDDON_REPORTS_FOLDER);
@@ -73,7 +74,14 @@ RadioGeddonReportResult radiogeddon_report_save(
     }
     if(ok && sig->kind == RadioGeddonSignalKindRaw) {
         furi_string_set(scratch, "\n== Unknown Protocol Analysis ==\n");
-        radiogeddon_analysis_unknown(storage, sub_path, scratch);
+        // Obtained only now, after the decoders have released their memory.
+        RadioGeddonUnknownFn run = unknown->begin(unknown->context);
+        if(run) {
+            run(storage, sub_path, scratch);
+        } else {
+            furi_string_cat_str(scratch, "Not run: not enough free memory for it.\n");
+        }
+        unknown->end(unknown->context);
         ok = radiogeddon_report_write(file, scratch);
     } else if(ok && sig->kind == RadioGeddonSignalKindProtocol) {
         furi_string_set(scratch, "\n== Crypto Analysis ==\n");

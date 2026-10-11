@@ -63,6 +63,10 @@
 /* Frames whose lengths differ are aligned by up to this many bits. */
 #define RG_ANALYZER_MAX_SHIFT         4
 #define RG_ANALYZER_NO_GROUP          0xFF
+/* Pulse/gap pairs needed, and the share that must keep to one rule, before
+ * the pairing overrides a Manchester grammar fit (see rg_finish_encoding). */
+#define RG_ANALYZER_PAIR_MIN          24u
+#define RG_ANALYZER_PAIR_RULE_PCT     93u
 
 typedef enum {
     RgEncodingUnknown = 0,
@@ -94,6 +98,12 @@ typedef struct {
     uint32_t ppm_high_us; /* dominant high-pulse width */
     uint32_t ppm_short_us; /* two in-frame low widths, 0 when lows are not bimodal */
     uint32_t ppm_long_us;
+    /* PWM variant where every bit's gap equals its pulse (1 = long pulse and
+     * long gap), as StarLine sends; set when the frames pair that way. */
+    bool pwm_equal;
+    /* Skip square-wave runs (preambles, separators) while decoding pulse
+     * pairs: set with an encoding read from the pulse/gap pairing. */
+    bool skip_square;
 } RgDecodeParams;
 
 /** One frame kept for comparison. Bits are packed MSB first. */
@@ -149,6 +159,19 @@ typedef struct {
     RgEncoding alternative; /* runner-up encoding, Unknown if none fits */
     int alternative_fit;
     int fit_pct; /* mean decode fit of the signal frames under encoding */
+    /* Every reading's grammar fit over the voting frames, 0..100, indexed by
+     * RgEncoding (Unknown unused): all the interpretations, not just two. */
+    uint8_t encoding_fit[RgEncodingCount];
+    /* How high pulses pair with the gap after them (1 or 2 Te each), past
+     * any preamble, over the frames that voted: share of equal pairs, of
+     * opposite pairs, and how many pairs. Manchester data mixes both; a
+     * pulse-width code keeps to one. */
+    uint8_t pair_same_pct;
+    uint8_t pair_opposite_pct;
+    uint32_t pair_count;
+    /* Manchester's grammar fit best, but the pairing showed a pulse-width
+     * code: the encoding was set from the pairing (alternative = Manchester). */
+    bool encoding_by_pairing;
     size_t signal_frames; /* frames decoding with fit >= RG_ANALYZER_GOOD_FIT */
     size_t bit_count; /* most common frame length in bits */
     size_t bit_count_frames; /* signal frames with that length */
@@ -193,6 +216,11 @@ typedef struct {
     uint64_t candidates; /* samples in the frames that voted */
     uint32_t candidate_frames;
     uint32_t chosen_fit_sum;
+    /* Pass 2: how each high pulse pairs with the gap after it, past a leading
+     * preamble, in frames that voted (pulses of 1 or 2 Te only). */
+    uint32_t pair_same; /* 1+1 or 2+2 Te */
+    uint32_t pair_opposite; /* 1+2 or 2+1 Te */
+    uint32_t pair_long; /* pairs with a 2 Te pulse */
 } RgAnalyzer;
 
 /** Reset @p a and start pass 1. */
@@ -261,6 +289,24 @@ size_t rg_analyzer_align(
  * there is none.
  */
 size_t rg_analyzer_repeat_period(const char* bits, size_t n);
+
+/* Frames further apart than this are separate presses, not repeats. */
+#define RG_ANALYZER_REPEAT_MAX_US 2000000u
+
+/** How often a pattern's frames repeat within a press. */
+typedef struct {
+    uint32_t intervals; /* start-to-start intervals counted */
+    uint32_t median_us;
+    uint32_t min_us;
+    uint32_t max_us;
+} RgRepeatTiming;
+
+/**
+ * Start-to-start intervals between consecutive kept frames of pattern
+ * @p group (exact or shifted), ignoring gaps over RG_ANALYZER_REPEAT_MAX_US.
+ * False when fewer than one interval is found.
+ */
+bool rg_analyzer_repeat_timing(const RgAnalysis* r, uint8_t group, RgRepeatTiming* out);
 
 /** Unpack a frame's bits into '0'/'1' characters (NUL-terminated). */
 void rg_analyzer_frame_bits(const RgFrame* frame, char* out);

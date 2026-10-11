@@ -21,6 +21,11 @@ RANGE_SRC := test_range.c ../helpers/rg_range.c
 TXPOLICY_SRC := test_txpolicy.c ../helpers/rg_txpolicy.c
 SPECTRUM_SRC := test_spectrum.c ../helpers/rg_spectrum.c ../helpers/rg_scan.c
 CHECKSUM_SRC := test_checksum.c ../helpers/rg_checksum.c
+BITS_SRC := test_bits.c ../helpers/rg_bits.c ../helpers/rg_analyzer.c
+MULTI_SRC := test_multi.c ../helpers/rg_multi.c ../helpers/rg_analyzer.c
+SESSION_SRC := test_session.c ../helpers/rg_session.c
+ELF_SRC := test_elf.c ../helpers/rg_elf.c
+WATERFALL_SRC := test_waterfall.c ../helpers/rg_waterfall.c ../helpers/rg_range.c
 MEMSTAT_SRC := test_memstat.c ../helpers/rg_memstat.c
 DECODE_SRC := test_decode.c ../helpers/rg_decode.c ../helpers/rg_raw.c
 DBLOAD_SRC := test_dbload.c stubs/furi_stub.c ../helpers/radiogeddon_db.c ../helpers/rg_db.c
@@ -70,7 +75,8 @@ FWANALYZE_SRC := test_fwanalyze.c ../helpers/rg_analyzer.c ../helpers/rg_raw.c
 FUZZ_RAW_SRC := fuzz/fuzz_raw.c ../helpers/rg_raw.c ../helpers/rg_analyzer.c
 FUZZ_DB_SRC := fuzz/fuzz_db.c ../helpers/rg_db.c ../helpers/radiogeddon_dsp.c
 FUZZ_SAMPLES_SRC := fuzz/fuzz_samples.c ../helpers/rg_analyzer.c ../helpers/rg_timeline.c
-FUZZ_TARGETS := fuzz_raw fuzz_db fuzz_samples
+FUZZ_SESSION_SRC := fuzz/fuzz_session.c ../helpers/rg_session.c ../helpers/rg_elf.c
+FUZZ_TARGETS := fuzz_raw fuzz_db fuzz_samples fuzz_session
 FUZZ_CC ?= clang
 FUZZ_TIME ?= 60
 
@@ -82,13 +88,26 @@ FUZZ_TIME ?= 60
 LIFECYCLE_SRC := test_lifecycle.c stubs/furi_stub.c stubs/radio_fake.c \
 		../helpers/radiogeddon_scanner.c ../helpers/radiogeddon_rangescan.c \
 		../helpers/radiogeddon_hopper.c ../helpers/rg_scan.c ../helpers/rg_hop.c \
-		../helpers/rg_range.c ../helpers/rg_spectrum.c ../helpers/rg_freq.c
+		../helpers/rg_range.c ../helpers/rg_spectrum.c ../helpers/rg_freq.c ../helpers/rg_waterfall.c
 
-.PHONY: check clean tsan fuzz formats decoders captures lifecycle
+# Offline UI tests: the Waterfall and Bitstream Explorer screens drawn into
+# a host 128x64 canvas with the firmware's own u8g2 fonts (ui/fetch_fonts.sh,
+# pinned and checksum-verified), driven with key events; every state is
+# checked for drawing off the screen and written as a synthetic preview
+# (build/ui/previews, PNG via ui/previews.py). `make ui`.
+UI_FONTS := $(BUILD)/ui/fonts.inc
+UI_SRC := test_ui.c ui/canvas_host.c ../views/radiogeddon_waterfall_view.c \
+		../views/radiogeddon_bits_view.c ../helpers/rg_waterfall.c ../helpers/rg_bits.c \
+		../helpers/rg_glyph.c ../helpers/rg_analyzer.c ../helpers/rg_range.c ../helpers/rg_freq.c \
+		../views/radiogeddon_db_view.c ../helpers/radiogeddon_db.c ../helpers/rg_db.c stubs/furi_stub.c
+UI_HDRS := ui/canvas_host.h ui/stubs/gui/view.h ui/stubs/gui/canvas.h ui/stubs/gui/elements.h \
+		../views/radiogeddon_waterfall_view.h ../views/radiogeddon_bits_view.h synth.h
+
+.PHONY: check clean tsan fuzz formats decoders captures lifecycle ui
 check: $(BUILD)/test_dsp $(BUILD)/test_analyzer $(BUILD)/test_scan $(BUILD)/test_hop $(BUILD)/test_raw \
 		$(BUILD)/test_timeline $(BUILD)/test_ring $(BUILD)/test_rawfmt $(BUILD)/test_recorder \
 		$(BUILD)/test_db $(BUILD)/test_memstat $(BUILD)/test_dbload $(BUILD)/test_decode $(BUILD)/test_freq $(BUILD)/test_preset $(BUILD)/test_range \
-		$(BUILD)/test_txpolicy $(BUILD)/test_spectrum $(BUILD)/test_checksum $(BUILD)/test_edition_full $(BUILD)/test_edition_catalog \
+		$(BUILD)/test_txpolicy $(BUILD)/test_spectrum $(BUILD)/test_checksum $(BUILD)/test_waterfall $(BUILD)/test_bits $(BUILD)/test_multi $(BUILD)/test_session $(BUILD)/test_elf $(BUILD)/test_edition_full $(BUILD)/test_edition_catalog \
 		$(BUILD)/test_edition_default $(BUILD)/edition_conflict.ok \
 		$(addprefix $(BUILD)/replay_,$(FUZZ_TARGETS))
 	$(BUILD)/test_dsp
@@ -110,6 +129,11 @@ check: $(BUILD)/test_dsp $(BUILD)/test_analyzer $(BUILD)/test_scan $(BUILD)/test
 	$(BUILD)/test_txpolicy
 	$(BUILD)/test_spectrum
 	$(BUILD)/test_checksum
+	$(BUILD)/test_waterfall
+	$(BUILD)/test_bits
+	$(BUILD)/test_multi
+	$(BUILD)/test_session
+	$(BUILD)/test_elf
 	$(BUILD)/test_edition_full
 	$(BUILD)/test_edition_catalog
 	$(BUILD)/test_edition_default
@@ -163,6 +187,21 @@ $(BUILD)/test_spectrum: $(SPECTRUM_SRC) ../helpers/rg_spectrum.h ../helpers/rg_s
 $(BUILD)/test_checksum: $(CHECKSUM_SRC) ../helpers/rg_checksum.h | $(BUILD)
 	$(CC) $(CFLAGS) $(SAN) -DRADIOGEDDON_EDITION_FULL -o $@ $(CHECKSUM_SRC)
 
+$(BUILD)/test_waterfall: $(WATERFALL_SRC) ../helpers/rg_waterfall.h ../helpers/rg_range.h | $(BUILD)
+	$(CC) $(CFLAGS) $(SAN) -DRADIOGEDDON_EDITION_FULL -o $@ $(WATERFALL_SRC)
+
+$(BUILD)/test_bits: $(BITS_SRC) ../helpers/rg_bits.h ../helpers/rg_analyzer.h synth.h | $(BUILD)
+	$(CC) $(CFLAGS) $(SAN) -DRADIOGEDDON_EDITION_FULL -o $@ $(BITS_SRC)
+
+$(BUILD)/test_multi: $(MULTI_SRC) ../helpers/rg_multi.h ../helpers/rg_analyzer.h synth.h | $(BUILD)
+	$(CC) $(CFLAGS) $(SAN) -DRADIOGEDDON_EDITION_FULL -o $@ $(MULTI_SRC)
+
+$(BUILD)/test_session: $(SESSION_SRC) ../helpers/rg_session.h | $(BUILD)
+	$(CC) $(CFLAGS) $(SAN) -DRADIOGEDDON_EDITION_FULL -o $@ $(SESSION_SRC)
+
+$(BUILD)/test_elf: $(ELF_SRC) ../helpers/rg_elf.h | $(BUILD)
+	$(CC) $(CFLAGS) $(SAN) -DRADIOGEDDON_EDITION_FULL -o $@ $(ELF_SRC)
+
 # The edition switches, built as each edition and with none defined.
 $(BUILD)/test_edition_full: test_edition.c ../radiogeddon_edition.h | $(BUILD)
 	$(CC) $(CFLAGS) $(SAN) -DRADIOGEDDON_EDITION_FULL -DEXPECT_FULL=1 -o $@ test_edition.c
@@ -195,6 +234,22 @@ lifecycle: $(BUILD)/test_lifecycle
 $(BUILD)/test_lifecycle: $(LIFECYCLE_SRC) $(STUB_HDRS) $(FW)/.fetched | $(BUILD)
 	$(CC) $(CFLAGS) $(SAN) -D_GNU_SOURCE -I$(FW) -I$(FW)/lib -I$(FW)/lib/mlib -Istubs \
 		-DSTUB_TRACK_ALLOC -DRADIOGEDDON_EDITION_FULL -pthread -o $@ $(LIFECYCLE_SRC)
+
+ui: $(BUILD)/test_ui
+	mkdir -p $(BUILD)/ui/previews
+	rm -f $(BUILD)/ui/previews/*
+	$(BUILD)/test_ui
+	python3 ui/previews.py $(BUILD)/ui/previews
+
+$(UI_FONTS): ui/fetch_fonts.sh ui/extract_fonts.py ../scripts/firmware_pins.sh
+	ui/fetch_fonts.sh $@
+
+# The stand-in gui headers come first; the firmware's Sub-GHz headers are
+# only for the range engine's types the Waterfall view's header names.
+$(BUILD)/test_ui: $(UI_SRC) $(UI_HDRS) $(UI_FONTS) $(FW)/.fetched | $(BUILD)
+	$(CC) $(CFLAGS) $(SAN) -D_GNU_SOURCE -Iui/stubs -Iui -I$(FW) -I$(FW)/lib -I$(FW)/lib/mlib \
+		-Istubs -DRADIOGEDDON_EDITION_FULL -DFONTS_INC='"$(abspath $(UI_FONTS))"' \
+		-o $@ $(UI_SRC)
 
 formats: $(BUILD)/test_formats
 	$(BUILD)/test_formats
@@ -265,6 +320,10 @@ $(BUILD)/replay_fuzz_samples: fuzz/replay.c $(FUZZ_SAMPLES_SRC) ../helpers/rg_an
 		../helpers/rg_timeline.h | $(BUILD)
 	$(CC) $(CFLAGS) $(SAN) -o $@ fuzz/replay.c $(FUZZ_SAMPLES_SRC)
 
+$(BUILD)/replay_fuzz_session: fuzz/replay.c $(FUZZ_SESSION_SRC) ../helpers/rg_session.h \
+		../helpers/rg_elf.h | $(BUILD)
+	$(CC) $(CFLAGS) $(SAN) -DRADIOGEDDON_EDITION_FULL -o $@ fuzz/replay.c $(FUZZ_SESSION_SRC)
+
 # libFuzzer builds. New inputs go to build/corpus/<target>; the committed
 # corpus is only read. A failing input is saved as build/<target>-crash-*.
 $(BUILD)/fuzz_raw: $(FUZZ_RAW_SRC) | $(BUILD)
@@ -274,6 +333,10 @@ $(BUILD)/fuzz_raw: $(FUZZ_RAW_SRC) | $(BUILD)
 $(BUILD)/fuzz_db: $(FUZZ_DB_SRC) | $(BUILD)
 	$(FUZZ_CC) $(CFLAGS) -g -fsanitize=fuzzer,address,undefined -fno-sanitize-recover=all \
 		-o $@ $(FUZZ_DB_SRC)
+
+$(BUILD)/fuzz_session: $(FUZZ_SESSION_SRC) | $(BUILD)
+	$(FUZZ_CC) $(CFLAGS) -g -DRADIOGEDDON_EDITION_FULL -fsanitize=fuzzer,address,undefined \
+		-fno-sanitize-recover=all -o $@ $(FUZZ_SESSION_SRC)
 
 $(BUILD)/fuzz_samples: $(FUZZ_SAMPLES_SRC) | $(BUILD)
 	$(FUZZ_CC) $(CFLAGS) -g -fsanitize=fuzzer,address,undefined -fno-sanitize-recover=all \

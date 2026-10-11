@@ -21,8 +21,13 @@ settings — is the same code in both.
 | [Favorites](#favorites-full-edition) | — | ✓ |
 | [Fine frequency stepping, Radio bands](#fine-frequency-stepping-and-radio-bands-full-edition) | — | ✓ |
 | [Checksum structure hypotheses](#unknown-protocol-analysis) | — | ✓ |
+| [Waterfall](#waterfall-full-edition) | — | ✓ |
+| [Bitstream Explorer](#bitstream-explorer-full-edition) | — | ✓ |
+| [Multi-Capture Compare](#multi-capture-compare-full-edition) | — | ✓ |
+| [Research Sessions](#research-sessions-full-edition) | — | ✓ |
+| Main menu | the tools listed directly | grouped: Scan, Receive & Record, Analyze, Database, Sessions, Settings, About |
 | [Replay](#authorized-signal-replay) | the app checks the firmware's region first and explains a refusal; then the firmware's own check | the firmware's own check only |
-| Resident code (from the built files) | 75.6 KB | 94.5 KB |
+| Resident code (from the built files) | 77,173 B | 104,388 B, plus [modules](#modules-full-edition) loaded only while used |
 
 The Catalog edition keeps every receiving and analysis feature the app had;
 the Full-only features are the research tools that go beyond the built-in
@@ -41,14 +46,19 @@ side by side (different app ids).
 **Every feature below is implemented, compiles for its editions and firmware
 families, and passes CI. None has yet been verified on a physical Flipper
 Zero.** "Unit-tested" means the feature's firmware-independent logic is covered
-by the host test suite (1,548 checks, plus format, decoder, capture and engine
-lifecycle tests); radio behaviour can only be confirmed on a
-device ([VERIFICATION.md](VERIFICATION.md)).
+by the host test suite (1,962 checks, plus format, decoder, capture, engine
+lifecycle and offline UI tests); radio behaviour and the screens' real look
+can only be confirmed on a device ([VERIFICATION.md](VERIFICATION.md)).
 
 | Feature | Implemented | Unit-tested logic | Verified on hardware |
 |---------|:-----------:|:-----------------:|:--------------------:|
 | [Sub-GHz Scanner](#sub-ghz-scanner) | ✅ | ✅ floor, activity, CSV rows; engine start/stop cycles | ⏳ pending |
 | [Range Scanner](#range-scanner-full-edition) *(Full)* | ✅ | ✅ band probe, plans across gaps, display maths; engine start/stop cycles | ⏳ pending |
+| [Waterfall](#waterfall-full-edition) *(Full)* | ✅ | ✅ history wraparound, column/pixel mapping, levels, missing cells, render; engine with history on real threads; screen on a host canvas | ⏳ pending |
+| [Bitstream Explorer](#bitstream-explorer-full-edition) *(Full)* | ✅ | ✅ bits, bytes from any offset, diff markers, fields; screen and keys on a host canvas | ⏳ pending |
+| [Multi-Capture Compare](#multi-capture-compare-full-edition) *(Full)* | ✅ | ✅ synthetic multi-capture sets with known field differences | ⏳ pending |
+| [Research Sessions](#research-sessions-full-edition) *(Full)* | ✅ | ✅ file format, a failure at each save step, recovery, grouping; fuzzed | ⏳ pending |
+| [Modules](#modules-full-edition) *(Full)* | ✅ | ✅ size estimate; every module's imports checked against each SDK | ⏳ pending |
 | [Favorites](#favorites-full-edition) and scan profiles *(Full)* | ✅ | ✅ file format, validation, sorting, failed saves | ⏳ pending |
 | [Fine stepping, Radio bands](#fine-frequency-stepping-and-radio-bands-full-edition) *(Full)* | ✅ | ✅ stepping across gaps, band probe | ⏳ pending |
 | [Frequency Hopper](#frequency-hopper) | ✅ | ✅ dwell, hold, lock, history; engine start/stop with auto-record | ⏳ pending |
@@ -101,6 +111,138 @@ The Scanner's sequential RSSI sweep over a range instead of a list:
 Like the Scanner it measures one frequency at a time: a sweep over many
 points can miss a burst shorter than the sweep. It is not a wideband
 spectrum analyzer.
+
+## Waterfall (Full edition)
+
+**Scan → Waterfall** sweeps the Range Scanner's range (its setup opens on
+*Start waterfall*) and keeps each complete sweep as one row of a history:
+frequency across in the order of the scan's points (gaps the radio cannot
+tune take no width; a dot over the picture marks where a band segment
+starts), time down, newest on top. The header says what it is — `RSSI
+sweep`: sequential narrowband readings, one frequency at a time, **not** a
+wideband or IQ/SDR capture, so a burst on a point the sweep is not visiting
+is not seen.
+
+- **Intensity** is an ordered-dither density from 0 to 12 of 16 pixels,
+  rising linearly over the chosen **sensitivity** span (6, 10, 20, 30 or
+  40 dB) above each column's **noise floor** (compensation on; off: above
+  -105 dBm). Readings at or above the Range Scanner's threshold over the
+  floor are drawn **solid**: strong signals stand out.
+- **Missing measurements** (a sweep interrupted by a recalibration, say) are
+  drawn as their own sparse dotted pattern, never filled in. With more points
+  than the 128 columns, a column shows the strongest of its points in that
+  sweep; with fewer, each point is drawn wider.
+- **Peak**: a tick marks the column of the strongest stored reading; the
+  footer shows the cursor's frequency, its reading in the top visible row and
+  its peak over the history, and the measured sweep time (before the first
+  sweep: the estimate, also on the waiting screen).
+- **Keys**: Left/Right move the cursor (held: faster), Up/Down scroll four
+  sweeps newer / older (the view then stays on those sweeps while new ones
+  arrive; the header shows `-N`), OK pauses / resumes. Holding OK opens a
+  menu: *Receive here* (the strongest point under the cursor), *Cursor to
+  peak*, *Newest sweeps*, *Sensitivity*, *Floor comp* and *Save history CSV*
+  (`scans/WF_<date>.csv`: one row per sweep, its age, then each column in
+  dBm, empty where not measured).
+- **Memory**: one byte per cell plus a timestamp per row, in one buffer of
+  at most 8 KB and at least one screen (42 rows), sized from the free heap
+  and refused before anything is allocated if it does not fit. It runs the
+  Range Scanner's own engine (no second radio session); engine, history and
+  screen are freed on exit, also when leaving for Receive (the history then
+  starts again).
+
+## Bitstream Explorer (Full edition)
+
+**Database → RAW file → Bitstream Explorer** (or **Analyze → Bitstream
+Explorer…**) shows the frames the analyzer infers from a RAW capture (the
+same engine as Unknown Protocol Analysis, streamed; only its result is kept)
+in five views, cycled with OK:
+
+- **FRAMES**: each frame's number, start time, bit count, pattern letter,
+  how many frames share its pattern, and its similarity to the reference
+  frame (the first of the most common pattern); noise frames say so.
+- **BITS**: 24 bits a line with their positions; Left/Right move the bit
+  cursor, the footer gives its position and value. Hold OK to start a field
+  there.
+- **HEX**: whole bytes from a chosen bit offset (hold OK moves the byte grid
+  one bit, 0-7); the bits before the first byte and after the last whole
+  byte are shown apart as bits, never padded into a byte. The footer gives
+  the selected byte's position, hex, decimal and binary.
+- **DIFF**: the frame's bits over markers — `.` the same in every comparable
+  frame (clean, same length, not cut off), `X` changes, `?` too few frames
+  to tell (fewer than two). No bit value is ever inferred.
+- **FIELD**: a bit range — Up/Down move its start, Left/Right its end — with
+  its binary, hex and decimal value (decimal up to 48 bits; up to 64 bits in
+  hex; longer ranges in binary, marked when cut).
+
+Every bit is a `[HYPOTHESIS]` from the encoding guess (the header shows the
+encoding and its confidence).
+
+## Multi-Capture Compare (Full edition)
+
+**Compare several…** on a recording (or **Analyze → Multi-Capture Compare**)
+builds a list of up to 8 recordings; *Compare now* analyses them one after
+another — one file open at a time, each leaving only a ~200-byte summary — and
+reports, with a label on every line:
+
+- `[OBSERVED]` frequency (same within 50 kHz or not), preset, and Te (within
+  15 %); each recording's encoding, frame length and repeat count;
+- `[HYPOTHESIS]` encoding and frame-length consistency, which recordings send
+  identical frames (letters), recordings holding several patterns (several
+  buttons in one file), and, for the recordings sharing the most common
+  length, the bits that stay **constant** or **change**;
+- each run of bits classified: constant (`could be an ID, sync or fixed
+  field; not verified as a serial`), **button-like** (short, or one-hot
+  values), **counter-like** (small steps one way in the order the recordings
+  were chosen) or **no simple rule** (data, rolling or encrypted part);
+- `[HEURISTIC]` mean similarity and a **noise check**: when every recording
+  repeats its frame, differences are steady; a recording holding its frame
+  only once may differ by noise.
+
+Decoded key files compare too (their bits come from the firmware's decoder,
+`[CONFIRMED]`). Nothing is decrypted, predicted or verified.
+
+## Research Sessions (Full edition)
+
+**Sessions** keeps named groups of recordings, one small text file each in
+`apps_data/radiogeddon/sessions/`. A session only *names* recordings of the
+signals folder: the `.sub` files are never changed, moved or deleted, and the
+stock Sub-GHz app opens them as before.
+
+- **New**, **Rename**, **Delete session** (asks first; its recordings stay).
+- **Recordings**: opens a recording's usual menu (analysis, explorer,
+  compare, replay); a recording deleted or renamed outside the app is marked
+  `?`, not hidden. **Add recording…** / **Remove recording…**.
+- **Collect new captures** makes it the active session (`*` in the list):
+  recordings saved from Receive join it.
+- **Compare recordings** opens Multi-Capture Compare with the first 8;
+  **Export report** writes the list and that comparison to `reports/`.
+- **Suggest groups** offers recordings with the same frequency (within
+  50 kHz), protocol and frame length, each saved within 30 minutes of the
+  previous one; a group becomes a session only when you confirm it.
+- **Safe saving**: the new file is written beside the old one and read back,
+  then swapped in (old → `.bak`, new → name, backup removed); an interrupted
+  save leaves the last complete version, restored on the next load. Renaming
+  a recording in the app updates the sessions that name it.
+
+## Modules (Full edition)
+
+The Full edition's optional tools are plugins packed inside the `.fap`
+(`fal_embedded`) and unpacked by the firmware into the app's assets folder.
+Each is loaded when its screen opens and unloaded when it closes, so its code
+takes RAM only then:
+
+| Module | Loaded while |
+|--------|--------------|
+| `radiogeddon_wf.fal` | the Waterfall is open |
+| `radiogeddon_bits.fal` | the Bitstream Explorer is open |
+| `radiogeddon_multi.fal` | a comparison or a session export runs |
+| `radiogeddon_unknown.fal` | an Unknown Protocol Analysis (or a report) runs |
+| `radiogeddon_sessions.fal` | any Sessions screen is open |
+
+Before loading, the app checks the module's code and data (its allocated ELF
+sections) plus the work it will do fit the free heap; if not, it says `Not
+enough memory` and stays where it was. A missing or mismatched module is
+reported as such (reinstall the app). The Catalog edition has no modules.
 
 ## Favorites (Full edition)
 
@@ -256,9 +398,15 @@ A frame list ends the report: each frame's start time, bit count and pattern.
 Unit tests cover PWM, PPM and Manchester identification, noise and jitter
 robustness, cut-off frames, several patterns in one file and chunked
 streaming, all on synthetic signals. The capture tests also score it on the
-firmware's own 50 RAW test captures: Te right for 50, encoding family for 41,
-frame length within one bit for 33. The Full edition adds checksum-structure
-hypotheses (XOR, sum, CRC-8, parity) over the distinct frames. Details:
+firmware's own 50 RAW test captures: Te right for 50, encoding family for 43,
+frame length within one bit for 35. Every reading's fit is listed, so an
+ambiguous capture shows as one; when Manchester's grammar fits but every
+pulse pairs with its gap by one rule (always opposite, or always equal), the
+pulse-width reading is taken and the report says why. The frame list ends
+with how often the main patterns repeat within a press (`[OBSERVED]`). The
+Full edition adds checksum-structure hypotheses (XOR, sum, CRC-8, parity)
+over the distinct frames, naming the frames tested and how many each kind of
+check needs. Details:
 [Protocol Analysis](PROTOCOL_ANALYSIS.md#unknown-protocol-analysis--observed-and-hypothesis).
 
 ## Pulse Timeline
@@ -405,7 +553,11 @@ region check.
 - **Receive and Hopper** measure what starting the radio took and, the next
   time, refuse with `Not enough memory` when that plus 6 KB is no longer free,
   instead of risking an out-of-memory crash. The measurement is kept per
-  firmware.
+  firmware. Before the first measurement, a session is refused only when less
+  than 16 KB is free (it could only run out of memory there).
+- **Optional screens** (Waterfall, Bitstream Explorer, comparisons, Sessions,
+  Unknown Protocol Analysis in the Full edition) check what they and their
+  module need before allocating anything and explain a refusal.
 - A one-line memory summary goes to the log when the app closes.
 
 ## Not implemented / out of scope

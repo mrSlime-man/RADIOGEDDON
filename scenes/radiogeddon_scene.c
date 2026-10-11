@@ -181,6 +181,31 @@ void radiogeddon_scene_show_message(RadioGeddonApp* app, const char* header, con
     scene_manager_next_scene(app->scene_manager, RadioGeddonSceneMessage);
 }
 
+/* The analysis streams the file through the analyzer (sizeof(RgAnalyzer)) and
+ * grows a report text of a few kilobytes. */
+#define RADIOGEDDON_UNKNOWN_WORK (sizeof(RgAnalyzer) + 10u * 1024u)
+
+RadioGeddonUnknownFn radiogeddon_scene_unknown_begin(void* context) {
+#if RG_EDITION_FULL
+    RadioGeddonApp* app = context;
+    if(!radiogeddon_scene_module_load(app, RADIOGEDDON_MODULE_UNKNOWN, RADIOGEDDON_UNKNOWN_WORK))
+        return NULL;
+    return ((const RadioGeddonUnknownModule*)app->module_api)->unknown;
+#else
+    UNUSED(context);
+    return radiogeddon_analysis_unknown;
+#endif
+}
+
+void radiogeddon_scene_unknown_end(void* context) {
+#if RG_EDITION_FULL
+    RadioGeddonApp* app = context;
+    if(app->module) radiogeddon_scene_module_unload(app);
+#else
+    UNUSED(context);
+#endif
+}
+
 void radiogeddon_scene_db_release(RadioGeddonApp* app) {
     if(app->db_view) {
         view_dispatcher_remove_view(app->view_dispatcher, RadioGeddonViewDb);
@@ -194,6 +219,25 @@ void radiogeddon_scene_db_release(RadioGeddonApp* app) {
 }
 
 #if RG_EDITION_FULL
+bool radiogeddon_scene_module_load(RadioGeddonApp* app, const char* file, size_t extra_heap) {
+    furi_check(!app->module);
+    RadioGeddonModuleStatus status;
+    app->module =
+        radiogeddon_module_load(app->storage, file, extra_heap, &app->module_api, &status);
+    if(app->module) {
+        radiogeddon_memdiag_sample(file);
+        return true;
+    }
+    radiogeddon_module_error(status, &app->message_header, &app->message_text);
+    return false;
+}
+
+void radiogeddon_scene_module_unload(RadioGeddonApp* app) {
+    radiogeddon_module_unload(app->module);
+    app->module = NULL;
+    app->module_api = NULL;
+}
+
 RadioGeddonFavorites* radiogeddon_scene_favorites(RadioGeddonApp* app) {
     if(!app->favorites_loaded) {
         radiogeddon_favorites_load(app->storage, &app->favorites);

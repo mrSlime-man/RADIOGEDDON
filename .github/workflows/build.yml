@@ -11,7 +11,9 @@
 #               capture tests (the analyzer on those captures) and the engine
 #               lifecycle tests (Scanner, Range Scanner, Hopper started and
 #               stopped repeatedly, every allocation counted), all downloaded
-#               at the pinned release
+#               at the pinned release, and the offline UI tests (Waterfall and
+#               Bitstream Explorer drawn on a host canvas with the firmware's
+#               fonts; synthetic previews kept as an artifact)
 #   catalog     Apps Catalog requirements for the Catalog edition
 #               (scripts/check_catalog.py)
 #   fuzz        the fuzz targets under libFuzzer for a fixed time each
@@ -67,6 +69,18 @@ jobs:
         run: make -C test captures
       - name: Run engine lifecycle tests (repeated start/stop, allocations counted)
         run: make -C test lifecycle
+      - name: Run offline UI tests (screens on a host 128x64 canvas, firmware fonts)
+        run: make -C test ui
+      # Synthetic development previews of the drawing code: not device
+      # screenshots, never for the Apps Catalog.
+      - name: Keep the synthetic UI previews
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: synthetic-ui-previews
+          path: test/build/ui/previews/*.png
+          if-no-files-found: ignore
+          retention-days: 14
 
   catalog:
     name: catalog (Apps Catalog checks)

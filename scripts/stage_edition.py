@@ -31,10 +31,29 @@ FULL_REWRITES = (
     (r'cdefines=\["RADIOGEDDON_EDITION_CATALOG"\]', 'cdefines=["RADIOGEDDON_EDITION_FULL"]'),
     (
         r'fap_description="[^"]*"',
-        'fap_description="Full edition: Sub-GHz research toolkit with range scanning, '
-        'scan profiles, favorites, field maps, recording, decoding and replay."',
+        'fap_description="Full edition: Sub-GHz research toolkit: range scanning, waterfall, '
+        'bitstream explorer, multi-capture compare, sessions, recording, decoding and replay."',
     ),
 )
+
+# Full edition: sources built only into its modules (modules/modules.fam),
+# kept out of the app so their code takes RAM only while a module is loaded.
+FULL_MODULE_ONLY = (
+    "views/radiogeddon_bits_view.c",
+    "views/radiogeddon_waterfall_view.c",
+    "helpers/rg_bits.c",
+    "helpers/rg_glyph.c",
+    "helpers/rg_multi.c",
+    "helpers/radiogeddon_multi.c",
+    "helpers/radiogeddon_analysis_unknown.c",
+    "helpers/rg_checksum.c",
+    "scenes/radiogeddon_scene_sessions.c",
+    "scenes/radiogeddon_scene_session_name.c",
+    "scenes/radiogeddon_scene_session_menu.c",
+    "scenes/radiogeddon_scene_session_signals.c",
+    "scenes/radiogeddon_scene_session_groups.c",
+)
+FULL_MODULES_FAM = "modules/modules.fam"
 
 # appid and name of each edition, as written into the .fap manifest.
 EDITIONS = {
@@ -52,6 +71,12 @@ def rewrite_fam(text, edition):
         text, n = re.subn(pattern, replacement, text)
         if n != 1:
             raise SystemExit("application.fam: expected one match for %s, found %d" % (pattern, n))
+    excluded = "".join('        "!%s",\n' % path for path in FULL_MODULE_ONLY)
+    text, n = re.subn(r'(        "views/\*\.c",\n)', r"\1" + excluded.replace("\\", "\\\\"), text)
+    if n != 1:
+        raise SystemExit('application.fam: expected one "views/*.c" source line, found %d' % n)
+    with open(os.path.join(ROOT, FULL_MODULES_FAM), encoding="utf-8") as f:
+        text += "\n" + f.read()
     return text
 
 

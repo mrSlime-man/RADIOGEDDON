@@ -1,14 +1,20 @@
 #include "radiogeddon_scene.h"
 
+// The Catalog edition lists its tools directly. The Full edition groups the
+// scanning tools under Scan and the file tools under Analyze, so the main
+// menu stays one screen long.
 typedef enum {
     StartIndexScanner,
-    StartIndexRange, // Full edition
+    StartIndexRange, // unused: under Scan in the Full edition
     StartIndexReceiver,
     StartIndexHopper,
-    StartIndexFavorites, // Full edition
+    StartIndexFavorites, // unused: under Scan in the Full edition
     StartIndexDatabase,
     StartIndexSettings,
     StartIndexAbout,
+    StartIndexScan, // Full edition
+    StartIndexAnalyze, // Full edition
+    StartIndexSessions, // Full edition
 } StartIndex;
 
 static void radiogeddon_scene_start_submenu_callback(void* context, uint32_t index) {
@@ -29,16 +35,31 @@ void radiogeddon_scene_start_on_enter(void* context) {
         radiogeddon_hopper_free(app->hopper);
         app->hopper = NULL;
     }
+#if RG_FEATURE_SESSIONS
+    radiogeddon_scene_sessions_release(app);
+#endif
     Submenu* submenu = app->submenu;
     submenu_reset(submenu);
     submenu_set_header(submenu, RG_EDITION_FULL ? "RadioGeddon Full" : "RadioGeddon");
 
+#if RG_EDITION_FULL
+    submenu_add_item(
+        submenu, "Scan", StartIndexScan, radiogeddon_scene_start_submenu_callback, app);
+    submenu_add_item(
+        submenu,
+        "Receive & Record",
+        StartIndexReceiver,
+        radiogeddon_scene_start_submenu_callback,
+        app);
+    submenu_add_item(
+        submenu, "Analyze", StartIndexAnalyze, radiogeddon_scene_start_submenu_callback, app);
+    submenu_add_item(
+        submenu, "Database", StartIndexDatabase, radiogeddon_scene_start_submenu_callback, app);
+    submenu_add_item(
+        submenu, "Sessions", StartIndexSessions, radiogeddon_scene_start_submenu_callback, app);
+#else
     submenu_add_item(
         submenu, "Scanner", StartIndexScanner, radiogeddon_scene_start_submenu_callback, app);
-#if RG_FEATURE_RANGE_SCAN
-    submenu_add_item(
-        submenu, "Range Scanner", StartIndexRange, radiogeddon_scene_start_submenu_callback, app);
-#endif
     submenu_add_item(
         submenu,
         "Receive & Record",
@@ -51,12 +72,9 @@ void radiogeddon_scene_start_on_enter(void* context) {
         StartIndexHopper,
         radiogeddon_scene_start_submenu_callback,
         app);
-#if RG_FEATURE_FAVORITES
-    submenu_add_item(
-        submenu, "Favorites", StartIndexFavorites, radiogeddon_scene_start_submenu_callback, app);
-#endif
     submenu_add_item(
         submenu, "Database", StartIndexDatabase, radiogeddon_scene_start_submenu_callback, app);
+#endif
     submenu_add_item(
         submenu, "Settings", StartIndexSettings, radiogeddon_scene_start_submenu_callback, app);
     submenu_add_item(
@@ -73,7 +91,7 @@ bool radiogeddon_scene_start_on_event(void* context, SceneManagerEvent event) {
     bool consumed = false;
 
     // Only menu indices are ours; ignore late events from a scene just closed.
-    if(event.type == SceneManagerEventTypeCustom && event.event <= StartIndexAbout) {
+    if(event.type == SceneManagerEventTypeCustom && event.event <= StartIndexSessions) {
         scene_manager_set_scene_state(app->scene_manager, RadioGeddonSceneStart, event.event);
         switch(event.event) {
         case StartIndexScanner:
@@ -82,18 +100,6 @@ bool radiogeddon_scene_start_on_event(void* context, SceneManagerEvent event) {
         case StartIndexReceiver:
             scene_manager_next_scene(app->scene_manager, RadioGeddonSceneReceiver);
             break;
-#if RG_FEATURE_RANGE_SCAN
-        case StartIndexRange:
-            scene_manager_set_scene_state(app->scene_manager, RadioGeddonSceneRangeSetup, 0);
-            scene_manager_next_scene(app->scene_manager, RadioGeddonSceneRangeSetup);
-            break;
-#endif
-#if RG_FEATURE_FAVORITES
-        case StartIndexFavorites:
-            scene_manager_set_scene_state(app->scene_manager, RadioGeddonSceneFavorites, 0);
-            scene_manager_next_scene(app->scene_manager, RadioGeddonSceneFavorites);
-            break;
-#endif
         case StartIndexHopper:
             scene_manager_next_scene(app->scene_manager, RadioGeddonSceneHopper);
             break;
@@ -107,6 +113,18 @@ bool radiogeddon_scene_start_on_event(void* context, SceneManagerEvent event) {
         case StartIndexAbout:
             scene_manager_next_scene(app->scene_manager, RadioGeddonSceneAbout);
             break;
+#if RG_EDITION_FULL
+        case StartIndexScan:
+            scene_manager_next_scene(app->scene_manager, RadioGeddonSceneScanMenu);
+            break;
+        case StartIndexAnalyze:
+            scene_manager_next_scene(app->scene_manager, RadioGeddonSceneAnalyzeMenu);
+            break;
+        case StartIndexSessions:
+            scene_manager_set_scene_state(app->scene_manager, RadioGeddonSceneSessions, 0);
+            scene_manager_next_scene(app->scene_manager, RadioGeddonSceneSessions);
+            break;
+#endif
         default:
             break;
         }

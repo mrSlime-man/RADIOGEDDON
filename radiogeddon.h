@@ -37,11 +37,16 @@
 #include "helpers/rg_range.h"
 #include "helpers/radiogeddon_profiles.h"
 #include "helpers/radiogeddon_rangescan.h"
+#include "helpers/radiogeddon_modules.h"
+#include "helpers/rg_multi.h"
+#include "helpers/radiogeddon_sessions.h"
 #include "views/radiogeddon_scanner_view.h"
 #include "views/radiogeddon_receiver_view.h"
 #include "views/radiogeddon_timeline_view.h"
 #include "views/radiogeddon_db_view.h"
 #include "views/radiogeddon_spectrum_view.h"
+#include "views/radiogeddon_waterfall_view.h"
+#include "views/radiogeddon_bits_view.h"
 
 #define RADIOGEDDON_TEXT_INPUT_BUFFER_SIZE 64
 #define RADIOGEDDON_TAG                    "RadioGeddon"
@@ -60,6 +65,8 @@ typedef enum {
     RadioGeddonViewDb, // added only while the Database is open
     RadioGeddonViewNumberInput, // added only while a custom frequency is typed
     RadioGeddonViewSpectrum, // Full: added only while the Range Scanner is open
+    RadioGeddonViewWaterfall, // Full: added only while the Waterfall is open
+    RadioGeddonViewBits, // Full: added only while the Bitstream Explorer is open
 } RadioGeddonView;
 
 /** What a frequency typed on the number keyboard is for. */
@@ -177,6 +184,45 @@ struct RadioGeddonApp {
     RadioGeddonSpectrumView* spectrum_view;
     uint32_t range_cursor; // point under the cursor, kept across a trip to Receive
     char profile_name[RADIOGEDDON_PROFILE_NAME_LEN];
+#endif
+#if RG_EDITION_FULL
+    // The optional tool loaded for the screen shown (radiogeddon_modules.h):
+    // at most one at a time, unloaded when that screen closes.
+    RadioGeddonModule* module;
+    const void* module_api;
+#endif
+#if RG_FEATURE_WATERFALL
+    // Waterfall: the range engine above (app->rangescan) with a history
+    // buffer and a screen of its own, all only while the Waterfall is open.
+    RadioGeddonWaterfallView* waterfall_view;
+    void* wf_buf;
+    uint16_t wf_cursor; // column under the cursor, kept across a trip to Receive
+    uint8_t wf_span_index; // sensitivity (radiogeddon_waterfall_spans)
+    bool wf_noise_comp;
+#endif
+#if RG_FEATURE_BITSTREAM
+    // Bitstream Explorer: the analysis of the open capture and its screen,
+    // only while the explorer is open.
+    RadioGeddonBitsView* bits_view;
+    RgAnalysis* bits_doc;
+#endif
+#if RG_FEATURE_MULTI_COMPARE
+    // Multi-Capture Compare: the chosen recordings (paths only) and, while
+    // the result is shown, its report text.
+    FuriString* multi_paths[RG_MULTI_MAX_CAPTURES];
+    uint8_t multi_count;
+    char multi_header[32];
+    char* multi_report;
+#endif
+#if RG_FEATURE_SESSIONS
+    // Sessions: the list and the open session exist only while the
+    // Sessions screens are shown (freed on returning to the main menu).
+    RadioGeddonModule* sessions_module; // the Sessions screens' code
+    const void* sessions_api;
+    RadioGeddonSessionList* session_list;
+    RgSession* session;
+    char session_name[RG_SESSION_NAME_MAX]; // the session opened from the list
+    uint8_t session_name_mode; // what the name keyboard is for (SessionNameMode)
 #endif
 };
 

@@ -58,7 +58,9 @@ application.fam             Flipper app manifest (appid, category, icon, sources
 scenes/                     One file per screen; the scene list is generated from
                             radiogeddon_scene_config.h (X-macros)
 views/                      Custom canvas views: scanner sweep, live receiver, pulse timeline,
-                            database list
+                            database list, waterfall [Full], bitstream explorer [Full]
+modules/                    Full-only plugins (.fal) built from the sources below, and their
+                            manifest (modules.fam): waterfall, bits, multi, unknown, sessions
 helpers/
   radiogeddon_subghz.*      Radio wrapper: device, decoders, RAW capture, hopper retune, TX
   radiogeddon_bands.*       Modulation presets and frequency lists (no radio SDK needed)
@@ -93,10 +95,21 @@ helpers/
   rg_checksum.*             Pure checksum / CRC-8 / parity structure hypotheses [Full]
   radiogeddon_rangescan.*   Range Scanner engine: sweep thread, per-point rg_scan, CSV [Full]
   radiogeddon_profiles.*    Favorites and scan profiles on the SD card [Full]
+  rg_waterfall.*            Pure RSSI sweep history: ring of rows, columns, levels, dither [Full]
+  rg_bits.*, rg_glyph.*     Pure bit/byte/diff/field extraction and a 3x5 glyph font [Full]
+  rg_multi.*                Pure multi-capture summaries, comparison and report [Full]
+  rg_session.*              Pure research-session file format, save steps, grouping [Full]
+  rg_elf.*                  Pure size of an ELF file's allocated sections (module check) [Full]
+  radiogeddon_multi.*       Multi-Capture Compare over files, one at a time [Full, module]
+  radiogeddon_sessions.*    Research sessions on the SD card, active session [Full]
+  radiogeddon_module.c      Module loader: memory check, load, unload, error text [Full]
+  radiogeddon_modules.h     The structs each module returns, and their file names [Full]
+  radiogeddon_host*.h       The app helpers handed to the Sessions module [Full]
 radiogeddon_edition.h       The edition (Full / Catalog) and its RG_FEATURE_* switches
 catalog/                    Apps Catalog description, changelog, manifest template, screenshots
 assets/                     10x10 launcher icon (compiled into the .fap)
-test/                       Host unit tests (1,548 checks), format, decoder, capture and lifecycle tests, fuzz, fixtures
+test/                       Host unit tests (1,962 checks), format, decoder, capture, lifecycle and
+                            offline UI tests (test/ui: host canvas, firmware fonts), fuzz, fixtures
 scripts/                    Edition staging, pinned builds, manifest and import verification, packaging,
                             catalog checks, link check
 tools/brand/                Generator for the logo, banner and social preview
@@ -108,7 +121,8 @@ tools/brand/                Generator for the logo, banner and social preview
 `radiogeddon_edition.h` turns `RADIOGEDDON_EDITION_FULL` or
 `RADIOGEDDON_EDITION_CATALOG` (from the manifest's `cdefines`) into
 `RG_FEATURE_*` switches: `RG_FEATURE_RANGE_SCAN`, `_FAVORITES`, `_FREQ_STEP`,
-`_BAND_INFO`, `_CHECKSUM_HINTS` (Full) and `_REGION_TX_GATE` (Catalog). Code
+`_BAND_INFO`, `_CHECKSUM_HINTS`, `_WATERFALL`, `_BITSTREAM`, `_MULTI_COMPARE`,
+`_SESSIONS` (Full) and `_REGION_TX_GATE` (Catalog). Code
 asks for a feature, never for an edition. With neither defined the build is a
 Catalog build.
 
@@ -118,10 +132,52 @@ tracked files and rewrites four manifest fields (appid `radiogeddon_full`,
 name, description, the define), each of which must match exactly once.
 Full-only scenes are registered only in Full builds (the scene list's X-macro
 has a `#if`), and Full-only modules compile to nothing in the Catalog edition,
-so it carries none of their code (75.6 KB resident against the Full edition's
-94.5 KB). Settings, storage and the radio layer are the same code in both, so
+so it carries none of their code (77,173 B resident against the Full edition's
+104,388 B). Settings, storage and the radio layer are the same code in both, so
 either edition reads, writes and keeps the other's files in
 `/ext/apps_data/radiogeddon`.
+
+### Modules (Full edition)
+
+A `.fap` is loaded whole into the heap and stays there while the app runs.
+The Full edition's larger optional tools are therefore built as plugins
+(`apptype=FlipperAppType.PLUGIN`, `fal_embedded=True` in
+`modules/modules.fam`, appended to the manifest by `stage_edition.py full`):
+the firmware unpacks them into the app's assets folder, and
+`radiogeddon_module_load()` opens one with the firmware's plugin manager
+(application id `radiogeddon_full`, `RADIOGEDDON_MODULE_API`) when its screen
+opens; the scene unloads it in `on_exit`. A module links against the
+firmware's API only: its entry point returns a struct of functions
+(`radiogeddon_modules.h`), and everything from the app it needs is passed in.
+The Sessions module's scenes call a few app helpers (messages, progress,
+loading another module) through a table the app hands it
+(`radiogeddon_host.h`; in a module build `radiogeddon_host_map.h` maps the
+helpers' names onto it, so the scene sources compile unchanged in both).
+
+Before loading, `rg_elf` sums the `.fal`'s allocated sections and the loader
+adds what the tool will allocate, a loader allowance and a margin; if that
+does not fit the free heap, the screen says `Not enough memory` before
+anything is allocated (Flipper's `malloc` never returns NULL, so the check
+must come first). `RADIOGEDDON_MODULE_API` changes with any module struct, so
+a stale `.fal` is refused, not called. Sources used only by modules are
+listed in `stage_edition.py`'s `FULL_MODULE_ONLY` and left out of the app
+itself; small shared helpers (`rg_analyzer`, `rg_raw`, `rg_freq`, …) are
+compiled into each module that needs them as well.
+
+| Module | Contents | Resident while loaded |
+|--------|----------|-----------------------|
+| `radiogeddon_wf.fal` | Waterfall view | 2,740 B |
+| `radiogeddon_bits.fal` | Bitstream Explorer view, `rg_bits`, glyphs | 6,484 B |
+| `radiogeddon_unknown.fal` | Unknown Protocol Analysis report, checksum hypotheses | 15,608 B |
+| `radiogeddon_multi.fal` | `rg_multi`, comparison over files | 15,960 B |
+| `radiogeddon_sessions.fal` | Sessions scenes, `rg_session`, the Database list code they use | 16,383 B |
+
+Built into the app (as measured just before the move), the tools made the
+resident Full edition 128,309 B, 33,633 B more than beta 6; as modules it is
+104,388 B, 9,712 B more (the screens' entry points, the Waterfall history in
+the Range Scanner engine, the active session's hook on saving, the loader,
+and analyzer work shared with the Catalog edition). The Unknown Protocol
+Analysis report, resident in beta 6, now loads only while it runs.
 
 ## Screens and navigation
 

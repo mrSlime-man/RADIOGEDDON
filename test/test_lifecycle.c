@@ -1,5 +1,6 @@
 /**
- * Engine lifecycle tests: the real Scanner, Range Scanner and Hopper engines
+ * Engine lifecycle tests: the real Scanner, Range Scanner (also with the
+ * Waterfall's history attached) and Hopper engines
  * (helpers/radiogeddon_scanner.c, _rangescan.c, _hopper.c) on real threads,
  * against the fake radio in stubs/radio_fake.c and Furi stand-ins that count
  * every allocation (STUB_TRACK_ALLOC).
@@ -185,6 +186,92 @@ static void test_rangescan_cycles(void) {
     fake_band_hi = 928000000;
 }
 
+/* The Waterfall: the range engine with a sweep history attached, entered
+ * and left repeatedly, rows built from complete sweeps only, an active point
+ * drawn solid on its column, nothing kept after free. */
+static void test_waterfall_cycles(void) {
+    printf("test_waterfall_cycles\n");
+    size_t base_bytes = stub_live_bytes, base_blocks = stub_live_blocks;
+    RgBandSet bands = {.band = {{300000000, 348000000}, {387000000, 464000000}}, .count = 2};
+    fake_band_lo = 300000000;
+    fake_band_hi = 464000000;
+    RgRange range;
+    CHECK(
+        rg_range_plan(&range, 340000000, 400000000, 500000, &bands, RG_RANGE_MAX_POINTS) ==
+            RgRangeOk,
+        "plan");
+    size_t bytes = rg_waterfall_bytes(range.points, RADIOGEDDON_WF_VIEW_H);
+    RadioGeddonWaterfallFrame* frame = malloc(sizeof(RadioGeddonWaterfallFrame));
+    RadioGeddonWaterfallRequest req = {
+        .scroll = 0, .cursor = 0, .span_db = 20, .noise_comp = true};
+    for(int c = 0; c < CYCLES; c++) {
+        size_t before = stub_live_bytes;
+        void* buf = malloc(bytes);
+        RadioGeddonRangeScan* rs = radiogeddon_rangescan_alloc(fake_radio, &range, 1, 10, false);
+        if(!radiogeddon_rangescan_waterfall_attach(rs, buf, bytes)) {
+            CHECK(false, "history attaches");
+            break;
+        }
+        radiogeddon_rangescan_start(rs);
+        furi_delay_ms(2);
+        radiogeddon_rangescan_waterfall_frame(rs, &req, frame);
+        radiogeddon_rangescan_stop(rs);
+        radiogeddon_rangescan_free(rs);
+        free(buf);
+        if(stub_live_bytes != before) {
+            CHECK(false, "waterfall memory returned after each cycle");
+            break;
+        }
+    }
+    CHECK(atomic_load(&fake_scan_sessions) == 0, "every waterfall session closed");
+
+    // A signal appears on one point after the floors are known: rows arrive,
+    // its column is strong, the peak and cursor readings come from it.
+    void* buf = malloc(bytes);
+    RadioGeddonRangeScan* rs = radiogeddon_rangescan_alloc(fake_radio, &range, 1, 10, false);
+    CHECK(radiogeddon_rangescan_waterfall_attach(rs, buf, bytes), "attach");
+    atomic_store(&fake_active_hz, 0);
+    radiogeddon_rangescan_start(rs);
+    for(int t = 0; t < 1000; t++) {
+        radiogeddon_rangescan_waterfall_frame(rs, &req, frame);
+        if(!frame->calibrating && frame->filled >= 2) break;
+        furi_delay_ms(2);
+    }
+    CHECK(!frame->calibrating && frame->filled >= 2, "rows from quiet sweeps");
+    uint32_t point = 30;
+    atomic_store(&fake_active_hz, rg_range_frequency(&range, point));
+    uint32_t stored = frame->stored;
+    for(int t = 0; t < 2000; t++) {
+        radiogeddon_rangescan_waterfall_frame(rs, &req, frame);
+        if(frame->stored >= stored + 3) break;
+        furi_delay_ms(2);
+    }
+    radiogeddon_rangescan_stop(rs);
+    atomic_store(&fake_active_hz, 0);
+    CHECK(frame->stored >= stored + 3, "new rows while active");
+    CHECK(frame->columns == range.points, "one column per point");
+    CHECK(frame->have_peak && frame->peak_column == point, "peak on the active point");
+    CHECK(frame->peak_hz == rg_range_frequency(&range, point), "peak frequency");
+    req.cursor = (uint16_t)point;
+    radiogeddon_rangescan_waterfall_frame(rs, &req, frame);
+    CHECK(frame->cursor_dbm > -60 && frame->cursor_peak > -60, "cursor reads the active point");
+    CHECK(frame->cursor_hz == rg_range_frequency(&range, point), "cursor frequency for Receive");
+    // The newest row draws the active column solid.
+    uint16_t x = frame->cursor_x;
+    CHECK(frame->xbm[x / 8u] & (1u << (x % 8u)), "active column drawn on the newest row");
+    // Scroll requests are clamped to the history.
+    req.scroll = 1000;
+    radiogeddon_rangescan_waterfall_frame(rs, &req, frame);
+    CHECK(frame->scroll == frame->max_scroll, "scroll clamped");
+    radiogeddon_rangescan_free(rs);
+    free(buf);
+    free(frame);
+    CHECK(
+        stub_live_bytes == base_bytes && stub_live_blocks == base_blocks, "waterfall freed fully");
+    fake_band_lo = 300000000;
+    fake_band_hi = 928000000;
+}
+
 static _Atomic int g_saved_events;
 static void hopper_event(RadioGeddonHopperEvent event, void* context) {
     (void)context;
@@ -234,6 +321,7 @@ static void test_hopper_cycles(void) {
 int main(void) {
     test_scanner_cycles();
     test_rangescan_cycles();
+    test_waterfall_cycles();
     test_hopper_cycles();
     printf("%d checks, %d failures\n", g_checks, g_failures);
     return g_failures ? 1 : 0;

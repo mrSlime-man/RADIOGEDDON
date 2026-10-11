@@ -7,7 +7,7 @@ in two editions (see [Features → Editions](FEATURES.md#editions)), and because
 each firmware family publishes its own SDK, **each family gets its own `.fap`,
 compiled against that family's SDK**.
 
-## Supported firmware (v1.0.0-beta.6)
+## Supported firmware (v1.0.0-beta.7)
 
 | Firmware | Edition | Built against | SDK API | Download |
 |----------|---------|---------------|---------|----------|

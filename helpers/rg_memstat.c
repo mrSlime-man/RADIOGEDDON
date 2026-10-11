@@ -24,7 +24,9 @@ uint32_t rg_memstat_peak_use(const RgMemStat* s) {
 }
 
 bool rg_mem_session_fits(uint32_t free_now, uint32_t cost, uint32_t margin) {
-    if(cost == 0) return true;
+    // Never measured: refuse only when even the smallest session could not
+    // fit (a session that surely runs the heap out), never otherwise.
+    if(cost == 0) return free_now >= RG_MEM_MIN_SESSION_COST;
     return (uint64_t)free_now >= (uint64_t)cost + margin;
 }
 

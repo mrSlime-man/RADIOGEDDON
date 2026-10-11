@@ -53,8 +53,8 @@ static int g_checks = 0;
 /* Totals the engine reached on these 50 captures when they were set. Raise
  * them when the engine improves; a drop is a regression. */
 #define MIN_TE_OK     50
-#define MIN_FAMILY_OK 41
-#define MIN_BITS_OK   33
+#define MIN_FAMILY_OK 43
+#define MIN_BITS_OK   35
 
 typedef struct {
     const char* capture; /* as subghz_test.c names it */

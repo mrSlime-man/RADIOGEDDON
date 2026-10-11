@@ -71,6 +71,9 @@ RgAnalyzer*
  */
 void radiogeddon_analysis_set_progress(RadioGeddonProgressCallback callback, void* context);
 
+/** Report progress to the callback set above, if any. */
+void radiogeddon_analysis_report_progress(uint32_t done, uint32_t total);
+
 /** Append a short user-facing explanation of a non-Ok @p status. */
 void radiogeddon_analysis_cat_status(FuriString* out, RadioGeddonAnalysisStatus status);
 
@@ -82,6 +85,20 @@ void radiogeddon_analysis_cat_status(FuriString* out, RadioGeddonAnalysisStatus 
  * is presented as a verified decode and no key is recovered.
  */
 void radiogeddon_analysis_unknown(Storage* storage, const char* path, FuriString* out);
+
+/** radiogeddon_analysis_unknown's shape, for passing it (or a module's copy). */
+typedef void (*RadioGeddonUnknownFn)(Storage* storage, const char* path, FuriString* out);
+
+/**
+ * Where the Unknown Protocol Analysis comes from when it is needed: begin()
+ * returns it (loading it first if it is a module) or NULL when it cannot be
+ * had now (not enough memory); end() releases it.
+ */
+typedef struct {
+    RadioGeddonUnknownFn (*begin)(void* context);
+    void (*end)(void* context);
+    void* context;
+} RadioGeddonUnknownProvider;
 
 /**
  * Run the firmware's protocol decoders over a RAW capture (see

@@ -14,6 +14,7 @@
 #include <storage/storage.h>
 #include "radiogeddon_storage.h"
 #include "radiogeddon_subghz.h"
+#include "radiogeddon_analysis.h"
 
 typedef enum {
     RadioGeddonReportOk,
@@ -34,6 +35,7 @@ RadioGeddonReportResult radiogeddon_report_save(
     RadioGeddonSubGhz* subghz,
     const char* sub_path,
     const RadioGeddonLoadedSignal* sig,
+    const RadioGeddonUnknownProvider* unknown,
     FuriString* scratch,
     FuriString* out_path);
 

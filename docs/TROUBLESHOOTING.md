@@ -200,6 +200,23 @@ The measurement is replaced after the next session that runs if it changed by
 more than 1 KB, and it is ignored after a firmware update until a session has
 run on the new firmware.
 
+## `Tool missing` or `Tool not loaded` (Full edition)
+
+The Waterfall, Bitstream Explorer, comparisons, Unknown Protocol Analysis and
+Sessions are modules packed inside the Full edition's `.fap`, unpacked by the
+firmware to `apps_assets/radiogeddon_full/plugins/` when the app starts.
+`Tool missing` means that folder is incomplete; `Tool not loaded` that a
+module does not match this version or firmware (for example, left over from
+another build). Delete `apps_assets/radiogeddon_full` with qFlipper, then
+reinstall the `.fap` for your firmware and start it again. If it persists,
+please report it with your firmware version and a [device log](#collecting-a-device-log).
+
+## `Not enough memory` in the Waterfall, Sessions or another Full tool
+
+Each optional tool checks, before allocating anything, that its module and
+its work fit the free heap. Restart the Flipper (closing whatever ran before)
+and open the tool again.
+
 ## *Unknown Protocol Analysis* says *Not enough free memory*
 
 The analysis needs about 8 KB of contiguous free heap plus a safety margin and
