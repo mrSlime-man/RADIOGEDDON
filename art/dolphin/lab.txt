@@ -1,0 +1,159 @@
+# RadioGeddon Dolphin Lab: original monochrome pixel art for the lab's
+# props, effects and menu icons (MIT, like the rest of the repository).
+# Same format as dolphin.txt; tools/dolphin/build_sprites.py builds both.
+
+# Menu icons, 7x7: Scan, Receive, Analyze, Database, Sessions, Lab room,
+# Settings, About.
+sprite icon_scan
+..###..
+.#...#.
+#...#.#
+#..#..#
+#.....#
+.#...#.
+..###..
+
+sprite icon_receive
+#.....#
+.#.#.#.
+#..#..#
+...#...
+..#.#..
+..#.#..
+.#...#.
+
+sprite icon_analyze
+.......
+.##....
+#..#...
+#..#..#
+...#..#
+....##.
+.......
+
+sprite icon_database
+.#####.
+#.....#
+.#####.
+#.....#
+.#####.
+#.....#
+.#####.
+
+sprite icon_sessions
+###....
+#..####
+#.....#
+#.....#
+#.....#
+#######
+.......
+
+sprite icon_lab
+..###..
+...#...
+...#...
+..#.#..
+.#...#.
+#.###.#
+#######
+
+sprite icon_settings
+...#...
+.#.#.#.
+..###..
+###.###
+..###..
+.#.#.#.
+...#...
+
+sprite icon_about
+...#...
+.......
+..##...
+...#...
+...#...
+...#...
+..###..
+
+# A handheld radio the dolphin examines when idle.
+sprite radio
+#....
+#....
+####.
+#..#.
+#.#..
+#..#.
+####.
+
+# Sound waves next to the headphones: small, medium, large.
+sprite wave_s
+#.
+.#
+.#
+#.
+
+sprite wave_m
+#..
+.#.
+..#
+..#
+.#.
+#..
+
+sprite wave_l
+#..
+.#.
+..#
+..#
+..#
+..#
+.#.
+#..
+
+# A sparkle for a celebration.
+sprite sparkle
+..#..
+..#..
+##.##
+..#..
+..#..
+
+# A memory chip with an almost empty gauge (low memory).
+sprite chip
+.#.#.#.#.
+#########
+#.......#
+#.##....#
+#.......#
+#########
+.#.#.#.#.
+
+# The small dolphin head drawn in a radio screen's header (11x8):
+# calm, alert (eye wide) and listening (headphone cup).
+sprite mini_calm
+..####.....
+.#....#....
+#...##.#...
+#...##..###
+#.......#..
+#....###...
+.####......
+
+sprite mini_alert
+..####.....
+.#....#....
+#..###.#...
+#..#.#..###
+#..###..#..
+#....###...
+.####......
+
+sprite mini_listen
+..####.....
+.#....#....
+##..##.#...
+###.##..###
+##......#..
+#....###...
+.####......

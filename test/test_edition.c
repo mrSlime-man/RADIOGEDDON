@@ -40,6 +40,7 @@ int main(void) {
     CHECK(RG_FEATURE_BITSTREAM == EXPECT_FULL, "bitstream explorer only in Full");
     CHECK(RG_FEATURE_MULTI_COMPARE == EXPECT_FULL, "multi-capture compare only in Full");
     CHECK(RG_FEATURE_SESSIONS == EXPECT_FULL, "sessions only in Full");
+    CHECK(RG_FEATURE_DOLPHIN_LAB == EXPECT_FULL, "Dolphin Lab only in Full");
     // The app's own region gate is in every build except Full.
     CHECK(RG_FEATURE_REGION_TX_GATE == !EXPECT_FULL, "region gate in Catalog");
     printf("%d checks, %d failures\n", g_checks, g_failures);

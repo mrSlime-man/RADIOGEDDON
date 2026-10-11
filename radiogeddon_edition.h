@@ -77,3 +77,9 @@
 /* Research Sessions: named groups of recordings kept in small text files on
  * the SD card (helpers/rg_session.h). */
 #define RG_FEATURE_SESSIONS RG_EDITION_FULL
+
+/* Dolphin Lab: the animated dolphin mascot, the lab dashboard home screen,
+ * the Dolphin Lab / Cyber Lab / Classic UI styles, cards, transitions,
+ * optional UI feedback and the Dolphin Lab room (helpers/rg_mascot.h,
+ * helpers/radiogeddon_ui.h). The Catalog edition keeps the Classic menus. */
+#define RG_FEATURE_DOLPHIN_LAB RG_EDITION_FULL
