@@ -431,6 +431,13 @@ void radiogeddon_rangescan_waterfall_frame(
     furi_mutex_release(instance->mutex);
 }
 
+void radiogeddon_rangescan_waterfall_frame_fn(
+    void* engine,
+    const RadioGeddonWaterfallRequest* request,
+    RadioGeddonWaterfallFrame* out) {
+    radiogeddon_rangescan_waterfall_frame(engine, request, out);
+}
+
 bool radiogeddon_rangescan_waterfall_save_csv(
     RadioGeddonRangeScan* instance,
     Storage* storage,

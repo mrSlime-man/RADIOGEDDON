@@ -1,4 +1,5 @@
 #include "radiogeddon_scene.h"
+#include "../helpers/rg_multi.h"
 
 #if RG_FEATURE_SESSIONS
 
@@ -167,23 +168,30 @@ static void radiogeddon_scene_session_menu_compare(RadioGeddonApp* app) {
     }
 }
 
-/* A text report: the recordings with what their files say, then the
- * comparison of up to 8 of them. Written to reports/SESSION_<name>.txt. */
-static bool radiogeddon_scene_session_menu_export(RadioGeddonApp* app, FuriString* where) {
+static void radiogeddon_scene_session_menu_file(void* context, size_t index, size_t count) {
+    RadioGeddonApp* app = context;
+    snprintf(
+        app->multi_header,
+        sizeof(app->multi_header),
+        "Recording %u of %u",
+        (unsigned)(index + 1),
+        (unsigned)count);
+    radiogeddon_scene_show_progress(app, app->multi_header);
+}
+
+/* A text report: the recordings, then the comparison of up to 8 of them by
+ * the Multi-Capture Compare module. Written to reports/SESSION_<name>.txt.
+ * Returns false with app->message_* set on failure. */
+static bool radiogeddon_scene_session_menu_export(RadioGeddonApp* app) {
     RgSession* s = app->session;
+    const char* paths[RG_MULTI_MAX_CAPTURES];
+    FuriString* path_store[RG_MULTI_MAX_CAPTURES];
     size_t n = 0;
-    if(memmgr_heap_get_max_free_block() <
-       RG_MULTI_MAX_CAPTURES * sizeof(RgMultiCapture) + sizeof(RgMultiResult) +
-           SESSION_REPORT_SIZE + radiogeddon_multi_analysis_memory() + SESSION_HEAP_SPARE)
-        return false;
-    RgMultiCapture* caps = malloc(RG_MULTI_MAX_CAPTURES * sizeof(RgMultiCapture));
-    char* buf = malloc(SESSION_REPORT_SIZE);
-    RgText t;
-    rg_text_init(&t, buf, SESSION_REPORT_SIZE);
+    FuriString* heading = furi_string_alloc();
     char now[20];
     radiogeddon_session_now(now, sizeof(now));
-    rg_text_printf(
-        &t,
+    furi_string_printf(
+        heading,
         "RadioGeddon %s session report\nSession: %s\nCreated: %s\nExported: %s\n"
         "Recordings: %u\n================\n",
         RG_EDITION_NAME,
@@ -191,46 +199,68 @@ static bool radiogeddon_scene_session_menu_export(RadioGeddonApp* app, FuriStrin
         s->created[0] ? s->created : "-",
         now,
         (unsigned)s->count);
-    FuriString* path = furi_string_alloc();
     for(size_t i = 0; i < s->count; i++) {
-        furi_string_printf(path, "%s/%s", RADIOGEDDON_SIGNALS_FOLDER, s->signal[i]);
-        if(!radiogeddon_session_signal_exists(app->storage, s->signal[i])) {
-            rg_text_printf(&t, "%u %s: missing\n", (unsigned)(i + 1), s->signal[i]);
-            continue;
-        }
-        if(n < RG_MULTI_MAX_CAPTURES) {
-            snprintf(
-                app->multi_header, sizeof(app->multi_header), "Recording %u", (unsigned)(i + 1));
-            radiogeddon_scene_show_progress(app, app->multi_header);
-            RadioGeddonAnalysisStatus st;
-            radiogeddon_multi_capture(app->storage, furi_string_get_cstr(path), &caps[n], &st);
-            radiogeddon_scene_progress_end(app);
+        bool here = radiogeddon_session_signal_exists(app->storage, s->signal[i]);
+        furi_string_cat_printf(
+            heading, "%u %s%s\n", (unsigned)(i + 1), s->signal[i], here ? "" : ": missing");
+        if(here && n < RG_MULTI_MAX_CAPTURES) {
+            path_store[n] =
+                furi_string_alloc_printf("%s/%s", RADIOGEDDON_SIGNALS_FOLDER, s->signal[i]);
+            paths[n] = furi_string_get_cstr(path_store[n]);
             n++;
         }
-        rg_text_printf(&t, "%u %s\n", (unsigned)(i + 1), s->signal[i]);
     }
-    furi_string_free(path);
-    rg_text_printf(&t, "================\nComparison of %u\n", (unsigned)n);
-    RgMultiResult* res = malloc(sizeof(RgMultiResult));
-    rg_multi_compare(caps, n, res);
-    rg_multi_report(caps, n, res, &t);
-    free(res);
-    free(caps);
+    furi_string_cat_printf(heading, "================\nComparison of %u\n", (unsigned)n);
 
-    storage_common_mkdir(app->storage, RADIOGEDDON_REPORTS_FOLDER);
-    char name[RG_SESSION_NAME_MAX + 8];
-    snprintf(name, sizeof(name), "SESSION_%s", s->name);
-    for(char* c = name; *c; c++)
-        if(*c == ' ') *c = '_';
-    bool ok = radiogeddon_storage_make_unique_path_in(
-        app->storage, where, RADIOGEDDON_REPORTS_FOLDER, name, ".txt");
+    bool ok = radiogeddon_scene_module_load(
+        app,
+        RADIOGEDDON_MODULE_MULTI,
+        radiogeddon_scene_multi_memory(n) + SESSION_REPORT_SIZE + SESSION_HEAP_SPARE);
+    char* buf = NULL;
+    size_t len = 0;
     if(ok) {
-        File* file = storage_file_alloc(app->storage);
-        ok = storage_file_open(file, furi_string_get_cstr(where), FSAM_WRITE, FSOM_CREATE_NEW) &&
-             storage_file_write(file, buf, t.len) == t.len;
-        ok = storage_file_close(file) && ok;
-        storage_file_free(file);
-        if(!ok) storage_common_remove(app->storage, furi_string_get_cstr(where));
+        const RadioGeddonMultiModule* api = app->module_api;
+        buf = malloc(SESSION_REPORT_SIZE);
+        len = api->compare(
+            app->storage,
+            paths,
+            n,
+            furi_string_get_cstr(heading),
+            buf,
+            SESSION_REPORT_SIZE,
+            radiogeddon_scene_session_menu_file,
+            radiogeddon_scene_progress,
+            app);
+        radiogeddon_scene_progress_end(app);
+        radiogeddon_scene_module_unload(app);
+    }
+    for(size_t i = 0; i < n; i++)
+        furi_string_free(path_store[i]);
+    furi_string_free(heading);
+
+    if(ok) {
+        storage_common_mkdir(app->storage, RADIOGEDDON_REPORTS_FOLDER);
+        char name[RG_SESSION_NAME_MAX + 8];
+        snprintf(name, sizeof(name), "SESSION_%s", s->name);
+        for(char* c = name; *c; c++)
+            if(*c == ' ') *c = '_';
+        FuriString* where = furi_string_alloc();
+        ok = radiogeddon_storage_make_unique_path_in(
+            app->storage, where, RADIOGEDDON_REPORTS_FOLDER, name, ".txt");
+        if(ok) {
+            File* file = storage_file_alloc(app->storage);
+            ok = storage_file_open(
+                     file, furi_string_get_cstr(where), FSAM_WRITE, FSOM_CREATE_NEW) &&
+                 storage_file_write(file, buf, len) == len;
+            ok = storage_file_close(file) && ok;
+            storage_file_free(file);
+            if(!ok) storage_common_remove(app->storage, furi_string_get_cstr(where));
+        }
+        furi_string_free(where);
+        if(!ok) {
+            app->message_header = "Export failed";
+            app->message_text = "The SD card refused\nthe report file.";
+        }
     }
     free(buf);
     return ok;
@@ -283,20 +313,15 @@ bool radiogeddon_scene_session_menu_on_event(void* context, SceneManagerEvent ev
     case SessionMenuCompare:
         radiogeddon_scene_session_menu_compare(app);
         break;
-    case SessionMenuExport: {
-        FuriString* where = furi_string_alloc();
-        bool ok = radiogeddon_scene_session_menu_export(app, where);
-        if(ok) {
+    case SessionMenuExport:
+        if(radiogeddon_scene_session_menu_export(app)) {
             notification_message(app->notifications, &sequence_success);
             radiogeddon_scene_show_message(
                 app, "Report saved", "In apps_data/\nradiogeddon/reports");
         } else {
-            radiogeddon_scene_show_message(
-                app, "Export failed", "Not enough memory or\nthe SD card refused it.");
+            radiogeddon_scene_show_message(app, app->message_header, app->message_text);
         }
-        furi_string_free(where);
         break;
-    }
     case SessionMenuRename:
         app->session_name_mode = RadioGeddonSessionNameRename;
         scene_manager_next_scene(app->scene_manager, RadioGeddonSceneSessionName);

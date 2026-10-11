@@ -162,6 +162,19 @@ void radiogeddon_rangescan_waterfall_frame(
     const RadioGeddonWaterfallRequest* request,
     RadioGeddonWaterfallFrame* out);
 
+/** How the screen asks for a frame: the engine above, passed as a pointer so
+ * the screen (a loadable module) needs no symbol of the app. */
+typedef void (*RadioGeddonWaterfallFrameFn)(
+    void* engine,
+    const RadioGeddonWaterfallRequest* request,
+    RadioGeddonWaterfallFrame* out);
+
+/** radiogeddon_rangescan_waterfall_frame as a RadioGeddonWaterfallFrameFn. */
+void radiogeddon_rangescan_waterfall_frame_fn(
+    void* engine,
+    const RadioGeddonWaterfallRequest* request,
+    RadioGeddonWaterfallFrame* out);
+
 /**
  * Write the stored sweeps as CSV: comment header, then one row per sweep
  * (newest first), its age in ms, then each column's reading in dBm (empty

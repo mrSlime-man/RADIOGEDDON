@@ -27,10 +27,15 @@ void rg_memstat_sample(RgMemStat* s, uint32_t free_now, const char* where);
 /** Most memory in use beyond the start: start_free - lowest_free (0 if none). */
 uint32_t rg_memstat_peak_use(const RgMemStat* s);
 
+/* Far less than any receive session takes (the protocol decoders and the
+ * keystore alone take more): below this the session cannot fit. */
+#define RG_MEM_MIN_SESSION_COST (16u * 1024u)
+
 /**
  * Whether a radio session that cost @p cost bytes before still fits in
  * @p free_now with @p margin bytes to spare. An unmeasured cost (0) is
- * allowed: nothing is known to refuse on.
+ * allowed unless less than RG_MEM_MIN_SESSION_COST is free, when it could
+ * only run out of memory.
  */
 bool rg_mem_session_fits(uint32_t free_now, uint32_t cost, uint32_t margin);
 

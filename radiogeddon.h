@@ -37,7 +37,8 @@
 #include "helpers/rg_range.h"
 #include "helpers/radiogeddon_profiles.h"
 #include "helpers/radiogeddon_rangescan.h"
-#include "helpers/radiogeddon_multi.h"
+#include "helpers/radiogeddon_modules.h"
+#include "helpers/rg_multi.h"
 #include "helpers/radiogeddon_sessions.h"
 #include "views/radiogeddon_scanner_view.h"
 #include "views/radiogeddon_receiver_view.h"
@@ -184,6 +185,12 @@ struct RadioGeddonApp {
     uint32_t range_cursor; // point under the cursor, kept across a trip to Receive
     char profile_name[RADIOGEDDON_PROFILE_NAME_LEN];
 #endif
+#if RG_EDITION_FULL
+    // The optional tool loaded for the screen shown (radiogeddon_modules.h):
+    // at most one at a time, unloaded when that screen closes.
+    RadioGeddonModule* module;
+    const void* module_api;
+#endif
 #if RG_FEATURE_WATERFALL
     // Waterfall: the range engine above (app->rangescan) with a history
     // buffer and a screen of its own, all only while the Waterfall is open.
@@ -210,6 +217,8 @@ struct RadioGeddonApp {
 #if RG_FEATURE_SESSIONS
     // Sessions: the list and the open session exist only while the
     // Sessions screens are shown (freed on returning to the main menu).
+    RadioGeddonModule* sessions_module; // the Sessions screens' code
+    const void* sessions_api;
     RadioGeddonSessionList* session_list;
     RgSession* session;
     char session_name[RG_SESSION_NAME_MAX]; // the session opened from the list

@@ -51,10 +51,11 @@ void radiogeddon_waterfall_view_set_callback(
     RadioGeddonWaterfallCallback callback,
     void* context);
 
-/** Refresh from the engine (GUI thread, on the tick). */
+/** Refresh from the engine through @p frame (GUI thread, on the tick). */
 void radiogeddon_waterfall_view_update(
     RadioGeddonWaterfallView* instance,
-    RadioGeddonRangeScan* scan);
+    RadioGeddonWaterfallFrameFn frame,
+    void* engine);
 
 /** Display settings: sensitivity index into radiogeddon_waterfall_spans, compensation. */
 void radiogeddon_waterfall_view_set_style(

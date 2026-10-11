@@ -2,8 +2,9 @@
 
 #if RG_FEATURE_SESSIONS
 
-// Full edition: the list of research sessions. The list and the open session
-// are kept while the Sessions screens are shown and freed on returning to
+// Full edition: the list of research sessions. The Sessions screens are a
+// module (radiogeddon_scene_sessions_host.c); the list and the open session
+// are kept while they are shown and freed, with the module, on returning to
 // the main menu (radiogeddon_scene_sessions_release).
 
 typedef enum {
@@ -11,13 +12,6 @@ typedef enum {
     SessionsIndexSuggest,
     SessionsIndexSession = 100, // + list position
 } SessionsIndex;
-
-void radiogeddon_scene_sessions_release(RadioGeddonApp* app) {
-    free(app->session_list);
-    app->session_list = NULL;
-    free(app->session);
-    app->session = NULL;
-}
 
 static void radiogeddon_scene_sessions_cb(void* context, uint32_t index) {
     RadioGeddonApp* app = context;

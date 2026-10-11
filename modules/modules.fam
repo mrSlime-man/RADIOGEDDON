@@ -1,0 +1,99 @@
+# Full edition modules (helpers/radiogeddon_modules.h): optional tools built as
+# plugins, packed inside the .fap (fal_embedded) and loaded only while their
+# screen is open. scripts/stage_edition.py appends this file to the Full
+# edition's application.fam and takes these sources out of the app itself;
+# the Catalog edition never builds them. A module uses the firmware's API
+# only, so each lists every source it links (unused code is dropped).
+
+App(
+    appid="radiogeddon_bits",
+    apptype=FlipperAppType.PLUGIN,
+    entry_point="radiogeddon_bits_module_ep",
+    requires=["radiogeddon_full"],
+    cdefines=["RADIOGEDDON_EDITION_FULL"],
+    sources=[
+        "modules/radiogeddon_module_bits.c",
+        "views/radiogeddon_bits_view.c",
+        "helpers/rg_bits.c",
+        "helpers/rg_glyph.c",
+        "helpers/rg_analyzer.c",
+    ],
+    fal_embedded=True,
+)
+
+App(
+    appid="radiogeddon_multi",
+    apptype=FlipperAppType.PLUGIN,
+    entry_point="radiogeddon_multi_module_ep",
+    requires=["radiogeddon_full"],
+    cdefines=["RADIOGEDDON_EDITION_FULL"],
+    sources=[
+        "modules/radiogeddon_module_multi.c",
+        "helpers/radiogeddon_multi.c",
+        "helpers/rg_multi.c",
+        "helpers/rg_analyzer.c",
+        "helpers/rg_raw.c",
+        "helpers/radiogeddon_analysis_run.c",
+        "helpers/radiogeddon_storage.c",
+        "helpers/radiogeddon_dsp.c",
+    ],
+    fal_embedded=True,
+)
+
+App(
+    appid="radiogeddon_wf",
+    apptype=FlipperAppType.PLUGIN,
+    entry_point="radiogeddon_waterfall_module_ep",
+    requires=["radiogeddon_full"],
+    cdefines=["RADIOGEDDON_EDITION_FULL"],
+    sources=[
+        "modules/radiogeddon_module_waterfall.c",
+        "views/radiogeddon_waterfall_view.c",
+        "helpers/rg_freq.c",
+    ],
+    fal_embedded=True,
+)
+
+App(
+    appid="radiogeddon_unknown",
+    apptype=FlipperAppType.PLUGIN,
+    entry_point="radiogeddon_unknown_module_ep",
+    requires=["radiogeddon_full"],
+    cdefines=["RADIOGEDDON_EDITION_FULL"],
+    sources=[
+        "modules/radiogeddon_module_unknown.c",
+        "helpers/radiogeddon_analysis_unknown.c",
+        "helpers/radiogeddon_analysis_run.c",
+        "helpers/rg_analyzer.c",
+        "helpers/rg_checksum.c",
+        "helpers/rg_raw.c",
+        "helpers/radiogeddon_storage.c",
+        "helpers/radiogeddon_dsp.c",
+    ],
+    fal_embedded=True,
+)
+
+App(
+    appid="radiogeddon_sessions",
+    apptype=FlipperAppType.PLUGIN,
+    entry_point="radiogeddon_sessions_module_ep",
+    requires=["radiogeddon_full"],
+    cdefines=["RADIOGEDDON_EDITION_FULL", "RADIOGEDDON_MODULE"],
+    sources=[
+        "modules/radiogeddon_module_sessions.c",
+        "scenes/radiogeddon_scene_sessions.c",
+        "scenes/radiogeddon_scene_session_name.c",
+        "scenes/radiogeddon_scene_session_menu.c",
+        "scenes/radiogeddon_scene_session_signals.c",
+        "scenes/radiogeddon_scene_session_groups.c",
+        "helpers/radiogeddon_sessions.c",
+        "helpers/rg_session.c",
+        "helpers/radiogeddon_db.c",
+        "helpers/rg_db.c",
+        "helpers/radiogeddon_storage.c",
+        "helpers/radiogeddon_dsp.c",
+        "helpers/rg_raw.c",
+        "helpers/rg_freq.c",
+    ],
+    fal_embedded=True,
+)

@@ -364,19 +364,21 @@ void radiogeddon_waterfall_view_set_callback(
 }
 
 /* One update of the model (its lock held). */
-static void
-    radiogeddon_waterfall_view_refresh(RadioGeddonWaterfallModel* m, RadioGeddonRangeScan* scan) {
+static void radiogeddon_waterfall_view_refresh(
+    RadioGeddonWaterfallModel* m,
+    RadioGeddonWaterfallFrameFn frame,
+    void* scan) {
     RadioGeddonWaterfallRequest req;
     req.scroll = m->scroll;
     req.cursor = m->cursor;
     req.span_db = radiogeddon_waterfall_spans[m->span_index % RADIOGEDDON_WF_SPANS];
     req.noise_comp = m->noise_comp;
-    radiogeddon_rangescan_waterfall_frame(scan, &req, &m->frame);
+    frame(scan, &req, &m->frame);
     // Scrolled back: keep showing the same sweeps as new ones arrive.
     if(m->have_frame && m->scroll > 0 && m->frame.stored > m->last_stored) {
         uint32_t scroll = (uint32_t)m->scroll + (m->frame.stored - m->last_stored);
         req.scroll = (uint16_t)(scroll > UINT16_MAX ? UINT16_MAX : scroll);
-        radiogeddon_rangescan_waterfall_frame(scan, &req, &m->frame);
+        frame(scan, &req, &m->frame);
     }
     m->last_stored = m->frame.stored;
     m->scroll = m->frame.scroll;
@@ -386,11 +388,12 @@ static void
 
 void radiogeddon_waterfall_view_update(
     RadioGeddonWaterfallView* instance,
-    RadioGeddonRangeScan* scan) {
+    RadioGeddonWaterfallFrameFn frame,
+    void* engine) {
     with_view_model(
         instance->view,
         RadioGeddonWaterfallModel * m,
-        { radiogeddon_waterfall_view_refresh(m, scan); },
+        { radiogeddon_waterfall_view_refresh(m, frame, engine); },
         true);
 }
 

@@ -110,8 +110,8 @@ static bool g_paused;
 static bool g_calibrating;
 static uint32_t g_wf_points;
 
-void radiogeddon_rangescan_waterfall_frame(
-    RadioGeddonRangeScan* instance,
+static void fake_frame(
+    void* instance,
     const RadioGeddonWaterfallRequest* request,
     RadioGeddonWaterfallFrame* out) {
     (void)instance;
@@ -179,12 +179,12 @@ static void test_waterfall_view(void) {
     RadioGeddonWaterfallView* v = radiogeddon_waterfall_view_alloc();
     View* view = radiogeddon_waterfall_view_get_view(v);
     radiogeddon_waterfall_view_set_callback(v, wf_cb, NULL);
-    RadioGeddonRangeScan* engine = NULL;
+    void* engine = NULL;
 
     // Before the first sweep: the wait message with the sweep-time estimate.
     wf_fill(128, 0, 0);
     g_calibrating = true;
-    radiogeddon_waterfall_view_update(v, engine);
+    radiogeddon_waterfall_view_update(v, fake_frame, engine);
     render(view, "waterfall_waiting");
     CHECK(canvas_host_count(canvas_host(), 0, 20, 128, 30) > 50, "wait message drawn");
     g_calibrating = false;
@@ -192,7 +192,7 @@ static void test_waterfall_view(void) {
     // A full history, live: the hot column is solid on the newest row.
     uint32_t hot = 64;
     wf_fill(128, 120, hot);
-    radiogeddon_waterfall_view_update(v, engine);
+    radiogeddon_waterfall_view_update(v, fake_frame, engine);
     render(view, "waterfall_live");
     Canvas* c = canvas_host();
     CHECK(canvas_host_pixel(c, 64, 11), "strong reading solid on the newest row (x=64, y=11)");
@@ -206,7 +206,7 @@ static void test_waterfall_view(void) {
     // long-press action fires while holding it.
     for(int i = 0; i < 127; i++)
         view_host_input(view, InputKeyRight, InputTypeShort);
-    radiogeddon_waterfall_view_update(v, engine);
+    radiogeddon_waterfall_view_update(v, fake_frame, engine);
     CHECK(radiogeddon_waterfall_view_get_cursor(v) == 127, "cursor at the last column");
     render(view, "waterfall_cursor_right_edge");
     view_host_input(view, InputKeyRight, InputTypeShort);
@@ -221,17 +221,17 @@ static void test_waterfall_view(void) {
     // Scrolling: Down goes back in time, clamped to the history.
     for(int i = 0; i < 100; i++)
         view_host_input(view, InputKeyDown, InputTypeRepeat);
-    radiogeddon_waterfall_view_update(v, engine);
+    radiogeddon_waterfall_view_update(v, fake_frame, engine);
     render(view, "waterfall_scrolled_oldest");
     view_host_input(view, InputKeyUp, InputTypeShort);
-    radiogeddon_waterfall_view_update(v, engine);
+    radiogeddon_waterfall_view_update(v, fake_frame, engine);
     render(view, "waterfall_scrolled");
 
     // OK pauses; holding OK opens the menu; Back closes the menu first.
     view_host_input(view, InputKeyOk, InputTypeShort);
     CHECK(g_wf_events[RadioGeddonWaterfallEventTogglePause] == 1, "OK: pause event");
     g_paused = true;
-    radiogeddon_waterfall_view_update(v, engine);
+    radiogeddon_waterfall_view_update(v, fake_frame, engine);
     render(view, "waterfall_paused");
     view_host_input(view, InputKeyOk, InputTypeLong);
     render(view, "waterfall_menu");
@@ -246,7 +246,7 @@ static void test_waterfall_view(void) {
     view_host_input(view, InputKeyDown, InputTypeShort);
     view_host_input(view, InputKeyDown, InputTypeShort);
     view_host_input(view, InputKeyOk, InputTypeShort);
-    radiogeddon_waterfall_view_update(v, engine);
+    radiogeddon_waterfall_view_update(v, fake_frame, engine);
     render(view, "waterfall_newest");
     view_host_input(view, InputKeyOk, InputTypeLong);
     view_host_input(view, InputKeyOk, InputTypeShort);
@@ -282,26 +282,26 @@ static void test_waterfall_view(void) {
     // Extreme widths: one point, three points, external radio, all strong.
     radiogeddon_waterfall_view_set_external(v, true);
     wf_fill(1, 60, 0);
-    radiogeddon_waterfall_view_update(v, engine);
+    radiogeddon_waterfall_view_update(v, fake_frame, engine);
     render(view, "waterfall_one_point_ext");
     CHECK(
         canvas_host_pixel(canvas_host(), 0, 11) && canvas_host_pixel(canvas_host(), 127, 11),
         "one point spans the picture");
     wf_fill(3, 60, 1);
-    radiogeddon_waterfall_view_update(v, engine);
+    radiogeddon_waterfall_view_update(v, fake_frame, engine);
     render(view, "waterfall_three_points");
     // Point 1 of 3 covers pixels 43..85.
     CHECK(
         canvas_host_pixel(canvas_host(), 43, 11) && canvas_host_pixel(canvas_host(), 85, 11),
         "middle column pixels");
     wf_fill(256, 255, 200);
-    radiogeddon_waterfall_view_update(v, engine);
+    radiogeddon_waterfall_view_update(v, fake_frame, engine);
     render(view, "waterfall_256_points");
     radiogeddon_waterfall_view_set_external(v, false);
     // Empty plan: no columns.
     g_wf_points = 0;
     memset(&g_wf, 0, sizeof(g_wf));
-    radiogeddon_waterfall_view_update(v, engine);
+    radiogeddon_waterfall_view_update(v, fake_frame, engine);
     render(view, "waterfall_no_points");
     radiogeddon_waterfall_view_free(v);
 }

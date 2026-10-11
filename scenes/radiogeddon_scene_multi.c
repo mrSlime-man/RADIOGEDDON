@@ -1,4 +1,5 @@
 #include "radiogeddon_scene.h"
+#include "../helpers/rg_multi.h"
 
 #if RG_FEATURE_MULTI_COMPARE
 
@@ -15,6 +16,12 @@ typedef enum {
 static void radiogeddon_scene_multi_cb(void* context, uint32_t index) {
     RadioGeddonApp* app = context;
     view_dispatcher_send_custom_event(app->view_dispatcher, index);
+}
+
+size_t radiogeddon_scene_multi_memory(size_t count) {
+    if(count > RG_MULTI_MAX_CAPTURES) count = RG_MULTI_MAX_CAPTURES;
+    // Summaries, the result and one analysis at a time (rg_multi.h).
+    return count * sizeof(RgMultiCapture) + sizeof(RgMultiResult) + sizeof(RgAnalyzer);
 }
 
 bool radiogeddon_multi_add(RadioGeddonApp* app, const char* path) {

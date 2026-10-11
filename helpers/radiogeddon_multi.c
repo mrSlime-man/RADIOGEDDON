@@ -4,8 +4,9 @@
 
 #include "radiogeddon_storage.h"
 
-size_t radiogeddon_multi_analysis_memory(void) {
-    return sizeof(RgAnalyzer);
+size_t radiogeddon_multi_memory(size_t count) {
+    if(count > RG_MULTI_MAX_CAPTURES) count = RG_MULTI_MAX_CAPTURES;
+    return count * sizeof(RgMultiCapture) + sizeof(RgMultiResult) + sizeof(RgAnalyzer);
 }
 
 bool radiogeddon_multi_capture(
@@ -57,6 +58,36 @@ bool radiogeddon_multi_capture(
     rg_multi_capture_from_analysis(cap, &a->result);
     free(a);
     return true;
+}
+
+size_t radiogeddon_multi_compare_files(
+    Storage* storage,
+    const char* const* paths,
+    size_t count,
+    const char* heading,
+    char* report,
+    size_t size,
+    RadioGeddonMultiFileCallback on_file,
+    RadioGeddonProgressCallback progress,
+    void* context) {
+    if(count > RG_MULTI_MAX_CAPTURES) count = RG_MULTI_MAX_CAPTURES;
+    RgText text;
+    rg_text_init(&text, report, size);
+    if(heading) rg_text_printf(&text, "%s", heading);
+    RgMultiCapture* caps = malloc((count ? count : 1) * sizeof(RgMultiCapture));
+    radiogeddon_analysis_set_progress(progress, context);
+    for(size_t i = 0; i < count; i++) {
+        if(on_file) on_file(context, i, count);
+        RadioGeddonAnalysisStatus status;
+        radiogeddon_multi_capture(storage, paths[i], &caps[i], &status);
+    }
+    radiogeddon_analysis_set_progress(NULL, NULL);
+    RgMultiResult* res = malloc(sizeof(RgMultiResult));
+    rg_multi_compare(caps, count, res);
+    rg_multi_report(caps, count, res, &text);
+    free(res);
+    free(caps);
+    return text.len;
 }
 
 #endif

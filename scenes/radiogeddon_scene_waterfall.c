@@ -48,19 +48,25 @@ static void radiogeddon_scene_waterfall_popup_cb(void* context) {
     view_dispatcher_send_custom_event(app->view_dispatcher, WaterfallEventPopupDone);
 }
 
+/* The screen is a module (radiogeddon_modules.h) loaded with the scene. */
+#define WF_API(app) ((const RadioGeddonWaterfallModule*)(app)->module_api)
+
 static void radiogeddon_scene_waterfall_release(RadioGeddonApp* app) {
+    // Screen first (nothing asks the engine for frames after it), then the
+    // engine (stops its thread), its history, and the screen's code last.
+    if(app->waterfall_view) {
+        app->wf_cursor = WF_API(app)->get_cursor(app->waterfall_view);
+        view_dispatcher_remove_view(app->view_dispatcher, RadioGeddonViewWaterfall);
+        WF_API(app)->free(app->waterfall_view);
+        app->waterfall_view = NULL;
+    }
     if(app->rangescan) {
-        radiogeddon_rangescan_free(app->rangescan); // stops the thread first
+        radiogeddon_rangescan_free(app->rangescan);
         app->rangescan = NULL;
     }
     free(app->wf_buf);
     app->wf_buf = NULL;
-    if(app->waterfall_view) {
-        app->wf_cursor = radiogeddon_waterfall_view_get_cursor(app->waterfall_view);
-        view_dispatcher_remove_view(app->view_dispatcher, RadioGeddonViewWaterfall);
-        radiogeddon_waterfall_view_free(app->waterfall_view);
-        app->waterfall_view = NULL;
-    }
+    if(app->module) radiogeddon_scene_module_unload(app);
 }
 
 void radiogeddon_scene_waterfall_on_enter(void* context) {
@@ -75,6 +81,13 @@ void radiogeddon_scene_waterfall_on_enter(void* context) {
     }
     uint32_t points = app->range.points;
     size_t fixed = radiogeddon_scene_waterfall_fixed_bytes(points);
+    if(!radiogeddon_scene_module_load(
+           app,
+           RADIOGEDDON_MODULE_WATERFALL,
+           fixed + radiogeddon_scene_waterfall_min_bytes(points) + WATERFALL_HEAP_MARGIN)) {
+        view_dispatcher_send_custom_event(app->view_dispatcher, WaterfallEventFailed);
+        return;
+    }
     size_t free_block = memmgr_heap_get_max_free_block();
     size_t room = free_block > fixed + WATERFALL_HEAP_MARGIN ?
                       free_block - fixed - WATERFALL_HEAP_MARGIN :
@@ -83,6 +96,7 @@ void radiogeddon_scene_waterfall_on_enter(void* context) {
     if(bytes < radiogeddon_scene_waterfall_min_bytes(points)) {
         app->message_header = "Not enough memory";
         app->message_text = "Free memory is too low\nfor the waterfall.\nUse fewer points.";
+        radiogeddon_scene_module_unload(app);
         view_dispatcher_send_custom_event(app->view_dispatcher, WaterfallEventFailed);
         return;
     }
@@ -98,20 +112,17 @@ void radiogeddon_scene_waterfall_on_enter(void* context) {
         false);
     radiogeddon_rangescan_waterfall_attach(app->rangescan, app->wf_buf, bytes);
 
-    app->waterfall_view = radiogeddon_waterfall_view_alloc();
+    const RadioGeddonWaterfallModule* api = WF_API(app);
+    app->waterfall_view = api->alloc();
     view_dispatcher_add_view(
-        app->view_dispatcher,
-        RadioGeddonViewWaterfall,
-        radiogeddon_waterfall_view_get_view(app->waterfall_view));
-    radiogeddon_waterfall_view_set_callback(
-        app->waterfall_view, radiogeddon_scene_waterfall_view_cb, app);
-    radiogeddon_waterfall_view_set_style(
-        app->waterfall_view, app->wf_span_index, app->wf_noise_comp);
-    radiogeddon_waterfall_view_set_external(
+        app->view_dispatcher, RadioGeddonViewWaterfall, api->get_view(app->waterfall_view));
+    api->set_callback(app->waterfall_view, radiogeddon_scene_waterfall_view_cb, app);
+    api->set_style(app->waterfall_view, app->wf_span_index, app->wf_noise_comp);
+    api->set_external(
         app->waterfall_view,
         radiogeddon_subghz_get_radio(app->subghz) == RadioGeddonRadioExternal);
-    radiogeddon_waterfall_view_set_cursor(app->waterfall_view, app->wf_cursor);
-    radiogeddon_waterfall_view_update(app->waterfall_view, app->rangescan);
+    api->set_cursor(app->waterfall_view, app->wf_cursor);
+    api->update(app->waterfall_view, radiogeddon_rangescan_waterfall_frame_fn, app->rangescan);
 
     radiogeddon_rangescan_start(app->rangescan);
     radiogeddon_memdiag_sample("Waterfall");
@@ -169,17 +180,19 @@ bool radiogeddon_scene_waterfall_on_event(void* context, SceneManagerEvent event
     }
 
     if(event.type == SceneManagerEventTypeTick) {
-        radiogeddon_waterfall_view_update(app->waterfall_view, app->rangescan);
+        WF_API(app)->update(
+            app->waterfall_view, radiogeddon_rangescan_waterfall_frame_fn, app->rangescan);
         return true;
     }
     if(event.type != SceneManagerEventTypeCustom) return false;
     switch(event.event) {
     case WaterfallEventPause:
         radiogeddon_rangescan_toggle_pause(app->rangescan);
-        radiogeddon_waterfall_view_update(app->waterfall_view, app->rangescan);
+        WF_API(app)->update(
+            app->waterfall_view, radiogeddon_rangescan_waterfall_frame_fn, app->rangescan);
         break;
     case WaterfallEventReceive: {
-        uint32_t freq = radiogeddon_waterfall_view_get_cursor_hz(app->waterfall_view);
+        uint32_t freq = WF_API(app)->get_cursor_hz(app->waterfall_view);
         if(freq && radiogeddon_subghz_is_frequency_allowed(app->subghz, freq)) {
             app->frequency = freq;
             radiogeddon_subghz_set_frequency(app->subghz, freq);
@@ -192,9 +205,9 @@ bool radiogeddon_scene_waterfall_on_event(void* context, SceneManagerEvent event
         radiogeddon_scene_waterfall_save(app);
         break;
     case WaterfallEventSettings:
-        radiogeddon_waterfall_view_get_style(
-            app->waterfall_view, &app->wf_span_index, &app->wf_noise_comp);
-        radiogeddon_waterfall_view_update(app->waterfall_view, app->rangescan);
+        WF_API(app)->get_style(app->waterfall_view, &app->wf_span_index, &app->wf_noise_comp);
+        WF_API(app)->update(
+            app->waterfall_view, radiogeddon_rangescan_waterfall_frame_fn, app->rangescan);
         break;
     case WaterfallEventPopupDone:
         view_dispatcher_switch_to_view(app->view_dispatcher, RadioGeddonViewWaterfall);

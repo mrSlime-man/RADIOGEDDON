@@ -17,8 +17,14 @@ void radiogeddon_scene_unknown_on_enter(void* context) {
         app->temp_str,
         "Unknown analysis: %s\n----------------\n",
         furi_string_get_cstr(app->loaded.name));
-    radiogeddon_analysis_unknown(
-        app->storage, furi_string_get_cstr(app->file_path), app->temp_str);
+    // Full edition: the analysis is a module, loaded for this run only.
+    RadioGeddonUnknownFn run = radiogeddon_scene_unknown_begin(app);
+    if(run) {
+        run(app->storage, furi_string_get_cstr(app->file_path), app->temp_str);
+    } else {
+        furi_string_cat_printf(app->temp_str, "%s.\n%s\n", app->message_header, app->message_text);
+    }
+    radiogeddon_scene_unknown_end(app);
     radiogeddon_scene_progress_end(app);
 
     text_box_reset(app->text_box);
