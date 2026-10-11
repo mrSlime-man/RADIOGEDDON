@@ -10,3 +10,6 @@ void elements_scrollbar_pos(
     size_t height,
     size_t pos,
     size_t total);
+
+/** A button at the bottom centre with an OK mark and @p str. */
+void elements_button_center(Canvas* canvas, const char* str);
