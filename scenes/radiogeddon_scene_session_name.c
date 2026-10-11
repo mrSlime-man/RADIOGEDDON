@@ -12,7 +12,7 @@ static bool
     radiogeddon_scene_session_name_validator(const char* text, FuriString* error, void* context) {
     RadioGeddonApp* app = context;
     if(!rg_session_name_valid(text)) {
-        furi_string_set(error, "Letters, digits,\nspaces; no / : * ?");
+        furi_string_set(error, "No / : * ? and no\nspace at either end");
         return false;
     }
     bool same = app->session_name_mode == RadioGeddonSessionNameRename && app->session &&

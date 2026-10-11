@@ -29,7 +29,9 @@ bool rg_session_name_valid(const char* name) {
         if(c < 0x20 || c > 0x7E || strchr("/\\:*?\"<>|", c)) return false;
         if(c != ' ') ink = true;
     }
-    return ink && name[0] != '.';
+    // Spaces at either end would not survive the file (values are trimmed)
+    // and make two names look alike.
+    return ink && name[0] != '.' && name[0] != ' ' && name[n - 1] != ' ';
 }
 
 bool rg_session_signal_valid(const char* file) {
@@ -108,6 +110,9 @@ static const char* rg_session_value(const char* line, size_t len, const char* ke
     if(len < k + 1 || memcmp(line, key, k) != 0 || line[k] != ':') return NULL;
     const char* v = line + k + 1;
     const char* end = line + len;
+    // A NUL ends the value (it could not be written back otherwise).
+    const char* nul = memchr(v, '\0', (size_t)(end - v));
+    if(nul) end = nul;
     while(v < end && (*v == ' ' || *v == '\t'))
         v++;
     while(end > v && (end[-1] == ' ' || end[-1] == '\t' || end[-1] == '\r'))

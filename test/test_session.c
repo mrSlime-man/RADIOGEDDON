@@ -151,6 +151,16 @@ static void test_format(void) {
         !rg_session_name_valid("a/b") && !rg_session_name_valid("   ") &&
             !rg_session_name_valid(".x"),
         "bad names");
+    CHECK(
+        !rg_session_name_valid(" x") && !rg_session_name_valid("x ") &&
+            rg_session_name_valid("x y"),
+        "no spaces at the ends (they would not survive the file)");
+    // A NUL inside a value ends it, and what remains is trimmed again.
+    const char nul[] = "# RadioGeddon session\nName: Tw1- \0junk\n";
+    CHECK(
+        rg_session_parse(&r, nul, sizeof(nul) - 1) == RgSessionParseOk &&
+            strcmp(r.name, "Tw1-") == 0,
+        "value cut at a NUL");
     CHECK(!rg_session_name_valid("0123456789012345678901234567890123"), "too long");
 }
 

@@ -49,8 +49,9 @@ typedef struct {
 
 void rg_session_init(RgSession* s, const char* name, const char* created);
 
-/** A name for a session: 1-31 printable ASCII characters, not all spaces,
- * without / \ : * ? " < > | (it also names the file). */
+/** A name for a session: 1-31 printable ASCII characters, not starting with
+ * '.' or a space nor ending with a space, without / \ : * ? " < > | (it
+ * also names the file). */
 bool rg_session_name_valid(const char* name);
 
 /** A recording name a session can hold: a file name ending in ".sub". */

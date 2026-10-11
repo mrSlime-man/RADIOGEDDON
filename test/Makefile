@@ -75,7 +75,8 @@ FWANALYZE_SRC := test_fwanalyze.c ../helpers/rg_analyzer.c ../helpers/rg_raw.c
 FUZZ_RAW_SRC := fuzz/fuzz_raw.c ../helpers/rg_raw.c ../helpers/rg_analyzer.c
 FUZZ_DB_SRC := fuzz/fuzz_db.c ../helpers/rg_db.c ../helpers/radiogeddon_dsp.c
 FUZZ_SAMPLES_SRC := fuzz/fuzz_samples.c ../helpers/rg_analyzer.c ../helpers/rg_timeline.c
-FUZZ_TARGETS := fuzz_raw fuzz_db fuzz_samples
+FUZZ_SESSION_SRC := fuzz/fuzz_session.c ../helpers/rg_session.c ../helpers/rg_elf.c
+FUZZ_TARGETS := fuzz_raw fuzz_db fuzz_samples fuzz_session
 FUZZ_CC ?= clang
 FUZZ_TIME ?= 60
 
@@ -319,6 +320,10 @@ $(BUILD)/replay_fuzz_samples: fuzz/replay.c $(FUZZ_SAMPLES_SRC) ../helpers/rg_an
 		../helpers/rg_timeline.h | $(BUILD)
 	$(CC) $(CFLAGS) $(SAN) -o $@ fuzz/replay.c $(FUZZ_SAMPLES_SRC)
 
+$(BUILD)/replay_fuzz_session: fuzz/replay.c $(FUZZ_SESSION_SRC) ../helpers/rg_session.h \
+		../helpers/rg_elf.h | $(BUILD)
+	$(CC) $(CFLAGS) $(SAN) -DRADIOGEDDON_EDITION_FULL -o $@ fuzz/replay.c $(FUZZ_SESSION_SRC)
+
 # libFuzzer builds. New inputs go to build/corpus/<target>; the committed
 # corpus is only read. A failing input is saved as build/<target>-crash-*.
 $(BUILD)/fuzz_raw: $(FUZZ_RAW_SRC) | $(BUILD)
@@ -328,6 +333,10 @@ $(BUILD)/fuzz_raw: $(FUZZ_RAW_SRC) | $(BUILD)
 $(BUILD)/fuzz_db: $(FUZZ_DB_SRC) | $(BUILD)
 	$(FUZZ_CC) $(CFLAGS) -g -fsanitize=fuzzer,address,undefined -fno-sanitize-recover=all \
 		-o $@ $(FUZZ_DB_SRC)
+
+$(BUILD)/fuzz_session: $(FUZZ_SESSION_SRC) | $(BUILD)
+	$(FUZZ_CC) $(CFLAGS) -g -DRADIOGEDDON_EDITION_FULL -fsanitize=fuzzer,address,undefined \
+		-fno-sanitize-recover=all -o $@ $(FUZZ_SESSION_SRC)
 
 $(BUILD)/fuzz_samples: $(FUZZ_SAMPLES_SRC) | $(BUILD)
 	$(FUZZ_CC) $(CFLAGS) -g -fsanitize=fuzzer,address,undefined -fno-sanitize-recover=all \
