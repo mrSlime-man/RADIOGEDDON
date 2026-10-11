@@ -5,6 +5,7 @@
 #pragma once
 
 #include <gui/view.h>
+#include "../radiogeddon_edition.h"
 #include "../helpers/radiogeddon_recorder.h"
 
 typedef struct RadioGeddonReceiverView RadioGeddonReceiverView;
@@ -61,6 +62,15 @@ void radiogeddon_receiver_view_set_history(
     RadioGeddonReceiverView* instance,
     size_t count,
     const char* latest_label);
+
+#if RG_FEATURE_DOLPHIN_LAB
+#include "../helpers/rg_mascot.h"
+/** Dolphin Lab badge in the header (@p frame NULL: none, as in Classic). */
+void radiogeddon_receiver_view_set_badge(
+    RadioGeddonReceiverView* instance,
+    const RgMascotFrame* frame,
+    bool cyber);
+#endif
 
 /** Currently highlighted decoded-signal index. */
 size_t radiogeddon_receiver_view_get_selected(RadioGeddonReceiverView* instance);

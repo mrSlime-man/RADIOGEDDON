@@ -103,6 +103,7 @@ static void radiogeddon_scene_range_scan_save(RadioGeddonApp* app) {
         app->storage,
         furi_string_get_cstr(path),
         radiogeddon_presets[app->preset_index].label);
+    radiogeddon_ui_event(app, ok ? RgMascotEventSaveCompleted : RgMascotEventOperationFailed, 0);
     if(ok) {
         notification_message(app->notifications, &sequence_success);
         size_t slash = furi_string_search_rchar(path, '/');
@@ -131,6 +132,13 @@ bool radiogeddon_scene_range_scan_on_event(void* context, SceneManagerEvent even
 
     if(event.type == SceneManagerEventTypeTick) {
         radiogeddon_spectrum_view_update(app->spectrum_view, app->rangescan);
+        radiogeddon_ui_set_scanning(app, radiogeddon_spectrum_view_sweeping(app->spectrum_view));
+#if RG_FEATURE_DOLPHIN_LAB
+        RgMascotFrame f;
+        bool cyber = false;
+        bool on = radiogeddon_ui_badge(app, &f, &cyber);
+        radiogeddon_spectrum_view_set_badge(app->spectrum_view, on ? &f : NULL, cyber);
+#endif
         return true;
     }
     if(event.type != SceneManagerEventTypeCustom) return false;
@@ -138,6 +146,7 @@ bool radiogeddon_scene_range_scan_on_event(void* context, SceneManagerEvent even
     if(event.event >= RangeScanEventHitBase) {
         uint32_t index = event.event - RangeScanEventHitBase;
         notification_message(app->notifications, &sequence_blink_cyan_10);
+        radiogeddon_ui_event(app, RgMascotEventSignalActivity, index);
         // Holding on a hit: put the cursor there, so OK goes to it.
         if(app->settings.range_hold_on_hit) {
             radiogeddon_spectrum_view_set_cursor(app->spectrum_view, index);
@@ -184,6 +193,7 @@ bool radiogeddon_scene_range_scan_on_event(void* context, SceneManagerEvent even
 
 void radiogeddon_scene_range_scan_on_exit(void* context) {
     RadioGeddonApp* app = context;
+    radiogeddon_ui_set_scanning(app, false);
     popup_reset(app->popup);
     if(app->rangescan) {
         radiogeddon_rangescan_free(app->rangescan); // stops the thread first

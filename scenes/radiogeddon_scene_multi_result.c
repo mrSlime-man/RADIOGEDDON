@@ -57,7 +57,7 @@ void radiogeddon_scene_multi_result_on_enter(void* context) {
     radiogeddon_scene_module_unload(app);
 
     text_box_set_text(app->text_box, app->multi_report);
-    view_dispatcher_switch_to_view(app->view_dispatcher, RadioGeddonViewTextBox);
+    radiogeddon_scene_show_report(app, "Comparison", app->multi_report);
 }
 
 bool radiogeddon_scene_multi_result_on_event(void* context, SceneManagerEvent event) {
@@ -68,6 +68,7 @@ bool radiogeddon_scene_multi_result_on_event(void* context, SceneManagerEvent ev
 
 void radiogeddon_scene_multi_result_on_exit(void* context) {
     RadioGeddonApp* app = context;
+    radiogeddon_ui_cancel(app);
     text_box_reset(app->text_box);
     free(app->multi_report);
     app->multi_report = NULL;

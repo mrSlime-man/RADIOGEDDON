@@ -40,6 +40,10 @@ typedef struct {
     uint8_t scan_source; // RadioGeddonSource: Scanner frequencies
     uint8_t hop_source; // RadioGeddonSource: Hopper frequencies
     uint32_t freq_step_hz; // Settings frequency step (0: step through the list)
+    // Dolphin Lab (Full edition; kept by both, like the fields above).
+    uint8_t ui_style; // RgUiStyle
+    uint8_t ui_feedback; // RgUiFeedbackLevel
+    bool ui_transitions; // screen transitions in the lab styles
 } RadioGeddonSettings;
 
 /** Where the Scanner and the Hopper take their frequencies from. */

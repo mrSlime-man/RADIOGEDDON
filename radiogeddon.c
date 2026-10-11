@@ -20,6 +20,9 @@ static void radiogeddon_tick_event_callback(void* context) {
     furi_assert(context);
     RadioGeddonApp* app = context;
     radiogeddon_memdiag_sample(NULL);
+#if RG_FEATURE_DOLPHIN_LAB
+    radiogeddon_ui_tick(app);
+#endif
     scene_manager_handle_tick_event(app->scene_manager);
 }
 
@@ -120,6 +123,11 @@ RadioGeddonApp* radiogeddon_app_alloc(void) {
         radiogeddon_receiver_view_get_view(app->receiver_view));
 
     view_dispatcher_attach_to_gui(app->view_dispatcher, app->gui, ViewDispatcherTypeFullscreen);
+#if RG_FEATURE_DOLPHIN_LAB
+    // After everything the radio and the menus need: the lab view is the
+    // one thing a short heap does without (Classic for this run).
+    radiogeddon_ui_alloc(app);
+#endif
 
     return app;
 }
@@ -139,6 +147,9 @@ void radiogeddon_app_free(RadioGeddonApp* app) {
     view_dispatcher_remove_view(app->view_dispatcher, RadioGeddonViewTextBox);
     view_dispatcher_remove_view(app->view_dispatcher, RadioGeddonViewScanner);
     view_dispatcher_remove_view(app->view_dispatcher, RadioGeddonViewReceiver);
+#if RG_FEATURE_DOLPHIN_LAB
+    radiogeddon_ui_free(app);
+#endif
     radiogeddon_scene_db_release(app);
 
     submenu_free(app->submenu);

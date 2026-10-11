@@ -30,6 +30,7 @@ struct Canvas {
     char last_overflow[96];
     bool in_text;
     uint32_t text_clipped;
+    bool bitmap_alpha;
 };
 
 static Canvas g_canvas;
@@ -189,10 +190,118 @@ void canvas_draw_xbm(
     // device, where clear bits draw the background: same result on a
     // cleared screen).
     size_t stride = (width + 7u) / 8u;
+    Color color = c->color;
     for(size_t j = 0; j < height; j++)
-        for(size_t i = 0; i < width; i++)
-            if(bitmap[j * stride + i / 8u] & (1u << (i % 8u)))
+        for(size_t i = 0; i < width; i++) {
+            bool set = bitmap[j * stride + i / 8u] & (1u << (i % 8u));
+            if(set) {
                 canvas_host_set(c, x + (int32_t)i, y + (int32_t)j);
+            } else if(!c->bitmap_alpha) {
+                // Solid mode, as the firmware draws by default: clear bits
+                // in the background colour.
+                c->color = color == ColorBlack ? ColorWhite : ColorBlack;
+                if(color != ColorXOR) canvas_host_set(c, x + (int32_t)i, y + (int32_t)j);
+                c->color = color;
+            }
+        }
+}
+
+void canvas_set_bitmap_mode(Canvas* c, bool alpha) {
+    c->bitmap_alpha = alpha;
+}
+
+/* u8g2's circle: the midpoint algorithm, eight points per step (u8g2_circle.c). */
+static void
+    canvas_host_circle_points(Canvas* c, int32_t x0, int32_t y0, int32_t x, int32_t y, bool fill) {
+    if(fill) {
+        for(int32_t k = y0 - y; k <= y0 + y; k++) {
+            canvas_host_set(c, x0 + x, k);
+            canvas_host_set(c, x0 - x, k);
+        }
+        for(int32_t k = y0 - x; k <= y0 + x; k++) {
+            canvas_host_set(c, x0 + y, k);
+            canvas_host_set(c, x0 - y, k);
+        }
+        return;
+    }
+    canvas_host_set(c, x0 + x, y0 - y);
+    canvas_host_set(c, x0 + y, y0 - x);
+    canvas_host_set(c, x0 - x, y0 - y);
+    canvas_host_set(c, x0 - y, y0 - x);
+    canvas_host_set(c, x0 + x, y0 + y);
+    canvas_host_set(c, x0 + y, y0 + x);
+    canvas_host_set(c, x0 - x, y0 + y);
+    canvas_host_set(c, x0 - y, y0 + x);
+}
+
+static void canvas_host_circle(Canvas* c, int32_t x0, int32_t y0, int32_t rad, bool fill) {
+    int32_t f = 1 - rad, ddx = 1, ddy = -2 * rad, x = 0, y = rad;
+    canvas_host_circle_points(c, x0, y0, x, y, fill);
+    while(x < y) {
+        if(f >= 0) {
+            y--;
+            ddy += 2;
+            f += ddy;
+        }
+        x++;
+        ddx += 2;
+        f += ddx;
+        canvas_host_circle_points(c, x0, y0, x, y, fill);
+    }
+}
+
+void canvas_draw_circle(Canvas* c, int32_t x, int32_t y, size_t radius) {
+    canvas_host_circle(c, x, y, (int32_t)radius, false);
+}
+
+void canvas_draw_disc(Canvas* c, int32_t x, int32_t y, size_t radius) {
+    canvas_host_circle(c, x, y, (int32_t)radius, true);
+}
+
+/* Rounded rectangles: straight sides and quarter circles in the corners. */
+static void canvas_host_rounded(
+    Canvas* c,
+    int32_t x,
+    int32_t y,
+    size_t width,
+    size_t height,
+    size_t radius,
+    bool fill) {
+    int32_t w = (int32_t)width, h = (int32_t)height, r = (int32_t)radius;
+    if(w <= 0 || h <= 0) return;
+    if(2 * r >= w) r = (w - 1) / 2;
+    if(2 * r >= h) r = (h - 1) / 2;
+    if(r < 0) r = 0;
+    for(int32_t j = 0; j < h; j++)
+        for(int32_t i = 0; i < w; i++) {
+            // Distance into the nearest corner's square.
+            int32_t cx = i < r ? r - i : (i >= w - r ? i - (w - 1 - r) : 0);
+            int32_t cy = j < r ? r - j : (j >= h - r ? j - (h - 1 - r) : 0);
+            int32_t d2 = cx * cx + cy * cy;
+            bool inside = d2 <= r * r + r / 2;
+            if(!inside) continue;
+            bool edge = i == 0 || j == 0 || i == w - 1 || j == h - 1;
+            if(!edge && (cx || cy)) {
+                // On a corner's arc: inside, but a neighbour outside.
+                int32_t ox = cx ? cx + 1 : 0, oy = cy ? cy + 1 : 0;
+                edge = ox * ox + cy * cy > r * r + r / 2 || cx * cx + oy * oy > r * r + r / 2;
+            }
+            if(fill || edge) canvas_host_set(c, x + i, y + j);
+        }
+}
+
+void canvas_draw_rframe(
+    Canvas* c,
+    int32_t x,
+    int32_t y,
+    size_t width,
+    size_t height,
+    size_t radius) {
+    canvas_host_rounded(c, x, y, width, height, radius, false);
+}
+
+void canvas_draw_rbox(Canvas* c, int32_t x, int32_t y, size_t width, size_t height, size_t radius) {
+    canvas_host_rounded(c, x, y, width, height, radius, true);
 }
 
 /* ---- u8g2 font decoding (font format of u8g2's u8g2_font.c) -------------- */
@@ -348,8 +457,11 @@ void canvas_draw_str_aligned(
 struct View {
     ViewDrawCallback draw;
     ViewInputCallback input;
+    ViewCallback enter;
+    ViewCallback exit;
     void* context;
     void* model;
+    uint32_t updates;
 };
 
 View* view_alloc(void) {
@@ -378,17 +490,41 @@ void view_set_input_callback(View* view, ViewInputCallback callback) {
     view->input = callback;
 }
 
+void view_set_enter_callback(View* view, ViewCallback callback) {
+    view->enter = callback;
+}
+
+void view_set_exit_callback(View* view, ViewCallback callback) {
+    view->exit = callback;
+}
+
+void view_host_enter(View* view) {
+    if(view->enter) view->enter(view->context);
+}
+
+void view_host_exit(View* view) {
+    if(view->exit) view->exit(view->context);
+}
+
+uint32_t view_host_updates(View* view) {
+    uint32_t n = view->updates;
+    view->updates = 0;
+    return n;
+}
+
 void* view_get_model(View* view) {
     return view->model;
 }
 
 void view_commit_model(View* view, bool update) {
-    (void)view;
-    (void)update;
+    if(update) view->updates++;
 }
 
 void view_host_draw(View* view, Canvas* canvas) {
+    // As the GUI before each draw callback.
     canvas->color = ColorBlack;
+    canvas->bitmap_alpha = false;
+    canvas_set_font(canvas, FontSecondary);
     view->draw(canvas, view->model);
 }
 
@@ -414,4 +550,20 @@ void elements_scrollbar_pos(
     for(int32_t yy = y; yy < y + (int32_t)height; yy += 2)
         canvas_host_set(c, x - 2, yy);
     canvas_draw_box(c, x - 3, top, 3, block);
+}
+
+/* As the firmware's elements_button_center: a box at the bottom centre with
+ * an OK mark (here a ring) and the label in the inverted colour. */
+void elements_button_center(Canvas* c, const char* str) {
+    int32_t w = (int32_t)canvas_string_width(c, str) + 2 + 10;
+    int32_t x = (128 - w) / 2, y = 64;
+    canvas_draw_box(c, x, y - 12, (size_t)w, 12);
+    for(int32_t k = 1; k <= 3; k++) {
+        canvas_draw_line(c, x - k, y - 1, x - k, y - 12 + k - 1);
+        canvas_draw_line(c, x + w - 1 + k, y - 1, x + w - 1 + k, y - 12 + k - 1);
+    }
+    canvas_invert_color(c);
+    canvas_draw_circle(c, x + 4, y - 6, 3);
+    canvas_draw_str(c, x + 11, y - 3, str);
+    canvas_invert_color(c);
 }

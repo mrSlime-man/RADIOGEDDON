@@ -21,6 +21,7 @@ struct RadioGeddonScanner {
     bool hold_on_hit;
     bool paused;
     int32_t hold_index;
+    int32_t measuring; // channel being measured now, or -1
     uint32_t sweep_ms;
 
     RadioGeddonScannerHitCallback callback;
@@ -33,6 +34,7 @@ RadioGeddonScanner* radiogeddon_scanner_alloc(RadioGeddonSubGhz* subghz) {
     instance->subghz = subghz;
     instance->mutex = furi_mutex_alloc(FuriMutexTypeNormal);
     instance->hold_index = -1;
+    instance->measuring = -1;
     rg_scan_params_default(&instance->params);
     instance->dwell_ms = 10;
     instance->threshold_db = 10;
@@ -106,6 +108,9 @@ static int32_t radiogeddon_scanner_thread(void* context) {
 
         size_t index = (hold >= 0 && (size_t)hold < count) ? (size_t)hold : next;
         uint32_t freq = instance->frequencies[index];
+        furi_mutex_acquire(instance->mutex, FuriWaitForever);
+        instance->measuring = (int32_t)index;
+        furi_mutex_release(instance->mutex);
         float rssi = radiogeddon_subghz_probe_rssi_dwell(instance->subghz, freq, dwell);
 
         bool started = false;
@@ -155,6 +160,7 @@ void radiogeddon_scanner_stop(RadioGeddonScanner* instance) {
     furi_thread_join(instance->thread);
     furi_thread_free(instance->thread);
     instance->thread = NULL;
+    instance->measuring = -1;
 }
 
 void radiogeddon_scanner_toggle_pause(RadioGeddonScanner* instance) {
@@ -190,6 +196,7 @@ void radiogeddon_scanner_snapshot(RadioGeddonScanner* instance, RadioGeddonScann
     memcpy(out->channels, instance->channels, sizeof(out->channels));
     out->global_floor = rg_scan_global_floor(instance->channels, instance->count);
     out->hold_index = instance->hold_index;
+    out->measuring = instance->paused ? -1 : instance->measuring;
     out->paused = instance->paused;
     out->sweep_ms = instance->sweep_ms;
     out->threshold_db = instance->threshold_db;
@@ -276,4 +283,11 @@ uint32_t radiogeddon_scanner_frequency(RadioGeddonScanner* instance, size_t inde
     uint32_t f = (index < instance->count) ? instance->frequencies[index] : 0;
     furi_mutex_release(instance->mutex);
     return f;
+}
+
+bool radiogeddon_scanner_is_paused(RadioGeddonScanner* instance) {
+    furi_mutex_acquire(instance->mutex, FuriWaitForever);
+    bool paused = instance->paused;
+    furi_mutex_release(instance->mutex);
+    return paused;
 }

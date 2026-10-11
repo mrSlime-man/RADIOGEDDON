@@ -2,7 +2,7 @@
 
 What has been verified, how, and what has not. Integrity rule: nothing is
 marked hardware-verified without evidence from a physical device. As of
-`1.0.0-beta.7`, the only physical-hardware results are tester reports on
+`1.0.0-beta.8`, the only physical-hardware results are tester reports on
 earlier code (see "Reported by users" below); no checklist item is
 independently verified, and the "Not verified" section stands open.
 
@@ -21,10 +21,10 @@ locally.
 | Area | Method | Result |
 |------|--------|--------|
 | Catalog edition, Official build | SDK 1.4.3 pinned by SHA-256, API asserted 87.1, manifest (name `RadioGeddon`, version) verified, all 289 imports exported by the SDK | Pass — `radiogeddon-catalog-official.fap` |
-| Full edition, RogueMaster build | RogueMaster source at commit `38d7ae9`, built with its own `fbt`, API asserted 88.16, manifest (name `RadioGeddon Full`) verified, all 303 imports exported by its `api_symbols.csv` | Pass — `radiogeddon-full-roguemaster.fap` |
-| Full edition, Momentum build | Momentum mntm-012 SDK pinned by SHA-256 (matches Momentum's update index), API asserted 87.1, manifest verified, all 303 imports exported by Momentum's SDK | Pass — `radiogeddon-full-momentum.fap` |
-| Full edition, Unleashed build | SDK unlshd-093 pinned by SHA-256, API asserted 88.9, manifest verified, all 303 imports exported by the SDK | Pass — `radiogeddon-full-unleashed.fap` |
-| Edition switches | `test_edition` built three times: as Full, as Catalog and with no edition (must be Catalog); defining both must not compile | Pass — 12 checks each, conflict refused |
+| Full edition, RogueMaster build | RogueMaster source at commit `38d7ae9`, built with its own `fbt`, API asserted 88.16, manifest (name `RadioGeddon Full`) verified, all 322 imports exported by its `api_symbols.csv` | Pass — `radiogeddon-full-roguemaster.fap` |
+| Full edition, Momentum build | Momentum mntm-012 SDK pinned by SHA-256 (matches Momentum's update index), API asserted 87.1, manifest verified, all 322 imports exported by Momentum's SDK | Pass — `radiogeddon-full-momentum.fap` |
+| Full edition, Unleashed build | SDK unlshd-093 pinned by SHA-256, API asserted 88.9, manifest verified, all 322 imports exported by the SDK | Pass — `radiogeddon-full-unleashed.fap` |
+| Edition switches | `test_edition` built three times: as Full, as Catalog and with no edition (must be Catalog); defining both must not compile | Pass — 13 checks each, conflict refused |
 | Lint | `ufbt lint` (clang-format) | Pass, no warnings |
 | DSP/parse unit tests | `make -C test check` → `test_dsp` | Pass — 36 checks |
 | Analysis-engine unit tests | `make -C test check` → `test_analyzer` | Pass — 137 checks |
@@ -50,6 +50,9 @@ locally.
 | Multi-capture comparison | `make -C test check` → `test_multi`: synthetic sets with known constant, button, counter and data fields, frequency / preset / Te consistency, identical-frame letters, the noise check, labels on every report line, no "serial" claim | Pass — 48 checks |
 | Research session files | `make -C test check` → `test_session`: format round trip, damaged lines and names, a failure at each step of a save (write, read-back, rename: the last complete version always loads), backup recovery, add / remove / rename, name rules, grouping suggestions | Pass — 91 checks |
 | Module size estimate | `make -C test check` → `test_elf`: allocated-section sum of an ELF file, ELF64, big-endian, truncated and malformed headers refused | Pass — 10 checks |
+| Dolphin Lab logic | `make -C test check` → `test_mascot`: the mascot's priorities, levels from the real state (REC only while the recorder runs), deadlines that never queue (100,000 detections end like one), boredom and sleep never during a scan, the clock's wrap and a clock going back, analysis progress never invented, determinism, every pose in range and idle calmer than active states; styles and the low-memory fallback, feedback levels and rate limits, transitions and the dither, the menu window, text wrapping, the oscilloscope trace, the firmware family, the sprite table | Pass — 150 checks |
+| Sprites from their art | `make -C test check` → `tools/dolphin/build_sprites.py --check`: `helpers/rg_sprites.c` is what `art/dolphin/*.txt` generates | Pass |
+| Offline UI, Dolphin Lab | `make -C test ui` → `test_ui_lab`: the dashboard in Dolphin Lab and Cyber Lab for every mascot state and every 100 ms frame of 12 s; navigation, events and the menu window; redraws only on a change (120 in 60 s of idle at 100 ms ticks); every message the app shows (listed from the sources) on a card, whole and inside the screen in both styles; save, busy and progress cards (no figure without progress); wipe and dither transitions ended by a key; the badges on the Scanner (its sweep cursor), Receive, Range Scanner and Waterfall screens; the Waterfall's entry reveal; the lab room's stations, wipes, gallery and oscilloscope; synthetic previews of each | Pass — 226 checks |
 | Offline UI | `make -C test ui` → `test_ui`: screens drawn with the firmware's own canvas fonts (u8g2 data from the pinned SDK) on a 128x64 host canvas; no text off screen or overlapping, keys driven through the Waterfall and Bitstream Explorer, the Database list with no, long-named and 200 files; synthetic previews written as PNG (CI artifact `synthetic-ui-previews`, labelled synthetic, not hardware screenshots) | Pass — 141 checks |
 | Format tests (firmware code, real files) | `make -C test formats` → `test_formats`: the firmware's FlipperFormat and stream code and its 85 Sub-GHz test files, from the commit of Official 1.4.3 | Pass — 654 checks (also settings shared between editions and with beta 5, favorites and scan profiles) |
 | Analyzer on real captures | `make -C test captures` → `test_fwanalyze`: `rg_analyzer` on the firmware's 50 paired RAW test captures, scored against each protocol's decoder source | Pass — 354 checks; Te right for 50, encoding family for 43, frame length for 35 (see below) |
@@ -58,19 +61,19 @@ locally.
 | Engine lifecycle | `make -C test lifecycle` → `test_lifecycle`: the real Scanner, Range Scanner (with and without a waterfall history) and Hopper engines started and stopped repeatedly on real threads against a fake radio, every allocation counted | Pass — 36 checks; memory unchanged between cycles and fully returned on free, every scan session and capture closed, no probe inside a band gap, activity detected after calibration, hold on hit |
 | Apps Catalog rules | `scripts/check_catalog.py --catalog`: fam fields, icon, description and changelog through the catalog's own Markdown filter, ASCII-only strings, writes only under `apps_data/radiogeddon` | Pass; screenshots missing (need hardware) |
 | Apps Catalog bundler | `scripts/catalog_bundle.py`: the catalog's own `tools/bundle.py` steps on the pushed commit (clone, `ufbt lint`, build, manifest from `application.fam`, path, includes, icon, values, Markdown) | Every step passes except screenshots (see "Not verified") |
-| Fuzz corpus replay | `make -C test check` → `replay_fuzz_raw`, `replay_fuzz_db`, `replay_fuzz_samples`, `replay_fuzz_session` | Pass — every committed input |
+| Fuzz corpus replay | `make -C test check` → `replay_fuzz_raw`, `replay_fuzz_db`, `replay_fuzz_samples`, `replay_fuzz_session`, `replay_fuzz_ui` | Pass — every committed input |
 | Fuzzing | `make -C test fuzz` (libFuzzer with ASan/UBSan; 60 s per target in CI) | Pass — no crash, sanitizer report or broken invariant |
-| Static analysis | `scripts/static_analysis.py`: GCC `-fanalyzer` and clang-tidy ([`.clang-tidy`](../.clang-tidy)) over the device code with the build flags: the Catalog edition on the Official SDK, the Full edition on the Momentum and Unleashed SDKs | Pass — 0 findings (beta 7: 19 findings in the new code fixed first, two of them real uninitialised-value paths) |
+| Static analysis | `scripts/static_analysis.py`: GCC `-fanalyzer` and clang-tidy ([`.clang-tidy`](../.clang-tidy)) over the device code with the build flags: the Catalog edition on the Official SDK, the Full edition on the Momentum and Unleashed SDKs | Pass — 0 findings (beta 8: 2 findings in the new code fixed first, a parameter name and an implicit narrowing; beta 7: 19, two of them real uninitialised-value paths) |
 | Thread safety of ring and recorder | `make -C test tsan` (ThreadSanitizer; optional, not in CI) | Pass — no reports |
 | Memory safety of tested code | tests built `-Werror` under `-fsanitize=address,undefined` | Pass — no ASan/UBSan reports |
 | Documentation links | `scripts/check_links.py` (offline link + anchor check) | Pass |
 | Release metadata | `scripts/release_meta.py`: version in `radiogeddon_version.h` and `application.fam`, release notes, CHANGELOG section, the API listed for each `.fap` against the pins, download links | Pass |
 | Newer firmware (canary) | `scripts/firmware_watch.py --build` (weekly in CI): Catalog edition on the Official 1.5.1-rc SDK, API 88.2 | Builds; `APPCHK`, manifest and imports pass. No release targets it yet, not hardware-tested |
 | `.fap` metadata | `scripts/verify_fap.py` parses `.fapmeta` and asserts magic, API, target, name, version, icon; with `--symbols`, that every undefined symbol in the ELF symbol table is exported by the SDK | Pass for all four artifacts |
-| Resident code size | `scripts/fap_size.py`: the sum of the allocated (`SHF_ALLOC`) ELF sections of the built files, which is what the loader places in the heap | Catalog 77,173 B (beta 6: 75,704 B, same script), Full 104,388 B (beta 6: 94,676 B); Full modules, loaded only while in use: Waterfall 2,740 B, Bitstream 6,484 B, Unknown 15,608 B, Multi 15,960 B, Sessions 16,383 B |
-| Embedded modules | `scripts/verify_fap.py --modules`: unpacks the Full `.fap`'s `.fapassets`, checks each of the five `.fal` plugins' manifest and that every symbol it imports is exported by that firmware's SDK | Pass for all three Full builds |
+| Resident code size | `scripts/fap_size.py`: the sum of the allocated (`SHF_ALLOC`) ELF sections of the built files, which is what the loader places in the heap | Catalog 77,782 B (beta 7: 77,172 B, same script), Full 119,428 B (beta 7: 104,388 B); Full modules, loaded only while in use: Waterfall 4,315 B, Bitstream 6,484 B, Unknown 15,608 B, Multi 15,959 B, Sessions 16,380 B, Dolphin Lab room 8,830 B |
+| Embedded modules | `scripts/verify_fap.py --modules`: unpacks the Full `.fap`'s `.fapassets`, checks each of the six `.fal` plugins' manifest and that every symbol it imports is exported by that firmware's SDK | Pass for all three Full builds |
 
-Host-test total: **1,962 checks, 0 failures** (`make -C test check`; the format, capture and decoder tests are counted on their own). What the suite covers (synthetic
+Host-test total: **2,115 checks, 0 failures** (`make -C test check`; the format, capture and decoder tests are counted on their own). What the suite covers (synthetic
 signals, not real captures):
 
 - `test_dsp` — RAW `RAW_Data` parsing (incl. whitespace, signs, out-of-range
@@ -212,6 +215,14 @@ the sanitizers then report:
   session, and the ELF estimate never reads outside the file. It found that a
   session name ending in a space did not survive a save and load; fixed, and
   the input is in the corpus.
+- `fuzz_ui` — Dolphin Lab: event streams for the mascot (unknown events,
+  clock steps backwards and across the 32-bit wrap, level syncs), text of any
+  content wrapped at any width, and RAW durations for the oscilloscope trace:
+  every pose in range, the same input giving the same frames, REC only while
+  the recorder level is on, wrapped lines inside the text and the width, the
+  trace's span equal to the durations' sum. Its first run found that the
+  harness itself let a raw "recording started" event through (the app only
+  syncs the recorder's level); the harness was fixed and the input kept.
 
 The seed corpus is synthetic (the fixtures plus hand-made edge cases, written
 by `test/fuzz/make_seeds.py`) plus inputs the fuzzer found.
@@ -446,8 +457,8 @@ Everything about on-device radio behaviour, and the end-to-end workflow. See the
   (checklist C1–C3); the host tests check the decision for every combination
   of the firmware's answers, not the firmware's region data.
 - Memory headroom of the larger Full edition on a device (checklist M1–M5):
-  its resident code is about 31 KB larger than beta 5's (9.7 KB more than
-  beta 6), and each module needs its own size free while in use.
+  its resident code is 119,428 B (beta 7: 104,388 B; beta 6: 94,676 B), and
+  each module needs its own size free while in use.
 - The beta 7 research tools on a device (checklist B1–B9): the Waterfall's
   real sweep rate and readability, module loading by each firmware's plugin
   manager, the Bitstream Explorer and Multi-Capture Compare on captures from a
@@ -455,6 +466,16 @@ Everything about on-device radio behaviour, and the end-to-end workflow. See the
   saving), and the grouped Full menu. The host tests run the pure logic, the
   screens on a host canvas and the engine against a fake radio; they do not
   run the firmware's plugin loader, display or SD card.
+- Dolphin Lab on a device (checklist D1–D14): how the dolphin and the
+  dashboard look on the real screen, the animation rate the GUI achieves,
+  that reactions follow the radio (scan, detection, receive, the REC lamp
+  with the recorder), theme switching and persistence, the room module loading
+  by each firmware's plugin manager, memory before and after the room and
+  across many trips between the room and radio tools, and battery use with
+  the dashboard left open. The host tests draw every state on a host canvas
+  and run the logic and the event bridge's pure parts; the bridge itself, the
+  firmware's GUI timing, notification sounds and vibration, and the 15 KB of
+  extra resident code on a real heap are unverified.
 - Apps Catalog acceptance: the submission needs qFlipper screenshots from a
   device, and the catalog's moderators decide.
 

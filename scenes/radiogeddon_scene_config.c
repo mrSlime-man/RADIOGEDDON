@@ -43,6 +43,10 @@ typedef enum {
     ConfigItemHopSource,
     ConfigItemFreqStep,
     ConfigItemBands,
+    // Dolphin Lab (Full edition).
+    ConfigItemUiStyle,
+    ConfigItemUiFeedback,
+    ConfigItemTransitions,
 } ConfigItem;
 
 #define ConfigCustomEditScanList 600
@@ -291,6 +295,28 @@ static void radiogeddon_scene_config_enter_cb(void* context, uint32_t index) {
     }
 }
 
+#if RG_FEATURE_DOLPHIN_LAB
+static void radiogeddon_scene_config_ui_style_changed(VariableItem* item) {
+    RadioGeddonApp* app = variable_item_get_context(item);
+    uint8_t index = variable_item_get_current_value_index(item);
+    app->settings.ui_style = index;
+    variable_item_set_current_value_text(item, rg_ui_style_name((RgUiStyle)index));
+}
+
+static void radiogeddon_scene_config_ui_feedback_changed(VariableItem* item) {
+    RadioGeddonApp* app = variable_item_get_context(item);
+    uint8_t index = variable_item_get_current_value_index(item);
+    app->settings.ui_feedback = index;
+    variable_item_set_current_value_text(item, rg_ui_feedback_name((RgUiFeedbackLevel)index));
+}
+
+static void radiogeddon_scene_config_transitions_changed(VariableItem* item) {
+    RadioGeddonApp* app = variable_item_get_context(item);
+    app->settings.ui_transitions = variable_item_get_current_value_index(item) == 1;
+    variable_item_set_current_value_text(item, app->settings.ui_transitions ? "On" : "Off");
+}
+#endif
+
 static uint8_t radiogeddon_config_nearest_u16(const uint16_t* values, size_t n, uint16_t v) {
     uint8_t best = 0;
     for(size_t i = 0; i < n; i++) {
@@ -490,6 +516,23 @@ void radiogeddon_scene_config_on_enter(void* context) {
     item = variable_item_list_add(list, "Radio bands", 1, NULL, app);
     variable_item_set_current_value_text(item, ">");
 #endif
+#if RG_FEATURE_DOLPHIN_LAB
+    // Look and feel only: none of these changes what the radio does.
+    item = variable_item_list_add(
+        list, "UI style", RgUiStyleCount, radiogeddon_scene_config_ui_style_changed, app);
+    variable_item_set_current_value_index(item, app->settings.ui_style);
+    variable_item_set_current_value_text(
+        item, rg_ui_style_name((RgUiStyle)app->settings.ui_style));
+    item = variable_item_list_add(
+        list, "UI feedback", RgUiFeedbackCount, radiogeddon_scene_config_ui_feedback_changed, app);
+    variable_item_set_current_value_index(item, app->settings.ui_feedback);
+    variable_item_set_current_value_text(
+        item, rg_ui_feedback_name((RgUiFeedbackLevel)app->settings.ui_feedback));
+    item = variable_item_list_add(
+        list, "Transitions", 2, radiogeddon_scene_config_transitions_changed, app);
+    variable_item_set_current_value_index(item, app->settings.ui_transitions ? 1 : 0);
+    variable_item_set_current_value_text(item, app->settings.ui_transitions ? "On" : "Off");
+#endif
 
     variable_item_list_set_enter_callback(list, radiogeddon_scene_config_enter_cb, app);
     variable_item_list_set_selected_item(
@@ -554,5 +597,9 @@ void radiogeddon_scene_config_on_exit(void* context) {
     radiogeddon_subghz_set_frequency(app->subghz, app->frequency);
     radiogeddon_subghz_set_preset(app->subghz, app->preset_index);
     radiogeddon_app_save_settings(app);
+#if RG_FEATURE_DOLPHIN_LAB
+    // A new style takes effect at once (the lab view is not on screen now).
+    radiogeddon_ui_apply_style(app);
+#endif
     variable_item_list_reset(app->var_item_list);
 }

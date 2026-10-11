@@ -46,7 +46,11 @@ void radiogeddon_scene_about_on_enter(void* context) {
         "- Crypto characteristics\n"
         "- Comparator\n"
         "- SD-card database\n"
-        "- Authorized replay\n\n"
+        "- Authorized replay\n"
+#if RG_FEATURE_DOLPHIN_LAB
+        "- Dolphin Lab interface\n  and lab room\n"
+#endif
+        "\n"
         "Labels: [CONFIRMED] =\ndecoder matched.\n[OBSERVED] = measured\nfrom the timing.\n"
         "[HEURISTIC] = guess from\nsignal statistics.\n"
         "[HYPOTHESIS] = engine\ninference, unverified.\n\n"

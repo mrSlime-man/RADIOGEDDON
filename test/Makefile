@@ -25,6 +25,7 @@ BITS_SRC := test_bits.c ../helpers/rg_bits.c ../helpers/rg_analyzer.c
 MULTI_SRC := test_multi.c ../helpers/rg_multi.c ../helpers/rg_analyzer.c
 SESSION_SRC := test_session.c ../helpers/rg_session.c
 ELF_SRC := test_elf.c ../helpers/rg_elf.c
+MASCOT_SRC := test_mascot.c ../helpers/rg_mascot.c ../helpers/rg_ui.c ../helpers/rg_sprites.c
 WATERFALL_SRC := test_waterfall.c ../helpers/rg_waterfall.c ../helpers/rg_range.c
 MEMSTAT_SRC := test_memstat.c ../helpers/rg_memstat.c
 DECODE_SRC := test_decode.c ../helpers/rg_decode.c ../helpers/rg_raw.c
@@ -47,7 +48,7 @@ FW_OBJ := $(patsubst $(FW)/%.c,$(BUILD)/fwobj/%.o,$(FW_SRC))
 FORMATS_SRC := test_formats.c stubs/furi_stub.c ../helpers/radiogeddon_storage.c \
 		../helpers/radiogeddon_settings.c ../helpers/radiogeddon_bands.c ../helpers/rg_freq.c \
 		../helpers/radiogeddon_dsp.c ../helpers/rg_range.c ../helpers/radiogeddon_profiles.c \
-		../helpers/rg_db.c ../helpers/rg_raw.c ../helpers/rg_analyzer.c
+		../helpers/rg_db.c ../helpers/rg_raw.c ../helpers/rg_analyzer.c ../helpers/rg_ui.c
 
 # Decoder tests: the firmware's own Sub-GHz receiver and protocol decoders
 # (lib/subghz, every protocol it registers) run over its own RAW test captures
@@ -76,7 +77,8 @@ FUZZ_RAW_SRC := fuzz/fuzz_raw.c ../helpers/rg_raw.c ../helpers/rg_analyzer.c
 FUZZ_DB_SRC := fuzz/fuzz_db.c ../helpers/rg_db.c ../helpers/radiogeddon_dsp.c
 FUZZ_SAMPLES_SRC := fuzz/fuzz_samples.c ../helpers/rg_analyzer.c ../helpers/rg_timeline.c
 FUZZ_SESSION_SRC := fuzz/fuzz_session.c ../helpers/rg_session.c ../helpers/rg_elf.c
-FUZZ_TARGETS := fuzz_raw fuzz_db fuzz_samples fuzz_session
+FUZZ_UI_SRC := fuzz/fuzz_ui.c ../helpers/rg_mascot.c ../helpers/rg_ui.c
+FUZZ_TARGETS := fuzz_raw fuzz_db fuzz_samples fuzz_session fuzz_ui
 FUZZ_CC ?= clang
 FUZZ_TIME ?= 60
 
@@ -97,6 +99,7 @@ LIFECYCLE_SRC := test_lifecycle.c stubs/furi_stub.c stubs/radio_fake.c \
 # (build/ui/previews, PNG via ui/previews.py). `make ui`.
 UI_FONTS := $(BUILD)/ui/fonts.inc
 UI_SRC := test_ui.c ui/canvas_host.c ../views/radiogeddon_waterfall_view.c \
+		../views/radiogeddon_mascot_draw.c ../helpers/rg_sprites.c \
 		../views/radiogeddon_bits_view.c ../helpers/rg_waterfall.c ../helpers/rg_bits.c \
 		../helpers/rg_glyph.c ../helpers/rg_analyzer.c ../helpers/rg_range.c ../helpers/rg_freq.c \
 		../views/radiogeddon_db_view.c ../helpers/radiogeddon_db.c ../helpers/rg_db.c stubs/furi_stub.c
@@ -107,7 +110,7 @@ UI_HDRS := ui/canvas_host.h ui/stubs/gui/view.h ui/stubs/gui/canvas.h ui/stubs/g
 check: $(BUILD)/test_dsp $(BUILD)/test_analyzer $(BUILD)/test_scan $(BUILD)/test_hop $(BUILD)/test_raw \
 		$(BUILD)/test_timeline $(BUILD)/test_ring $(BUILD)/test_rawfmt $(BUILD)/test_recorder \
 		$(BUILD)/test_db $(BUILD)/test_memstat $(BUILD)/test_dbload $(BUILD)/test_decode $(BUILD)/test_freq $(BUILD)/test_preset $(BUILD)/test_range \
-		$(BUILD)/test_txpolicy $(BUILD)/test_spectrum $(BUILD)/test_checksum $(BUILD)/test_waterfall $(BUILD)/test_bits $(BUILD)/test_multi $(BUILD)/test_session $(BUILD)/test_elf $(BUILD)/test_edition_full $(BUILD)/test_edition_catalog \
+		$(BUILD)/test_txpolicy $(BUILD)/test_spectrum $(BUILD)/test_checksum $(BUILD)/test_waterfall $(BUILD)/test_bits $(BUILD)/test_multi $(BUILD)/test_session $(BUILD)/test_elf $(BUILD)/test_mascot $(BUILD)/sprites.ok $(BUILD)/test_edition_full $(BUILD)/test_edition_catalog \
 		$(BUILD)/test_edition_default $(BUILD)/edition_conflict.ok \
 		$(addprefix $(BUILD)/replay_,$(FUZZ_TARGETS))
 	$(BUILD)/test_dsp
@@ -134,6 +137,7 @@ check: $(BUILD)/test_dsp $(BUILD)/test_analyzer $(BUILD)/test_scan $(BUILD)/test
 	$(BUILD)/test_multi
 	$(BUILD)/test_session
 	$(BUILD)/test_elf
+	$(BUILD)/test_mascot
 	$(BUILD)/test_edition_full
 	$(BUILD)/test_edition_catalog
 	$(BUILD)/test_edition_default
@@ -202,6 +206,15 @@ $(BUILD)/test_session: $(SESSION_SRC) ../helpers/rg_session.h | $(BUILD)
 $(BUILD)/test_elf: $(ELF_SRC) ../helpers/rg_elf.h | $(BUILD)
 	$(CC) $(CFLAGS) $(SAN) -DRADIOGEDDON_EDITION_FULL -o $@ $(ELF_SRC)
 
+$(BUILD)/test_mascot: $(MASCOT_SRC) ../helpers/rg_mascot.h ../helpers/rg_ui.h ../helpers/rg_sprites.h | $(BUILD)
+	$(CC) $(CFLAGS) $(SAN) -DRADIOGEDDON_EDITION_FULL -o $@ $(MASCOT_SRC)
+
+# The generated sprites match their text art (tools/dolphin/build_sprites.py).
+$(BUILD)/sprites.ok: ../tools/dolphin/build_sprites.py $(wildcard ../art/dolphin/*.txt) \
+		../helpers/rg_sprites.c ../helpers/rg_sprites.h | $(BUILD)
+	python3 ../tools/dolphin/build_sprites.py --check
+	touch $@
+
 # The edition switches, built as each edition and with none defined.
 $(BUILD)/test_edition_full: test_edition.c ../radiogeddon_edition.h | $(BUILD)
 	$(CC) $(CFLAGS) $(SAN) -DRADIOGEDDON_EDITION_FULL -DEXPECT_FULL=1 -o $@ test_edition.c
@@ -235,14 +248,38 @@ $(BUILD)/test_lifecycle: $(LIFECYCLE_SRC) $(STUB_HDRS) $(FW)/.fetched | $(BUILD)
 	$(CC) $(CFLAGS) $(SAN) -D_GNU_SOURCE -I$(FW) -I$(FW)/lib -I$(FW)/lib/mlib -Istubs \
 		-DSTUB_TRACK_ALLOC -DRADIOGEDDON_EDITION_FULL -pthread -o $@ $(LIFECYCLE_SRC)
 
-ui: $(BUILD)/test_ui
+ui: $(BUILD)/test_ui $(BUILD)/test_ui_lab
 	mkdir -p $(BUILD)/ui/previews
 	rm -f $(BUILD)/ui/previews/*
 	$(BUILD)/test_ui
+	$(BUILD)/test_ui_lab
 	python3 ui/previews.py $(BUILD)/ui/previews
+	python3 ../tools/dolphin/build_sprites.py --check --preview $(BUILD)/ui/previews
 
 $(UI_FONTS): ui/fetch_fonts.sh ui/extract_fonts.py ../scripts/firmware_pins.sh
 	ui/fetch_fonts.sh $@
+
+# Dolphin Lab: the dashboard, cards, transitions, badges, the room and the
+# radio screens with their badges, on the same canvas (every message the app
+# shows is listed from the sources by ui/messages.py).
+UI_MESSAGES := $(BUILD)/ui/messages.inc
+UI_LAB_SRC := test_ui_lab.c ui/canvas_host.c ../views/radiogeddon_lab_view.c \
+		../views/radiogeddon_mascot_draw.c ../views/radiogeddon_room_view.c \
+		../views/radiogeddon_scanner_view.c ../views/radiogeddon_receiver_view.c \
+		../views/radiogeddon_spectrum_view.c ../views/radiogeddon_waterfall_view.c \
+		../helpers/rg_mascot.c ../helpers/rg_ui.c ../helpers/rg_sprites.c ../helpers/rg_freq.c \
+		../helpers/rg_spectrum.c ../helpers/rg_scan.c ../helpers/rg_range.c stubs/furi_stub.c
+UI_LAB_HDRS := $(UI_HDRS) ../views/radiogeddon_lab_view.h ../views/radiogeddon_mascot_draw.h \
+		../views/radiogeddon_room_view.h ../helpers/rg_mascot.h ../helpers/rg_ui.h ../helpers/rg_sprites.h
+
+$(UI_MESSAGES): ui/messages.py $(wildcard ../scenes/*.c) $(wildcard ../helpers/*.c) | $(BUILD)
+	mkdir -p $(dir $@)
+	python3 ui/messages.py $@ $(wildcard ../scenes/*.c) $(wildcard ../helpers/*.c)
+
+$(BUILD)/test_ui_lab: $(UI_LAB_SRC) $(UI_LAB_HDRS) $(UI_FONTS) $(UI_MESSAGES) $(FW)/.fetched | $(BUILD)
+	$(CC) $(CFLAGS) $(SAN) -D_GNU_SOURCE -Iui/stubs -Iui -I. -I$(FW) -I$(FW)/lib -I$(FW)/lib/mlib \
+		-Istubs -DRADIOGEDDON_EDITION_FULL -DFONTS_INC='"$(abspath $(UI_FONTS))"' \
+		-DMESSAGES_INC='"$(abspath $(UI_MESSAGES))"' -o $@ $(UI_LAB_SRC)
 
 # The stand-in gui headers come first; the firmware's Sub-GHz headers are
 # only for the range engine's types the Waterfall view's header names.
@@ -324,6 +361,10 @@ $(BUILD)/replay_fuzz_session: fuzz/replay.c $(FUZZ_SESSION_SRC) ../helpers/rg_se
 		../helpers/rg_elf.h | $(BUILD)
 	$(CC) $(CFLAGS) $(SAN) -DRADIOGEDDON_EDITION_FULL -o $@ fuzz/replay.c $(FUZZ_SESSION_SRC)
 
+$(BUILD)/replay_fuzz_ui: fuzz/replay.c $(FUZZ_UI_SRC) ../helpers/rg_mascot.h ../helpers/rg_ui.h \
+		| $(BUILD)
+	$(CC) $(CFLAGS) $(SAN) -DRADIOGEDDON_EDITION_FULL -o $@ fuzz/replay.c $(FUZZ_UI_SRC)
+
 # libFuzzer builds. New inputs go to build/corpus/<target>; the committed
 # corpus is only read. A failing input is saved as build/<target>-crash-*.
 $(BUILD)/fuzz_raw: $(FUZZ_RAW_SRC) | $(BUILD)
@@ -337,6 +378,10 @@ $(BUILD)/fuzz_db: $(FUZZ_DB_SRC) | $(BUILD)
 $(BUILD)/fuzz_session: $(FUZZ_SESSION_SRC) | $(BUILD)
 	$(FUZZ_CC) $(CFLAGS) -g -DRADIOGEDDON_EDITION_FULL -fsanitize=fuzzer,address,undefined \
 		-fno-sanitize-recover=all -o $@ $(FUZZ_SESSION_SRC)
+
+$(BUILD)/fuzz_ui: $(FUZZ_UI_SRC) | $(BUILD)
+	$(FUZZ_CC) $(CFLAGS) -g -DRADIOGEDDON_EDITION_FULL -fsanitize=fuzzer,address,undefined \
+		-fno-sanitize-recover=all -o $@ $(FUZZ_UI_SRC)
 
 $(BUILD)/fuzz_samples: $(FUZZ_SAMPLES_SRC) | $(BUILD)
 	$(FUZZ_CC) $(CFLAGS) -g -fsanitize=fuzzer,address,undefined -fno-sanitize-recover=all \

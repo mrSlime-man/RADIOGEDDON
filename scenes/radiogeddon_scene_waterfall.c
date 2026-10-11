@@ -51,6 +51,27 @@ static void radiogeddon_scene_waterfall_popup_cb(void* context) {
 /* The screen is a module (radiogeddon_modules.h) loaded with the scene. */
 #define WF_API(app) ((const RadioGeddonWaterfallModule*)(app)->module_api)
 
+// Dolphin Lab: the entry reveal (a transition, never data) and the badge.
+static RgTransition radiogeddon_waterfall_intro;
+
+#define WATERFALL_EVENT_HIT_BASE 20000u
+
+// Scan thread -> GUI thread: a point became active.
+static void radiogeddon_scene_waterfall_hit_cb(uint32_t index, void* context) {
+    RadioGeddonApp* app = context;
+    view_dispatcher_send_custom_event(app->view_dispatcher, WATERFALL_EVENT_HIT_BASE + index);
+}
+
+static void radiogeddon_scene_waterfall_lab(RadioGeddonApp* app) {
+    const RadioGeddonWaterfallModule* api = WF_API(app);
+    RgMascotFrame f;
+    bool cyber = false;
+    bool on = radiogeddon_ui_badge(app, &f, &cyber);
+    api->set_badge(app->waterfall_view, on ? &f : NULL, cyber);
+    api->set_reveal(
+        app->waterfall_view, rg_transition_level(&radiogeddon_waterfall_intro, furi_get_tick()));
+}
+
 static void radiogeddon_scene_waterfall_release(RadioGeddonApp* app) {
     // Screen first (nothing asks the engine for frames after it), then the
     // engine (stops its thread), its history, and the screen's code last.
@@ -111,6 +132,7 @@ void radiogeddon_scene_waterfall_on_enter(void* context) {
         app->settings.scan_threshold_db,
         false);
     radiogeddon_rangescan_waterfall_attach(app->rangescan, app->wf_buf, bytes);
+    radiogeddon_rangescan_set_callback(app->rangescan, radiogeddon_scene_waterfall_hit_cb, app);
 
     const RadioGeddonWaterfallModule* api = WF_API(app);
     app->waterfall_view = api->alloc();
@@ -123,6 +145,10 @@ void radiogeddon_scene_waterfall_on_enter(void* context) {
         radiogeddon_subghz_get_radio(app->subghz) == RadioGeddonRadioExternal);
     api->set_cursor(app->waterfall_view, app->wf_cursor);
     api->update(app->waterfall_view, radiogeddon_rangescan_waterfall_frame_fn, app->rangescan);
+    rg_transition_finish(&radiogeddon_waterfall_intro);
+    if(radiogeddon_ui_active(app) && app->settings.ui_transitions)
+        rg_transition_start(&radiogeddon_waterfall_intro, RgTransitionWipe, 300, furi_get_tick());
+    radiogeddon_scene_waterfall_lab(app);
 
     radiogeddon_rangescan_start(app->rangescan);
     radiogeddon_memdiag_sample("Waterfall");
@@ -150,6 +176,7 @@ static void radiogeddon_scene_waterfall_save(RadioGeddonApp* app) {
         app->storage,
         furi_string_get_cstr(path),
         radiogeddon_presets[app->preset_index].label);
+    radiogeddon_ui_event(app, ok ? RgMascotEventSaveCompleted : RgMascotEventOperationFailed, 0);
     if(ok) {
         notification_message(app->notifications, &sequence_success);
         size_t slash = furi_string_search_rchar(path, '/');
@@ -182,9 +209,16 @@ bool radiogeddon_scene_waterfall_on_event(void* context, SceneManagerEvent event
     if(event.type == SceneManagerEventTypeTick) {
         WF_API(app)->update(
             app->waterfall_view, radiogeddon_rangescan_waterfall_frame_fn, app->rangescan);
+        radiogeddon_ui_set_scanning(app, !radiogeddon_rangescan_is_paused(app->rangescan));
+        radiogeddon_scene_waterfall_lab(app);
         return true;
     }
     if(event.type != SceneManagerEventTypeCustom) return false;
+    if(event.event >= WATERFALL_EVENT_HIT_BASE) {
+        radiogeddon_ui_event(
+            app, RgMascotEventSignalActivity, event.event - WATERFALL_EVENT_HIT_BASE);
+        return true;
+    }
     switch(event.event) {
     case WaterfallEventPause:
         radiogeddon_rangescan_toggle_pause(app->rangescan);
@@ -220,6 +254,8 @@ bool radiogeddon_scene_waterfall_on_event(void* context, SceneManagerEvent event
 
 void radiogeddon_scene_waterfall_on_exit(void* context) {
     RadioGeddonApp* app = context;
+    radiogeddon_ui_set_scanning(app, false);
+    rg_transition_finish(&radiogeddon_waterfall_intro);
     popup_reset(app->popup);
     radiogeddon_scene_waterfall_release(app);
 }

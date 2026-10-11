@@ -27,7 +27,7 @@
 
 /* The plugin manager's application id and API version for every module. */
 #define RADIOGEDDON_MODULE_APPID "radiogeddon_full"
-#define RADIOGEDDON_MODULE_API   1u
+#define RADIOGEDDON_MODULE_API   2u
 
 /* File names in the app's assets folder (APP_ASSETS_PATH("plugins/...")). */
 #define RADIOGEDDON_MODULE_BITS      "radiogeddon_bits.fal"
@@ -35,6 +35,7 @@
 #define RADIOGEDDON_MODULE_WATERFALL "radiogeddon_wf.fal"
 #define RADIOGEDDON_MODULE_UNKNOWN   "radiogeddon_unknown.fal"
 #define RADIOGEDDON_MODULE_SESSIONS  "radiogeddon_sessions.fal"
+#define RADIOGEDDON_MODULE_LAB       "radiogeddon_lab.fal"
 
 #include "radiogeddon_analysis.h"
 /* Unknown Protocol Analysis report (radiogeddon_analysis_unknown). */
@@ -92,6 +93,8 @@ typedef struct {
     uint32_t (*get_cursor_hz)(RadioGeddonWaterfallView* view);
     uint16_t (*get_cursor)(RadioGeddonWaterfallView* view);
     void (*set_cursor)(RadioGeddonWaterfallView* view, uint16_t column);
+    void (*set_reveal)(RadioGeddonWaterfallView* view, uint8_t level);
+    void (*set_badge)(RadioGeddonWaterfallView* view, const RgMascotFrame* frame, bool cyber);
 } RadioGeddonWaterfallModule;
 #endif
 
@@ -114,6 +117,22 @@ typedef struct {
     bool (*on_event[RadioGeddonSessionsSceneCount])(void* context, SceneManagerEvent event);
     void (*on_exit[RadioGeddonSessionsSceneCount])(void* context);
 } RadioGeddonSessionsModule;
+#endif
+
+#if RG_FEATURE_DOLPHIN_LAB
+#include "../views/radiogeddon_room_view.h"
+/* The Dolphin Lab room's screen. */
+typedef struct {
+    RadioGeddonRoomView* (*alloc)(void);
+    void (*free)(RadioGeddonRoomView* view);
+    View* (*get_view)(RadioGeddonRoomView* view);
+    void (*set_callback)(RadioGeddonRoomView* view, RadioGeddonRoomCallback cb, void* ctx);
+    void (*load_terminal)(RadioGeddonRoomView* view, Storage* storage, const char* fw);
+    void (*load_scope)(RadioGeddonRoomView* view, Storage* storage, const char* path);
+    uint8_t (*get_station)(RadioGeddonRoomView* view);
+    uint8_t (*get_gallery)(RadioGeddonRoomView* view);
+    void (*update)(RadioGeddonRoomView* view, const RgMascotFrame* frame, uint32_t now);
+} RadioGeddonLabModule;
 #endif
 
 /* ---- host side --------------------------------------------------------------- */

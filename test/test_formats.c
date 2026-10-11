@@ -26,6 +26,7 @@
 #include "storage/storage.h"
 #include "../helpers/radiogeddon_storage.h"
 #include "../helpers/radiogeddon_settings.h"
+#include "../helpers/rg_ui.h"
 #include "../helpers/radiogeddon_profiles.h"
 #include "../helpers/radiogeddon_bands.h"
 #include "../helpers/rg_db.h"
@@ -387,7 +388,9 @@ static bool same_settings(const RadioGeddonSettings* a, const RadioGeddonSetting
            a->range_start_hz == b->range_start_hz && a->range_end_hz == b->range_end_hz &&
            a->range_step_hz == b->range_step_hz && a->range_dwell_ms == b->range_dwell_ms &&
            a->range_hold_on_hit == b->range_hold_on_hit && a->scan_source == b->scan_source &&
-           a->hop_source == b->hop_source && a->freq_step_hz == b->freq_step_hz;
+           a->hop_source == b->hop_source && a->freq_step_hz == b->freq_step_hz &&
+           a->ui_style == b->ui_style && a->ui_feedback == b->ui_feedback &&
+           a->ui_transitions == b->ui_transitions;
 }
 
 static RadioGeddonSettings custom_settings(void) {
@@ -416,6 +419,9 @@ static RadioGeddonSettings custom_settings(void) {
     s.scan_source = RadioGeddonSourceFavorites;
     s.hop_source = RadioGeddonSourceFavorites;
     s.freq_step_hz = 12500;
+    s.ui_style = RgUiStyleCyberLab;
+    s.ui_feedback = RgUiFeedbackFull;
+    s.ui_transitions = false;
     return s;
 }
 
@@ -474,6 +480,30 @@ static void test_settings_editions(void) {
             got.range_step_hz == def.range_step_hz && got.scan_source == RadioGeddonSourceList &&
             got.hop_source == RadioGeddonSourceList && got.freq_step_hz == 0,
         "new fields default");
+
+    // A file from 1.0.0-beta.7 (no Dolphin Lab keys): the Full edition's
+    // default style, feedback off, transitions on; garbage is refused.
+    reset_card();
+    write_settings_text("Filetype: RadioGeddon Settings\nVersion: 1\nFrequency: 433920000\n"
+                        "Freq_step: 12500\n");
+    radiogeddon_settings_load(CARD, &got);
+    CHECK(
+        got.freq_step_hz == 12500 && got.ui_style == RgUiStyleDolphinLab &&
+            got.ui_feedback == RgUiFeedbackOff && got.ui_transitions,
+        "beta.7 file: Dolphin Lab defaults");
+    reset_card();
+    write_settings_text("Filetype: RadioGeddon Settings\nVersion: 1\nUi_style: 3\n"
+                        "Ui_feedback: 7\n");
+    radiogeddon_settings_load(CARD, &got);
+    CHECK(same_settings(&got, &def), "invalid UI fields fall back to defaults");
+    reset_card();
+    write_settings_text("Filetype: RadioGeddon Settings\nVersion: 1\nUi_style: 2\n"
+                        "Ui_feedback: 1\nUi_transitions: false\n");
+    radiogeddon_settings_load(CARD, &got);
+    CHECK(
+        got.ui_style == RgUiStyleClassic && got.ui_feedback == RgUiFeedbackMinimal &&
+            !got.ui_transitions,
+        "UI fields read");
 
     // Whichever edition saves, the other edition's fields are written back.
     RadioGeddonSettings want = custom_settings();

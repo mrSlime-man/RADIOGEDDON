@@ -40,6 +40,7 @@
 #include "helpers/radiogeddon_modules.h"
 #include "helpers/rg_multi.h"
 #include "helpers/radiogeddon_sessions.h"
+#include "helpers/radiogeddon_ui.h"
 #include "views/radiogeddon_scanner_view.h"
 #include "views/radiogeddon_receiver_view.h"
 #include "views/radiogeddon_timeline_view.h"
@@ -47,6 +48,7 @@
 #include "views/radiogeddon_spectrum_view.h"
 #include "views/radiogeddon_waterfall_view.h"
 #include "views/radiogeddon_bits_view.h"
+#include "views/radiogeddon_room_view.h"
 
 #define RADIOGEDDON_TEXT_INPUT_BUFFER_SIZE 64
 #define RADIOGEDDON_TAG                    "RadioGeddon"
@@ -67,6 +69,8 @@ typedef enum {
     RadioGeddonViewSpectrum, // Full: added only while the Range Scanner is open
     RadioGeddonViewWaterfall, // Full: added only while the Waterfall is open
     RadioGeddonViewBits, // Full: added only while the Bitstream Explorer is open
+    RadioGeddonViewLab, // Full: dashboard and cards, while the style is not Classic
+    RadioGeddonViewRoom, // Full: added only while the Dolphin Lab room is open
 } RadioGeddonView;
 
 /** What a frequency typed on the number keyboard is for. */
@@ -223,6 +227,12 @@ struct RadioGeddonApp {
     RgSession* session;
     char session_name[RG_SESSION_NAME_MAX]; // the session opened from the list
     uint8_t session_name_mode; // what the name keyboard is for (SessionNameMode)
+#endif
+#if RG_FEATURE_DOLPHIN_LAB
+    // Dolphin Lab: the mascot, the style in effect and the lab view.
+    RadioGeddonUi ui;
+    // The Dolphin Lab room: its screen (from a module) while it is open.
+    RadioGeddonRoomView* room_view;
 #endif
 };
 

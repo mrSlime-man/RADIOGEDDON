@@ -5,6 +5,7 @@
 #include <gui/elements.h>
 #include <furi.h>
 #include "../helpers/rg_freq.h"
+#include "radiogeddon_mascot_draw.h"
 
 #define WF_TOP    11 // first picture row
 #define WF_MARK_Y 9 // marker row (peak tick, segment dots)
@@ -28,6 +29,10 @@ typedef struct {
     uint32_t last_stored; // frame.stored at the previous update
     bool menu_open; // hold OK: the action menu over the picture
     uint8_t menu_index;
+    uint8_t reveal; // entry reveal, 255: all shown
+    RgMascotFrame badge;
+    bool badge_on;
+    bool badge_cyber;
 } RadioGeddonWaterfallModel;
 
 typedef enum {
@@ -90,6 +95,7 @@ static void radiogeddon_waterfall_view_draw(Canvas* canvas, void* model) {
         (unsigned)radiogeddon_waterfall_spans[m->span_index % RADIOGEDDON_WF_SPANS],
         m->noise_comp ? 'N' : 'A');
     canvas_draw_str_aligned(canvas, 127, 8, AlignRight, AlignBottom, text);
+    if(m->badge_on) rg_draw_badge(canvas, 58, 0, m->badge_cyber, &m->badge);
 
     if(!m->have_frame || f->columns == 0) {
         canvas_draw_str_aligned(canvas, 64, 32, AlignCenter, AlignCenter, "No points to sweep.");
@@ -160,6 +166,20 @@ static void radiogeddon_waterfall_view_draw(Canvas* canvas, void* model) {
         radiogeddon_waterfall_seconds(text, sizeof(text), f->estimate_ms, "~");
     }
     canvas_draw_str_aligned(canvas, 127, 61, AlignRight, AlignBottom, text);
+
+    if(m->reveal < 255) {
+        // Entry reveal: what is below the trace is hidden (not redrawn or
+        // filled in) while the trace sweeps down the screen.
+        int32_t edge = WF_TOP + (int32_t)m->reveal * (64 - WF_TOP) / 255;
+        canvas_set_color(canvas, ColorWhite);
+        canvas_draw_box(canvas, 0, edge, 128, (size_t)(64 - edge));
+        canvas_set_color(canvas, ColorBlack);
+        for(int32_t x = 0; x < 128; x++) {
+            static const int8_t wiggle[8] = {0, 1, 1, 0, 0, -1, -1, 0};
+            int32_t y = edge + wiggle[(x + m->reveal / 8) & 7];
+            if(y >= WF_TOP && y < 64) canvas_draw_dot(canvas, x, y);
+        }
+    }
 
     if(m->menu_open) {
         // Action menu: a framed list over the picture.
@@ -313,6 +333,7 @@ static bool radiogeddon_waterfall_view_input(InputEvent* event, void* context) {
         instance->view,
         RadioGeddonWaterfallModel * m,
         {
+            m->reveal = 255; // a key never waits for the reveal
             // Back leaves the screen unless it closes the menu.
             if(event->key == InputKeyBack && !m->menu_open) consumed = false;
             if(consumed) send = radiogeddon_waterfall_input_model(m, event);
@@ -338,6 +359,7 @@ RadioGeddonWaterfallView* radiogeddon_waterfall_view_alloc(void) {
             memset(m, 0, sizeof(*m));
             m->span_index = 2;
             m->noise_comp = true;
+            m->reveal = 255;
             m->frame.cursor_dbm = RG_WF_NO_DATA;
             m->frame.cursor_peak = RG_WF_NO_DATA;
         },
@@ -448,6 +470,25 @@ uint16_t radiogeddon_waterfall_view_get_cursor(RadioGeddonWaterfallView* instanc
 
 void radiogeddon_waterfall_view_set_cursor(RadioGeddonWaterfallView* instance, uint16_t column) {
     with_view_model(instance->view, RadioGeddonWaterfallModel * m, { m->cursor = column; }, true);
+}
+
+void radiogeddon_waterfall_view_set_reveal(RadioGeddonWaterfallView* instance, uint8_t level) {
+    with_view_model(instance->view, RadioGeddonWaterfallModel * m, { m->reveal = level; }, true);
+}
+
+void radiogeddon_waterfall_view_set_badge(
+    RadioGeddonWaterfallView* instance,
+    const RgMascotFrame* frame,
+    bool cyber) {
+    with_view_model(
+        instance->view,
+        RadioGeddonWaterfallModel * m,
+        {
+            m->badge_on = frame != NULL;
+            if(frame) m->badge = *frame;
+            m->badge_cyber = cyber;
+        },
+        true);
 }
 
 #endif

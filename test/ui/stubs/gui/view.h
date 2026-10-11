@@ -35,6 +35,7 @@ typedef struct {
 } InputEvent;
 
 typedef void (*ViewDrawCallback)(Canvas* canvas, void* model);
+typedef void (*ViewCallback)(void* context);
 typedef bool (*ViewInputCallback)(InputEvent* event, void* context);
 
 typedef enum {
@@ -51,6 +52,8 @@ void view_set_context(View* view, void* context);
 void view_allocate_model(View* view, ViewModelType type, size_t size);
 void view_set_draw_callback(View* view, ViewDrawCallback callback);
 void view_set_input_callback(View* view, ViewInputCallback callback);
+void view_set_enter_callback(View* view, ViewCallback callback);
+void view_set_exit_callback(View* view, ViewCallback callback);
 void* view_get_model(View* view);
 void view_commit_model(View* view, bool update);
 
@@ -64,3 +67,8 @@ void view_commit_model(View* view, bool update);
 /* Host harness: draw the view into @p canvas / send it a key. */
 void view_host_draw(View* view, Canvas* canvas);
 bool view_host_input(View* view, InputKey key, InputType type);
+/* Host harness: the view comes on screen / leaves it. */
+void view_host_enter(View* view);
+void view_host_exit(View* view);
+/* Host harness: redraws the view asked for since the last call. */
+uint32_t view_host_updates(View* view);

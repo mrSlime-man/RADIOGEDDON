@@ -77,4 +77,17 @@ uint32_t radiogeddon_waterfall_view_get_cursor_hz(RadioGeddonWaterfallView* inst
 uint16_t radiogeddon_waterfall_view_get_cursor(RadioGeddonWaterfallView* instance);
 void radiogeddon_waterfall_view_set_cursor(RadioGeddonWaterfallView* instance, uint16_t column);
 
+/**
+ * Entry reveal: the picture shows down to @p level (0..255) with a trace
+ * line at the edge; 255 shows it all. Hides rows, never invents them.
+ */
+void radiogeddon_waterfall_view_set_reveal(RadioGeddonWaterfallView* instance, uint8_t level);
+
+#include "../helpers/rg_mascot.h"
+/** Dolphin Lab badge in the header (@p frame NULL: none). */
+void radiogeddon_waterfall_view_set_badge(
+    RadioGeddonWaterfallView* instance,
+    const RgMascotFrame* frame,
+    bool cyber);
+
 #endif

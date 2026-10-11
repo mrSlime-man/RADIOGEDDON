@@ -52,3 +52,6 @@ ADD_SCENE(radiogeddon, session_menu, SessionMenu)
 ADD_SCENE(radiogeddon, session_signals, SessionSignals)
 ADD_SCENE(radiogeddon, session_groups, SessionGroups)
 #endif
+#if RG_FEATURE_DOLPHIN_LAB
+ADD_SCENE(radiogeddon, room, Room)
+#endif
