@@ -12,6 +12,7 @@
  * synthetic data; they are not screenshots of a Flipper Zero.
  */
 #include "canvas_host.h"
+#include <gui/elements.h>
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -394,4 +395,23 @@ void view_host_draw(View* view, Canvas* canvas) {
 bool view_host_input(View* view, InputKey key, InputType type) {
     InputEvent e = {.sequence = 0, .key = key, .type = type};
     return view->input ? view->input(&e, view->context) : false;
+}
+
+/* As the firmware's elements_scrollbar_pos: a dotted track with a block
+ * whose position tells where the list is. */
+void elements_scrollbar_pos(
+    Canvas* c,
+    int32_t x,
+    int32_t y,
+    size_t height,
+    size_t pos,
+    size_t total) {
+    if(total < 2 || height == 0) return;
+    size_t block = height / total;
+    if(block < 1) block = 1;
+    if(pos >= total) pos = total - 1;
+    int32_t top = y + (int32_t)((height - block) * pos / (total - 1));
+    for(int32_t yy = y; yy < y + (int32_t)height; yy += 2)
+        canvas_host_set(c, x - 2, yy);
+    canvas_draw_box(c, x - 3, top, 3, block);
 }

@@ -97,7 +97,8 @@ LIFECYCLE_SRC := test_lifecycle.c stubs/furi_stub.c stubs/radio_fake.c \
 UI_FONTS := $(BUILD)/ui/fonts.inc
 UI_SRC := test_ui.c ui/canvas_host.c ../views/radiogeddon_waterfall_view.c \
 		../views/radiogeddon_bits_view.c ../helpers/rg_waterfall.c ../helpers/rg_bits.c \
-		../helpers/rg_glyph.c ../helpers/rg_analyzer.c ../helpers/rg_range.c ../helpers/rg_freq.c
+		../helpers/rg_glyph.c ../helpers/rg_analyzer.c ../helpers/rg_range.c ../helpers/rg_freq.c \
+		../views/radiogeddon_db_view.c ../helpers/radiogeddon_db.c ../helpers/rg_db.c stubs/furi_stub.c
 UI_HDRS := ui/canvas_host.h ui/stubs/gui/view.h ui/stubs/gui/canvas.h ui/stubs/gui/elements.h \
 		../views/radiogeddon_waterfall_view.h ../views/radiogeddon_bits_view.h synth.h
 

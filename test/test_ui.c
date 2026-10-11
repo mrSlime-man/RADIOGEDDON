@@ -14,6 +14,7 @@
 #include "ui/canvas_host.h"
 #include "../views/radiogeddon_waterfall_view.h"
 #include "../views/radiogeddon_bits_view.h"
+#include "../views/radiogeddon_db_view.h"
 #include "../helpers/rg_glyph.h"
 #include "synth.h"
 
@@ -443,8 +444,92 @@ static void test_bits_view(void) {
     radiogeddon_bits_view_free(v);
 }
 
+/* ---- Database list ------------------------------------------------------- */
+
+static RadioGeddonDb* db_make(size_t count, size_t name_len) {
+    RadioGeddonDb* db = calloc(1, sizeof(RadioGeddonDb));
+    size_t cap = count ? count : 1;
+    RgDbEntry* entries = calloc(cap, sizeof(RgDbEntry));
+    char* names = calloc(cap, 72);
+    db->view = calloc(cap, sizeof(uint16_t));
+    rg_db_init(&db->db, entries, cap, names, cap * 72);
+    char name[72];
+    for(size_t i = 0; i < count; i++) {
+        size_t n = 0;
+        n += (size_t)snprintf(name, sizeof(name), "%03u_", (unsigned)i);
+        while(n < name_len && n + 1 < sizeof(name)) {
+            name[n] = (char)('a' + (i + n) % 26);
+            n++;
+        }
+        name[n] = '\0';
+        strncat(name, ".sub", sizeof(name) - strlen(name) - 1);
+        RgDbEntry* e = rg_db_add(&db->db, name);
+        if(!e) break;
+        e->kind = (i % 7 == 3) ? RgDbKindCorrupt : (i % 2) ? RgDbKindRaw : RgDbKindProtocol;
+        e->frequency = 433920000u + (uint32_t)i * 10000u;
+        e->mtime = 1760000000u + (uint32_t)i * 60u;
+        e->bits = 24;
+        snprintf(
+            e->protocol, sizeof(e->protocol), "%s", e->kind == RgDbKindRaw ? "RAW" : "Princeton");
+    }
+    db->total_files = count;
+    db->query.sort = RgDbSortDate;
+    db->query.show = RgDbShowAll;
+    radiogeddon_db_apply(db);
+    return db;
+}
+
+static void db_free_test(RadioGeddonDb* db) {
+    free(db->db.entries);
+    free(db->db.names);
+    free(db->view);
+    free(db);
+}
+
+static void test_db_view(void) {
+    printf("test_db_view\n");
+    RadioGeddonDbView* v = radiogeddon_db_view_alloc();
+    View* view = radiogeddon_db_view_get_view(v);
+    render(view, "db_loading");
+
+    // Empty: a message, not a blank list.
+    RadioGeddonDb* empty = db_make(0, 0);
+    radiogeddon_db_view_set_db(v, empty);
+    render(view, "db_empty");
+    CHECK(canvas_host_count(canvas_host(), 0, 12, 128, 38) > 30, "empty list explained");
+
+    // Very long names (60 characters): cut to fit, never past the edge.
+    RadioGeddonDb* longn = db_make(5, 60);
+    radiogeddon_db_view_set_db(v, longn);
+    render(view, "db_long_names");
+    radiogeddon_db_view_set_selected(v, 4);
+    render(view, "db_long_names_last");
+
+    // A full list: the cursor walks to the end and wraps; every step on screen.
+    RadioGeddonDb* many = db_make(200, 20);
+    radiogeddon_db_view_set_db(v, many);
+    uint32_t bad = 0;
+    for(int i = 0; i < 205; i++) {
+        view_host_input(view, InputKeyDown, i % 3 ? InputTypeRepeat : InputTypeShort);
+        Canvas* c = canvas_host();
+        canvas_host_reset(c);
+        view_host_draw(view, c);
+        if(canvas_host_clipped(c) || canvas_host_text_overflows(c)) bad++;
+    }
+    CHECK(bad == 0, "200 files, every position on screen");
+    radiogeddon_db_view_set_selected(v, 199);
+    render(view, "db_200_files_last");
+    CHECK(radiogeddon_db_view_get_selected(v) == 199, "last selected");
+    radiogeddon_db_view_set_db(v, NULL);
+    radiogeddon_db_view_free(v);
+    db_free_test(empty);
+    db_free_test(longn);
+    db_free_test(many);
+}
+
 int main(void) {
     test_fonts();
+    test_db_view();
     test_waterfall_view();
     test_bits_view();
     printf(
