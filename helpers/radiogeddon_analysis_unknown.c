@@ -195,6 +195,45 @@ static void radiogeddon_report_hypothesis(const RgAnalysis* r, FuriString* out) 
     radiogeddon_report_fields(r, out);
 }
 
+/* Evidence flags as short lines, "+ " for, "- " against. */
+static void radiogeddon_cat_evidence(FuriString* out, uint16_t flags, const char* sign) {
+    for(size_t b = 0; b < RG_HYP_EVIDENCE_COUNT; b++) {
+        if(flags & (1u << b))
+            furi_string_cat_printf(out, " %s%s\n", sign, rg_hyp_evidence_name((RgHypEvidence)(1u << b)));
+    }
+}
+
+/* Smart Protocol Discovery: every reading that fits, best first. */
+static void radiogeddon_report_readings(const RgAnalysis* r, FuriString* out) {
+    if(r->hypothesis_count == 0) return;
+    furi_string_cat_str(out, "Readings [HYPOTHESIS]\n");
+    for(size_t i = 0; i < r->hypothesis_count; i++) {
+        const RgHypothesis* h = &r->hypotheses[i];
+        furi_string_cat_printf(
+            out,
+            "%u. %s%s, score %u\n",
+            (unsigned)(i + 1),
+            h->differential ? "Diff. " : "",
+            rg_analyzer_encoding_name((RgEncoding)h->encoding),
+            (unsigned)h->score);
+        if(h->bits) {
+            furi_string_cat_printf(
+                out,
+                " %u bits (%u of %u frames)\n",
+                (unsigned)h->bits,
+                (unsigned)h->frames_len,
+                (unsigned)h->frames);
+        }
+        furi_string_cat_printf(out, " grammar fit %u%%\n", (unsigned)h->fit);
+        radiogeddon_cat_evidence(out, h->support, "+ ");
+        radiogeddon_cat_evidence(out, h->against, "- ");
+    }
+    if(r->hypothesis_count > 1 && r->hypotheses[0].score < r->hypotheses[1].score + 15) {
+        furi_string_cat_str(
+            out, "Uncertain: the top two\nreadings score close.\nCompare more captures.\n");
+    }
+}
+
 static void radiogeddon_report_frames(const RgAnalysis* r, FuriString* out) {
     if(r->frames_kept == 0) return;
     // How the main patterns repeat within a press (measured start times).
@@ -335,6 +374,8 @@ void radiogeddon_analysis_unknown(Storage* storage, const char* path, FuriString
     radiogeddon_report_observed(r, out);
     furi_string_cat_str(out, "----------------\n");
     radiogeddon_report_hypothesis(r, out);
+    furi_string_cat_str(out, "----------------\n");
+    radiogeddon_report_readings(r, out);
     furi_string_cat_str(out, "----------------\n");
     radiogeddon_report_frames(r, out);
 #if RG_FEATURE_CHECKSUM_HINTS
