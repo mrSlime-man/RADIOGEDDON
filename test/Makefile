@@ -29,6 +29,10 @@ MASCOT_SRC := test_mascot.c ../helpers/rg_mascot.c ../helpers/rg_ui.c ../helpers
 WATERFALL_SRC := test_waterfall.c ../helpers/rg_waterfall.c ../helpers/rg_range.c
 MEMSTAT_SRC := test_memstat.c ../helpers/rg_memstat.c
 DECODE_SRC := test_decode.c ../helpers/rg_decode.c ../helpers/rg_raw.c
+FP_SRC := test_fp.c ../helpers/rg_fp.c ../helpers/rg_analyzer.c ../helpers/rg_crc.c
+ADAPT_SRC := test_adapt.c ../helpers/rg_adapt.c
+ACTLOG_SRC := test_actlog.c ../helpers/rg_actlog.c
+JOURNAL_SRC := test_journal.c ../helpers/rg_journal.c ../helpers/rg_assist.c ../helpers/rg_crc.c
 DBLOAD_SRC := test_dbload.c stubs/furi_stub.c ../helpers/radiogeddon_db.c ../helpers/rg_db.c
 STUB_HDRS := stubs/furi.h stubs/storage/storage.h stubs/datetime/datetime.h \
 		stubs/lib/toolbox/stream/stream.h stubs/core/check.h stubs/core/common_defines.h \
@@ -78,7 +82,9 @@ FUZZ_DB_SRC := fuzz/fuzz_db.c ../helpers/rg_db.c ../helpers/radiogeddon_dsp.c
 FUZZ_SAMPLES_SRC := fuzz/fuzz_samples.c ../helpers/rg_analyzer.c ../helpers/rg_timeline.c
 FUZZ_SESSION_SRC := fuzz/fuzz_session.c ../helpers/rg_session.c ../helpers/rg_elf.c
 FUZZ_UI_SRC := fuzz/fuzz_ui.c ../helpers/rg_mascot.c ../helpers/rg_ui.c
-FUZZ_TARGETS := fuzz_raw fuzz_db fuzz_samples fuzz_session fuzz_ui
+FUZZ_FP_SRC := fuzz/fuzz_fp.c ../helpers/rg_fp.c ../helpers/rg_journal.c ../helpers/rg_crc.c \
+		../helpers/rg_analyzer.c
+FUZZ_TARGETS := fuzz_raw fuzz_db fuzz_samples fuzz_session fuzz_ui fuzz_fp
 FUZZ_CC ?= clang
 FUZZ_TIME ?= 60
 
@@ -110,7 +116,7 @@ UI_HDRS := ui/canvas_host.h ui/stubs/gui/view.h ui/stubs/gui/canvas.h ui/stubs/g
 check: $(BUILD)/test_dsp $(BUILD)/test_analyzer $(BUILD)/test_scan $(BUILD)/test_hop $(BUILD)/test_raw \
 		$(BUILD)/test_timeline $(BUILD)/test_ring $(BUILD)/test_rawfmt $(BUILD)/test_recorder \
 		$(BUILD)/test_db $(BUILD)/test_memstat $(BUILD)/test_dbload $(BUILD)/test_decode $(BUILD)/test_freq $(BUILD)/test_preset $(BUILD)/test_range \
-		$(BUILD)/test_txpolicy $(BUILD)/test_spectrum $(BUILD)/test_checksum $(BUILD)/test_waterfall $(BUILD)/test_bits $(BUILD)/test_multi $(BUILD)/test_session $(BUILD)/test_elf $(BUILD)/test_mascot $(BUILD)/sprites.ok $(BUILD)/test_edition_full $(BUILD)/test_edition_catalog \
+		$(BUILD)/test_txpolicy $(BUILD)/test_spectrum $(BUILD)/test_checksum $(BUILD)/test_waterfall $(BUILD)/test_bits $(BUILD)/test_multi $(BUILD)/test_session $(BUILD)/test_elf $(BUILD)/test_mascot $(BUILD)/test_fp $(BUILD)/test_adapt $(BUILD)/test_actlog $(BUILD)/test_journal $(BUILD)/sprites.ok $(BUILD)/test_edition_full $(BUILD)/test_edition_catalog \
 		$(BUILD)/test_edition_default $(BUILD)/edition_conflict.ok \
 		$(addprefix $(BUILD)/replay_,$(FUZZ_TARGETS))
 	$(BUILD)/test_dsp
@@ -138,6 +144,10 @@ check: $(BUILD)/test_dsp $(BUILD)/test_analyzer $(BUILD)/test_scan $(BUILD)/test
 	$(BUILD)/test_session
 	$(BUILD)/test_elf
 	$(BUILD)/test_mascot
+	$(BUILD)/test_fp
+	$(BUILD)/test_adapt
+	$(BUILD)/test_actlog
+	$(BUILD)/test_journal
 	$(BUILD)/test_edition_full
 	$(BUILD)/test_edition_catalog
 	$(BUILD)/test_edition_default
@@ -208,6 +218,18 @@ $(BUILD)/test_elf: $(ELF_SRC) ../helpers/rg_elf.h | $(BUILD)
 
 $(BUILD)/test_mascot: $(MASCOT_SRC) ../helpers/rg_mascot.h ../helpers/rg_ui.h ../helpers/rg_sprites.h | $(BUILD)
 	$(CC) $(CFLAGS) $(SAN) -DRADIOGEDDON_EDITION_FULL -o $@ $(MASCOT_SRC)
+
+$(BUILD)/test_fp: $(FP_SRC) ../helpers/rg_fp.h ../helpers/rg_analyzer.h ../helpers/rg_crc.h | $(BUILD)
+	$(CC) $(CFLAGS) $(SAN) -DRADIOGEDDON_EDITION_FULL -o $@ $(FP_SRC)
+
+$(BUILD)/test_adapt: $(ADAPT_SRC) ../helpers/rg_adapt.h | $(BUILD)
+	$(CC) $(CFLAGS) $(SAN) -DRADIOGEDDON_EDITION_FULL -o $@ $(ADAPT_SRC)
+
+$(BUILD)/test_actlog: $(ACTLOG_SRC) ../helpers/rg_actlog.h | $(BUILD)
+	$(CC) $(CFLAGS) $(SAN) -DRADIOGEDDON_EDITION_FULL -o $@ $(ACTLOG_SRC)
+
+$(BUILD)/test_journal: $(JOURNAL_SRC) ../helpers/rg_journal.h ../helpers/rg_assist.h | $(BUILD)
+	$(CC) $(CFLAGS) $(SAN) -DRADIOGEDDON_EDITION_FULL -o $@ $(JOURNAL_SRC)
 
 # The generated sprites match their text art (tools/dolphin/build_sprites.py).
 $(BUILD)/sprites.ok: ../tools/dolphin/build_sprites.py $(wildcard ../art/dolphin/*.txt) \
@@ -365,6 +387,10 @@ $(BUILD)/replay_fuzz_ui: fuzz/replay.c $(FUZZ_UI_SRC) ../helpers/rg_mascot.h ../
 		| $(BUILD)
 	$(CC) $(CFLAGS) $(SAN) -DRADIOGEDDON_EDITION_FULL -o $@ fuzz/replay.c $(FUZZ_UI_SRC)
 
+$(BUILD)/replay_fuzz_fp: fuzz/replay.c $(FUZZ_FP_SRC) ../helpers/rg_fp.h ../helpers/rg_journal.h \
+		| $(BUILD)
+	$(CC) $(CFLAGS) $(SAN) -DRADIOGEDDON_EDITION_FULL -o $@ fuzz/replay.c $(FUZZ_FP_SRC)
+
 # libFuzzer builds. New inputs go to build/corpus/<target>; the committed
 # corpus is only read. A failing input is saved as build/<target>-crash-*.
 $(BUILD)/fuzz_raw: $(FUZZ_RAW_SRC) | $(BUILD)
@@ -382,6 +408,10 @@ $(BUILD)/fuzz_session: $(FUZZ_SESSION_SRC) | $(BUILD)
 $(BUILD)/fuzz_ui: $(FUZZ_UI_SRC) | $(BUILD)
 	$(FUZZ_CC) $(CFLAGS) -g -DRADIOGEDDON_EDITION_FULL -fsanitize=fuzzer,address,undefined \
 		-fno-sanitize-recover=all -o $@ $(FUZZ_UI_SRC)
+
+$(BUILD)/fuzz_fp: $(FUZZ_FP_SRC) | $(BUILD)
+	$(FUZZ_CC) $(CFLAGS) -g -DRADIOGEDDON_EDITION_FULL -fsanitize=fuzzer,address,undefined \
+		-fno-sanitize-recover=all -o $@ $(FUZZ_FP_SRC)
 
 $(BUILD)/fuzz_samples: $(FUZZ_SAMPLES_SRC) | $(BUILD)
 	$(FUZZ_CC) $(CFLAGS) -g -fsanitize=fuzzer,address,undefined -fno-sanitize-recover=all \
