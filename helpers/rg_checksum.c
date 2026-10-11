@@ -76,6 +76,50 @@ static size_t rg_distinct(const RgChecksumSet* set, size_t from, size_t to) {
 }
 
 /* Value the checksum would have for one frame. */
+/*
+ * Independent evidence for an affine checksum over GF(2) (XOR, CRC-8,
+ * parity, and their inverted forms): the rank of the frames' bits in
+ * [from, to) with a constant 1 appended. A frame equal to the XOR of an odd
+ * number of others adds nothing (it satisfies the hypothesis whenever they
+ * do), so distinct frames can overstate the evidence; their rank cannot.
+ */
+static size_t rg_independent(const RgChecksumSet* set, size_t from, size_t to) {
+    enum { W = RG_CHECKSUM_MAX_BITS / 8 + 1 };
+    uint8_t basis[RG_CHECKSUM_MAX_FRAMES][W];
+    size_t rank = 0;
+    size_t nbits = to - from + 1; // the window and the constant bit
+    for(size_t f = 0; f < set->count; f++) {
+        uint8_t v[W];
+        memset(v, 0, sizeof(v));
+        for(size_t i = from; i < to; i++)
+            if(rg_bit(set->frame[f], i)) v[(i - from) / 8] |= (uint8_t)(0x80u >> ((i - from) % 8));
+        v[(to - from) / 8] |= (uint8_t)(0x80u >> ((to - from) % 8));
+        // Reduce by the basis (each basis row has a distinct leading bit).
+        for(size_t r = 0; r < rank; r++) {
+            size_t lead = 0;
+            while(lead < nbits && !(basis[r][lead / 8] & (0x80u >> (lead % 8))))
+                lead++;
+            if(lead < nbits && (v[lead / 8] & (0x80u >> (lead % 8))))
+                for(size_t k = 0; k < W; k++)
+                    v[k] ^= basis[r][k];
+        }
+        bool zero = true;
+        for(size_t k = 0; k < W && zero; k++)
+            zero = v[k] == 0;
+        if(zero) continue;
+        // Keep the basis reduced: clear v's leading bit from earlier rows.
+        size_t lead = 0;
+        while(!(v[lead / 8] & (0x80u >> (lead % 8))))
+            lead++;
+        for(size_t r = 0; r < rank; r++)
+            if(basis[r][lead / 8] & (0x80u >> (lead % 8)))
+                for(size_t k = 0; k < W; k++)
+                    basis[r][k] ^= v[k];
+        memcpy(basis[rank++], v, W);
+    }
+    return rank;
+}
+
 static uint32_t rg_expected(
     const uint8_t* frame,
     RgChecksumKind kind,
@@ -129,9 +173,13 @@ static void
     // The covered bits must differ between the frames, or every frame is the
     // same test and proves nothing.
     if(rg_distinct(set, data_start, ck_start + width) < need) return;
+    // XOR and CRC are affine over GF(2): they need independent frames too.
+    bool affine_ok = rg_independent(set, data_start, ck_start + width) >= need;
 
     for(int kind = RgChecksumXor; kind <= RgChecksumCrc8; kind++) {
         if(kind == RgChecksumCrc8 && width != 8) continue;
+        bool affine = kind == RgChecksumXor || kind == RgChecksumXorInv || kind == RgChecksumCrc8;
+        if(affine && !affine_ok) continue;
         size_t variants = kind == RgChecksumCrc8 ? RG_CRC8_POLYS * RG_CRC8_INITS : 1;
         for(size_t v = 0; v < variants; v++) {
             uint8_t poly = rg_crc8_polys[v / RG_CRC8_INITS];
@@ -167,7 +215,7 @@ static void rg_test_parity(const RgChecksumSet* set, size_t end_skip, RgChecksum
     size_t n = set->bit_count;
     if(n < end_skip + 9) return;
     size_t pbit = n - end_skip - 1;
-    if(rg_distinct(set, 0, pbit + 1) < RG_CHECKSUM_MIN_PARITY) return;
+    if(rg_independent(set, 0, pbit + 1) < RG_CHECKSUM_MIN_PARITY) return;
     for(int odd = 0; odd < 2; odd++) {
         bool all = true;
         for(size_t f = 0; f < set->count && all; f++) {
