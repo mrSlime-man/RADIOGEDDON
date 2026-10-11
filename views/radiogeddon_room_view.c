@@ -29,15 +29,26 @@ typedef struct {
     uint32_t recordings;
     char lines[RADIOGEDDON_ROOM_LINES][RADIOGEDDON_ROOM_LINE_LEN];
     RadioGeddonRoomTrace scope;
+    char recording[32]; // the recording in context ("" none)
+    char session[24]; // the active session ("" none)
+    uint8_t rack; // RadioGeddonRackTool selected
+    uint8_t decoration; // RgDecoration
 } RoomModel;
 
 static const char* const room_names[RadioGeddonRoomCount] = {
-    "Radar",
+    "Workbench",
     "Oscilloscope",
-    "Antenna",
-    "Recorder",
+    "Radar",
     "Terminal",
-    "Gallery",
+    "Rack",
+    "Corner",
+};
+
+static const char* const rack_names[RadioGeddonRackCount] = {
+    "Scanner",
+    "Adaptive scan",
+    "Activity log",
+    "Receive",
 };
 
 /* A line centred in the station's area, cut to fit it. */
@@ -149,36 +160,46 @@ static void room_draw(Canvas* canvas, void* model) {
 
     rg_draw_mascot(canvas, 0, 24, &m->frame, 64, true);
     switch(m->station) {
+    case RadioGeddonRoomWorkbench: {
+        // A bench with a radio on it, and what is on it now.
+        canvas_draw_line(canvas, 46, 40, 126, 40);
+        canvas_draw_line(canvas, 48, 41, 48, 44);
+        canvas_draw_line(canvas, 124, 41, 124, 44);
+        rg_draw_prop(canvas, 108, 40, RgMascotPropRecorder, m->phase, RG_MASCOT_PROGRESS_NONE);
+        canvas_set_font(canvas, FontSecondary);
+        canvas_draw_str(canvas, 46, 20, m->recording[0] ? "Recording:" : "No recording yet");
+        if(m->recording[0]) room_line(canvas, 29, m->recording);
+        char ses[40];
+        snprintf(ses, sizeof(ses), "Session: %s", m->session[0] ? m->session : "none");
+        room_hint(canvas, ses, m->recording[0] ? "OK: open it" : "OK: Database");
+        break;
+    }
+    case RadioGeddonRoomScope:
+        room_draw_scope(canvas, m);
+        break;
     case RadioGeddonRoomRadar:
         rg_draw_radar(canvas, 86, 30, 15, m->phase);
         rg_draw_radar(canvas, 86, 30, 9, m->phase);
         room_hint(canvas, "Illustration", "OK: real Scanner");
         break;
-    case RadioGeddonRoomScope:
-        room_draw_scope(canvas, m);
-        break;
-    case RadioGeddonRoomAntenna: {
-        int32_t ax = 86;
-        // A mast with its waves (drawn, not measured).
-        canvas_draw_line(canvas, ax, 25, ax, 44);
-        canvas_draw_line(canvas, ax - 6, 44, ax + 6, 44);
-        canvas_draw_line(canvas, ax, 30, ax - 4, 37);
-        canvas_draw_line(canvas, ax, 30, ax + 4, 37);
-        canvas_draw_disc(canvas, ax, 24, 1);
-        uint8_t arcs = (uint8_t)(m->phase % 4u);
-        for(uint8_t k = 0; k < arcs; k++)
-            canvas_draw_circle(canvas, ax, 24, 4u + 4u * k);
-        room_hint(canvas, "Illustration", "OK: Receive");
-        break;
-    }
-    case RadioGeddonRoomRecorder: {
-        rg_draw_prop(canvas, 79, 36, RgMascotPropRecorder, m->phase, RG_MASCOT_PROGRESS_NONE);
-        char count[24];
-        snprintf(count, sizeof(count), "%lu recordings", (unsigned long)m->recordings);
-        room_hint(canvas, count, "OK: Database");
+    case RadioGeddonRoomRack: {
+        // A rack of the real tools: Up/Down choose, OK opens.
+        canvas_draw_rframe(canvas, 44, 12, 84, 40, 2);
+        canvas_set_font(canvas, FontSecondary);
+        for(uint8_t i = 0; i < RadioGeddonRackCount; i++) {
+            int32_t y = 14 + i * 9;
+            if(i == m->rack) {
+                canvas_draw_box(canvas, 46, y, 80, 9);
+                canvas_set_color(canvas, ColorWhite);
+            }
+            canvas_draw_str(canvas, 49, y + 8, rack_names[i]);
+            canvas_set_color(canvas, ColorBlack);
+        }
+        room_hint(canvas, NULL, "Up/Down, OK: open");
         break;
     }
-    case RadioGeddonRoomGallery: {
+    case RadioGeddonRoomCorner: {
+        rg_draw_decoration(canvas, 46, 13, m->decoration);
         char name[24];
         snprintf(
             name,
@@ -189,15 +210,15 @@ static void room_draw(Canvas* canvas, void* model) {
         canvas_set_font(canvas, FontPrimary);
         canvas_draw_str_aligned(
             canvas,
-            86,
+            94,
             22,
             AlignCenter,
             AlignBottom,
             rg_mascot_state_name((RgMascotState)m->gallery));
         canvas_set_font(canvas, FontSecondary);
-        canvas_draw_str_aligned(canvas, 86, 31, AlignCenter, AlignBottom, name);
-        rg_draw_prop(canvas, 96, 46, m->frame.prop, m->frame.prop_phase, m->frame.progress);
-        room_hint(canvas, NULL, "Up/Down: pose");
+        canvas_draw_str_aligned(canvas, 94, 31, AlignCenter, AlignBottom, name);
+        rg_draw_prop(canvas, 100, 46, m->frame.prop, m->frame.prop_phase, m->frame.progress);
+        room_hint(canvas, "Up/Down: pose", "OK: customize");
         break;
     }
     default:
@@ -231,14 +252,19 @@ static bool room_input(InputEvent* event, void* context) {
                 break;
             }
             case InputKeyUp:
-            case InputKeyDown:
-                if(m->station == RadioGeddonRoomGallery) {
-                    bool up = event->key == InputKeyUp;
+            case InputKeyDown: {
+                bool up = event->key == InputKeyUp;
+                if(m->station == RadioGeddonRoomCorner) {
                     m->gallery = up ? (uint8_t)((m->gallery + RgMascotStateCount - 1u) %
                                                 RgMascotStateCount) :
                                       (uint8_t)((m->gallery + 1u) % RgMascotStateCount);
+                } else if(m->station == RadioGeddonRoomRack) {
+                    m->rack = up ? (uint8_t)((m->rack + RadioGeddonRackCount - 1u) %
+                                             RadioGeddonRackCount) :
+                                   (uint8_t)((m->rack + 1u) % RadioGeddonRackCount);
                 }
                 break;
+            }
             case InputKeyOk:
                 ok = event->type == InputTypeShort;
                 m->level = RG_TRANSITION_DONE; // a key never waits for the slide
@@ -328,6 +354,30 @@ uint8_t radiogeddon_room_view_get_station(RadioGeddonRoomView* instance) {
     return s;
 }
 
+void radiogeddon_room_view_set_workbench(
+    RadioGeddonRoomView* instance,
+    const char* recording,
+    const char* session) {
+    with_view_model(
+        instance->view,
+        RoomModel * m,
+        {
+            strlcpy(m->recording, recording ? recording : "", sizeof(m->recording));
+            strlcpy(m->session, session ? session : "", sizeof(m->session));
+        },
+        true);
+}
+
+void radiogeddon_room_view_set_decoration(RadioGeddonRoomView* instance, uint8_t decoration) {
+    with_view_model(instance->view, RoomModel * m, { m->decoration = decoration; }, true);
+}
+
+uint8_t radiogeddon_room_view_get_rack(RadioGeddonRoomView* instance) {
+    uint8_t r = 0;
+    with_view_model(instance->view, RoomModel * m, { r = m->rack; }, false);
+    return r;
+}
+
 uint8_t radiogeddon_room_view_get_gallery(RadioGeddonRoomView* instance) {
     uint8_t g = 0;
     with_view_model(instance->view, RoomModel * m, { g = m->gallery; }, false);
@@ -358,8 +408,8 @@ void radiogeddon_room_view_update(
             if(now - m->phase_ms >= 125u) {
                 m->phase_ms = now;
                 m->phase = (uint8_t)((m->phase + 1u) & 15u);
-                if(m->station != RadioGeddonRoomTerminal && m->station != RadioGeddonRoomScope &&
-                   m->station != RadioGeddonRoomGallery)
+                // Only the radar and the workbench's recorder turn.
+                if(m->station == RadioGeddonRoomRadar || m->station == RadioGeddonRoomWorkbench)
                     changed = true;
             }
         },

@@ -94,6 +94,10 @@ void radiogeddon_scene_scanner_on_enter(void* context) {
         RADIOGEDDON_SCANNER_MAX_CHANNELS);
 
     if(!app->scanner) app->scanner = radiogeddon_scanner_alloc(app->subghz);
+#if RG_FEATURE_ADAPTIVE_SCAN
+    // Standard, or the Adaptive Scanner's schedule (chosen in its setup).
+    radiogeddon_scanner_set_mode(app->scanner, app->scan_mode_run);
+#endif
     radiogeddon_scanner_configure(
         app->scanner,
         list,
@@ -102,6 +106,21 @@ void radiogeddon_scene_scanner_on_enter(void* context) {
         app->settings.scan_threshold_db,
         app->settings.scan_hold_on_hit);
     radiogeddon_scanner_set_callback(app->scanner, radiogeddon_scanner_hit_cb, app);
+#if RG_FEATURE_ADAPTIVE_SCAN
+    if(app->scan_mode_run == RgAdaptCustom) {
+        // Custom: the favorites come first (still never alone).
+        RadioGeddonFavorites* fav = radiogeddon_scene_favorites(app);
+        for(size_t i = 0; i < count; i++) {
+            uint8_t prio = 0;
+            for(size_t k = 0; k < fav->count; k++)
+                if(fav->freq[k] == list[i]) prio = 3;
+            radiogeddon_scanner_set_priority(app->scanner, i, prio);
+        }
+    }
+#endif
+#if RG_FEATURE_JOURNAL
+    if(count > 0) radiogeddon_research_record(app, RgJrnScan, 1, NULL);
+#endif
 
     radiogeddon_subghz_set_preset(app->subghz, app->preset_index);
     radiogeddon_scanner_view_set_callback(app->scanner_view, radiogeddon_scanner_view_cb, app);

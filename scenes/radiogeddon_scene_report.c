@@ -19,19 +19,30 @@ void radiogeddon_scene_report_on_enter(void* context) {
 
     FuriString* path = furi_string_alloc();
     // The decoders run only if they fit; the report says when they did not.
+#ifdef RADIOGEDDON_MODULE
+    // This module's copy of the analysis run reports to the same screen.
+    radiogeddon_analysis_set_progress(radiogeddon_scene_progress, app);
+#endif
     RadioGeddonReportResult result = radiogeddon_report_save(
         app->storage,
         radiogeddon_scene_decoders_fit(app) ? app->subghz : NULL,
+        radiogeddon_analysis_decode,
         furi_string_get_cstr(app->file_path),
         &app->loaded,
         &(RadioGeddonUnknownProvider){
             radiogeddon_scene_unknown_begin, radiogeddon_scene_unknown_end, app},
         app->temp_str,
         path);
+#ifdef RADIOGEDDON_MODULE
+    radiogeddon_analysis_set_progress(NULL, NULL);
+#endif
     radiogeddon_scene_progress_end(app);
 
     furi_string_reset(app->temp_str);
     if(result == RadioGeddonReportOk) {
+#if RG_FEATURE_JOURNAL
+        radiogeddon_research_record(app, RgJrnReport, 1, furi_string_get_cstr(app->loaded.name));
+#endif
         notification_message(app->notifications, &sequence_success);
         const char* full = furi_string_get_cstr(path);
         const char* slash = strrchr(full, '/');

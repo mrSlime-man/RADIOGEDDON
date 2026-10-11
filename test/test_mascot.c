@@ -445,7 +445,7 @@ static void test_celebrate_look_anim(void) {
     CHECK(rg_mascot_state(&m, 1000 + RG_MASCOT_CELEBRATE_MS) != RgMascotStateCelebrate, "short");
     rg_mascot_event(&m, RgMascotEventMatch, 0, 9000);
     CHECK(rg_mascot_state(&m, 9001) == RgMascotStateCelebrate, "a match celebrates");
-    CHECK(strcmp(rg_mascot_state_name(RgMascotStateGreet), "Welcome back") == 0, "names");
+    CHECK(strcmp(rg_mascot_state_name(RgMascotStateGreet), "Greeting") == 0, "names");
 
     // The look is copied into every frame; a damaged look is sanitized.
     RgMascotLook look;

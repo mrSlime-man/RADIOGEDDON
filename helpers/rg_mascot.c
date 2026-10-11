@@ -460,7 +460,7 @@ const char* rg_mascot_state_name(RgMascotState state) {
         "Low memory",
         "Error",
         "Celebrate",
-        "Welcome back",
+        "Greeting",
     };
     return (unsigned)state < RgMascotStateCount ? names[state] : "?";
 }

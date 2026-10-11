@@ -16,7 +16,7 @@
  * important wins:
  *
  *   Error > Low memory > Recording > Receiving > Signal detected >
- *   Scanning > Analyzing > Celebrate > Saved > Welcome back > Asleep >
+ *   Scanning > Analyzing > Celebrate > Saved > Greeting > Asleep >
  *   Bored > Idle
  *
  * A detection while receiving or recording still shows as a short "!" on

@@ -302,7 +302,7 @@ UI_LAB_SRC := test_ui_lab.c ui/canvas_host.c ../views/radiogeddon_lab_view.c \
 		../views/radiogeddon_scanner_view.c ../views/radiogeddon_receiver_view.c \
 		../views/radiogeddon_spectrum_view.c ../views/radiogeddon_waterfall_view.c \
 		../helpers/rg_mascot.c ../helpers/rg_ui.c ../helpers/rg_sprites.c ../helpers/rg_freq.c \
-		../helpers/rg_spectrum.c ../helpers/rg_scan.c ../helpers/rg_range.c stubs/furi_stub.c
+		../helpers/rg_spectrum.c ../helpers/rg_scan.c ../helpers/rg_adapt.c ../helpers/rg_range.c stubs/furi_stub.c
 UI_LAB_HDRS := $(UI_HDRS) ../views/radiogeddon_lab_view.h ../views/radiogeddon_mascot_draw.h \
 		../views/radiogeddon_room_view.h ../helpers/rg_mascot.h ../helpers/rg_ui.h ../helpers/rg_sprites.h
 

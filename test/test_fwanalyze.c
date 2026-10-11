@@ -239,6 +239,7 @@ static bool analyse(const char* path, RgAnalyzer* a, int32_t** samples, size_t* 
         again = rg_analyzer_next_pass(a);
         if(again) rg_raw_reader_rewind(r);
     } while(again);
+    rg_analyzer_hypotheses(a);
     bool ok = r->any_data && !r->corrupt;
     free(r);
     fclose(f);

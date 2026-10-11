@@ -76,6 +76,22 @@ static const char* const rg_tip_texts[RgTipCount] = {
     "Export a session report?",
 };
 
+static const char* const rg_tip_shorts[RgTipCount] = {
+    "",
+    "Classic mode?",
+    "More samples?",
+    "Analyze it?",
+    "Compare?",
+    "Find similar?",
+    "Pulse timing?",
+    "To session?",
+    "Export?",
+};
+
+const char* rg_tip_short(RgTip tip) {
+    return (unsigned)tip < RgTipCount ? rg_tip_shorts[tip] : "";
+}
+
 static const uint8_t rg_tip_actions[RgTipCount] = {
     RgTipActionNone,
     RgTipActionSettings,

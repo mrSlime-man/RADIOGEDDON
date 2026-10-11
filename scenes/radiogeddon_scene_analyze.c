@@ -8,6 +8,9 @@ void radiogeddon_scene_analyze_on_enter(void* context) {
     furi_string_cat_str(app->temp_str, "----------------\n");
     radiogeddon_analysis_analyze(
         app->storage, furi_string_get_cstr(app->file_path), &app->loaded, app->temp_str);
+#if RG_FEATURE_JOURNAL
+    radiogeddon_research_record(app, RgJrnAnalysis, 1, furi_string_get_cstr(app->loaded.name));
+#endif
 
     text_box_reset(app->text_box);
     text_box_set_font(app->text_box, TextBoxFontText);

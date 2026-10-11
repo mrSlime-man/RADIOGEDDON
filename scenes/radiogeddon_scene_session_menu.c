@@ -315,6 +315,7 @@ bool radiogeddon_scene_session_menu_on_event(void* context, SceneManagerEvent ev
         break;
     case SessionMenuExport:
         if(radiogeddon_scene_session_menu_export(app)) {
+            radiogeddon_research_record(app, RgJrnReport, 1, app->session->name);
             notification_message(app->notifications, &sequence_success);
             radiogeddon_scene_show_message(
                 app, "Report saved", "In apps_data/\nradiogeddon/reports");

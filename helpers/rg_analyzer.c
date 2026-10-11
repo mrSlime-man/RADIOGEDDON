@@ -961,7 +961,7 @@ static void rg_hyp_evidence(const RgAnalyzer* a, int e, RgHypothesis* h) {
     }
 }
 
-static void rg_build_hypotheses(RgAnalyzer* a) {
+void rg_analyzer_hypotheses(RgAnalyzer* a) {
     RgAnalysis* r = &a->result;
     RgHypothesis* out = r->hypotheses;
     size_t n = 0;
@@ -1213,7 +1213,6 @@ static void rg_finish_frames(RgAnalyzer* a) {
     if(conf < 0) conf = 0;
     if(conf > 95) conf = 95;
     r->encoding_confidence = conf;
-    rg_build_hypotheses(a);
 }
 
 bool rg_analyzer_next_pass(RgAnalyzer* a) {
@@ -1257,6 +1256,7 @@ void rg_analyzer_run(const int32_t* samples, size_t count, RgAnalysis* out) {
     do {
         rg_analyzer_feed(a, samples, count);
     } while(rg_analyzer_next_pass(a));
+    rg_analyzer_hypotheses(a);
     memcpy(out, &a->result, sizeof(*out));
     free(a);
 }

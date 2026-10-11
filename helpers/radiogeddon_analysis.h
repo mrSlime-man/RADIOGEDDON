@@ -82,12 +82,15 @@ void radiogeddon_analysis_cat_status(FuriString* out, RadioGeddonAnalysisStatus 
  * (peaks, noise, jitter, frames) and HYPOTHESIS structure (encoding with
  * confidence and runner-up, bit length, repeated patterns, frame alignment,
  * constant vs changing fields, ID candidate) plus a per-frame list. Nothing
- * is presented as a verified decode and no key is recovered.
+ * is presented as a verified decode and no key is recovered. Returns the
+ * frames that decode as a signal, or -1 when it could not run.
  */
-void radiogeddon_analysis_unknown(Storage* storage, const char* path, FuriString* out);
+int radiogeddon_analysis_unknown(Storage* storage, const char* path, FuriString* out);
 
-/** radiogeddon_analysis_unknown's shape, for passing it (or a module's copy). */
-typedef void (*RadioGeddonUnknownFn)(Storage* storage, const char* path, FuriString* out);
+/** radiogeddon_analysis_unknown's shape, for passing it (or a module's copy).
+ * Returns the frames that decode as a signal, or -1 when the file could not
+ * be analysed. */
+typedef int (*RadioGeddonUnknownFn)(Storage* storage, const char* path, FuriString* out);
 
 /**
  * Where the Unknown Protocol Analysis comes from when it is needed: begin()

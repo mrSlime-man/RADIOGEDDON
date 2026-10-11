@@ -660,21 +660,23 @@ static void test_room(void) {
     View* view = radiogeddon_room_view_get_view(v);
     radiogeddon_room_view_set_callback(v, room_cb, NULL);
     char lines[RADIOGEDDON_ROOM_LINES][RADIOGEDDON_ROOM_LINE_LEN] = {
-        "RadioGeddon 1.0.0-beta.8",
+        "RadioGeddon 1.0.0-beta.9",
         "Momentum mntm-012",
-        "Recordings: 42",
-        "Saved reports: 7",
-        "Sessions: 3",
+        "Level 3, 164 XP",
+        "Saved 12, analysed 5",
+        "Badges 4/12, logs 1",
     };
-    radiogeddon_room_view_set_terminal(v, (const char(*)[RADIOGEDDON_ROOM_LINE_LEN])lines, 42);
+    radiogeddon_room_view_set_terminal(v, (const char(*)[RADIOGEDDON_ROOM_LINE_LEN])lines, 12);
+    radiogeddon_room_view_set_workbench(v, "RAW_garage_door_2026.sub", "Gate study");
+    radiogeddon_room_view_set_decoration(v, RgDecoPlant);
 
     static const char* const names[RadioGeddonRoomCount] = {
-        "room_radar",
+        "room_workbench",
         "room_scope_empty",
-        "room_antenna",
-        "room_recorder",
+        "room_radar",
         "room_terminal",
-        "room_gallery"};
+        "room_rack",
+        "room_corner"};
     memset(g_room_ok, 0, sizeof(g_room_ok));
     uint32_t now = 1000;
     bool inside = true;
@@ -700,7 +702,7 @@ static void test_room(void) {
     CHECK(radiogeddon_room_view_get_station(v) == 0, "Right wraps to the first");
     view_host_input(view, InputKeyLeft, InputTypeShort);
     CHECK(
-        radiogeddon_room_view_get_station(v) == RadioGeddonRoomGallery, "Left wraps to the last");
+        radiogeddon_room_view_get_station(v) == RadioGeddonRoomCorner, "Left wraps to the last");
     view_host_input(view, InputKeyDown, InputTypeShort);
     view_host_input(view, InputKeyDown, InputTypeShort);
     CHECK(radiogeddon_room_view_get_gallery(v) == 2, "Down: next pose");
@@ -714,10 +716,65 @@ static void test_room(void) {
         view_host_input(view, InputKeyDown, InputTypeShort);
     }
     CHECK(inside, "every gallery pose inside");
+    // Every look (headphones, goggles, antenna, tool, accessory) on every
+    // pose stays on the screen; the decorations too.
+    RgMascotLook look;
+    bool looks_inside = true;
+    for(uint8_t ph = 0; ph < 2; ph++)
+        for(uint8_t go = 0; go < RgLookGogglesCount; go++)
+            for(uint8_t an = 0; an < RgLookAntennaCount; an++)
+                for(uint8_t to = 0; to < RgLookToolCount; to++)
+                    for(uint8_t ac = 0; ac < RgLookAccessoryCount; ac++) {
+                        look = (RgMascotLook){ph, go, an, to, (uint8_t)(ac % 3), ac};
+                        RgMascotFrame f;
+                        rg_mascot_pose(
+                            (RgMascotState)((ph + go + an + to + ac) % RgMascotStateCount),
+                            700,
+                            1,
+                            60,
+                            false,
+                            &f);
+                        rg_mascot_style(&f, &look, RgAnimFull, 700);
+                        radiogeddon_room_view_update(v, &f, now += 100);
+                        if(!render(view, NULL)) looks_inside = false;
+                    }
+    CHECK(looks_inside, "every look inside the screen");
+    for(uint8_t d = 0; d < RgDecoCount; d++) {
+        radiogeddon_room_view_set_decoration(v, d);
+        if(!render(view, NULL)) looks_inside = false;
+    }
+    CHECK(looks_inside, "every decoration inside the screen");
+    look = (RgMascotLook){1, RgLookGogglesAlways, RgLookAntennaDish, RgLookToolWrench, 1, RgLookAccessoryBowtie};
+    {
+        RgMascotFrame f;
+        rg_mascot_pose(RgMascotStateIdle, 0, 1, 60, false, &f);
+        rg_mascot_style(&f, &look, RgAnimNormal, 0);
+        radiogeddon_room_view_set_decoration(v, RgDecoTrophy);
+        radiogeddon_room_view_update(v, &f, now += 100);
+        render(view, "room_corner_custom");
+        look = (RgMascotLook){0, RgLookGogglesOff, RgLookAntennaWhip, RgLookToolProbe, 2, RgLookAccessoryScarf};
+        rg_mascot_style(&f, &look, RgAnimNormal, 0);
+        radiogeddon_room_view_set_decoration(v, RgDecoPoster);
+        radiogeddon_room_view_update(v, &f, now += 100);
+        render(view, "room_corner_custom2");
+    }
     CHECK(!view_host_input(view, InputKeyBack, InputTypeShort), "Back leaves the room");
 
+    // The rack: Up/Down choose a tool, wrapping.
+    view_host_input(view, InputKeyLeft, InputTypeShort); // corner -> rack
+    CHECK(radiogeddon_room_view_get_station(v) == RadioGeddonRoomRack, "rack");
+    CHECK(radiogeddon_room_view_get_rack(v) == RadioGeddonRackScanner, "rack starts on the Scanner");
+    view_host_input(view, InputKeyDown, InputTypeShort);
+    CHECK(radiogeddon_room_view_get_rack(v) == RadioGeddonRackAdaptive, "Down: next tool");
+    view_host_input(view, InputKeyUp, InputTypeShort);
+    view_host_input(view, InputKeyUp, InputTypeShort);
+    CHECK(radiogeddon_room_view_get_rack(v) == RadioGeddonRackReceive, "Up wraps");
+    radiogeddon_room_view_update(v, NULL, now += 1000);
+    render(view, "room_rack_receive");
+
     // The oscilloscope shows a recording's levels as recorded.
-    view_host_input(view, InputKeyRight, InputTypeShort); // gallery -> radar
+    view_host_input(view, InputKeyRight, InputTypeShort); // rack -> corner
+    view_host_input(view, InputKeyRight, InputTypeShort); // -> workbench
     view_host_input(view, InputKeyRight, InputTypeShort); // -> scope
     radiogeddon_room_view_update(v, NULL, now += 1000);
     radiogeddon_room_view_update(v, NULL, now += 1000);

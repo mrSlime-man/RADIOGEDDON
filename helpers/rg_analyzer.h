@@ -231,7 +231,7 @@ typedef struct {
 
     /* Every reading with a fit of at least 30%, best first (the chosen
      * encoding leads); differential Manchester is listed with Manchester
-     * because their timing is the same. */
+     * because their timing is the same. Filled by rg_analyzer_hypotheses. */
     RgHypothesis hypotheses[RG_ANALYZER_MAX_HYP];
     size_t hypothesis_count;
 
@@ -288,6 +288,13 @@ void rg_analyzer_feed(RgAnalyzer* a, const int32_t* samples, size_t count);
  * and a->result is final.
  */
 bool rg_analyzer_next_pass(RgAnalyzer* a);
+
+/**
+ * After the last pass: fill a->result.hypotheses, every reading that fits
+ * with its evidence (only the reports need them, so it is a separate call
+ * and the screens that do not show them do not carry its code).
+ */
+void rg_analyzer_hypotheses(RgAnalyzer* a);
 
 /** Convenience: run every pass over an in-memory buffer (heap-allocates). */
 void rg_analyzer_run(const int32_t* samples, size_t count, RgAnalysis* out);

@@ -191,6 +191,8 @@ static void test_assist_rules(void) {
     for(int t = 1; t < RgTipCount; t++) {
         CHECK(rg_tip_text((RgTip)t)[0] != '\0', "every tip has text");
         CHECK(rg_tip_action((RgTip)t) != RgTipActionNone, "every tip has an action");
+        CHECK(strlen(rg_tip_short((RgTip)t)) > 0 && strlen(rg_tip_short((RgTip)t)) <= 13,
+              "every tip has a short form that fits a menu row");
     }
     CHECK(rg_tip_action(RgTipCount) == RgTipActionNone, "unknown tip");
 }

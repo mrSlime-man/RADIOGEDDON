@@ -140,6 +140,17 @@ typedef enum {
 void radiogeddon_scene_sessions_release(RadioGeddonApp* app);
 #endif
 
+#if RG_EDITION_FULL
+/**
+ * Tool screens built into modules (radiogeddon_modules.h): keep each
+ * module only while one of its screens is shown; called on the tick, where
+ * no module code is running, to unload the ones no longer shown.
+ */
+void radiogeddon_scene_tools_tick(RadioGeddonApp* app);
+/** Unload them all (app exit). */
+void radiogeddon_scene_tools_release(RadioGeddonApp* app);
+#endif
+
 #if RG_FEATURE_WATERFALL
 /** Range Scanner setup's "Start waterfall" row (its scene state selects it). */
 uint32_t radiogeddon_scene_range_setup_waterfall_item(void);

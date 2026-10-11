@@ -357,13 +357,14 @@ static void radiogeddon_report_checksums(const RgAnalysis* r, FuriString* out) {
 }
 #endif
 
-void radiogeddon_analysis_unknown(Storage* storage, const char* path, FuriString* out) {
+int radiogeddon_analysis_unknown(Storage* storage, const char* path, FuriString* out) {
     RadioGeddonAnalysisStatus status;
     RgAnalyzer* a = radiogeddon_analysis_run_file(storage, path, &status);
     if(!a) {
         radiogeddon_analysis_cat_status(out, status);
-        return;
+        return -1;
     }
+    rg_analyzer_hypotheses(a);
     const RgAnalysis* r = &a->result;
 
     furi_string_cat_str(
@@ -381,5 +382,7 @@ void radiogeddon_analysis_unknown(Storage* storage, const char* path, FuriString
 #if RG_FEATURE_CHECKSUM_HINTS
     radiogeddon_report_checksums(r, out);
 #endif
+    int frames = (int)(r->signal_frames > INT32_MAX ? INT32_MAX : r->signal_frames);
     free(a);
+    return frames;
 }

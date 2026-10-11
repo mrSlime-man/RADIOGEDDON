@@ -1,18 +1,37 @@
-/* Full edition module: the Dolphin Lab room's screen (see helpers/radiogeddon_modules.h). */
-#include "../helpers/radiogeddon_modules.h"
+/* Full edition module: tool screens (see helpers/radiogeddon_modules.h). */
+#include "../scenes/radiogeddon_scene.h"
 
 #include <flipper_application/flipper_application.h>
 
-static const RadioGeddonLabModule radiogeddon_lab_module = {
-    .alloc = radiogeddon_room_view_alloc,
-    .free = radiogeddon_room_view_free,
-    .get_view = radiogeddon_room_view_get_view,
-    .set_callback = radiogeddon_room_view_set_callback,
-    .load_terminal = radiogeddon_room_load_terminal,
-    .load_scope = radiogeddon_room_load_scope,
-    .get_station = radiogeddon_room_view_get_station,
-    .get_gallery = radiogeddon_room_view_get_gallery,
-    .update = radiogeddon_room_view_update,
+const RadioGeddonHost* radiogeddon_host;
+
+static void radiogeddon_lab_set_host(const RadioGeddonHost* host) {
+    radiogeddon_host = host;
+}
+
+static const RadioGeddonToolModule radiogeddon_lab_module = {
+    .set_host = radiogeddon_lab_set_host,
+    .on_enter =
+        {
+            radiogeddon_scene_room_on_enter,
+            radiogeddon_scene_journal_on_enter,
+            radiogeddon_scene_customize_on_enter,
+            radiogeddon_scene_assistant_on_enter,
+        },
+    .on_event =
+        {
+            radiogeddon_scene_room_on_event,
+            radiogeddon_scene_journal_on_event,
+            radiogeddon_scene_customize_on_event,
+            radiogeddon_scene_assistant_on_event,
+        },
+    .on_exit =
+        {
+            radiogeddon_scene_room_on_exit,
+            radiogeddon_scene_journal_on_exit,
+            radiogeddon_scene_customize_on_exit,
+            radiogeddon_scene_assistant_on_exit,
+        },
 };
 
 static const FlipperAppPluginDescriptor radiogeddon_lab_descriptor = {

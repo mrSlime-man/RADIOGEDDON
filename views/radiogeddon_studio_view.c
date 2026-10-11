@@ -167,7 +167,7 @@ static void studio_draw_wave(Canvas* canvas, StudioModel* m) {
         last = x;
     }
     // Footer: the cursor's pulse, its bit and the marker's distance.
-    char line[40];
+    char line[64];
     if(m->cursor < f->n) {
         int32_t v = f->s[m->cursor];
         uint32_t d = v < 0 ? (uint32_t)(-(int64_t)v) : (uint32_t)v;
@@ -236,10 +236,10 @@ static void studio_draw_lines(Canvas* canvas, StudioModel* m, const char* text) 
 
 static void studio_draw_frame(Canvas* canvas, StudioModel* m) {
     const StudioFrameInfo* fi = &m->info[m->frame];
-    char text[220];
+    char text[320];
     uint8_t diff[(RG_ANALYZER_MAX_BITS + 7) / 8];
     size_t d = m->ref_n ? rg_studio_diff(&m->f, m->ref, m->ref_n, diff) : 0;
-    char group[24] = "no pattern group";
+    char group[40] = "no pattern group";
     if(fi->group < RG_ANALYZER_MAX_GROUPS) {
         snprintf(
             group,

@@ -55,3 +55,22 @@ ADD_SCENE(radiogeddon, session_groups, SessionGroups)
 #if RG_FEATURE_DOLPHIN_LAB
 ADD_SCENE(radiogeddon, room, Room)
 #endif
+#if RG_FEATURE_FINGERPRINT
+ADD_SCENE(radiogeddon, similar, Similar)
+#endif
+#if RG_FEATURE_PULSE_STUDIO
+ADD_SCENE(radiogeddon, studio, Studio)
+#endif
+#if RG_FEATURE_ADAPTIVE_SCAN
+ADD_SCENE(radiogeddon, adaptive, Adaptive)
+#endif
+#if RG_FEATURE_ACTIVITY_LOG
+ADD_SCENE(radiogeddon, actlog, Actlog)
+#endif
+#if RG_FEATURE_JOURNAL
+ADD_SCENE(radiogeddon, journal, Journal)
+ADD_SCENE(radiogeddon, assistant, Assistant)
+#endif
+#if RG_FEATURE_DOLPHIN_LAB
+ADD_SCENE(radiogeddon, customize, Customize)
+#endif

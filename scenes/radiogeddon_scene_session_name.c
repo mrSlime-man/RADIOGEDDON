@@ -71,6 +71,7 @@ bool radiogeddon_scene_session_name_on_event(void* context, SceneManagerEvent ev
     rg_session_init(app->session, app->text_store, created);
     if(radiogeddon_session_save(app->storage, app->session)) {
         strlcpy(app->session_name, app->session->name, sizeof(app->session_name));
+        radiogeddon_research_record(app, RgJrnSession, 1, app->session->name);
         scene_manager_set_scene_state(app->scene_manager, RadioGeddonSceneSessionMenu, 0);
         scene_manager_search_and_switch_to_another_scene(
             app->scene_manager, RadioGeddonSceneSessionMenu);

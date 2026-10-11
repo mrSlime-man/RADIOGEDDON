@@ -201,9 +201,9 @@ static int32_t radiogeddon_scanner_thread(void* context) {
             instance->hold_index = (int32_t)index;
         }
         int16_t dbm = (int16_t)(rssi < -127.0f ? -127 : rssi > 0.0f ? 0 : (int)(rssi - 0.5f));
-        int16_t floor_dbm = ch->samples >= RG_SCAN_WARMUP_SAMPLES ?
-                                (int16_t)(ch->floor < -127.0f ? -127 : (int)(ch->floor - 0.5f)) :
-                                (int16_t)-127;
+        int16_t floor_dbm = -127;
+        if(ch->samples >= RG_SCAN_WARMUP_SAMPLES && ch->floor > -127.0f)
+            floor_dbm = (int16_t)(ch->floor > 0.0f ? 0 : (int)(ch->floor - 0.5f));
 #if RG_FEATURE_ADAPTIVE_SCAN
         if(instance->adapt) rg_adapt_observe(instance->adapt, index, ch->active, started, dbm, dwell, now);
 #endif

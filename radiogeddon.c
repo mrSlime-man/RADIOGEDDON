@@ -27,6 +27,10 @@ static void radiogeddon_tick_event_callback(void* context) {
     radiogeddon_research_tick(app);
 #endif
     scene_manager_handle_tick_event(app->scene_manager);
+#if RG_EDITION_FULL
+    // After the scene's tick: unload tool modules whose screens closed.
+    radiogeddon_scene_tools_tick(app);
+#endif
 }
 
 void radiogeddon_app_save_settings(RadioGeddonApp* app) {
@@ -172,6 +176,9 @@ void radiogeddon_app_free(RadioGeddonApp* app) {
 
     scene_manager_free(app->scene_manager);
     view_dispatcher_free(app->view_dispatcher);
+#if RG_EDITION_FULL
+    radiogeddon_scene_tools_release(app);
+#endif
 
     if(app->scanner) radiogeddon_scanner_free(app->scanner);
     if(app->hopper) radiogeddon_hopper_free(app->hopper);

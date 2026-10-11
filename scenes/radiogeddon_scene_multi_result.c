@@ -55,6 +55,11 @@ void radiogeddon_scene_multi_result_on_enter(void* context) {
     radiogeddon_scene_progress_end(app);
     radiogeddon_memdiag_sample("Multi-compare");
     radiogeddon_scene_module_unload(app);
+#if RG_FEATURE_JOURNAL
+    radiogeddon_research_record(app, RgJrnMulti, 1, NULL);
+    for(size_t i = 0; i < n; i++)
+        radiogeddon_research_step(app, paths[i], RadioGeddonStepCompared, 0);
+#endif
 
     text_box_set_text(app->text_box, app->multi_report);
     radiogeddon_scene_show_report(app, "Comparison", app->multi_report);

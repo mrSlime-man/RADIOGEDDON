@@ -8,7 +8,6 @@
 
 #include "../radiogeddon_version.h"
 #include "../helpers/radiogeddon_storage.h"
-#include "../helpers/radiogeddon_sessions.h"
 #include "../helpers/rg_raw.h"
 #include "../helpers/rg_ui.h"
 #include <toolbox/stream/file_stream.h>
@@ -16,47 +15,39 @@
 /* The oscilloscope's samples: the first ones of the file. */
 #define ROOM_SAMPLES 512u
 
-/* Files in @p folder whose names end in @p suffix. */
-static uint32_t room_count(Storage* storage, const char* folder, const char* suffix) {
-    uint32_t n = 0;
-    File* dir = storage_file_alloc(storage);
-    FileInfo info;
-    char name[64];
-    size_t sl = strlen(suffix);
-    if(storage_dir_open(dir, folder)) {
-        while(storage_dir_read(dir, &info, name, sizeof(name))) {
-            if(info.flags & FSF_DIRECTORY) continue;
-            size_t len = strlen(name);
-            if(len > sl && strcmp(name + len - sl, suffix) == 0) n++;
-        }
-    }
-    storage_dir_close(dir);
-    storage_file_free(dir);
-    return n;
-}
-
 void radiogeddon_room_load_terminal(
     RadioGeddonRoomView* instance,
-    Storage* storage,
+    const RgJournal* j,
     const char* fw) {
+    // The journal's counts: nothing is read from the card for them.
     char lines[RADIOGEDDON_ROOM_LINES][RADIOGEDDON_ROOM_LINE_LEN];
-    uint32_t recordings =
-        room_count(storage, RADIOGEDDON_SIGNALS_FOLDER, RADIOGEDDON_SUB_EXTENSION);
+    uint32_t xp = rg_journal_xp(j);
     snprintf(lines[0], sizeof(lines[0]), "RadioGeddon %s", RADIOGEDDON_VERSION);
     snprintf(lines[1], sizeof(lines[1]), "%s %s", rg_ui_fw_family(fw), fw ? fw : "");
-    snprintf(lines[2], sizeof(lines[2]), "Recordings: %lu", (unsigned long)recordings);
+    snprintf(
+        lines[2],
+        sizeof(lines[2]),
+        "Level %u, %lu XP",
+        (unsigned)rg_journal_level(xp),
+        (unsigned long)xp);
     snprintf(
         lines[3],
         sizeof(lines[3]),
-        "Saved reports: %lu",
-        (unsigned long)room_count(storage, RADIOGEDDON_REPORTS_FOLDER, ".txt"));
+        "Saved %lu, analysed %lu",
+        (unsigned long)j->counters[RgJrnCapture],
+        (unsigned long)(j->counters[RgJrnAnalysis] + j->counters[RgJrnDiscovery]));
+    uint32_t badges = 0;
+    for(size_t a = 0; a < RgAchCount; a++)
+        if(j->achievements & (1u << a)) badges++;
     snprintf(
         lines[4],
         sizeof(lines[4]),
-        "Sessions: %lu",
-        (unsigned long)room_count(storage, RADIOGEDDON_SESSIONS_FOLDER, ".txt"));
+        "Badges %lu/%u, logs %lu",
+        (unsigned long)badges,
+        (unsigned)RgAchCount,
+        (unsigned long)j->counters[RgJrnActlog]);
     radiogeddon_room_view_set_terminal(
-        instance, (const char(*)[RADIOGEDDON_ROOM_LINE_LEN])lines, recordings);
+        instance, (const char(*)[RADIOGEDDON_ROOM_LINE_LEN])lines, j->counters[RgJrnCapture]);
 }
 
 static size_t room_stream_read(void* context, uint8_t* buf, size_t size) {

@@ -117,4 +117,6 @@ RgTip rg_assist_update(RgAssist* a, const RgAssistFacts* f, uint32_t now_ms);
 void rg_assist_dismiss(RgAssist* a);
 
 const char* rg_tip_text(RgTip tip);
+/** A short form for a menu row (at most 13 characters). */
+const char* rg_tip_short(RgTip tip);
 RgTipAction rg_tip_action(RgTip tip);
