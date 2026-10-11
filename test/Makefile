@@ -32,6 +32,7 @@ DECODE_SRC := test_decode.c ../helpers/rg_decode.c ../helpers/rg_raw.c
 FP_SRC := test_fp.c ../helpers/rg_fp.c ../helpers/rg_analyzer.c ../helpers/rg_crc.c
 ADAPT_SRC := test_adapt.c ../helpers/rg_adapt.c
 ACTLOG_SRC := test_actlog.c ../helpers/rg_actlog.c
+STUDIO_SRC := test_studio.c ../helpers/rg_studio.c ../helpers/rg_analyzer.c
 JOURNAL_SRC := test_journal.c ../helpers/rg_journal.c ../helpers/rg_assist.c ../helpers/rg_crc.c
 DBLOAD_SRC := test_dbload.c stubs/furi_stub.c ../helpers/radiogeddon_db.c ../helpers/rg_db.c
 STUB_HDRS := stubs/furi.h stubs/storage/storage.h stubs/datetime/datetime.h \
@@ -119,11 +120,11 @@ UI_SRC := test_ui.c ui/canvas_host.c ../views/radiogeddon_waterfall_view.c \
 UI_HDRS := ui/canvas_host.h ui/stubs/gui/view.h ui/stubs/gui/canvas.h ui/stubs/gui/elements.h \
 		../views/radiogeddon_waterfall_view.h ../views/radiogeddon_bits_view.h synth.h
 
-.PHONY: check clean tsan fuzz formats decoders captures lifecycle ui fpindex
+.PHONY: check clean tsan fuzz formats decoders captures lifecycle ui fpindex actlogfiles
 check: $(BUILD)/test_dsp $(BUILD)/test_analyzer $(BUILD)/test_scan $(BUILD)/test_hop $(BUILD)/test_raw \
 		$(BUILD)/test_timeline $(BUILD)/test_ring $(BUILD)/test_rawfmt $(BUILD)/test_recorder \
 		$(BUILD)/test_db $(BUILD)/test_memstat $(BUILD)/test_dbload $(BUILD)/test_decode $(BUILD)/test_freq $(BUILD)/test_preset $(BUILD)/test_range \
-		$(BUILD)/test_txpolicy $(BUILD)/test_spectrum $(BUILD)/test_checksum $(BUILD)/test_waterfall $(BUILD)/test_bits $(BUILD)/test_multi $(BUILD)/test_session $(BUILD)/test_elf $(BUILD)/test_mascot $(BUILD)/test_fp $(BUILD)/test_adapt $(BUILD)/test_actlog $(BUILD)/test_journal $(BUILD)/sprites.ok $(BUILD)/test_edition_full $(BUILD)/test_edition_catalog \
+		$(BUILD)/test_txpolicy $(BUILD)/test_spectrum $(BUILD)/test_checksum $(BUILD)/test_waterfall $(BUILD)/test_bits $(BUILD)/test_multi $(BUILD)/test_session $(BUILD)/test_elf $(BUILD)/test_mascot $(BUILD)/test_fp $(BUILD)/test_adapt $(BUILD)/test_actlog $(BUILD)/test_journal $(BUILD)/test_studio $(BUILD)/sprites.ok $(BUILD)/test_edition_full $(BUILD)/test_edition_catalog \
 		$(BUILD)/test_edition_default $(BUILD)/edition_conflict.ok \
 		$(addprefix $(BUILD)/replay_,$(FUZZ_TARGETS))
 	$(BUILD)/test_dsp
@@ -155,6 +156,7 @@ check: $(BUILD)/test_dsp $(BUILD)/test_analyzer $(BUILD)/test_scan $(BUILD)/test
 	$(BUILD)/test_adapt
 	$(BUILD)/test_actlog
 	$(BUILD)/test_journal
+	$(BUILD)/test_studio
 	$(BUILD)/test_edition_full
 	$(BUILD)/test_edition_catalog
 	$(BUILD)/test_edition_default
@@ -234,6 +236,9 @@ $(BUILD)/test_adapt: $(ADAPT_SRC) ../helpers/rg_adapt.h | $(BUILD)
 
 $(BUILD)/test_actlog: $(ACTLOG_SRC) ../helpers/rg_actlog.h | $(BUILD)
 	$(CC) $(CFLAGS) $(SAN) -DRADIOGEDDON_EDITION_FULL -o $@ $(ACTLOG_SRC)
+
+$(BUILD)/test_studio: $(STUDIO_SRC) ../helpers/rg_studio.h ../helpers/rg_analyzer.h | $(BUILD)
+	$(CC) $(CFLAGS) $(SAN) -DRADIOGEDDON_EDITION_FULL -o $@ $(STUDIO_SRC)
 
 $(BUILD)/test_journal: $(JOURNAL_SRC) ../helpers/rg_journal.h ../helpers/rg_assist.h | $(BUILD)
 	$(CC) $(CFLAGS) $(SAN) -DRADIOGEDDON_EDITION_FULL -o $@ $(JOURNAL_SRC)
@@ -336,6 +341,17 @@ $(BUILD)/fwobj/%.o: $(FW)/%.c $(STUB_HDRS)
 $(BUILD)/test_formats: $(FORMATS_SRC) $(STUB_HDRS) $(FW_OBJ) | $(BUILD)
 	$(CC) $(CFLAGS) $(SAN) -D_GNU_SOURCE -I$(FW) -I$(FW)/lib -Istubs -DSTUB_TRACK_ALLOC -DRADIOGEDDON_EDITION_FULL -pthread \
 		-o $@ $(FORMATS_SRC) $(FW_OBJ)
+
+ACTLOGFILES_SRC := test_actlog_files.c stubs/furi_stub.c ../helpers/radiogeddon_actlog.c \
+		../helpers/rg_actlog.c
+
+actlogfiles: $(BUILD)/test_actlog_files
+	$(BUILD)/test_actlog_files
+
+$(BUILD)/test_actlog_files: $(ACTLOGFILES_SRC) $(STUB_HDRS) ../helpers/radiogeddon_actlog.h \
+		../helpers/rg_actlog.h | $(BUILD)
+	$(CC) $(CFLAGS) $(SAN) -D_GNU_SOURCE -Istubs -DSTUB_TRACK_ALLOC -DRADIOGEDDON_EDITION_FULL \
+		-pthread -o $@ $(ACTLOGFILES_SRC)
 
 fpindex: $(BUILD)/test_fpindex
 	$(BUILD)/test_fpindex

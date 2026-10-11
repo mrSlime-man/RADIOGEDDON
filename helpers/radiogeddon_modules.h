@@ -27,7 +27,7 @@
 
 /* The plugin manager's application id and API version for every module. */
 #define RADIOGEDDON_MODULE_APPID "radiogeddon_full"
-#define RADIOGEDDON_MODULE_API   2u
+#define RADIOGEDDON_MODULE_API   3u
 
 /* File names in the app's assets folder (APP_ASSETS_PATH("plugins/...")). */
 #define RADIOGEDDON_MODULE_BITS      "radiogeddon_bits.fal"
@@ -36,6 +36,9 @@
 #define RADIOGEDDON_MODULE_UNKNOWN   "radiogeddon_unknown.fal"
 #define RADIOGEDDON_MODULE_SESSIONS  "radiogeddon_sessions.fal"
 #define RADIOGEDDON_MODULE_LAB       "radiogeddon_lab.fal"
+#define RADIOGEDDON_MODULE_FP        "radiogeddon_fp.fal"
+#define RADIOGEDDON_MODULE_STUDIO    "radiogeddon_studio.fal"
+#define RADIOGEDDON_MODULE_LOG       "radiogeddon_log.fal"
 
 #include "radiogeddon_analysis.h"
 /* Unknown Protocol Analysis report (radiogeddon_analysis_unknown). */
@@ -119,6 +122,17 @@ typedef struct {
 } RadioGeddonSessionsModule;
 #endif
 
+#if RG_FEATURE_JOURNAL
+#include "rg_journal.h"
+/* The Research Journal's pages (in the lab module). */
+typedef struct {
+    /** History, statistics, protocols and level as text. */
+    size_t (*journal_text)(const RgJournal* journal, char* out, size_t size);
+    /** Achievements earned (with when) and the ones still open, with hints. */
+    size_t (*achievements_text)(const RgJournal* journal, uint32_t fresh, char* out, size_t size);
+} RadioGeddonJournalPages;
+#endif
+
 #if RG_FEATURE_DOLPHIN_LAB
 #include "../views/radiogeddon_room_view.h"
 /* The Dolphin Lab room's screen. */
@@ -132,7 +146,65 @@ typedef struct {
     uint8_t (*get_station)(RadioGeddonRoomView* view);
     uint8_t (*get_gallery)(RadioGeddonRoomView* view);
     void (*update)(RadioGeddonRoomView* view, const RgMascotFrame* frame, uint32_t now);
+#if RG_FEATURE_JOURNAL
+    RadioGeddonJournalPages journal;
+#endif
 } RadioGeddonLabModule;
+#endif
+
+
+#if RG_FEATURE_FINGERPRINT
+#include "radiogeddon_fp.h"
+typedef struct {
+    size_t (*memory)(void);
+    bool (*find_similar)(
+        Storage* storage,
+        const char* target,
+        RadioGeddonFpResult* out,
+        RadioGeddonProgressCallback progress,
+        void* context);
+    size_t (*explain)(const RadioGeddonFpResult* r, size_t index, char* out, size_t size);
+} RadioGeddonFpModule;
+#endif
+
+#if RG_FEATURE_PULSE_STUDIO
+#include "../views/radiogeddon_studio_view.h"
+typedef struct {
+    size_t (*memory)(void);
+    RadioGeddonStudioView* (*alloc)(void);
+    void (*free)(RadioGeddonStudioView* view);
+    View* (*get_view)(RadioGeddonStudioView* view);
+    void (*set_callback)(RadioGeddonStudioView* view, RadioGeddonStudioCallback cb, void* ctx);
+    void (*set_analysis)(RadioGeddonStudioView* view, const char* name, const RgAnalysis* a);
+    void (*load_frame)(RadioGeddonStudioView* view, RgRawReader* reader, uint8_t frame);
+} RadioGeddonStudioModule;
+#endif
+
+#if RG_FEATURE_ACTIVITY_LOG
+#include "radiogeddon_actlog.h"
+typedef struct {
+    size_t (*memory)(size_t count);
+    RadioGeddonActlog* (*start)(
+        Storage* storage,
+        const uint32_t* frequencies,
+        size_t count,
+        const RadioGeddonActlogConfig* config,
+        uint32_t now);
+    /* The scanner's observer (RadioGeddonScannerObserver), context: the log. */
+    void (*observe)(
+        void* context,
+        size_t index,
+        bool active,
+        bool started,
+        int16_t rssi_dbm,
+        int16_t floor_dbm,
+        uint16_t dwell_ms,
+        uint32_t now_ms);
+    size_t (*collect)(RadioGeddonActlog* log, uint32_t now, char* buf, size_t size);
+    bool (*write)(RadioGeddonActlog* log, const char* buf, size_t len);
+    void (*status)(RadioGeddonActlog* log, uint32_t now, RadioGeddonActlogStatus* out);
+    size_t (*finish)(RadioGeddonActlog* log, const char* reason, uint32_t now, char* summary, size_t size);
+} RadioGeddonLogModule;
 #endif
 
 /* ---- host side --------------------------------------------------------------- */
