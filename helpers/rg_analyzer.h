@@ -290,6 +290,24 @@ size_t rg_analyzer_align(
  */
 size_t rg_analyzer_repeat_period(const char* bits, size_t n);
 
+/* Frames further apart than this are separate presses, not repeats. */
+#define RG_ANALYZER_REPEAT_MAX_US 2000000u
+
+/** How often a pattern's frames repeat within a press. */
+typedef struct {
+    uint32_t intervals; /* start-to-start intervals counted */
+    uint32_t median_us;
+    uint32_t min_us;
+    uint32_t max_us;
+} RgRepeatTiming;
+
+/**
+ * Start-to-start intervals between consecutive kept frames of pattern
+ * @p group (exact or shifted), ignoring gaps over RG_ANALYZER_REPEAT_MAX_US.
+ * False when fewer than one interval is found.
+ */
+bool rg_analyzer_repeat_timing(const RgAnalysis* r, uint8_t group, RgRepeatTiming* out);
+
 /** Unpack a frame's bits into '0'/'1' characters (NUL-terminated). */
 void rg_analyzer_frame_bits(const RgFrame* frame, char* out);
 

@@ -197,6 +197,20 @@ static void radiogeddon_report_hypothesis(const RgAnalysis* r, FuriString* out) 
 
 static void radiogeddon_report_frames(const RgAnalysis* r, FuriString* out) {
     if(r->frames_kept == 0) return;
+    // How the main patterns repeat within a press (measured start times).
+    for(uint8_t g = 0; g < r->group_count && g < 2; g++) {
+        RgRepeatTiming t;
+        if(!rg_analyzer_repeat_timing(r, g, &t)) continue;
+        furi_string_cat_printf(
+            out,
+            "[OBSERVED] %c repeats\nevery %lu.%lu ms (%lu\ngaps, %lu-%lu ms)\n",
+            radiogeddon_group_letter(g),
+            (unsigned long)(t.median_us / 1000u),
+            (unsigned long)(t.median_us % 1000u / 100u),
+            (unsigned long)t.intervals,
+            (unsigned long)(t.min_us / 1000u),
+            (unsigned long)((t.max_us + 999u) / 1000u));
+    }
     furi_string_cat_str(out, "Frames (start, bits, pat)\n");
     for(size_t i = 0; i < r->frames_kept; i++) {
         const RgFrame* f = &r->frames[i];

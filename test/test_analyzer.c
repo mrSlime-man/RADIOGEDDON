@@ -650,6 +650,27 @@ static void test_pairing_keeps_manchester(void) {
         g_a.encoding_fit[RgEncodingManchester] >= g_a.encoding_fit[RgEncodingPWM], "fits listed");
 }
 
+static void test_repeat_timing(void) {
+    printf("test_repeat_timing\n");
+    // Frame A every 24 bits of PWM (24 x 4 Te + stop + 31 Te sync) twice,
+    // a long pause (a new press), then twice more.
+    static int32_t buf[4000];
+    size_t pos = 0;
+    const char* a = "101100111000101011110001";
+    emit_pwm(buf, &pos, a, 0);
+    emit_pwm(buf, &pos, a, 0);
+    buf[pos - 1] -= 3000000; // 3 s pause after the second frame
+    emit_pwm(buf, &pos, a, 0);
+    emit_pwm(buf, &pos, a, 0);
+    rg_analyzer_run(buf, pos, &g_a);
+    RgRepeatTiming t;
+    CHECK(rg_analyzer_repeat_timing(&g_a, 0, &t), "pattern A repeats");
+    uint32_t period = (24u * 4u + 1u + 31u) * TE;
+    CHECK(t.intervals == 2, "the 3 s pause is a new press, not a repeat");
+    CHECK(t.median_us == period && t.min_us == period && t.max_us == period, "interval");
+    CHECK(!rg_analyzer_repeat_timing(&g_a, 5, &t) && t.intervals == 0, "no such pattern");
+}
+
 static void test_degenerate(void) {
     printf("test_degenerate\n");
     rg_analyzer_run(NULL, 0, &g_a);
@@ -682,6 +703,7 @@ int main(void) {
     test_pairing_equal();
     test_pairing_opposite();
     test_pairing_keeps_manchester();
+    test_repeat_timing();
     test_pwm_identification();
     test_fixed_code_fields();
     test_changing_fields();

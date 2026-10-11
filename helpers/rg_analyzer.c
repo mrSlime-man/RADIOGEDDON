@@ -1025,6 +1025,37 @@ void rg_analyzer_run(const int32_t* samples, size_t count, RgAnalysis* out) {
     free(a);
 }
 
+bool rg_analyzer_repeat_timing(const RgAnalysis* r, uint8_t group, RgRepeatTiming* out) {
+    uint32_t iv[RG_ANALYZER_MAX_FRAMES];
+    uint32_t n = 0;
+    const RgFrame* prev = NULL;
+    memset(out, 0, sizeof(*out));
+    for(size_t i = 0; i < r->frames_kept; i++) {
+        const RgFrame* f = &r->frames[i];
+        if(f->group != group) continue;
+        if(prev && f->start_us > prev->start_us) {
+            uint64_t d = f->start_us - prev->start_us;
+            if(d <= RG_ANALYZER_REPEAT_MAX_US) iv[n++] = (uint32_t)d;
+        }
+        prev = f;
+    }
+    if(n == 0) return false;
+    for(uint32_t i = 1; i < n; i++) {
+        uint32_t key = iv[i];
+        uint32_t j = i;
+        while(j > 0 && iv[j - 1] > key) {
+            iv[j] = iv[j - 1];
+            j--;
+        }
+        iv[j] = key;
+    }
+    out->intervals = n;
+    out->median_us = iv[(n - 1) / 2];
+    out->min_us = iv[0];
+    out->max_us = iv[n - 1];
+    return true;
+}
+
 const char* rg_analyzer_encoding_name(RgEncoding e) {
     switch(e) {
     case RgEncodingPWM:
