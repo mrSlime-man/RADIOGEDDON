@@ -257,7 +257,8 @@ int main(void) {
     RgAnalyzer* a = malloc(sizeof(RgAnalyzer));
     RgAnalysis* mem = malloc(sizeof(RgAnalysis));
     unsigned te_ok = 0, family_ok = 0, bits_ok = 0, unknown = 0, analysed = 0;
-    unsigned hyp_family = 0, hyp_bits = 0, conf_right = 0, conf_wrong = 0, n_right = 0, n_wrong = 0;
+    unsigned hyp_family = 0, hyp_bits = 0, conf_right = 0, conf_wrong = 0, n_right = 0,
+             n_wrong = 0;
 
     printf(
         "\n%-26s %-12s %-16s %-16s %s\n",
@@ -370,8 +371,9 @@ int main(void) {
         n_wrong ? conf_wrong / n_wrong : 0,
         n_wrong);
     CHECK(hyp_family >= family_ok, "hypotheses include every right chosen family");
-    CHECK(n_wrong == 0 || conf_wrong / n_wrong < conf_right / n_right,
-          "confidence is lower when the family is wrong");
+    CHECK(
+        n_wrong == 0 || conf_wrong / n_wrong < conf_right / n_right,
+        "confidence is lower when the family is wrong");
     CHECK(analysed == PAIR_COUNT, "every paired capture analysed");
     CHECK(te_ok >= MIN_TE_OK, "Te score did not drop");
     CHECK(family_ok >= MIN_FAMILY_OK, "encoding family score did not drop");

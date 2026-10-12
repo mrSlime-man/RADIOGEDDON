@@ -142,7 +142,8 @@ static size_t fp_next_batch(
             if((info.flags & FSF_DIRECTORY) || !fp_is_sub(name)) continue;
             files++;
             if(strlen(name) >= RG_FP_NAME_MAX) continue;
-            if(n < max && !fp_seen(seen, fp_name_hash(name))) strlcpy(names[n++], name, RG_FP_NAME_MAX);
+            if(n < max && !fp_seen(seen, fp_name_hash(name)))
+                strlcpy(names[n++], name, RG_FP_NAME_MAX);
         }
     }
     storage_dir_close(dir);

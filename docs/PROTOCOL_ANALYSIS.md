@@ -311,26 +311,32 @@ protocol's decoder source:
 | Hypothesis | Counted right when | Right |
 |------------|--------------------|-------|
 | Base Te | within the decoder's own tolerance (`te_delta`) of its `te_short` | 50 of 50 |
-| Encoding | Manchester exactly when the decoder uses the firmware's Manchester decoder; PWM and PPM both count for the others | 43 of 50 (3 give no guess) |
-| Bit length | within one bit of the decoder's `min_count_bit_for_found` | 35 of 50 |
+| Encoding | Manchester exactly when the decoder uses the firmware's Manchester decoder; PWM and PPM both count for the others | 48 of 50 |
+| Bit length | within one bit of the decoder's `min_count_bit_for_found` | 42 of 50 |
 
 Before the rules above for glitches, pairing, preambles and separators, the
 same scores were 39, 33 and 16; in beta 5 they were 48, 41 and 29, in beta 6
 50, 41 and 33. Beta 6's 140 µs glitch floor fixed Te on Holtek and Phoenix
 V2, and cutting gapless repeats fixed the frame length on FAAC SLH, Power
 Smart, Honeywell WDB and Revers RB2. Beta 7's pulse/gap pairing rule fixed
-the encoding and the frame length on Nero Radio and Cenmax; no capture's
-score went down. No rule names a protocol or a capture; each has a synthetic
+the encoding and the frame length on Nero Radio and Cenmax. Beta 9 keeps a
+populous short gap cluster (at most 20 Te, a quarter of the gaps) as data
+rather than a frame separator, and measures a PWM period from how pulses
+pair: the encoding is now right on Scher-Khan, Phoenix V2, Linear Delta-3,
+Hollarm and Marantec24 (43 → 48), and the frame length on Phoenix V2,
+Linear Delta-3, Hollarm, Marantec24, Clemsa, Megacode and Magellan (35 → 42).
+No capture's score went down. No rule names a protocol or a capture; each has a synthetic
 regression test that fails without it.
 
-Remaining misses: encoding on Scher-Khan, Holtek, Holtek HT12X and Phoenix
-V2 (pulse-width codes still read as Manchester: too few pairs, or pairs that
-are not consistent enough for the pairing rule), no
-encoding guess on Linear Delta-3, Hollarm and Marantec24; frame length on 15
-captures, mostly protocols that send a long preamble or sync inside the frame
-(Nero Sketch reads 89 bits for the decoder's 40), count bits differently from
-the frame on air (Nice FLO 24 for 12, Megacode, Clemsa), or repeat without a
-gap but without filling the buffer. Bit length is the weakest: several protocols
+Remaining misses: encoding on Holtek and Holtek HT12X (pulse-width codes
+still read as Manchester: pairs not consistent enough for the pairing rule);
+frame length on 8 captures — protocols that send a long preamble or sync
+inside the frame (Nero Sketch reads 89 bits for the decoder's 40, Holtek,
+Scher-Khan, Nice One, KingGates Stylo4k), count bits differently from the
+frame on air (Nice FLO 24 for 12, Intertechno V3 64 for 32), or repeat
+without a gap the engine can see (KIA Seed). In Smart Protocol Discovery
+the decoder's encoding is among the competing readings for 48 captures, and
+the answer's confidence averages 87 when right and 67 when wrong. Bit length is the weakest: several protocols
 repeat a frame with no gap the engine can see, and some count bits
 differently from the frame on air. The captures are the firmware's, recorded
 by others; none of this is checked on our hardware.

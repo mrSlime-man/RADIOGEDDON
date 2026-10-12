@@ -41,9 +41,9 @@ The **Full** edition (RogueMaster, Momentum, Unleashed) is titled
 
 | Item | What it holds |
 |------|---------------|
-| `Scan` | `Frequency Scanner` (common frequencies or your favorites), [`Range Scanner`](#range-scanner-full-edition), [`Waterfall`](#waterfall-full-edition), `Frequency Hopper`, [`Favorites`](#favorites-full-edition) |
+| `Scan` | `Frequency Scanner` (common frequencies or your favorites), [`Adaptive Scanner`](#adaptive-scanner-full-edition), [`RF Activity Logger`](#rf-activity-logger-full-edition), [`Range Scanner`](#range-scanner-full-edition), [`Waterfall`](#waterfall-full-edition), `Frequency Hopper`, [`Favorites`](#favorites-full-edition) |
 | `Receive & Record` | Live decoding and RAW recording on one frequency |
-| `Analyze` | Pick a recording for `Open recording...` (its whole menu), [`Bitstream Explorer...`](#bitstream-explorer-full-edition), [`Multi-Capture Compare`](#comparing-several-recordings-full-edition), `Unknown Analysis...`, `Decode with Firmware...` or `Pulse Timeline...` |
+| `Analyze` | `Current: <name>` (the [current recording](#the-current-recording-full-edition)'s menu, when there is one), `Open recording...` (its whole menu), [`Pulse Studio...`](#pulse-studio-full-edition), [`Find Similar...`](#find-similar-signals-full-edition), [`Bitstream Explorer...`](#bitstream-explorer-full-edition), [`Multi-Capture Compare`](#comparing-several-recordings-full-edition), `Protocol Discovery...`, `Decode with Firmware...`, `Pulse Timeline...` or [`Research Journal`](#research-journal-full-edition) |
 | `Database` | The recordings list, as in the Catalog edition |
 | `Sessions` | [Research sessions](#research-sessions-full-edition): named groups of recordings |
 | `Settings`, `About` | As in the Catalog edition |
@@ -70,7 +70,14 @@ bottom a status bar.
 The **status bar** shows the frequency and modulation Receive will use (and
 `EXT` with an external radio), and on the right the active research session
 (`S:name`), or `MEM LOW` (inverted) when there is not enough free memory for a
-receive session right now, or the edition.
+receive session right now, `New badge!` when you earned an achievement you
+have not looked at yet, or the edition.
+
+**Assistant tips.** When the [Dolphin Assistant](#dolphin-assistant-full-edition)
+has a suggestion, it is the first menu row (with a light-bulb icon), for
+example `Find similar?` or `More samples?`. **OK** opens the suggested tool;
+**long OK** dismisses the tip for this recording. It never appears while
+recording, and can be switched off in Settings.
 
 **The dolphin** shows what the app is doing, and only what it is really
 doing:
@@ -84,6 +91,8 @@ doing:
 | At the reel recorder with `REC` and a blinking lamp | A RAW recording is running (never shown when it is not) |
 | At the terminal, a bar and percentage | An analysis or long file job; the bar only when the job reports its progress |
 | Cheering with sparkles | A save just completed |
+| Arms up, confetti | An achievement, a new research level or a strong similarity match |
+| Waving | The first time the dashboard opens in a run |
 | Worried, a `?` bubble | An operation failed (the message itself is always shown in full) |
 | Worried, a memory chip | Memory is low (a receive session would be refused) |
 | Sleepy, then asleep with `z`s | No key and nothing happening for 45 s, then 2 minutes. This is not a radio fault; any key wakes it |
@@ -125,12 +134,29 @@ between its stations; **OK** uses one; **Back** leaves.
 
 | Station | What it shows | OK |
 |---------|---------------|----|
+| `Workbench` | The [current recording](#the-current-recording-full-edition) and the active session | Opens the recording's menu (or the `Database` when there is none) |
+| `Oscilloscope` | The first 512 samples of a RAW recording, carrier on (high) and off (low) as recorded, with the time they span | Pick a recording |
 | `Radar` | A sweeping radar. It is an illustration, labelled so, not a measurement | Opens the real `Frequency Scanner` |
-| `Oscilloscope` | The first 512 samples of a RAW recording you pick, carrier on (high) and off (low) as recorded, with the time they span | Pick a recording |
-| `Antenna` | An antenna with waves (an illustration) | Opens `Receive & Record` |
-| `Recorder` | How many recordings are in `signals` | Opens the `Database` |
-| `Terminal` | The app version, firmware, and counts of recordings, saved reports and sessions, read from the SD card | Counts again |
-| `Gallery` | Every pose of the dolphin; **Up / Down** change it | — |
+| `Terminal` | The app version, firmware, and your research level and counts from the [journal](#research-journal-full-edition) | Opens the `Research Journal` |
+| `Rack` | The equipment rack: `Scanner`, `Adaptive scan`, `Activity log`, `Receive`; **Up / Down** choose | Opens the chosen tool |
+| `Corner` | The dolphin's corner with your wall decoration; every pose, **Up / Down** change it | Opens [customization](#customizing-the-dolphin) |
+
+### Customizing the dolphin
+
+`Corner` → **OK** (or `Customize dolphin` in the journal):
+
+| Row | Values |
+|-----|--------|
+| `Headphones` | `Off`, `On` |
+| `Goggles` | `As posed`, `Always`, `Off` |
+| `Antenna` | `Classic`, `Whip`, `Dish`, `None` |
+| `Tool` | `None`, `Wrench`, `Probe`, `Notebook` |
+| `Expression` | `Normal`, `Cheerful`, `Focused` |
+| `Accessory` | `None`, `Bow tie`, `Scarf`, `ID badge` |
+| `Wall` | `None`, `Plant`, `Poster`, `Lamp`, `Mug`, `Trophy` — each from a research level, shown as `(Lv n)` until then; all available with Research XP off |
+| `Animation` | as in Settings |
+
+Changes show at once and are saved with the settings.
 
 The room never uses the radio. Its code is loaded only while it is open; if
 it does not fit in memory, `Not enough memory` is shown and nothing else is
@@ -161,6 +187,9 @@ affected.
 | `UI style` *(Full)* | **`Dolphin Lab`**, `Cyber Lab`, `Classic` (see [Dolphin Lab](#dolphin-lab-full-edition)) | Dolphin Lab |
 | `UI feedback` *(Full)* | **`Off`**, `Minimal`, `Full` | Off |
 | `Transitions` *(Full)* | `Off`, **`On`** | On |
+| `Animation` *(Full)* | `Off` (a still pose per state), `Minimal` (state changes and blinks), **`Normal`**, `Full` (more movement) | Normal |
+| `Assistant tips` *(Full)* | `Off`, **`On`** | On |
+| `Research XP` *(Full)* | `Off` (the journal still counts, no XP, levels or badges), **`On`** | On |
 
 With `Freq step` set to a step, **Left / Right** on `Frequency MHz` move the
 frequency by that step instead of through the list, staying inside the bands
@@ -563,6 +592,42 @@ its confidence.
 report. See [Features → Multi-Capture Compare](FEATURES.md#multi-capture-compare-full-edition)
 for what it contains. **Analyze → Multi-Capture Compare** opens the same list.
 
+### Pulse Studio (Full edition)
+
+`Pulse Studio` on a RAW recording's menu (or **Analyze → Pulse Studio...**)
+reads the capture once (`Reading pulses...`) and opens on the first frame
+that decodes. The header shows `F2/12` (frame), the page and the encoding
+with its bit count. **OK** cycles the pages; **Up / Down** change frame;
+**Back** leaves.
+
+| Page | Shows | Keys |
+|------|-------|------|
+| `Wave` | The frame's pulses (high) and gaps (low). A dotted line over the preamble, a dot under a glitch, a dotted line at the frame's end, and the bit each symbol decodes to (`?`: unsure). The footer: the pulse or gap under the cursor (`#12 pulse 400us 1.0Te`), its bit, and the time from the marker `A` | Left / Right: cursor; hold Left / Right: zoom out / in; hold OK: set or clear the marker |
+| `Frame` | Start, duration, samples, bits, fit and pattern letter | Left / Right: scroll |
+| `Bits`, `Hex` | The frame's bits, grouped, and as hex | Left / Right: scroll |
+| `Diff` | The bits against the most common pattern | Left / Right: scroll |
+| `Timing` | How many pulses (`hi`) and gaps (`lo`) fall at each length, in half-Te steps up to 8 Te | — |
+
+Frames are read from the card one at a time (`Reading frame...` for a
+moment). Pulse Studio needs a RAW capture; with too little free memory it
+says so and does not open.
+
+### Find Similar Signals (Full edition)
+
+`Find Similar` on a recording's menu (or **Analyze → Find Similar...**)
+compares the recording's fingerprint with every other recording's. The first
+search fingerprints your recordings (`Fingerprinting...` with a
+percentage); later ones only the new or changed files. The list shows up to 8 matches with a score
+(`87% RAW_gate_2.sub`) and a line on how many were compared; `No similar
+recordings` or `No structure to match` (too little structure in this one to
+compare) when there is nothing to show.
+
+Pick a match for `Why similar?` (the features that agree and those that
+contradict), `Open recording` or `Compare with this`; `Compare all matches`
+puts them in a [multi-capture comparison](#comparing-several-recordings-full-edition).
+A score is evidence, not identity: a recording with no frame structure never
+scores above 30, RAW against a decoded file never above 60.
+
 ### Pulse Timeline
 
 Shows a RAW capture as a waveform: carrier-on pulses on the upper line,
@@ -591,6 +656,84 @@ end of the recording.
 
 You can analyse `.sub` files from other sources (for example the stock app's
 `/ext/subghz` folder) by copying them into the signals folder.
+
+### The current recording (Full edition)
+
+The recording you last saved, opened or analysed is the *current
+recording*. **Analyze** lists it first (`Current: <name>`), the room's
+`Workbench` shows it, and the [Research Journal](#research-journal-full-edition)
+notes which steps it has been through (analysed, searched, compared, studied,
+in a session) — which is what the assistant's tips are based on.
+
+## Adaptive Scanner (Full edition)
+
+**Scan → Adaptive Scanner** chooses how the Frequency Scanner spends its time:
+
+| Mode | Behaviour |
+|------|-----------|
+| `Standard` | The classic Scanner: every frequency in turn, the same dwell |
+| `Balanced` | Frequencies that showed activity are visited more and listened to a little longer |
+| `Focused` | Activity counts more still |
+| `Custom` | Like Balanced, with your favorites in the list first |
+
+`Start scanner` opens the Scanner in that mode (the mode is remembered);
+`Reset learning` forgets what it learned. Whatever the mode, every frequency
+is visited again within a bounded number of visits, and none more than three
+times in a row. The Scanner's header shows the mode and the longest wait any
+frequency had (`gap 4.2s`); the last line, the selected frequency's share of
+the visits.
+
+## RF Activity Logger (Full edition)
+
+**Scan → RF Activity Logger** watches the Scanner's frequency list for a long
+time and writes what it saw. Set:
+
+| Row | Values |
+|-----|--------|
+| `Schedule` | `Standard`, `Balanced`, `Focused` (see above) |
+| `Duration` | `15 min`, `30 min`, `1 h`, `2 h`, `4 h`, `8 h`, `Until stop` |
+| `Log every` | `10 s`, `30 s`, `1 min`, `5 min` — one row per frequency per interval |
+| `File part` | `64 KB`, `256 KB`, `1 MB` (up to 8 parts) |
+| `Threshold` | as the Scanner's |
+| `Frequencies` | how many (the Scanner's list or favorites, as set in Settings) |
+
+`Start logging` shows the elapsed time, the events, rows and kilobytes
+written, and the two busiest frequencies. **Back** stops it. It also stops when the time is up, when the
+last part is full or when the card cannot be written — never overwriting.
+Then a summary is shown and saved next to the log.
+
+Files are in `apps_data/radiogeddon/activity/`: `activity_<date>_<time>.csv`
+(further parts `_2`, `_3`, ...) and `..._summary.txt`. A row with empty
+fields means nobody listened to that frequency in that interval — it is not
+"quiet". The radio hears one frequency at a time, so short transmissions
+between visits are not seen.
+
+## Research Journal (Full edition)
+
+**Analyze → Research Journal** (or the room's `Terminal`):
+
+- `History & statistics` — your level and XP, the count of every kind of
+  event (recordings, analyses, searches, comparisons, sessions, reports,
+  activity logs, Pulse Studio, identified protocols, scans), the protocols
+  identified and the 12 most recent events with their time.
+- `Achievements` — the 12 badges, earned (with the date) or what earns them.
+- `Customize dolphin`, `Clear history` (the recent list; counts and XP stay)
+  and `Reset all progress` (everything; asks first). Recordings are never
+  touched.
+
+Only real events count, and XP for repeating one kind of event is capped.
+Nothing is awarded for transmitting. With `Research XP` off in Settings, the
+journal still counts, without XP, levels or badges.
+
+### Dolphin Assistant (Full edition)
+
+The assistant reads what the app knows — the current recording, whether it
+was analysed, searched, compared or studied, the active session, free
+memory — and suggests one next step at a time on the dashboard. It never
+runs anything by itself, never transmits, and is quiet while recording. A new
+tip waits at least 15 s after the last, the same tip 5 minutes; a dismissed
+tip (long OK) stays away for that recording. `Settings → Assistant tips`
+switches it off.
 
 ## Replay (TX)
 

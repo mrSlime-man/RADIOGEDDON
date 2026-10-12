@@ -144,8 +144,9 @@ static void test_fairness(void) {
         CHECK(fair, "no channel waits beyond the revisit bound");
         CHECK(rg_adapt_noisy(&a.ch[7]), "the carrier is recognised as noisy");
         CHECK(r.visits[7] * 100u / total(r.visits) < 25u, "the carrier cannot take the scan");
-        CHECK(r.max_gap_ms <= (uint32_t)a.max_revisit * (a.max_dwell_ms + RETUNE_MS) + 50u,
-              "longest unobserved gap is bounded in time");
+        CHECK(
+            r.max_gap_ms <= (uint32_t)a.max_revisit * (a.max_dwell_ms + RETUNE_MS) + 50u,
+            "longest unobserved gap is bounded in time");
         CHECK(r.visits[3] > r.visits[0], "the busy channel is visited more");
         bool dwell_ok = true;
         for(size_t i = 0; i < CHANNELS; i++) {

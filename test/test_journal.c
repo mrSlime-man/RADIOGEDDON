@@ -106,8 +106,9 @@ static void test_xp_and_achievements(void) {
     CHECK(rg_journal_level_xp(2) == 40 && rg_journal_level_xp(3) == 120, "thresholds");
     // Decorations.
     CHECK(rg_decoration_unlocked(RgDecoNone, 1), "no decoration always");
-    CHECK(!rg_decoration_unlocked(RgDecoPlant, 1) && rg_decoration_unlocked(RgDecoPlant, 2),
-          "plant at level 2");
+    CHECK(
+        !rg_decoration_unlocked(RgDecoPlant, 1) && rg_decoration_unlocked(RgDecoPlant, 2),
+        "plant at level 2");
     CHECK(!rg_decoration_unlocked(RgDecoCount, 10), "unknown decoration locked");
     CHECK(strcmp(rg_achievement_name(RgAchNightWatch), "Night Watch") == 0, "name");
     CHECK(strcmp(rg_achievement_name(RgAchCount), "?") == 0, "unknown name");
@@ -191,8 +192,9 @@ static void test_assist_rules(void) {
     for(int t = 1; t < RgTipCount; t++) {
         CHECK(rg_tip_text((RgTip)t)[0] != '\0', "every tip has text");
         CHECK(rg_tip_action((RgTip)t) != RgTipActionNone, "every tip has an action");
-        CHECK(strlen(rg_tip_short((RgTip)t)) > 0 && strlen(rg_tip_short((RgTip)t)) <= 13,
-              "every tip has a short form that fits a menu row");
+        CHECK(
+            strlen(rg_tip_short((RgTip)t)) > 0 && strlen(rg_tip_short((RgTip)t)) <= 13,
+            "every tip has a short form that fits a menu row");
     }
     CHECK(rg_tip_action(RgTipCount) == RgTipActionNone, "unknown tip");
 }
@@ -206,14 +208,14 @@ static void test_assist_limits(void) {
     CHECK(rg_assist_update(&a, &f, 1100) == RgTipAnalyze, "stays while relevant");
     f.ctx_analyzed = true;
     CHECK(rg_assist_update(&a, &f, 2000) == RgTipNone, "a new tip waits for the gap");
-    CHECK(rg_assist_update(&a, &f, 1000 + RG_ASSIST_MIN_GAP_MS) == RgTipFindSimilar,
-          "then shows");
+    CHECK(rg_assist_update(&a, &f, 1000 + RG_ASSIST_MIN_GAP_MS) == RgTipFindSimilar, "then shows");
     rg_assist_dismiss(&a);
     CHECK(rg_assist_update(&a, &f, 100000) != RgTipFindSimilar, "dismissed stays away");
     rg_assist_new_context(&a);
     CHECK(rg_assist_update(&a, &f, 120000) == RgTipNone, "same tip not repeated too soon");
-    CHECK(rg_assist_update(&a, &f, 20000 + RG_ASSIST_REPEAT_MS) == RgTipFindSimilar,
-          "after the repeat time, in a new context, it may return");
+    CHECK(
+        rg_assist_update(&a, &f, 20000 + RG_ASSIST_REPEAT_MS) == RgTipFindSimilar,
+        "after the repeat time, in a new context, it may return");
     RgAssist off;
     rg_assist_init(&off, false);
     CHECK(rg_assist_update(&off, &f, 5000) == RgTipNone, "disabled");

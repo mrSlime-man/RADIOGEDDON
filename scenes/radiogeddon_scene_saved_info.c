@@ -105,7 +105,11 @@ static void radiogeddon_scene_saved_info_show_menu(RadioGeddonApp* app) {
         app);
 #if RG_FEATURE_FINGERPRINT
     submenu_add_item(
-        submenu, "Find Similar Signals", SavedInfoIndexSimilar, radiogeddon_scene_saved_info_cb, app);
+        submenu,
+        "Find Similar Signals",
+        SavedInfoIndexSimilar,
+        radiogeddon_scene_saved_info_cb,
+        app);
 #endif
     if(app->loaded.kind == RadioGeddonSignalKindRaw) {
 #if RG_FEATURE_PULSE_STUDIO
@@ -180,7 +184,9 @@ void radiogeddon_scene_saved_info_on_enter(void* context) {
     // The recording opened is the one in context for the workflow.
     if(!app->file_damaged) {
         radiogeddon_research_set_context(
-            app, furi_string_get_cstr(app->file_path), app->loaded.kind == RadioGeddonSignalKindRaw);
+            app,
+            furi_string_get_cstr(app->file_path),
+            app->loaded.kind == RadioGeddonSignalKindRaw);
     }
 #endif
     radiogeddon_scene_saved_info_set_mode(app, SavedInfoStateMenu);

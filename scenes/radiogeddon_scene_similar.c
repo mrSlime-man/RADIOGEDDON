@@ -60,12 +60,7 @@ static void similar_show_list(RadioGeddonApp* app, uint32_t selected) {
     char line[64];
     const RadioGeddonFpResult* r = &s->res;
     for(size_t i = 0; i < r->count; i++) {
-        snprintf(
-            line,
-            sizeof(line),
-            "%u%% %s",
-            (unsigned)r->hit[i].match.score,
-            r->hit[i].name);
+        snprintf(line, sizeof(line), "%u%% %s", (unsigned)r->hit[i].match.score, r->hit[i].name);
         submenu_add_item(submenu, line, SimilarItemMatchBase + i, similar_cb, app);
     }
     if(!r->target_found) {
@@ -112,7 +107,11 @@ static bool similar_search(RadioGeddonApp* app) {
     strlcpy(s->target, similar_name(furi_string_get_cstr(app->file_path)), sizeof(s->target));
     radiogeddon_scene_show_progress(app, "Fingerprinting...");
     bool ok = radiogeddon_fp_find_similar(
-        app->storage, furi_string_get_cstr(app->file_path), &s->res, radiogeddon_scene_progress, app);
+        app->storage,
+        furi_string_get_cstr(app->file_path),
+        &s->res,
+        radiogeddon_scene_progress,
+        app);
     radiogeddon_scene_progress_end(app);
     if(ok) {
         for(size_t i = 0; i < s->res.count; i++)
@@ -175,7 +174,8 @@ static bool similar_load(RadioGeddonApp* app, const char* name, bool second) {
 bool radiogeddon_scene_similar_on_event(void* context, SceneManagerEvent event) {
     RadioGeddonApp* app = context;
     if(event.type == SceneManagerEventTypeBack) {
-        uint32_t state = scene_manager_get_scene_state(app->scene_manager, RadioGeddonSceneSimilar);
+        uint32_t state =
+            scene_manager_get_scene_state(app->scene_manager, RadioGeddonSceneSimilar);
         if((state & 0xFFu) == SimilarModeWhy) {
             scene_manager_set_scene_state(
                 app->scene_manager, RadioGeddonSceneSimilar, (state & ~0xFFu) | SimilarModeMatch);
@@ -183,7 +183,8 @@ bool radiogeddon_scene_similar_on_event(void* context, SceneManagerEvent event) 
             return true;
         }
         if((state & 0xFFu) == SimilarModeMatch) {
-            scene_manager_set_scene_state(app->scene_manager, RadioGeddonSceneSimilar, state & ~0xFFu);
+            scene_manager_set_scene_state(
+                app->scene_manager, RadioGeddonSceneSimilar, state & ~0xFFu);
             similar_show_list(app, SimilarItemMatchBase + (state >> 8) - 1u);
             return true;
         }
@@ -240,14 +241,16 @@ bool radiogeddon_scene_similar_on_event(void* context, SceneManagerEvent event) 
         if(similar_load(app, target, false) && similar_load(app, s->res.hit[match].name, true)) {
             scene_manager_next_scene(app->scene_manager, RadioGeddonSceneCompareResult);
         } else {
-            radiogeddon_scene_show_message(app, "Cannot compare", "A file is not a\nreadable .sub file.");
+            radiogeddon_scene_show_message(
+                app, "Cannot compare", "A file is not a\nreadable .sub file.");
         }
         return true;
     }
     case SimilarItemCompareAll: {
 #if RG_FEATURE_MULTI_COMPARE
         radiogeddon_multi_clear(app);
-        FuriString* path = furi_string_alloc_printf("%s/%s", RADIOGEDDON_SIGNALS_FOLDER, s->target);
+        FuriString* path =
+            furi_string_alloc_printf("%s/%s", RADIOGEDDON_SIGNALS_FOLDER, s->target);
         radiogeddon_multi_add(app, furi_string_get_cstr(path));
         for(size_t i = 0; i < s->res.count; i++) {
             furi_string_printf(path, "%s/%s", RADIOGEDDON_SIGNALS_FOLDER, s->res.hit[i].name);

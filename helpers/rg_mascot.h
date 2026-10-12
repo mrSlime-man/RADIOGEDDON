@@ -71,14 +71,14 @@ typedef enum {
 } RgMascotEvent;
 
 /* How long a reaction shows (ms). */
-#define RG_MASCOT_DETECT_MS 1500u
-#define RG_MASCOT_SAVED_MS  2000u
-#define RG_MASCOT_ERROR_MS  3000u
+#define RG_MASCOT_DETECT_MS    1500u
+#define RG_MASCOT_SAVED_MS     2000u
+#define RG_MASCOT_ERROR_MS     3000u
 #define RG_MASCOT_CELEBRATE_MS 2500u
-#define RG_MASCOT_GREET_MS  1600u
+#define RG_MASCOT_GREET_MS     1600u
 /* Quiet time before the mascot gets bored, then falls asleep (ms). */
-#define RG_MASCOT_BORED_MS  45000u
-#define RG_MASCOT_ASLEEP_MS 120000u
+#define RG_MASCOT_BORED_MS     45000u
+#define RG_MASCOT_ASLEEP_MS    120000u
 
 /* Progress not known (an analysis that does not report it). */
 #define RG_MASCOT_PROGRESS_NONE 0xFFu

@@ -542,11 +542,13 @@ static void test_settings_editions(void) {
                         "Log_max_kb: 99999\nLab_decoration: 6\n");
     radiogeddon_settings_load(CARD, &got);
     CHECK(got.ui_animation == RgAnimNormal && got.scan_mode == RgAdaptStandard, "bad enums");
-    CHECK(got.look[0] == 1 && got.look[1] == RgLookGogglesAuto && got.look[2] == 1 &&
-              got.look[3] == RgLookToolNone && got.look[4] == 2 && got.look[5] == 3,
-          "look sanitized field by field");
-    CHECK(got.log_interval_s == 60 && got.log_max_kb == 256 && got.decoration == RgDecoNone,
-          "out-of-range logger and decoration fall back");
+    CHECK(
+        got.look[0] == 1 && got.look[1] == RgLookGogglesAuto && got.look[2] == 1 &&
+            got.look[3] == RgLookToolNone && got.look[4] == 2 && got.look[5] == 3,
+        "look sanitized field by field");
+    CHECK(
+        got.log_interval_s == 60 && got.log_max_kb == 256 && got.decoration == RgDecoNone,
+        "out-of-range logger and decoration fall back");
 
     // Whichever edition saves, the other edition's fields are written back.
     RadioGeddonSettings want = custom_settings();

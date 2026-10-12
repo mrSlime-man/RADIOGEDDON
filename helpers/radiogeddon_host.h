@@ -68,7 +68,8 @@ typedef struct {
     void (*ui_apply_style)(RadioGeddonApp* app);
     /* The app. */
     void (*save_settings)(RadioGeddonApp* app);
-    size_t (*build_list)(RadioGeddonApp* app, uint8_t source, uint32_t mask, uint32_t* out, size_t max);
+    size_t (
+        *build_list)(RadioGeddonApp* app, uint8_t source, uint32_t mask, uint32_t* out, size_t max);
     void (*memdiag_sample)(const char* label);
     const char* (*preset_label)(uint8_t index);
     /* The Scanner engine (helpers/radiogeddon_scanner.h). */
@@ -82,7 +83,8 @@ typedef struct {
         bool hold_on_hit);
     void (*scanner_set_callback)(RadioGeddonScanner* s, RadioGeddonHostScannerHit cb, void* ctx);
     void (*scanner_set_mode)(RadioGeddonScanner* s, uint8_t mode);
-    void (*scanner_set_observer)(RadioGeddonScanner* s, RadioGeddonHostScannerObserver o, void* ctx);
+    void (
+        *scanner_set_observer)(RadioGeddonScanner* s, RadioGeddonHostScannerObserver o, void* ctx);
     void (*scanner_start)(RadioGeddonScanner* s);
     void (*scanner_stop)(RadioGeddonScanner* s);
     void (*scanner_lock)(RadioGeddonScanner* s);

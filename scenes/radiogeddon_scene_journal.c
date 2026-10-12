@@ -157,7 +157,8 @@ bool radiogeddon_scene_journal_on_event(void* context, SceneManagerEvent event) 
         }
         break;
     case JournalEventNo:
-        journal_show_menu(app, mode == JournalModeConfirmReset ? JournalItemReset : JournalItemClear);
+        journal_show_menu(
+            app, mode == JournalModeConfirmReset ? JournalItemReset : JournalItemClear);
         break;
     default:
         break;

@@ -4,7 +4,21 @@ Where RadioGeddon is headed. This is a plan, not a promise — priorities shift
 with what hardware testing finds and what contributors pick up. Dates are
 deliberately omitted.
 
-## Now — `1.0.0-beta.7`
+## Now — `1.0.0-beta.9`
+
+`1.0.0-beta.9` makes the Full edition a standalone research lab: signal
+fingerprints and **Find Similar Signals**, **Pulse Studio**, **Smart Protocol
+Discovery** (competing readings with evidence; encoding right on 48 of the
+firmware's 50 test captures, frame length on 42), the **Adaptive Scanner**,
+the **RF Activity Logger**, a **Research Journal** with optional XP and
+achievements, a rule-based **Dolphin Assistant**, dolphin customization and a
+six-station lab room. Everything runs on the Flipper and nothing new
+transmits; the resident Full edition is slightly smaller than beta 8's, the
+new tools being four more modules. None of it is verified on hardware yet.
+
+`1.0.0-beta.8` adds the **Dolphin Lab** interface to the Full edition: an
+original animated dolphin that reacts to what the radio really does, a
+dashboard, Cyber Lab and Classic styles, cards, transitions and a lab room.
 
 `1.0.0-beta.7` adds research tools to the Full edition: a **waterfall** (RSSI
 sweep history of the Range Scanner), the **Bitstream Explorer**,
@@ -58,6 +72,9 @@ all four firmware families and both editions and record evidence in
       memory headroom (M1–M3).
 - [ ] Full edition: the beta 7 research tools and modules (B1–B9) and memory
       with modules (M4–M5).
+- [ ] Full edition: the Dolphin Lab interface (D1–D14).
+- [ ] Full edition: the beta 9 research lab (RL1–RL20), including a
+      multi-hour activity log on battery and Find Similar on a large card.
 - [ ] Catalog edition: region refusal on a device (C1–C3), then qFlipper
       screenshots and the Apps Catalog submission.
 - [ ] Receive/decode, RAW capture fidelity, and authorized replay confirmed
@@ -165,6 +182,27 @@ still needs.
       timing (hardware check B9 pending).
 - [x] **Offline UI tests** on a host canvas with the firmware's fonts.
 
+## Beta 8: Dolphin Lab (Full edition)
+
+- [x] Animated mascot driven by the real state, dashboard, styles, cards,
+      transitions, UI feedback, lab room (hardware checks D1–D14 pending).
+
+## Beta 9: standalone research lab (Full edition)
+
+- [x] **Signal fingerprints** and **Find Similar Signals** with explained,
+      evidence-capped scores (RL1–RL5 pending).
+- [x] **Pulse Studio** (RL6–RL7 pending).
+- [x] **Smart Protocol Discovery**: competing readings, bit map, checksum
+      independence; 48/50 encoding and 42/50 frame length on the firmware's
+      captures (RL8 pending).
+- [x] **Adaptive Scanner** with a fairness bound (RL9–RL10 pending).
+- [x] **RF Activity Logger** (RL11–RL14 pending).
+- [x] **Research Journal**, optional **Research XP**, **Dolphin Assistant**
+      (RL15–RL17 pending).
+- [x] **Customization**, **Animation level**, **Room 2.0** (RL18–RL19
+      pending).
+- [x] Resident Full edition no larger than beta 8 (RL20 pending on device).
+
 ## Toward a stable 1.0.0
 
 - [ ] Fix whatever hardware testing surfaces.
@@ -180,7 +218,10 @@ still needs.
 - [x] CRC/checksum structure guesses (Full edition, beta 6).
 - [x] Bit-field views across several captures (Bitstream Explorer and
       Multi-Capture Compare, beta 7).
-- [ ] Richer analysis: more encodings.
+- [ ] Richer analysis: more encodings; frame lengths for protocols with an
+      in-frame preamble (the remaining 8 misses).
+- [ ] Find Similar across a session or a time window, and similarity
+      thresholds learned from your own labelled recordings.
 - [x] A waterfall of past sweeps (beta 7).
 - [ ] Range Scanner zoom.
 - [ ] A larger library of reference captures for regression testing.

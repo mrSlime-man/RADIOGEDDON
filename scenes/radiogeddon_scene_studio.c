@@ -47,20 +47,24 @@ void radiogeddon_scene_studio_on_enter(void* context) {
     RgAnalyzer* a = radiogeddon_analysis_run_raw(app->studio_file, &status);
     radiogeddon_analysis_set_progress(NULL, NULL);
     radiogeddon_scene_progress_end(app);
-    if(!a || memmgr_heap_get_max_free_block() < radiogeddon_studio_view_memory() + STUDIO_HEAP_SPARE) {
+    if(!a ||
+       memmgr_heap_get_max_free_block() < radiogeddon_studio_view_memory() + STUDIO_HEAP_SPARE) {
         free(a);
         radiogeddon_storage_raw_close(app->studio_file);
         app->studio_file = NULL;
         studio_fail(
             app,
-            status == RadioGeddonAnalysisNoRaw ? "No RAW timing data:\nStudio needs a\nRAW capture." :
-                                                 "Not enough free\nmemory, or the file\nis damaged.");
+            status == RadioGeddonAnalysisNoRaw ?
+                "No RAW timing data:\nStudio needs a\nRAW capture." :
+                "Not enough free\nmemory, or the file\nis damaged.");
         return;
     }
     app->studio_view = radiogeddon_studio_view_alloc();
     radiogeddon_studio_view_set_callback(app->studio_view, studio_cb, app);
     view_dispatcher_add_view(
-        app->view_dispatcher, RadioGeddonViewStudio, radiogeddon_studio_view_get_view(app->studio_view));
+        app->view_dispatcher,
+        RadioGeddonViewStudio,
+        radiogeddon_studio_view_get_view(app->studio_view));
     radiogeddon_studio_view_set_analysis(
         app->studio_view, furi_string_get_cstr(app->loaded.name), &a->result);
     // The first frame that decodes, read before the analyzer goes.

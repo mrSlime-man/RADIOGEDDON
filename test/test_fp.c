@@ -362,10 +362,12 @@ static void test_evidence_text(void) {
     rg_fp_evidence_text(0xFFF, 12, small, sizeof(small));
     CHECK(strlen(small) < sizeof(small), "fits a small buffer");
     CHECK(strcmp(rg_fp_evidence_name(RgFpEvSync), "sync gap") == 0, "name");
-    CHECK(rg_fp_bin(350, 350) == 1 && rg_fp_bin(1050, 350) == 4 && rg_fp_bin(100, 350) == 0,
-          "buckets");
-    CHECK(rg_fp_bin(1000000, 350) == RG_FP_BINS - 1 && rg_fp_bin(5, 0) == RG_FP_BINS - 1,
-          "open bucket and no Te");
+    CHECK(
+        rg_fp_bin(350, 350) == 1 && rg_fp_bin(1050, 350) == 4 && rg_fp_bin(100, 350) == 0,
+        "buckets");
+    CHECK(
+        rg_fp_bin(1000000, 350) == RG_FP_BINS - 1 && rg_fp_bin(5, 0) == RG_FP_BINS - 1,
+        "open bucket and no Te");
 }
 
 int main(void) {

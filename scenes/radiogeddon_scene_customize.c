@@ -23,10 +23,15 @@ typedef enum {
 
 static const char* const customize_phones[] = {"Off", "On"};
 static const char* const customize_goggles[RgLookGogglesCount] = {"As posed", "Always", "Off"};
-static const char* const customize_antenna[RgLookAntennaCount] = {"Classic", "Whip", "Dish", "None"};
+static const char* const customize_antenna[RgLookAntennaCount] =
+    {"Classic", "Whip", "Dish", "None"};
 static const char* const customize_tool[RgLookToolCount] = {"None", "Wrench", "Probe", "Notebook"};
-static const char* const customize_expression[RgLookExpressionCount] = {"Normal", "Cheerful", "Focused"};
-static const char* const customize_accessory[RgLookAccessoryCount] = {"None", "Bow tie", "Scarf", "ID badge"};
+static const char* const customize_expression[RgLookExpressionCount] = {
+    "Normal",
+    "Cheerful",
+    "Focused"};
+static const char* const customize_accessory[RgLookAccessoryCount] =
+    {"None", "Bow tie", "Scarf", "ID badge"};
 
 static uint8_t customize_level(RadioGeddonApp* app) {
 #if RG_FEATURE_JOURNAL
@@ -118,8 +123,10 @@ void radiogeddon_scene_customize_on_enter(void* context) {
     memcpy(&look, app->settings.look, sizeof(look));
     rg_mascot_look_sanitize(&look);
     customize_add(app, "Headphones", 2, look.phones, customize_phones[look.phones]);
-    customize_add(app, "Goggles", RgLookGogglesCount, look.goggles, customize_goggles[look.goggles]);
-    customize_add(app, "Antenna", RgLookAntennaCount, look.antenna, customize_antenna[look.antenna]);
+    customize_add(
+        app, "Goggles", RgLookGogglesCount, look.goggles, customize_goggles[look.goggles]);
+    customize_add(
+        app, "Antenna", RgLookAntennaCount, look.antenna, customize_antenna[look.antenna]);
     customize_add(app, "Tool", RgLookToolCount, look.tool, customize_tool[look.tool]);
     customize_add(
         app,
@@ -128,11 +135,16 @@ void radiogeddon_scene_customize_on_enter(void* context) {
         look.expression,
         customize_expression[look.expression]);
     customize_add(
-        app, "Accessory", RgLookAccessoryCount, look.accessory, customize_accessory[look.accessory]);
+        app,
+        "Accessory",
+        RgLookAccessoryCount,
+        look.accessory,
+        customize_accessory[look.accessory]);
     uint8_t deco = app->settings.decoration < RgDecoCount ? app->settings.decoration : 0;
     VariableItem* item = customize_add(app, "Wall", RgDecoCount, deco, NULL);
     customize_decoration_text(app, item, deco);
-    uint8_t anim = app->settings.ui_animation < RgAnimCount ? app->settings.ui_animation : RgAnimNormal;
+    uint8_t anim = app->settings.ui_animation < RgAnimCount ? app->settings.ui_animation :
+                                                              RgAnimNormal;
     customize_add(app, "Animation", RgAnimCount, anim, rg_anim_level_name((RgAnimLevel)anim));
     variable_item_list_set_selected_item(app->var_item_list, 0);
     view_dispatcher_switch_to_view(app->view_dispatcher, RadioGeddonViewVarItemList);

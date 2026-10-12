@@ -20,14 +20,14 @@ locally.
 
 | Area | Method | Result |
 |------|--------|--------|
-| Catalog edition, Official build | SDK 1.4.3 pinned by SHA-256, API asserted 87.1, manifest (name `RadioGeddon`, version) verified, all 289 imports exported by the SDK | Pass — `radiogeddon-catalog-official.fap` |
-| Full edition, RogueMaster build | RogueMaster source at commit `38d7ae9`, built with its own `fbt`, API asserted 88.16, manifest (name `RadioGeddon Full`) verified, all 322 imports exported by its `api_symbols.csv` | Pass — `radiogeddon-full-roguemaster.fap` |
-| Full edition, Momentum build | Momentum mntm-012 SDK pinned by SHA-256 (matches Momentum's update index), API asserted 87.1, manifest verified, all 322 imports exported by Momentum's SDK | Pass — `radiogeddon-full-momentum.fap` |
-| Full edition, Unleashed build | SDK unlshd-093 pinned by SHA-256, API asserted 88.9, manifest verified, all 322 imports exported by the SDK | Pass — `radiogeddon-full-unleashed.fap` |
-| Edition switches | `test_edition` built three times: as Full, as Catalog and with no edition (must be Catalog); defining both must not compile | Pass — 13 checks each, conflict refused |
+| Catalog edition, Official build | SDK 1.4.3 pinned by SHA-256, API asserted 87.1, manifest (name `RadioGeddon`, version) verified, all 289 imports exported by the SDK (beta 9) | Pass — `radiogeddon-catalog-official.fap` |
+| Full edition, RogueMaster build | RogueMaster source at commit `38d7ae9`, built with its own `fbt`, API asserted 88.16, manifest (name `RadioGeddon Full`) verified, all 323 imports, and each of the 10 modules' imports, exported by its `api_symbols.csv` | Pass — `radiogeddon-full-roguemaster.fap` |
+| Full edition, Momentum build | Momentum mntm-012 SDK pinned by SHA-256 (matches Momentum's update index), API asserted 87.1, manifest verified, all 323 imports and the 10 modules' imports exported by Momentum's SDK | Pass — `radiogeddon-full-momentum.fap` |
+| Full edition, Unleashed build | SDK unlshd-093 pinned by SHA-256, API asserted 88.9, manifest verified, all 323 imports and the 10 modules' imports exported by the SDK | Pass — `radiogeddon-full-unleashed.fap` |
+| Edition switches | `test_edition` built three times: as Full, as Catalog and with no edition (must be Catalog); defining both must not compile | Pass — 19 checks each, conflict refused |
 | Lint | `ufbt lint` (clang-format) | Pass, no warnings |
 | DSP/parse unit tests | `make -C test check` → `test_dsp` | Pass — 36 checks |
-| Analysis-engine unit tests | `make -C test check` → `test_analyzer` | Pass — 137 checks |
+| Analysis-engine unit tests | `make -C test check` → `test_analyzer` (beta 9: bit map, competing readings, long-gap PWM, 5-Te PWM periods) | Pass — 170 checks |
 | Scanner-logic unit tests | `make -C test check` → `test_scan` | Pass — 31 checks |
 | Hopper-logic unit tests | `make -C test check` → `test_hop` | Pass — 42 checks |
 | RAW-reader unit tests | `make -C test check` → `test_raw` | Pass — 43 checks |
@@ -44,24 +44,31 @@ locally.
 | Bands and range plans | `make -C test check` → `test_range`: band probing against Official 1.4.3's and RogueMaster/Momentum/Unleashed's real `furi_hal_subghz_is_frequency_valid()` ranges, range plans across gaps (every point tunable), limits, overflow, fine stepping | Pass — 96 checks |
 | Transmit check | `make -C test check` → `test_txpolicy`: all 16 fact combinations in both editions, refusal texts | Pass — 272 checks |
 | Range-scan display maths | `make -C test check` → `test_spectrum`: compact points, median floor over all points, column binning for 1 to 256 points | Pass — 450 checks |
-| Checksum hypotheses | `make -C test check` → `test_checksum`: CRC-8 catalogue vectors, XOR / sum / CRC-8 / parity structures found, 200 random trials with no false fit, repeats and uncovered differences refused | Pass — 27 checks |
+| Checksum hypotheses | `make -C test check` → `test_checksum`: CRC-8 catalogue vectors, XOR / sum / CRC-8 / parity structures found, 200 random trials with no false fit, repeats and uncovered differences refused | Pass — 34 checks (beta 9: repeats of one frame, dependent over GF(2), never confirm a fit) |
 | Waterfall history | `make -C test check` → `test_waterfall`: ring wraparound and order, column/point mapping for 1 to 256 points, strongest point per column, levels over the floor and the solid threshold, missing cells never drawn as a level, dither density, pause and resume, pixel render | Pass — 172 checks |
 | Bitstream Explorer maths | `make -C test check` → `test_bits`: bit and byte extraction from every offset, leftover bits, diff markers (`.`, `X`, `?`) with cut-off and noise frames excluded, field values to 64 bits | Pass — 59 checks |
 | Multi-capture comparison | `make -C test check` → `test_multi`: synthetic sets with known constant, button, counter and data fields, frequency / preset / Te consistency, identical-frame letters, the noise check, labels on every report line, no "serial" claim | Pass — 48 checks |
 | Research session files | `make -C test check` → `test_session`: format round trip, damaged lines and names, a failure at each step of a save (write, read-back, rename: the last complete version always loads), backup recovery, add / remove / rename, name rules, grouping suggestions | Pass — 91 checks |
 | Module size estimate | `make -C test check` → `test_elf`: allocated-section sum of an ELF file, ELF64, big-endian, truncated and malformed headers refused | Pass — 10 checks |
-| Dolphin Lab logic | `make -C test check` → `test_mascot`: the mascot's priorities, levels from the real state (REC only while the recorder runs), deadlines that never queue (100,000 detections end like one), boredom and sleep never during a scan, the clock's wrap and a clock going back, analysis progress never invented, determinism, every pose in range and idle calmer than active states; styles and the low-memory fallback, feedback levels and rate limits, transitions and the dither, the menu window, text wrapping, the oscilloscope trace, the firmware family, the sprite table | Pass — 150 checks |
+| Dolphin Lab logic | `make -C test check` → `test_mascot`: the mascot's priorities, levels from the real state (REC only while the recorder runs), deadlines that never queue (100,000 detections end like one), boredom and sleep never during a scan, the clock's wrap and a clock going back, analysis progress never invented, determinism, every pose in range and idle calmer than active states; styles and the low-memory fallback, feedback levels and rate limits, transitions and the dither, the menu window, text wrapping, the oscilloscope trace, the firmware family, the sprite table | Pass — 170 checks (beta 9: celebrate and greeting, looks, animation levels: 0 / 23 / 87 / 129 idle redraws in 40 s for Off / Minimal / Normal / Full) |
+| Signal fingerprints | `make -C test check` → `test_fp`: synthetic signal families (PWM, PPM, Manchester, noise, different Te and lengths), the same device ranked first, different encodings never confidently similar, evidence caps (no structure 30, RAW vs decoded 60, timing 65), explanations, record encoding and CRC, damaged records | Pass — 73 checks |
+| Adaptive scheduling | `make -C test check` → `test_adapt`: fairness bound and run limit over long runs, dwell bounds, Custom priorities, noisy channels capped, decay, reset; simulated traffic over 24 phases (Standard 828, Balanced 1,031, Focused 1,129 of 3,168 bursts) | Pass — 37 checks |
+| Activity log | `make -C test check` → `test_actlog`: interval rows, unobserved never written as quiet, header and footer, part names and rotation, ranking, coverage, summary | Pass — 29 checks |
+| Journal, XP, assistant | `make -C test check` → `test_journal`: counters and caps, achievements from real counts only, levels, decorations, recent ring, file encode/decode with CRC and recovery; assistant rules, never while recording, rate limits and dismissal | Pass — 90 checks |
+| Pulse Studio maths | `make -C test check` → `test_studio`: pulse-to-bit map both ways, unsure bits, preamble and glitches, windows and pan, histogram, diff | Pass — 106 checks |
+| Fingerprint index files | `make -C test fpindex` → the index written and read through the firmware's FlipperFormat and storage code on a stub SD card: build, update after adding, changing and deleting recordings, damaged index and records rebuilt, temporary file never left | Pass — 47 checks |
+| Activity log files | `make -C test actlogfiles` → log parts, rotation, `# End`, summary file, a full card and a failing write stopping the log without overwriting | Pass — 20 checks |
 | Sprites from their art | `make -C test check` → `tools/dolphin/build_sprites.py --check`: `helpers/rg_sprites.c` is what `art/dolphin/*.txt` generates | Pass |
-| Offline UI, Dolphin Lab | `make -C test ui` → `test_ui_lab`: the dashboard in Dolphin Lab and Cyber Lab for every mascot state and every 100 ms frame of 12 s; navigation, events and the menu window; redraws only on a change (120 in 60 s of idle at 100 ms ticks); every message the app shows (listed from the sources) on a card, whole and inside the screen in both styles; save, busy and progress cards (no figure without progress); wipe and dither transitions ended by a key; the badges on the Scanner (its sweep cursor), Receive, Range Scanner and Waterfall screens; the Waterfall's entry reveal; the lab room's stations, wipes, gallery and oscilloscope; synthetic previews of each | Pass — 226 checks |
+| Offline UI, Dolphin Lab | `make -C test ui` → `test_ui_lab`: the dashboard in Dolphin Lab and Cyber Lab for every mascot state and every 100 ms frame of 12 s; navigation, events and the menu window; redraws only on a change (120 in 60 s of idle at 100 ms ticks); every message the app shows (listed from the sources) on a card, whole and inside the screen in both styles; save, busy and progress cards (no figure without progress); wipe and dither transitions ended by a key; the badges on the Scanner (its sweep cursor), Receive, Range Scanner and Waterfall screens; the Waterfall's entry reveal; the lab room's stations, wipes, gallery and oscilloscope; synthetic previews of each | Pass — 266 checks (beta 9 adds Room 2.0's six stations and the rack, every dolphin look and decoration, the adaptive Scanner's header, and Pulse Studio drawn on a synthetic RAW file through the real reader and analyzer, every page and frame inside the screen) |
 | Offline UI | `make -C test ui` → `test_ui`: screens drawn with the firmware's own canvas fonts (u8g2 data from the pinned SDK) on a 128x64 host canvas; no text off screen or overlapping, keys driven through the Waterfall and Bitstream Explorer, the Database list with no, long-named and 200 files; synthetic previews written as PNG (CI artifact `synthetic-ui-previews`, labelled synthetic, not hardware screenshots) | Pass — 141 checks |
-| Format tests (firmware code, real files) | `make -C test formats` → `test_formats`: the firmware's FlipperFormat and stream code and its 85 Sub-GHz test files, from the commit of Official 1.4.3 | Pass — 654 checks (also settings shared between editions and with beta 5, favorites and scan profiles) |
-| Analyzer on real captures | `make -C test captures` → `test_fwanalyze`: `rg_analyzer` on the firmware's 50 paired RAW test captures, scored against each protocol's decoder source | Pass — 354 checks; Te right for 50, encoding family for 43, frame length for 35 (see below) |
+| Format tests (firmware code, real files) | `make -C test formats` → `test_formats`: the firmware's FlipperFormat and stream code and its 85 Sub-GHz test files, from the commit of Official 1.4.3 | Pass — 661 checks (also settings shared between editions and with beta 5 and beta 8 files, favorites and scan profiles) |
+| Analyzer on real captures | `make -C test captures` → `test_fwanalyze`: `rg_analyzer` on the firmware's 50 paired RAW test captures, scored against each protocol's decoder source | Pass — 406 checks; Te right for 50, encoding family for 48, frame length for 42, the right family among the competing readings for 48; mean confidence 87 when right, 67 when wrong (see below) |
 | Decoder tests (firmware code, real captures) | `make -C test decoders` → `test_fwdecode`: the firmware's Sub-GHz receiver and all its protocol decoders, fed its 50 RAW test captures through `rg_decode` | Pass — 263 checks; all 50 decode and are described as the app describes them, and every decode saved as the app saves a key names its preset (see below) |
 | Preset check on the firmware's presets | `make -C test decoders` → `test_fwpreset`: `rg_preset_check` on the firmware's six built-in CC1101 presets and the custom presets in its example settings file | Pass — 26 checks; all eight pass and end where the firmware ends them |
-| Engine lifecycle | `make -C test lifecycle` → `test_lifecycle`: the real Scanner, Range Scanner (with and without a waterfall history) and Hopper engines started and stopped repeatedly on real threads against a fake radio, every allocation counted | Pass — 36 checks; memory unchanged between cycles and fully returned on free, every scan session and capture closed, no probe inside a band gap, activity detected after calibration, hold on hit |
+| Engine lifecycle | `make -C test lifecycle` → `test_lifecycle`: the real Scanner, Range Scanner (with and without a waterfall history) and Hopper engines started and stopped repeatedly on real threads against a fake radio, every allocation counted | Pass — 43 checks (beta 9: the Scanner in each adaptive mode with its observer); memory unchanged between cycles and fully returned on free, every scan session and capture closed, no probe inside a band gap, activity detected after calibration, hold on hit |
 | Apps Catalog rules | `scripts/check_catalog.py --catalog`: fam fields, icon, description and changelog through the catalog's own Markdown filter, ASCII-only strings, writes only under `apps_data/radiogeddon` | Pass; screenshots missing (need hardware) |
 | Apps Catalog bundler | `scripts/catalog_bundle.py`: the catalog's own `tools/bundle.py` steps on the pushed commit (clone, `ufbt lint`, build, manifest from `application.fam`, path, includes, icon, values, Markdown) | Every step passes except screenshots (see "Not verified") |
-| Fuzz corpus replay | `make -C test check` → `replay_fuzz_raw`, `replay_fuzz_db`, `replay_fuzz_samples`, `replay_fuzz_session`, `replay_fuzz_ui` | Pass — every committed input |
+| Fuzz corpus replay | `make -C test check` → `replay_fuzz_raw`, `replay_fuzz_db`, `replay_fuzz_samples`, `replay_fuzz_session`, `replay_fuzz_ui`, `replay_fuzz_fp` | Pass — every committed input |
 | Fuzzing | `make -C test fuzz` (libFuzzer with ASan/UBSan; 60 s per target in CI) | Pass — no crash, sanitizer report or broken invariant |
 | Static analysis | `scripts/static_analysis.py`: GCC `-fanalyzer` and clang-tidy ([`.clang-tidy`](../.clang-tidy)) over the device code with the build flags: the Catalog edition on the Official SDK, the Full edition on the Momentum and Unleashed SDKs | Pass — 0 findings (beta 8: 2 findings in the new code fixed first, a parameter name and an implicit narrowing; beta 7: 19, two of them real uninitialised-value paths) |
 | Thread safety of ring and recorder | `make -C test tsan` (ThreadSanitizer; optional, not in CI) | Pass — no reports |
@@ -223,6 +230,12 @@ the sanitizers then report:
   trace's span equal to the durations' sum. Its first run found that the
   harness itself let a raw "recording started" event through (the app only
   syncs the recorder's level); the harness was fixed and the input kept.
+- `fuzz_fp` — beta 9: fingerprint index records and journal files of any
+  content: a decoded record has a valid name and in-range fields and
+  re-encodes to the same bytes, comparing any two gives a symmetric score
+  of 0–100, and a journal either round-trips or is refused and left empty
+  with `recovered` set. 14.8 million
+  runs locally without a finding.
 
 The seed corpus is synthetic (the fixtures plus hand-made edge cases, written
 by `test/fuzz/make_seeds.py`) plus inputs the fuzzer found.
@@ -398,6 +411,13 @@ report through the hardware-report form to count as verified.
 
 Everything about on-device radio behaviour, and the end-to-end workflow. See the
 [hardware checklist](HARDWARE_CHECKLIST.md). In particular:
+
+- Everything new in beta 9 (checklist RL1–RL20): Find Similar on a real
+  card (fingerprinting time for many recordings, index survival across
+  reboots), Pulse Studio's memory headroom on a long recording, the
+  Adaptive Scanner on real traffic (its gains are from a host simulation),
+  multi-hour activity logs on battery, the journal's persistence, the
+  assistant's tips and the new screens' legibility on the real display.
 
 - Real over-the-air reception and live protocol decoding.
 - RAW capture fidelity, and replay producing a working transmission.

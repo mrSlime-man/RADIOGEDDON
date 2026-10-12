@@ -87,7 +87,10 @@ uint64_t rg_studio_pan(
     uint16_t cursor);
 
 /** Highs and lows of the frame in half-Te buckets (counts, saturating). */
-void rg_studio_hist(const RgStudioFrame* f, uint8_t high[RG_STUDIO_HIST], uint8_t low[RG_STUDIO_HIST]);
+void rg_studio_hist(
+    const RgStudioFrame* f,
+    uint8_t high[RG_STUDIO_HIST],
+    uint8_t low[RG_STUDIO_HIST]);
 
 /** Bits that differ from @p ref (ref '0'/'1' string), aligned at offset 0. */
 size_t rg_studio_diff(const RgStudioFrame* f, const char* ref, size_t ref_n, uint8_t* diff_mask);

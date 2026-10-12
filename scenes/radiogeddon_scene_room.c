@@ -57,7 +57,8 @@ void radiogeddon_scene_room_on_enter(void* context) {
 #endif
     FuriString* ctx = furi_string_alloc();
     bool have = radiogeddon_research_context_path(app, ctx);
-    radiogeddon_room_view_set_workbench(app->room_view, have ? app->research.ctx_name : "", session);
+    radiogeddon_room_view_set_workbench(
+        app->room_view, have ? app->research.ctx_name : "", session);
     if(have && app->research.ctx_raw)
         radiogeddon_room_load_scope(app->room_view, app->storage, furi_string_get_cstr(ctx));
     furi_string_free(ctx);
@@ -98,7 +99,8 @@ static void radiogeddon_scene_room_frame(RadioGeddonApp* app, RgMascotFrame* f) 
         rg_mascot_pose(RgMascotStateScanning, t, 0, RG_MASCOT_PROGRESS_NONE, false, f);
         break;
     case RadioGeddonRoomRack:
-        rg_mascot_pose(RgMascotStateIdle, t, app->ui.mascot.seed, RG_MASCOT_PROGRESS_NONE, false, f);
+        rg_mascot_pose(
+            RgMascotStateIdle, t, app->ui.mascot.seed, RG_MASCOT_PROGRESS_NONE, false, f);
         f->fin = RgMascotFinPoint;
         f->eye_dx = 1;
         break;

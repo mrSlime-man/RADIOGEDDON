@@ -37,7 +37,8 @@ static void reset_card(void) {
 
 static size_t count_files(const char* suffix) {
     char cmd[200];
-    snprintf(cmd, sizeof(cmd), "ls %s 2>/dev/null | grep -c '%s$'", RADIOGEDDON_ACTLOG_FOLDER, suffix);
+    snprintf(
+        cmd, sizeof(cmd), "ls %s 2>/dev/null | grep -c '%s$'", RADIOGEDDON_ACTLOG_FOLDER, suffix);
     FILE* p = popen(cmd, "r");
     unsigned n = 0;
     if(p) {
@@ -64,7 +65,8 @@ static uint32_t run(RadioGeddonActlog* l, uint32_t t, uint32_t until, bool* stop
     for(; t < until; t += 100) {
         for(size_t c = 0; c < 3; c++) {
             bool active = c == 1 && (t / 1000) % 7 == 0;
-            radiogeddon_actlog_observe(l, c, active, active && t % 1000 == 0, active ? -50 : -99, -100, 20, t);
+            radiogeddon_actlog_observe(
+                l, c, active, active && t % 1000 == 0, active ? -50 : -99, -100, 20, t);
         }
         size_t n = radiogeddon_actlog_collect(l, t, g_rows, sizeof(g_rows));
         if(n && !radiogeddon_actlog_write(l, g_rows, n)) {
@@ -90,7 +92,8 @@ static void test_log_and_summary(void) {
     CHECK(st.rows == 6 * 3, "six intervals of three rows");
     CHECK(st.top[0] == 1 && st.top_events[0] > 0, "the active channel leads");
     size_t n = radiogeddon_actlog_finish(l, "duration reached", t, g_summary, sizeof(g_summary));
-    CHECK(n > 0 && strstr(g_summary, "433.92") && strstr(g_summary, "duration reached"), "summary");
+    CHECK(
+        n > 0 && strstr(g_summary, "433.92") && strstr(g_summary, "duration reached"), "summary");
     CHECK(count_files(".csv") == 1 && count_files("_summary.txt") == 1, "log and summary files");
     CHECK(stub_files_open == 0, "files closed");
     CHECK(stub_live_bytes == bytes && stub_live_blocks == blocks, "everything freed");

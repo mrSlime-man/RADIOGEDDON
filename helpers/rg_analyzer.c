@@ -297,7 +297,8 @@ static size_t rg_decode_pairs_phase(
         if(ok) good++;
         if(bits && b < max_bits) bits[b] = bit;
         if(map && b < max_bits)
-            map[b] = (uint16_t)((i > RG_BITMAP_INDEX ? RG_BITMAP_INDEX : i) | (ok ? 0u : RG_BITMAP_UNSURE));
+            map[b] = (uint16_t)((i > RG_BITMAP_INDEX ? RG_BITMAP_INDEX : i) |
+                                (ok ? 0u : RG_BITMAP_UNSURE));
         if(b < max_bits) b++;
     }
     if(bits) bits[b] = '\0';
@@ -836,7 +837,8 @@ static void rg_finish_timing(RgAnalyzer* a) {
         uint32_t p1 = r->params.pwm_short_us + gap_long;
         uint32_t p2 = r->params.pwm_long_us + gap_short;
         uint32_t hi = p1 > p2 ? p1 : p2, lo = p1 > p2 ? p2 : p1;
-        if((uint64_t)(hi - lo) * 100u <= (uint64_t)hi * 15u) r->params.pwm_period_us = (p1 + p2) / 2u;
+        if((uint64_t)(hi - lo) * 100u <= (uint64_t)hi * 15u)
+            r->params.pwm_period_us = (p1 + p2) / 2u;
     }
 
     if(nh + nl == 0 || r->noise_pct > 50 || r->jitter_pct > 25)
@@ -999,8 +1001,7 @@ void rg_analyzer_hypotheses(RgAnalyzer* a) {
         h.score = (uint8_t)(score < 0 ? 0 : score > 95 ? 95 : score);
         out[n++] = h;
         // Differential Manchester has Manchester's timing: listed next to it.
-        if(e == RgEncodingManchester && h.fit >= RG_ANALYZER_GOOD_FIT &&
-           n < RG_ANALYZER_MAX_HYP) {
+        if(e == RgEncodingManchester && h.fit >= RG_ANALYZER_GOOD_FIT && n < RG_ANALYZER_MAX_HYP) {
             RgHypothesis d = h;
             d.differential = 1;
             d.against |= RgHypSameTiming;

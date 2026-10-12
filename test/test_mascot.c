@@ -127,7 +127,9 @@ static void test_boredom_and_sleep(void) {
         rg_mascot_state(&m, RG_MASCOT_ASLEEP_MS + 200 + RG_MASCOT_GREET_MS) == RgMascotStateIdle,
         "a short welcome, then idle");
     rg_mascot_event(&m, RgMascotEventUserInput, 0, RG_MASCOT_ASLEEP_MS + 2000);
-    CHECK(rg_mascot_state(&m, RG_MASCOT_ASLEEP_MS + 2000) == RgMascotStateIdle, "no welcome while awake");
+    CHECK(
+        rg_mascot_state(&m, RG_MASCOT_ASLEEP_MS + 2000) == RgMascotStateIdle,
+        "no welcome while awake");
 
     // A long scan with nothing on the air is not "no signal": it scans.
     rg_mascot_init(&m, 0, 9);

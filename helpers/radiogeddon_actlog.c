@@ -203,11 +203,7 @@ size_t radiogeddon_actlog_finish(
         size_t len = 0;
         for(size_t i = 0; i < l->log.count; i++)
             len += rg_actlog_row(
-                &l->log,
-                i,
-                now,
-                rows + len,
-                RG_ACTLOG_MAX_CHANNELS * RG_ACTLOG_LINE_MAX - len);
+                &l->log, i, now, rows + len, RG_ACTLOG_MAX_CHANNELS * RG_ACTLOG_LINE_MAX - len);
         rg_actlog_end_interval(&l->log, now);
         l->rows += l->log.count;
         uint8_t st = l->state;
@@ -236,8 +232,8 @@ size_t radiogeddon_actlog_finish(
         (unsigned long)l->bytes);
     if(extra > 0) len += (size_t)extra < size - len ? (size_t)extra : size - len - 1;
     // The summary next to the log.
-    FuriString* path = furi_string_alloc_printf(
-        "%s/%s_summary.txt", RADIOGEDDON_ACTLOG_FOLDER, l->base);
+    FuriString* path =
+        furi_string_alloc_printf("%s/%s_summary.txt", RADIOGEDDON_ACTLOG_FOLDER, l->base);
     File* file = storage_file_alloc(l->storage);
     if(storage_file_open(file, furi_string_get_cstr(path), FSAM_WRITE, FSOM_CREATE_NEW)) {
         storage_file_write(file, summary, len);

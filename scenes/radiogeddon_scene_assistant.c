@@ -28,13 +28,22 @@ void radiogeddon_scene_assistant_on_enter(void* context) {
     RgTip tip = (RgTip)app->research.tip;
     Widget* widget = app->widget;
     widget_reset(widget);
-    widget_add_string_element(widget, 64, 2, AlignCenter, AlignTop, FontPrimary, "Dolphin Assistant");
+    widget_add_string_element(
+        widget, 64, 2, AlignCenter, AlignTop, FontPrimary, "Dolphin Assistant");
     furi_string_set(app->temp_str, rg_tip_text(tip));
     if(app->research.ctx_name[0]) {
         furi_string_cat_printf(app->temp_str, "\n%s", app->research.ctx_name);
     }
     widget_add_text_box_element(
-        widget, 0, 14, 128, 36, AlignCenter, AlignCenter, furi_string_get_cstr(app->temp_str), false);
+        widget,
+        0,
+        14,
+        128,
+        36,
+        AlignCenter,
+        AlignCenter,
+        furi_string_get_cstr(app->temp_str),
+        false);
     widget_add_button_element(widget, GuiButtonTypeLeft, "Dismiss", assistant_button, app);
     widget_add_button_element(widget, GuiButtonTypeRight, "Go", assistant_button, app);
     view_dispatcher_switch_to_view(app->view_dispatcher, RadioGeddonViewWidget);
@@ -45,7 +54,8 @@ static bool assistant_load(RadioGeddonApp* app) {
     if(!radiogeddon_research_context_path(app, app->file_path)) return false;
     radiogeddon_loaded_signal_reset(&app->loaded);
     radiogeddon_loaded_signal_init(&app->loaded);
-    bool ok = radiogeddon_storage_load(app->storage, furi_string_get_cstr(app->file_path), &app->loaded);
+    bool ok =
+        radiogeddon_storage_load(app->storage, furi_string_get_cstr(app->file_path), &app->loaded);
     app->file_damaged = !ok;
     app->have_loaded_signal = ok;
     return ok;
@@ -76,7 +86,8 @@ static void assistant_go(RadioGeddonApp* app, RgTipAction action) {
         break;
     }
     if(!assistant_load(app)) {
-        radiogeddon_scene_show_message(app, "Not found", "The recording is gone\nor cannot be read.");
+        radiogeddon_scene_show_message(
+            app, "Not found", "The recording is gone\nor cannot be read.");
         return;
     }
     switch(action) {
@@ -101,7 +112,8 @@ static void assistant_go(RadioGeddonApp* app, RgTipAction action) {
         FuriString* path = furi_string_alloc();
         for(size_t i = 0; i < RADIOGEDDON_RESEARCH_SIMILAR; i++) {
             if(!app->research.similar[i][0]) continue;
-            furi_string_printf(path, "%s/%s", RADIOGEDDON_SIGNALS_FOLDER, app->research.similar[i]);
+            furi_string_printf(
+                path, "%s/%s", RADIOGEDDON_SIGNALS_FOLDER, app->research.similar[i]);
             radiogeddon_multi_add(app, furi_string_get_cstr(path));
         }
         furi_string_free(path);
@@ -121,7 +133,8 @@ static void assistant_go(RadioGeddonApp* app, RgTipAction action) {
             notification_message(app->notifications, &sequence_success);
             scene_manager_previous_scene(sm);
         } else {
-            radiogeddon_scene_show_message(app, "Not added", "No active session, or\nthe SD card refused.");
+            radiogeddon_scene_show_message(
+                app, "Not added", "No active session, or\nthe SD card refused.");
         }
         break;
     }

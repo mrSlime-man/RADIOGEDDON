@@ -58,7 +58,8 @@ static void test_map_both_ways(void) {
         CHECK(rg_studio_bit_of(&g_f, first, &unsure) == b && !unsure, "pulse to bit");
         CHECK(rg_studio_bit_of(&g_f, first + 1, NULL) == b, "gap to bit");
     }
-    CHECK(rg_studio_bit_of(&g_f, (uint16_t)(n - 1), NULL) == RG_STUDIO_NO_BIT, "stop pulse: no bit");
+    CHECK(
+        rg_studio_bit_of(&g_f, (uint16_t)(n - 1), NULL) == RG_STUDIO_NO_BIT, "stop pulse: no bit");
     CHECK(rg_studio_bit_of(&g_f, 999, NULL) == RG_STUDIO_NO_BIT, "past the end");
     CHECK(!rg_studio_bit_span(&g_f, 10, NULL, NULL), "no such bit");
     // A broken symbol is mapped but uncertain.
@@ -68,7 +69,8 @@ static void test_map_both_ways(void) {
     CHECK(rg_studio_bit_of(&g_f, 4, &unsure) == 2 && unsure, "uncertain bit");
     // Without an encoding nothing is mapped.
     rg_studio_load(&g_f, s, n, RgEncodingUnknown, &p);
-    CHECK(g_f.nbits == 0 && rg_studio_bit_of(&g_f, 0, NULL) == RG_STUDIO_NO_BIT, "unknown: no map");
+    CHECK(
+        g_f.nbits == 0 && rg_studio_bit_of(&g_f, 0, NULL) == RG_STUDIO_NO_BIT, "unknown: no map");
 }
 
 static void test_preamble_and_glitch(void) {
@@ -115,7 +117,9 @@ static void test_window(void) {
     start = rg_studio_pan(&g_f, start, 0, 120, 0);
     CHECK(start == 0, "back to the start");
     CHECK(rg_studio_pan(&g_f, 5000, 7, 120, 3) == 0, "whole frame on screen: no pan");
-    CHECK(rg_studio_sample_at(&g_f, 0) == 0 && rg_studio_sample_at(&g_f, 3 * TE) == 1, "time to sample");
+    CHECK(
+        rg_studio_sample_at(&g_f, 0) == 0 && rg_studio_sample_at(&g_f, 3 * TE) == 1,
+        "time to sample");
     CHECK(rg_studio_sample_at(&g_f, 1u << 30) == g_f.n - 1, "clamped");
     CHECK(rg_studio_time_at(&g_f, 2) == 4 * TE, "sample to time");
 }

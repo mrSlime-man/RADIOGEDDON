@@ -25,9 +25,15 @@ settings — is the same code in both.
 | [Bitstream Explorer](#bitstream-explorer-full-edition) | — | ✓ |
 | [Multi-Capture Compare](#multi-capture-compare-full-edition) | — | ✓ |
 | [Research Sessions](#research-sessions-full-edition) | — | ✓ |
+| [Dolphin Lab](#dolphin-lab-full-edition) | Classic menus | ✓ |
+| [Find Similar Signals](#find-similar-signals-full-edition) | — | ✓ |
+| [Pulse Studio](#pulse-studio-full-edition) | — | ✓ |
+| [Adaptive Scanner](#adaptive-scanner-full-edition) | — | ✓ |
+| [RF Activity Logger](#rf-activity-logger-full-edition) | — | ✓ |
+| [Research Journal, Research XP, Dolphin Assistant](#research-journal-xp-and-assistant-full-edition) | — | ✓ |
 | Main menu | the tools listed directly | grouped: Scan, Receive & Record, Analyze, Database, Sessions, Settings, About |
 | [Replay](#authorized-signal-replay) | the app checks the firmware's region first and explains a refusal; then the firmware's own check | the firmware's own check only |
-| Resident code (from the built files) | 77,173 B | 104,388 B, plus [modules](#modules-full-edition) loaded only while used |
+| Resident code (from the built files, beta 9) | 80,553 B | 119,124 B, plus [modules](#modules-full-edition) loaded only while used |
 
 The Catalog edition keeps every receiving and analysis feature the app had;
 the Full-only features are the research tools that go beyond the built-in
@@ -46,8 +52,8 @@ side by side (different app ids).
 **Every feature below is implemented, compiles for its editions and firmware
 families, and passes CI. None has yet been verified on a physical Flipper
 Zero.** "Unit-tested" means the feature's firmware-independent logic is covered
-by the host test suite (2,115 checks, plus format, decoder, capture, engine
-lifecycle and offline UI tests); radio behaviour and the screens' real look
+by the host test suite (2,528 checks, plus format, decoder, capture, engine
+lifecycle, file and offline UI tests); radio behaviour and the screens' real look
 can only be confirmed on a device ([VERIFICATION.md](VERIFICATION.md)).
 
 | Feature | Implemented | Unit-tested logic | Verified on hardware |
@@ -58,6 +64,11 @@ can only be confirmed on a device ([VERIFICATION.md](VERIFICATION.md)).
 | [Bitstream Explorer](#bitstream-explorer-full-edition) *(Full)* | ✅ | ✅ bits, bytes from any offset, diff markers, fields; screen and keys on a host canvas | ⏳ pending |
 | [Multi-Capture Compare](#multi-capture-compare-full-edition) *(Full)* | ✅ | ✅ synthetic multi-capture sets with known field differences | ⏳ pending |
 | [Research Sessions](#research-sessions-full-edition) *(Full)* | ✅ | ✅ file format, a failure at each save step, recovery, grouping; fuzzed | ⏳ pending |
+| [Find Similar Signals](#find-similar-signals-full-edition) *(Full)* | ✅ | ✅ fingerprints of synthetic families, ranking, explanations, evidence caps; index files through the firmware's FlipperFormat; fuzzed | ⏳ pending |
+| [Pulse Studio](#pulse-studio-full-edition) *(Full)* | ✅ | ✅ bit map both ways, preamble, glitches, windows, histogram, diff; every page and frame on a host canvas | ⏳ pending |
+| [Adaptive Scanner](#adaptive-scanner-full-edition) *(Full)* | ✅ | ✅ fairness bound, run limit, dwell bounds, simulated traffic; engine start/stop cycles | ⏳ pending |
+| [RF Activity Logger](#rf-activity-logger-full-edition) *(Full)* | ✅ | ✅ rows, unobserved vs quiet, rotation, card full, summary | ⏳ pending |
+| [Research Journal, XP, Assistant](#research-journal-xp-and-assistant-full-edition) *(Full)* | ✅ | ✅ counters, caps, achievements, file recovery, tip rules and rate limits; fuzzed | ⏳ pending |
 | [Modules](#modules-full-edition) *(Full)* | ✅ | ✅ size estimate; every module's imports checked against each SDK | ⏳ pending |
 | [Favorites](#favorites-full-edition) and scan profiles *(Full)* | ✅ | ✅ file format, validation, sorting, failed saves | ⏳ pending |
 | [Fine stepping, Radio bands](#fine-frequency-stepping-and-radio-bands-full-edition) *(Full)* | ✅ | ✅ stepping across gaps, band probe | ⏳ pending |
@@ -66,7 +77,7 @@ can only be confirmed on a device ([VERIFICATION.md](VERIFICATION.md)).
 | [Protocol Identification](#protocol-identification) | ✅ | — (firmware decoders) | ⏳ pending |
 | [Decode with Firmware](#decode-with-firmware) | ✅ | ✅ sample feeding, timing, repeat list; the firmware's decoders on its own test captures | ⏳ pending |
 | [Signal Analyzer](#signal-analyzer) | ✅ | ✅ parsing, clustering | ⏳ pending |
-| [Unknown Protocol Analysis](#unknown-protocol-analysis) | ✅ | ✅ PWM/PPM/Manchester, noise, alignment, streaming; scored on the firmware's 50 test captures | ⏳ pending |
+| [Unknown Protocol Analysis](#unknown-protocol-analysis) (Smart Protocol Discovery) | ✅ | ✅ PWM/PPM/Manchester, noise, alignment, streaming, competing readings, bit map; scored on the firmware's 50 test captures | ⏳ pending |
 | [Pulse Timeline](#pulse-timeline) | ✅ | ✅ layout, pan/zoom, frame navigation | ⏳ pending |
 | [Signal Comparison](#signal-comparison) | ✅ | ✅ RAW similarity, pattern alignment | ⏳ pending |
 | [Device ID Candidate Detection](#device-id-candidate-detection) | ✅ | ✅ constant/changing fields | ⏳ pending |
@@ -254,17 +265,129 @@ headphones, an antenna and goggles, drawn for RadioGeddon as text art
 - **UI feedback**: Off, Minimal (short vibrations on a recording start and an
   analysis end) or Full (also short sounds, menu clicks and rate-limited
   detection blips). Saves and errors keep their own sounds.
-- **Dolphin Lab room**: a radar and an antenna (illustrations, labelled so;
-  OK opens the real tool), an oscilloscope showing a saved RAW recording's
-  first samples as recorded, a recorder and a terminal with counts from the
-  SD card, and a gallery of every pose. A module, loaded only while open; it
-  never uses the radio.
+- **Dolphin Lab room** (Room 2.0, beta 9): six stations — *Workbench* (the
+  current recording and session; OK opens it), *Oscilloscope* (a RAW
+  recording's first samples as recorded), *Radar* (an illustration; OK opens
+  the real Scanner), *Research Terminal* (version, firmware and the journal's
+  counts), *Equipment Rack* (Scanner, Adaptive Scanner, Activity Logger,
+  Receive; Up/Down choose, OK opens the real tool) and the *Dolphin Corner*
+  (every pose; OK customizes). A module, loaded only while open; it never
+  uses the radio.
+- **Customization** (beta 9): headphones, goggles (as posed, always, off),
+  antenna (classic, whip, dish, none), tool (wrench, probe, notebook),
+  expression and accessory (bow tie, scarf, ID badge); a wall decoration
+  (plant, poster, lamp, mug, trophy) unlocked by research level, or always
+  available with Research XP off. Saved in `settings.txt`.
+- **Animation level** (beta 9, Settings → Animation): Off (a still pose per
+  state), Minimal (state changes and blinks), Normal (beta 8) and Full (a
+  swaying antenna, more tail and eye movement). Host measurement over 40 s
+  idle: 0, 23, 87 and 129 redraws. Off is used when memory is low.
+- **Reactions** (beta 9): Celebrate on an achievement, a level or a strong
+  match; Greeting on the first dashboard of a run.
 - **Scanner sweep cursor** (both editions): a mark under the header follows
   the frequency being measured.
 
 Animation uses the app's existing 100 ms tick, redraws only on a change and
-only while on screen, and adds no timer. Resident cost: 15,040 B in the Full
-edition; the room is an 8,830-byte module.
+only while on screen, and adds no timer. The room, journal, assistant and
+customization screens are the 18 KB `radiogeddon_lab` module.
+
+## Find Similar Signals (Full edition)
+
+- **Fingerprint** (`rg_fp`): a 64-byte summary computed by one extra pass of
+  the streaming analyzer — frequency and preset, Te, a 12-bin histogram of
+  pulse and gap lengths as Te ratios, preamble cells, the sync gap's ratio,
+  frame count and spacing, repeats, bit length, encoding, pattern stability
+  and a quality figure. Decoded recordings get a fingerprint from their
+  protocol, bit length and key.
+- **Index**: `apps_data/radiogeddon/fingerprints.idx` — a header and
+  fixed-size records, each with a CRC. A search brings it up to date
+  (new or changed recordings are fingerprinted in batches, deleted ones
+  dropped), writing a temporary file and renaming it; a damaged index or
+  record is rebuilt rather than trusted.
+- **Ranking**: weighted feature agreement, at most 8 matches. Every score is
+  capped by its evidence: 30 when either side has no frame structure, 60 for
+  RAW against decoded, 65 when the timing disagrees; bit patterns count only
+  between recordings of the same encoding.
+- **Why similar?**: the features that agree and those that contradict, in
+  words. From a match: Open, Compare with this, Compare all matches.
+- Similar is not identical: two remotes of one model look alike; one remote
+  on a noisy day can look different.
+
+## Pulse Studio (Full edition)
+
+- **Wave**: the frame's pulses with eight zoom levels, panning that follows the
+  cursor, a cursor on one pulse or gap (duration in µs and Te), a measuring
+  marker (long OK) and the time from it to the cursor; marks for the
+  preamble, glitches (pulses far shorter than Te) and the frame's end; the
+  decoded bit under each symbol, `?` where the analyzer is unsure.
+- **Frame**: start, duration, samples, bits, fit and pattern; **Bits** and
+  **Hex** (grouped); **Diff** against the most common pattern; **Timing**: the
+  frame's pulse and gap histogram in half-Te bins.
+- Frames are read from the SD card through the RAW reader's checkpoints one
+  at a time (up to 520 samples), so a long recording is never in memory. The
+  screen refuses to open when its memory does not fit.
+
+## Adaptive Scanner (Full edition)
+
+The Scanner's list scheduled in one of four modes (Scan → Adaptive Scanner;
+the mode is saved with the settings):
+
+| Mode | How frequencies are chosen |
+|------|----------------------------|
+| Standard | round robin with a fixed dwell — the classic Scanner, unchanged |
+| Balanced Adaptive | activity raises a frequency's weight as much as waiting time |
+| Activity Focused | activity weighs more; dwell can stretch to 3× (Balanced: 2×, at most 2 s) |
+| Custom | as Balanced, with your favorites in the list given the highest priority |
+
+Stride scheduling with a decaying activity score; a noisy frequency's weight
+is capped. **Fairness**: every frequency is visited at least once within a
+bounded number of picks (twice the list length; four times in Focused), and
+no frequency more than three times in a row. Dwell stays within its bounds.
+The Scanner shows the mode, the selected frequency's share of visits and the
+longest wait between visits. In the host simulation (19 frequencies, 3,168
+bursts) Standard caught 828, Balanced 1,031, Focused 1,129 — a model, not a
+field measurement.
+
+## RF Activity Logger (Full edition)
+
+A passive observation of the Scanner's list (Scan → RF Activity Logger):
+schedule (Standard, Balanced, Focused), duration (15 min – 8 h or until
+stopped), interval (10 s – 5 min), file part size (64 KB – 1 MB) and
+threshold.
+
+- Rows per frequency per interval in `activity/activity_<date>_<time>.csv`
+  (`t_s,freq_hz,visits,observed_ms,active_visits,events,peak_dbm,floor_dbm`). A
+  frequency nobody listened to in an interval gets empty fields — never
+  written as quiet.
+- A header describing the run and an `# End` footer; a log without one was
+  interrupted. Up to 8 parts; when the last is full the log stops and says
+  so — it never overwrites.
+- At the end, a summary on screen and in `<log>_summary.txt`: duration,
+  coverage per frequency, the busiest frequencies, first and last activity.
+- The CC1101 hears one frequency at a time: everything is per visit.
+
+## Research Journal, XP and Assistant (Full edition)
+
+- **Journal** (Analyze → Research Journal; the room's terminal): counts of
+  real events — recordings, analyses, Protocol Discovery runs, fingerprints,
+  searches, comparisons, sessions, reports, activity logs, Pulse Studio,
+  identified protocols, scans — the 12 most recent and up to 8 protocol
+  names. `journal.bin` with a CRC, written a few seconds after a change and
+  never while recording; a damaged file is kept as `journal.bad`.
+- **Research XP** (Settings → Research XP, on by default): derived from the
+  counters (each event type capped, so repeating one thing does not level
+  you up), 12 achievements and levels at 20·n·(n−1) XP. Nothing is awarded
+  for transmitting. Off: no XP, levels, badges or celebrations; the journal
+  still counts.
+- **Dolphin Assistant** (Settings → Assistant tips): one rule-based tip on
+  the dashboard, from what the app knows about the current recording and
+  session (analyse it, record more samples, find similar, compare, inspect
+  the pulses, add to the session, export a report, try Classic on low
+  memory). Never while recording; at least 15 s between tips and 5 min
+  before one repeats; long OK dismisses it for this recording; OK opens the
+  tool. It never acts by itself and never transmits.
+- **Current recording**: the one last saved, opened or analysed; Analyze
+  offers it first and the journal tracks which steps it went through.
 
 ## Modules (Full edition)
 
@@ -273,13 +396,22 @@ The Full edition's optional tools are plugins packed inside the `.fap`
 Each is loaded when its screen opens and unloaded when it closes, so its code
 takes RAM only then:
 
-| Module | Loaded while |
-|--------|--------------|
-| `radiogeddon_wf.fal` | the Waterfall is open |
-| `radiogeddon_bits.fal` | the Bitstream Explorer is open |
-| `radiogeddon_multi.fal` | a comparison or a session export runs |
-| `radiogeddon_unknown.fal` | an Unknown Protocol Analysis (or a report) runs |
-| `radiogeddon_sessions.fal` | any Sessions screen is open |
+| Module | Size (beta 9) | Loaded while |
+|--------|------:|--------------|
+| `radiogeddon_wf.fal` | 4,496 B | the Waterfall is open |
+| `radiogeddon_bits.fal` | 6,720 B | the Bitstream Explorer is open |
+| `radiogeddon_multi.fal` | 16,987 B | a comparison or a session export runs |
+| `radiogeddon_unknown.fal` | 18,612 B | Protocol Discovery (or a report) runs |
+| `radiogeddon_sessions.fal` | 16,422 B | any Sessions screen is open |
+| `radiogeddon_lab.fal` | 18,297 B | the room, journal, assistant or customization screen is open |
+| `radiogeddon_fp.fal` | 20,370 B | Find Similar runs or shows its results |
+| `radiogeddon_studio.fal` | 21,904 B | Pulse Studio or the Pulse Timeline is open |
+| `radiogeddon_log.fal` | 9,158 B | the Activity Logger or the adaptive setup is open |
+| `radiogeddon_reports.fal` | 18,198 B | an analysis, crypto, comparison or session report is shown |
+
+Sizes are the bytes the loader places in RAM, measured from the Momentum
+build. Beta 9's screens are hosted by a generic forwarder with two module
+slots; a module is unloaded once none of its screens is shown.
 
 Before loading, the app checks the module's code and data (its allocated ELF
 sections) plus the work it will do fit the free heap; if not, it says `Not
@@ -440,8 +572,8 @@ A frame list ends the report: each frame's start time, bit count and pattern.
 Unit tests cover PWM, PPM and Manchester identification, noise and jitter
 robustness, cut-off frames, several patterns in one file and chunked
 streaming, all on synthetic signals. The capture tests also score it on the
-firmware's own 50 RAW test captures: Te right for 50, encoding family for 43,
-frame length within one bit for 35. Every reading's fit is listed, so an
+firmware's own 50 RAW test captures: Te right for 50, encoding family for 48,
+frame length within one bit for 42 (beta 8: 43 and 35). Every reading's fit is listed, so an
 ambiguous capture shows as one; when Manchester's grammar fits but every
 pulse pairs with its gap by one rule (always opposite, or always equal), the
 pulse-width reading is taken and the report says why. The frame list ends

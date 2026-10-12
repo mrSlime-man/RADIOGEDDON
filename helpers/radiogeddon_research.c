@@ -61,8 +61,8 @@ bool radiogeddon_research_save(RadioGeddonApp* app) {
     storage_file_free(file);
     free(buf);
     if(ok) {
-        FS_Error err =
-            storage_common_rename(app->storage, RADIOGEDDON_JOURNAL_TEMP, RADIOGEDDON_JOURNAL_PATH);
+        FS_Error err = storage_common_rename(
+            app->storage, RADIOGEDDON_JOURNAL_TEMP, RADIOGEDDON_JOURNAL_PATH);
         if(err == FSE_EXIST) {
             storage_common_remove(app->storage, RADIOGEDDON_JOURNAL_PATH);
             err = storage_common_rename(

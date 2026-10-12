@@ -293,7 +293,8 @@ void rg_fp_compare(const RgFingerprint* a, const RgFingerprint* b, RgFpMatch* ou
             rg_fp_add(&s, a->proto_hash == b->proto_hash ? 100u : 0u, 40, RgFpEvProtocol);
     }
     if(raw_a && raw_b) {
-        if(a->te_us && b->te_us) rg_fp_add(&s, rg_fp_ratio_score(a->te_us, b->te_us, 8, 35), 15, RgFpEvTe);
+        if(a->te_us && b->te_us)
+            rg_fp_add(&s, rg_fp_ratio_score(a->te_us, b->te_us, 8, 35), 15, RgFpEvTe);
         if(rg_fp_has_hist(a->high_hist) && rg_fp_has_hist(b->high_hist)) {
             uint32_t hi = rg_fp_hist_overlap(a->high_hist, b->high_hist);
             uint32_t lo = rg_fp_has_hist(a->low_hist) && rg_fp_has_hist(b->low_hist) ?
@@ -303,9 +304,9 @@ void rg_fp_compare(const RgFingerprint* a, const RgFingerprint* b, RgFpMatch* ou
             rg_fp_add(&s, timing, 30, RgFpEvTiming);
         }
         if(st_a && st_b) {
-            uint32_t enc = a->encoding == b->encoding                                     ? 100u :
+            uint32_t enc = a->encoding == b->encoding ? 100u :
                            (a->encoding == b->alternative || b->encoding == a->alternative) ? 30u :
-                                                                                            0u;
+                                                                                              0u;
             rg_fp_add(&s, enc, 10, RgFpEvEncoding);
         }
         if(a->preamble || b->preamble) {
@@ -572,8 +573,7 @@ bool rg_fp_record_encode(const RgFpRecord* rec, uint8_t out[RG_FP_RECORD_BYTES])
 
 bool rg_fp_record_decode(const uint8_t in[RG_FP_RECORD_BYTES], RgFpRecord* rec) {
     const uint8_t* p = in + RG_FP_NAME_MAX;
-    if(rg_fp_get32(p + 8 + RG_FP_BYTES) != rg_crc32(0, in, RG_FP_RECORD_BYTES - 4))
-        return false;
+    if(rg_fp_get32(p + 8 + RG_FP_BYTES) != rg_crc32(0, in, RG_FP_RECORD_BYTES - 4)) return false;
     memcpy(rec->name, in, RG_FP_NAME_MAX);
     rec->name[RG_FP_NAME_MAX - 1] = '\0';
     size_t n = rg_fp_strnlen(rec->name, RG_FP_NAME_MAX);

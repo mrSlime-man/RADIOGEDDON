@@ -71,7 +71,8 @@ static void host_research_record(RadioGeddonApp* app, uint32_t ev, uint32_t n, c
 }
 
 #if RG_FEATURE_JOURNAL
-static void host_research_step(RadioGeddonApp* app, const char* path, uint32_t step, uint32_t arg) {
+static void
+    host_research_step(RadioGeddonApp* app, const char* path, uint32_t step, uint32_t arg) {
     radiogeddon_research_step(app, path, (RadioGeddonResearchStep)step, arg);
 }
 #endif
@@ -100,7 +101,8 @@ static const char* host_preset_label(uint8_t index) {
     return radiogeddon_presets[index].label;
 }
 
-static bool host_session_capture_saved(Storage* storage, const char* file, char* out, size_t size) {
+static bool
+    host_session_capture_saved(Storage* storage, const char* file, char* out, size_t size) {
 #if RG_FEATURE_SESSIONS
     return radiogeddon_session_capture_saved(storage, file, out, size);
 #else
@@ -280,15 +282,15 @@ static void tools_exit(void* context, uint32_t scene) {
         if(app->tool[i].file == t->file) app->tool[i].shown = false;
 }
 
-#define TOOL_SCENE(name, id)                                                         \
-    void radiogeddon_scene_##name##_on_enter(void* context) {                        \
-        tools_enter(context, RadioGeddonScene##id);                                  \
-    }                                                                                \
+#define TOOL_SCENE(name, id)                                                           \
+    void radiogeddon_scene_##name##_on_enter(void* context) {                          \
+        tools_enter(context, RadioGeddonScene##id);                                    \
+    }                                                                                  \
     bool radiogeddon_scene_##name##_on_event(void* context, SceneManagerEvent event) { \
-        return tools_event(context, RadioGeddonScene##id, event);                    \
-    }                                                                                \
-    void radiogeddon_scene_##name##_on_exit(void* context) {                         \
-        tools_exit(context, RadioGeddonScene##id);                                   \
+        return tools_event(context, RadioGeddonScene##id, event);                      \
+    }                                                                                  \
+    void radiogeddon_scene_##name##_on_exit(void* context) {                           \
+        tools_exit(context, RadioGeddonScene##id);                                     \
     }
 
 #if RG_FEATURE_FINGERPRINT

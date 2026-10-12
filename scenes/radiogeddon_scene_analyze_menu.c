@@ -36,7 +36,8 @@ void radiogeddon_scene_analyze_menu_on_enter(void* context) {
     if(radiogeddon_research_context_path(app, ctx)) {
         char line[80];
         snprintf(line, sizeof(line), "Current: %s", app->research.ctx_name);
-        submenu_add_item(submenu, line, AnalyzeMenuCurrent, radiogeddon_scene_analyze_menu_cb, app);
+        submenu_add_item(
+            submenu, line, AnalyzeMenuCurrent, radiogeddon_scene_analyze_menu_cb, app);
     }
     furi_string_free(ctx);
 #endif
@@ -59,7 +60,11 @@ void radiogeddon_scene_analyze_menu_on_enter(void* context) {
     submenu_add_item(
         submenu, "Multi-Capture Compare", AnalyzeMenuMulti, radiogeddon_scene_analyze_menu_cb, app);
     submenu_add_item(
-        submenu, "Protocol Discovery...", AnalyzeMenuUnknown, radiogeddon_scene_analyze_menu_cb, app);
+        submenu,
+        "Protocol Discovery...",
+        AnalyzeMenuUnknown,
+        radiogeddon_scene_analyze_menu_cb,
+        app);
     submenu_add_item(
         submenu,
         "Decode with Firmware...",
@@ -127,8 +132,7 @@ load:
 
 bool radiogeddon_scene_analyze_menu_on_event(void* context, SceneManagerEvent event) {
     RadioGeddonApp* app = context;
-    if(event.type != SceneManagerEventTypeCustom || event.event > AnalyzeMenuCurrent)
-        return false;
+    if(event.type != SceneManagerEventTypeCustom || event.event > AnalyzeMenuCurrent) return false;
     scene_manager_set_scene_state(app->scene_manager, RadioGeddonSceneAnalyzeMenu, event.event);
     if(event.event == AnalyzeMenuMulti) {
         scene_manager_set_scene_state(app->scene_manager, RadioGeddonSceneMulti, 0);

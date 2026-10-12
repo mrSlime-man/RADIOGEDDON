@@ -25,10 +25,10 @@ static void rg_journal_copy(char* dst, size_t size, const char* src) {
 }
 
 /* Research tools (events that count towards Explorer and Polymath). */
-#define RG_JOURNAL_TOOLS                                                                    \
-    ((1u << RgJrnAnalysis) | (1u << RgJrnSimilar) | (1u << RgJrnCompare) |                  \
-     (1u << RgJrnMulti) | (1u << RgJrnSession) | (1u << RgJrnReport) | (1u << RgJrnActlog) | \
-     (1u << RgJrnStudio) | (1u << RgJrnDiscovery))
+#define RG_JOURNAL_TOOLS                                                                        \
+    ((1u << RgJrnAnalysis) | (1u << RgJrnSimilar) | (1u << RgJrnCompare) | (1u << RgJrnMulti) | \
+     (1u << RgJrnSession) | (1u << RgJrnReport) | (1u << RgJrnActlog) | (1u << RgJrnStudio) |   \
+     (1u << RgJrnDiscovery))
 
 uint8_t rg_journal_tools_used(const RgJournal* j) {
     uint8_t n = 0;
@@ -266,8 +266,7 @@ static uint8_t* rg_j_put32(uint8_t* p, uint32_t v) {
 }
 
 static const uint8_t* rg_j_get32(const uint8_t* p, uint32_t* v) {
-    *v = (uint32_t)p[0] | ((uint32_t)p[1] << 8) | ((uint32_t)p[2] << 16) |
-         ((uint32_t)p[3] << 24);
+    *v = (uint32_t)p[0] | ((uint32_t)p[1] << 8) | ((uint32_t)p[2] << 16) | ((uint32_t)p[3] << 24);
     return p + 4;
 }
 

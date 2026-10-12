@@ -716,8 +716,7 @@ static void test_room(void) {
     CHECK(inside, "every room frame (and slide) inside the screen");
     CHECK(radiogeddon_room_view_get_station(v) == 0, "Right wraps to the first");
     view_host_input(view, InputKeyLeft, InputTypeShort);
-    CHECK(
-        radiogeddon_room_view_get_station(v) == RadioGeddonRoomCorner, "Left wraps to the last");
+    CHECK(radiogeddon_room_view_get_station(v) == RadioGeddonRoomCorner, "Left wraps to the last");
     view_host_input(view, InputKeyDown, InputTypeShort);
     view_host_input(view, InputKeyDown, InputTypeShort);
     CHECK(radiogeddon_room_view_get_gallery(v) == 2, "Down: next pose");
@@ -759,7 +758,8 @@ static void test_room(void) {
         if(!render(view, NULL)) looks_inside = false;
     }
     CHECK(looks_inside, "every decoration inside the screen");
-    look = (RgMascotLook){1, RgLookGogglesAlways, RgLookAntennaDish, RgLookToolWrench, 1, RgLookAccessoryBowtie};
+    look = (RgMascotLook){
+        1, RgLookGogglesAlways, RgLookAntennaDish, RgLookToolWrench, 1, RgLookAccessoryBowtie};
     {
         RgMascotFrame f;
         rg_mascot_pose(RgMascotStateIdle, 0, 1, 60, false, &f);
@@ -767,7 +767,8 @@ static void test_room(void) {
         radiogeddon_room_view_set_decoration(v, RgDecoTrophy);
         radiogeddon_room_view_update(v, &f, now += 100);
         render(view, "room_corner_custom");
-        look = (RgMascotLook){0, RgLookGogglesOff, RgLookAntennaWhip, RgLookToolProbe, 2, RgLookAccessoryScarf};
+        look = (RgMascotLook){
+            0, RgLookGogglesOff, RgLookAntennaWhip, RgLookToolProbe, 2, RgLookAccessoryScarf};
         rg_mascot_style(&f, &look, RgAnimNormal, 0);
         radiogeddon_room_view_set_decoration(v, RgDecoPoster);
         radiogeddon_room_view_update(v, &f, now += 100);
@@ -778,13 +779,15 @@ static void test_room(void) {
     // The rack: Up/Down choose a tool, wrapping.
     view_host_input(view, InputKeyLeft, InputTypeShort); // corner -> rack
     CHECK(radiogeddon_room_view_get_station(v) == RadioGeddonRoomRack, "rack");
-    CHECK(radiogeddon_room_view_get_rack(v) == RadioGeddonRackScanner, "rack starts on the Scanner");
+    CHECK(
+        radiogeddon_room_view_get_rack(v) == RadioGeddonRackScanner, "rack starts on the Scanner");
     view_host_input(view, InputKeyDown, InputTypeShort);
     CHECK(radiogeddon_room_view_get_rack(v) == RadioGeddonRackAdaptive, "Down: next tool");
     view_host_input(view, InputKeyUp, InputTypeShort);
     view_host_input(view, InputKeyUp, InputTypeShort);
     CHECK(radiogeddon_room_view_get_rack(v) == RadioGeddonRackReceive, "Up wraps");
-    for(int k = 0; k < 20; k++) radiogeddon_room_view_update(v, NULL, now += 100);
+    for(int k = 0; k < 20; k++)
+        radiogeddon_room_view_update(v, NULL, now += 100);
     render(view, "room_rack_receive");
 
     // The oscilloscope shows a recording's levels as recorded.
@@ -856,7 +859,8 @@ static void studio_want(uint8_t frame, void* context) {
 static void test_studio_view(void) {
     printf("test_studio_view\n");
     static char text[16384];
-    size_t len = (size_t)snprintf(text, sizeof(text), "Filetype: Flipper SubGhz RAW File\nVersion: 1\n");
+    size_t len =
+        (size_t)snprintf(text, sizeof(text), "Filetype: Flipper SubGhz RAW File\nVersion: 1\n");
     static const char* const codes[] = {
         "101100111000101011110000",
         "101100111000101011110000",
@@ -887,7 +891,8 @@ static void test_studio_view(void) {
     do {
         rg_raw_reader_rewind(reader);
         size_t n;
-        while((n = rg_raw_reader_read(reader, chunk, 128)) > 0) rg_analyzer_feed(a, chunk, n);
+        while((n = rg_raw_reader_read(reader, chunk, 128)) > 0)
+            rg_analyzer_feed(a, chunk, n);
     } while(rg_analyzer_next_pass(a));
     CHECK(a->result.frames_kept >= 5, "studio: the analyzer finds the frames");
 
@@ -897,7 +902,8 @@ static void test_studio_view(void) {
     radiogeddon_studio_view_set_analysis(sv, "RAW_gate_test.sub", &a->result);
     free(a);
     // The view starts on the first frame that decodes (as the scene does).
-    for(uint8_t f = 0; f < 8; f++) radiogeddon_studio_view_load_frame(sv, reader, f);
+    for(uint8_t f = 0; f < 8; f++)
+        radiogeddon_studio_view_load_frame(sv, reader, f);
     static const char* const pages[] = {
         "studio_wave", "studio_frame", "studio_bits", "studio_hex", "studio_diff", "studio_timing"};
     for(size_t p = 0; p < 6; p++) {
@@ -917,13 +923,15 @@ static void test_studio_view(void) {
     radiogeddon_studio_view_load_frame(sv, reader, (uint8_t)g_studio_want);
     render(view, "studio_wave_glitch");
     bool inside = true;
-    for(int k = 0; k < 4; k++) view_host_input(view, InputKeyRight, InputTypeLong);
+    for(int k = 0; k < 4; k++)
+        view_host_input(view, InputKeyRight, InputTypeLong);
     for(int k = 0; k < 30; k++) {
         view_host_input(view, InputKeyRight, InputTypeShort);
         if(!render(view, NULL)) inside = false;
     }
     view_host_input(view, InputKeyOk, InputTypeLong);
-    for(int k = 0; k < 10; k++) view_host_input(view, InputKeyRight, InputTypeShort);
+    for(int k = 0; k < 10; k++)
+        view_host_input(view, InputKeyRight, InputTypeShort);
     render(view, "studio_wave_zoom_marker");
     for(int k = 0; k < 8; k++) {
         view_host_input(view, InputKeyLeft, InputTypeLong);
@@ -932,7 +940,8 @@ static void test_studio_view(void) {
     // Every frame on every page stays on the screen.
     for(int f = 0; f < 8; f++) {
         view_host_input(view, InputKeyDown, InputTypeShort);
-        if(g_studio_want >= 0) radiogeddon_studio_view_load_frame(sv, reader, (uint8_t)g_studio_want);
+        if(g_studio_want >= 0)
+            radiogeddon_studio_view_load_frame(sv, reader, (uint8_t)g_studio_want);
         for(int p = 0; p < 6; p++) {
             if(!render(view, NULL)) inside = false;
             view_host_input(view, InputKeyOk, InputTypeShort);

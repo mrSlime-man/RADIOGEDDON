@@ -84,7 +84,9 @@ static size_t rg_distinct(const RgChecksumSet* set, size_t from, size_t to) {
  * do), so distinct frames can overstate the evidence; their rank cannot.
  */
 static size_t rg_independent(const RgChecksumSet* set, size_t from, size_t to) {
-    enum { W = RG_CHECKSUM_MAX_BITS / 8 + 1 };
+    enum {
+        W = RG_CHECKSUM_MAX_BITS / 8 + 1
+    };
     uint8_t basis[RG_CHECKSUM_MAX_FRAMES][W];
     size_t rank = 0;
     size_t nbits = to - from + 1; // the window and the constant bit

@@ -111,4 +111,3 @@ void radiogeddon_analysis_decode(
     }
     free(log);
 }
-

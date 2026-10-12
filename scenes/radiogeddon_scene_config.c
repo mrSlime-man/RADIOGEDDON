@@ -565,7 +565,8 @@ void radiogeddon_scene_config_on_enter(void* context) {
         list, "Assistant tips", 2, radiogeddon_scene_config_assistant_changed, app);
     variable_item_set_current_value_index(item, app->settings.assistant ? 1 : 0);
     variable_item_set_current_value_text(item, app->settings.assistant ? "On" : "Off");
-    item = variable_item_list_add(list, "Research XP", 2, radiogeddon_scene_config_xp_changed, app);
+    item =
+        variable_item_list_add(list, "Research XP", 2, radiogeddon_scene_config_xp_changed, app);
     variable_item_set_current_value_index(item, app->settings.research_xp ? 1 : 0);
     variable_item_set_current_value_text(item, app->settings.research_xp ? "On" : "Off");
 #endif

@@ -6,12 +6,12 @@
 #include <furi.h>
 #include <gui/elements.h>
 
-#define WAVE_HI     15
-#define WAVE_LO     31
-#define WAVE_COLS   128
-#define BITS_Y      42
-#define TEXT_CHARS  25
-#define TEXT_LINES  5
+#define WAVE_HI    15
+#define WAVE_LO    31
+#define WAVE_COLS  128
+#define BITS_Y     42
+#define TEXT_CHARS 25
+#define TEXT_LINES 5
 
 typedef enum {
     StudioPageWave,
@@ -207,7 +207,12 @@ static void studio_draw_wave(Canvas* canvas, StudioModel* m) {
         uint64_t a = rg_studio_time_at(f, (uint16_t)m->marker);
         uint64_t b = rg_studio_time_at(f, m->cursor);
         uint64_t dt = a > b ? a - b : b - a;
-        snprintf(line, sizeof(line), "A:%lu.%lums", (unsigned long)(dt / 1000u), (unsigned long)(dt % 1000u / 100u));
+        snprintf(
+            line,
+            sizeof(line),
+            "A:%lu.%lums",
+            (unsigned long)(dt / 1000u),
+            (unsigned long)(dt % 1000u / 100u));
         canvas_draw_str_aligned(canvas, 127, 63, AlignRight, AlignBottom, line);
     }
 }
@@ -492,8 +497,9 @@ void radiogeddon_studio_view_set_analysis(
             strlcpy(m->name, name ? name : "", sizeof(m->name));
             m->params = a->params;
             m->encoding = (uint8_t)a->encoding;
-            m->frames = (uint8_t)(a->frames_kept > RG_ANALYZER_MAX_FRAMES ? RG_ANALYZER_MAX_FRAMES :
-                                                                             a->frames_kept);
+            m->frames = (uint8_t)(a->frames_kept > RG_ANALYZER_MAX_FRAMES ?
+                                      RG_ANALYZER_MAX_FRAMES :
+                                      a->frames_kept);
             for(size_t i = 0; i < m->frames; i++) {
                 const RgFrame* fr = &a->frames[i];
                 StudioFrameInfo* fi = &m->info[i];

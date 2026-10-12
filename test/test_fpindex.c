@@ -168,8 +168,10 @@ static void test_invalidation(void) {
     nanosleep(&ts, NULL);
     CHECK(search("remote_a1.sub"), "search");
     CHECK(g_res.computed == 1 && g_res.dropped == 1, "only the changed one recomputed");
-    CHECK(hit_index("remote_b.sub") >= 0 && g_res.hit[hit_index("remote_b.sub")].match.evidence & RgFpEvPattern,
-          "its new content is what is compared");
+    CHECK(
+        hit_index("remote_b.sub") >= 0 &&
+            g_res.hit[hit_index("remote_b.sub")].match.evidence & RgFpEvPattern,
+        "its new content is what is compared");
     // Renamed and deleted recordings.
     char from[256], to[256];
     path_of("remote_a2.sub", from, sizeof(from));
@@ -181,14 +183,17 @@ static void test_invalidation(void) {
     CHECK(g_res.indexed == 5, "deleted one gone, renamed one indexed");
     // (remote_b.sub now holds the same frame too: either may lead.)
     int rn = hit_index("renamed.sub");
-    CHECK(hit_index("remote_a2.sub") < 0 && rn >= 0 && rn <= 1 &&
-              (g_res.hit[rn].match.evidence & RgFpEvPattern),
-          "under its new name");
+    CHECK(
+        hit_index("remote_a2.sub") < 0 && rn >= 0 && rn <= 1 &&
+            (g_res.hit[rn].match.evidence & RgFpEvPattern),
+        "under its new name");
     // The recordings were never written.
     FILE* fp = fopen(to, "rb");
     char head[40] = {0};
-    CHECK(fp && fread(head, 1, 39, fp) == 39 && strncmp(head, "Filetype: Flipper SubGhz RAW", 28) == 0,
-          "recording untouched");
+    CHECK(
+        fp && fread(head, 1, 39, fp) == 39 &&
+            strncmp(head, "Filetype: Flipper SubGhz RAW", 28) == 0,
+        "recording untouched");
     if(fp) fclose(fp);
     // A target that is not in the index any more is fingerprinted directly.
     CHECK(search("missing.sub") && !g_res.target_found, "missing target");

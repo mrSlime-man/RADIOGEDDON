@@ -66,7 +66,8 @@ static void radiogeddon_scanner_adapt_init(RadioGeddonScanner* instance) {
         return;
     }
     if(!instance->adapt) instance->adapt = malloc(sizeof(RgAdapt));
-    rg_adapt_init(instance->adapt, (RgAdaptMode)instance->mode, instance->count, instance->dwell_ms);
+    rg_adapt_init(
+        instance->adapt, (RgAdaptMode)instance->mode, instance->count, instance->dwell_ms);
 }
 
 void radiogeddon_scanner_set_mode(RadioGeddonScanner* instance, uint8_t mode) {
@@ -205,7 +206,8 @@ static int32_t radiogeddon_scanner_thread(void* context) {
         if(ch->samples >= RG_SCAN_WARMUP_SAMPLES && ch->floor > -127.0f)
             floor_dbm = (int16_t)(ch->floor > 0.0f ? 0 : (int)(ch->floor - 0.5f));
 #if RG_FEATURE_ADAPTIVE_SCAN
-        if(instance->adapt) rg_adapt_observe(instance->adapt, index, ch->active, started, dbm, dwell, now);
+        if(instance->adapt)
+            rg_adapt_observe(instance->adapt, index, ch->active, started, dbm, dwell, now);
 #endif
         if(instance->observer)
             instance->observer(

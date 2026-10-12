@@ -418,7 +418,8 @@ void rg_mascot_style(RgMascotFrame* f, const RgMascotLook* look, uint8_t anim, u
         // The antenna sways and the tail answers now and then.
         bool sway = f->state == RgMascotStateIdle || f->state == RgMascotStateScanning ||
                     f->state == RgMascotStateReceiving;
-        if(sway && f->antenna >= 4 && ((t / 400u) & 3u) == 1u) f->antenna = (uint8_t)(f->antenna + 1u);
+        if(sway && f->antenna >= 4 && ((t / 400u) & 3u) == 1u)
+            f->antenna = (uint8_t)(f->antenna + 1u);
         if(f->state == RgMascotStateIdle && (t / 700u) % 7u == 3u) f->fluke_flick = 1;
         if(f->state == RgMascotStateReceiving && f->eyes == RgMascotEyesOpen)
             f->eye_dx = (int8_t)(((t / 900u) & 1u) ? 1 : 0);

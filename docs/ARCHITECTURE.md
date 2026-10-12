@@ -62,7 +62,8 @@ views/                      Custom canvas views: scanner sweep, live receiver, p
                             database list, waterfall [Full], bitstream explorer [Full],
                             Dolphin Lab dashboard and cards, mascot drawing, lab room [Full]
 modules/                    Full-only plugins (.fal) built from the sources below, and their
-                            manifest (modules.fam): waterfall, bits, multi, unknown, sessions, lab
+                            manifest (modules.fam): waterfall, bits, multi, unknown, sessions, lab,
+                            fp, studio, log, reports
 art/dolphin/                The mascot, props and icons as editable text art (Dolphin Lab)
 helpers/
   radiogeddon_subghz.*      Radio wrapper: device, decoders, RAW capture, hopper retune, TX
@@ -114,11 +115,23 @@ helpers/
   rg_sprites.*              Generated sprite bitmaps (tools/dolphin/build_sprites.py) [Full]
   radiogeddon_ui.*          Dolphin Lab bridge: events in, level sync on the tick, cards,
                             reveal, dashboard status, feedback cues [Full]
+  rg_fp.*                   Pure signal fingerprint: builder pass, compare, rank, index records [Full]
+  rg_crc.*                  Pure CRC-32 (fingerprint index, journal)
+  rg_adapt.*                Pure adaptive scan scheduling: stride, fairness, dwell [Full]
+  rg_actlog.*               Pure activity log: per-interval stats, rows, rotation, summary [Full]
+  rg_journal.*              Pure research journal: counters, XP, achievements, file format [Full]
+  rg_assist.*               Pure assistant rules and rate limits [Full]
+  rg_studio.*               Pure Pulse Studio maths: bit map, window, histogram, diff [Full]
+  radiogeddon_fp.*          Fingerprint index on the SD card, Find Similar [Full, module]
+  radiogeddon_actlog.*      Activity log files: parts, footer, summary [Full, module]
+  radiogeddon_research.*    Journal persistence, current recording, steps, tips [Full]
+  radiogeddon_analysis_decode.c  Firmware decode report (resident; the other reports are a module)
 radiogeddon_edition.h       The edition (Full / Catalog) and its RG_FEATURE_* switches
 catalog/                    Apps Catalog description, changelog, manifest template, screenshots
 assets/                     10x10 launcher icon (compiled into the .fap)
-test/                       Host unit tests (2,115 checks), format, decoder, capture, lifecycle and
-                            offline UI tests (test/ui: host canvas, firmware fonts), fuzz, fixtures
+test/                       Host unit tests (2,528 checks), format, decoder, capture, lifecycle,
+                            file (fpindex, actlogfiles) and offline UI tests (test/ui: host canvas,
+                            firmware fonts), fuzz, fixtures
 scripts/                    Edition staging, pinned builds, manifest and import verification, packaging,
                             catalog checks, link check
 tools/brand/                Generator for the logo, banner and social preview
@@ -174,14 +187,45 @@ listed in `stage_edition.py`'s `FULL_MODULE_ONLY` and left out of the app
 itself; small shared helpers (`rg_analyzer`, `rg_raw`, `rg_freq`, …) are
 compiled into each module that needs them as well.
 
-| Module | Contents | Resident while loaded |
-|--------|----------|-----------------------|
-| `radiogeddon_wf.fal` | Waterfall view (with the Dolphin Lab badge and entry reveal) | 4,315 B |
-| `radiogeddon_bits.fal` | Bitstream Explorer view, `rg_bits`, glyphs | 6,484 B |
-| `radiogeddon_unknown.fal` | Unknown Protocol Analysis report, checksum hypotheses | 15,608 B |
-| `radiogeddon_multi.fal` | `rg_multi`, comparison over files | 15,960 B |
-| `radiogeddon_sessions.fal` | Sessions scenes, `rg_session`, the Database list code they use | 16,380 B |
-| `radiogeddon_lab.fal` | Dolphin Lab room: its screen, SD-card counts, the oscilloscope's reader | 8,830 B |
+| Module | Contents | Beta 8 | Beta 9 |
+|--------|----------|-------:|-------:|
+| `radiogeddon_wf.fal` | Waterfall view (with the Dolphin Lab badge and entry reveal) | 4,312 B | 4,496 B |
+| `radiogeddon_bits.fal` | Bitstream Explorer view, `rg_bits`, glyphs | 6,488 B | 6,720 B |
+| `radiogeddon_unknown.fal` | Smart Protocol Discovery report, hypotheses, checksum hypotheses | 15,608 B | 18,612 B |
+| `radiogeddon_multi.fal` | `rg_multi`, comparison over files | 15,960 B | 16,987 B |
+| `radiogeddon_sessions.fal` | Sessions scenes, `rg_session`, the Database list code they use | 16,380 B | 16,422 B |
+| `radiogeddon_lab.fal` | Room 2.0, Research Journal, Assistant and customization scenes | 8,835 B | 18,297 B |
+| `radiogeddon_fp.fal` | Find Similar scene, `rg_fp`, index update | — | 20,370 B |
+| `radiogeddon_studio.fal` | Pulse Studio and Pulse Timeline scenes and views, `rg_studio`, `rg_timeline` | — | 21,904 B |
+| `radiogeddon_log.fal` | Activity Logger and Adaptive setup scenes, log files | — | 9,158 B |
+| `radiogeddon_reports.fal` | Analysis, crypto, comparison and report scenes, report writer | — | 18,198 B |
+
+Sizes are the bytes the loader places in RAM (`scripts/fap_size.py`),
+from the Momentum builds.
+
+**Tool forwarders (beta 9).** The newer module screens are ordinary scenes
+whose handlers live in a module. `scenes/radiogeddon_scene_tools.c` (resident)
+lists each such scene with its module and the index of its handlers in the
+module's `RadioGeddonToolModule` table, and provides tiny forwarding
+`on_enter/on_event/on_exit` functions. A scene's module is loaded into one of
+two slots on entry (two, because a module screen can open another module's
+screen, e.g. Find Similar → Compare); `radiogeddon_scene_tools_tick` unloads a
+slot once none of its scenes is on the scene stack — never inside `on_exit`,
+because the module's code may still be on the call stack there. Module
+scenes reach the app through the host table (`radiogeddon_host.h`), which
+in beta 9 also carries the research hooks (journal record, current
+recording, steps) and the session helpers.
+
+**Beta 9 memory.** The resident Full edition is 119,124 B (beta 8:
+119,428 B) although it holds the new tools' entry points, the research hub,
+the adaptive scheduler and the scanner observer: the new screens, the
+analysis/crypto/comparison reports and the Pulse Timeline are modules, the
+Unknown Protocol report's hypotheses are computed on request, and settings
+are read and written from one table instead of one call per field. The
+Catalog edition is 80,553 B (beta 8: 77,782 B), the growth being the
+analyzer's bit map and PWM fixes. The largest module is Pulse Studio
+(21,904 B); with its screen model (about 4 KB) and a frame buffer it
+checks the free heap before opening.
 
 Built into the app (as measured just before the move), the tools made the
 resident Full edition 128,309 B, 33,633 B more than beta 6; as modules it is
@@ -247,6 +291,60 @@ flowchart LR
   allocations. Resident cost: Full 119,428 B (beta 7: 104,388 B); the
   Catalog edition compiles all of this out (77,782 B, +610 B for the
   Scanner's sweep cursor and the shared settings fields).
+
+## Research lab (Full edition, beta 9)
+
+```mermaid
+flowchart LR
+    SCAN["Scanner thread<br/>(radiogeddon_scanner)"] -- "observer: every visit<br/>(index, active, started,<br/>rssi, floor, dwell)" --> ADAPT["rg_adapt<br/>next pick, dwell"]
+    ADAPT -- "next channel" --> SCAN
+    SCAN -- observer --> LOG["rg_actlog<br/>interval stats"]
+    LOG -- "rows on the app tick,<br/>written without the lock" --> CSV[("activity/*.csv<br/>+ _summary.txt")]
+    RAW[("RAW .sub")] --> AN["rg_analyzer<br/>(streaming passes)"]
+    AN -- "extra pass" --> FP["rg_fp<br/>64-byte fingerprint"]
+    FP --> IDX[("fingerprints.idx")]
+    IDX --> SIM["Find Similar<br/>rank + explain"]
+    AN --> HYP["hypotheses,<br/>bit map"]
+    HYP --> SPD["Protocol Discovery report"]
+    HYP --> STU["Pulse Studio"]
+    EVENTS["saves, analyses,<br/>searches, logs, ..."] --> J["rg_journal<br/>counters, XP, badges"]
+    J --> JB[("journal.bin")]
+    J --> TIP["rg_assist<br/>rules + rate limits"]
+    CTX["current recording<br/>+ its steps"] --> TIP
+    TIP --> DASH["dashboard tip row"]
+```
+
+- **Pure engines.** `rg_fp`, `rg_adapt`, `rg_actlog`, `rg_journal`,
+  `rg_assist` and `rg_studio` include no SDK headers and are tested on the
+  host (`test_fp`, `test_adapt`, `test_actlog`, `test_journal`,
+  `test_studio`); the file layers around them (`radiogeddon_fp`,
+  `radiogeddon_actlog`, `radiogeddon_research`) are tested through the
+  firmware's own FlipperFormat and a stub SD card (`make -C test fpindex`,
+  `actlogfiles`, `formats`).
+- **Scanner observer.** The Scanner thread calls an observer after every
+  visit, with its lock held; the adaptive scheduler (`rg_adapt_observe`, then
+  `rg_adapt_next`) and the logger (`rg_actlog_observe`) only update counters
+  there. Rows are formatted on the app tick under the lock and written to the
+  card after releasing it, so the sweep never waits for the SD card.
+- **Adaptive scheduling** is stride scheduling: each channel has a pass
+  value advanced by `1/weight`, the weight being 16 plus the activity score
+  scaled by the mode (a noisy channel's capped; Custom adds 16 per priority
+  step). The lowest pass is picked, except that a channel not visited for
+  `max_revisit` picks is picked first (fairness) and none is picked more than
+  three times in a row. Scores decay by 1/64 per quiet visit.
+- **Fingerprints** are built by a fourth analyzer pass over the same stream
+  (no second read of the file) and stored as fixed 64-byte records with the
+  file's size and timestamp, so a changed recording is fingerprinted again.
+  The index is rewritten to `fingerprints.tmp` and renamed; a record with a
+  bad CRC is dropped and recomputed.
+- **Journal.** Events go through `radiogeddon_research_record` (resident,
+  reached by modules through the host table). The journal is kept in RAM
+  (624 bytes) and written three seconds after a change, never while the
+  recorder runs, to `journal.tmp` then renamed; XP and achievements are
+  derived from the counters, so they cannot disagree with them.
+- **Assistant.** `rg_assist_rule` is a pure function of facts the app
+  already holds (the current recording's steps, the session, the recorder,
+  free memory); `rg_assist_update` adds the rate limits and dismissals.
 
 ## Screens and navigation
 
@@ -454,6 +552,12 @@ interoperable with the stock Sub-GHz app and other tools:
 - RAW captures use `Filetype: Flipper SubGhz RAW File` with `RAW_Data` lines
   of up to 512 values, plus a final `# Lost: …` comment only if samples were
   dropped while recording.
+
+The Full edition's research data sits next to them in
+`/ext/apps_data/radiogeddon`: `fingerprints.idx` (binary header `RGFI` v1 and
+CRC-checked records), `journal.bin` (CRC-checked; a damaged one is renamed
+`journal.bad`), and `activity/` (CSV logs and summaries). All are rebuilt or
+restarted when missing; none is required to read a recording.
 
 ### Signal Database
 

@@ -199,7 +199,8 @@ static void radiogeddon_report_hypothesis(const RgAnalysis* r, FuriString* out) 
 static void radiogeddon_cat_evidence(FuriString* out, uint16_t flags, const char* sign) {
     for(size_t b = 0; b < RG_HYP_EVIDENCE_COUNT; b++) {
         if(flags & (1u << b))
-            furi_string_cat_printf(out, " %s%s\n", sign, rg_hyp_evidence_name((RgHypEvidence)(1u << b)));
+            furi_string_cat_printf(
+                out, " %s%s\n", sign, rg_hyp_evidence_name((RgHypEvidence)(1u << b)));
     }
 }
 

@@ -740,11 +740,13 @@ static void test_pwm_five_te_period(void) {
         buf[pos++] = -16000;
     }
     rg_analyzer_run(buf, pos, &g_a);
-    CHECK(g_a.low_peak_count >= 2 && g_a.low_peaks[0].center_us > 2000 &&
-              g_a.low_peaks[0].center_us < 2600,
-          "the larger of two close gap clusters is a peak");
-    CHECK(g_a.params.pwm_period_us >= 3800 && g_a.params.pwm_period_us <= 4200,
-          "period read from the pairing");
+    CHECK(
+        g_a.low_peak_count >= 2 && g_a.low_peaks[0].center_us > 2000 &&
+            g_a.low_peaks[0].center_us < 2600,
+        "the larger of two close gap clusters is a peak");
+    CHECK(
+        g_a.params.pwm_period_us >= 3800 && g_a.params.pwm_period_us <= 4200,
+        "period read from the pairing");
     CHECK(g_a.encoding == RgEncodingPWM, "PWM");
     CHECK(g_a.bit_count + 1 >= strlen(code) && g_a.bit_count <= strlen(code), "frame length");
 }
@@ -780,7 +782,8 @@ static void test_bit_map(void) {
     int fit = 0;
     // Idle low first, then 0, 1, a broken pair (Te + Te), 1.
     int32_t s[] = {-5000, TE, -3 * TE, 3 * TE, -TE, TE, -TE, 3 * TE, -TE};
-    size_t n = rg_analyzer_decode_map(RgEncodingPWM, &p, s, 9, bits, RG_ANALYZER_MAX_BITS, &fit, map);
+    size_t n =
+        rg_analyzer_decode_map(RgEncodingPWM, &p, s, 9, bits, RG_ANALYZER_MAX_BITS, &fit, map);
     CHECK(n == 4 && strcmp(bits, "0101") == 0, "bits");
     CHECK((map[0] & RG_BITMAP_INDEX) == 1 && (map[1] & RG_BITMAP_INDEX) == 3, "symbol starts");
     CHECK((map[2] & RG_BITMAP_INDEX) == 5 && (map[3] & RG_BITMAP_INDEX) == 7, "every pair");
@@ -794,7 +797,8 @@ static void test_bit_map(void) {
     // Manchester: a bit starts at the sample holding its first half-cell.
     p.te_us = 400;
     int32_t man[] = {400, -800, 400, -400, 800};
-    n = rg_analyzer_decode_map(RgEncodingManchester, &p, man, 5, bits, RG_ANALYZER_MAX_BITS, &fit, map);
+    n = rg_analyzer_decode_map(
+        RgEncodingManchester, &p, man, 5, bits, RG_ANALYZER_MAX_BITS, &fit, map);
     CHECK(n == 4, "Manchester bits");
     CHECK((map[0] & RG_BITMAP_INDEX) == 0 && (map[1] & RG_BITMAP_INDEX) == 1, "first halves");
     CHECK((map[2] & RG_BITMAP_INDEX) == 3 && (map[3] & RG_BITMAP_INDEX) == 4, "later halves");
@@ -805,7 +809,8 @@ static void test_bit_map(void) {
         longs[2 * i] = TE;
         longs[2 * i + 1] = -3 * TE;
     }
-    n = rg_analyzer_decode_map(RgEncodingPWM, &p, longs, 600, bits, RG_ANALYZER_MAX_BITS, &fit, map);
+    n = rg_analyzer_decode_map(
+        RgEncodingPWM, &p, longs, 600, bits, RG_ANALYZER_MAX_BITS, &fit, map);
     CHECK(n == RG_ANALYZER_MAX_BITS && (map[n - 1] & RG_BITMAP_INDEX) == 2 * (n - 1), "bounded");
 }
 

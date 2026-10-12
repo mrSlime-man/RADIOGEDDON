@@ -23,14 +23,14 @@ Sub-GHz signals — entirely on the device, with no computer, phone or network.
 
 > [!WARNING]
 > **Public beta.** Every feature is implemented and the builds pass all
-> automated checks (lint, 2,115 host-test checks, format, decoder, capture,
-> engine-lifecycle and offline UI tests, fuzzing, static analysis of both
-> editions, four firmware builds with API, manifest, imported-symbol and
+> automated checks (lint, 2,528 host-test checks, format, decoder, capture,
+> engine-lifecycle, file and offline UI tests, fuzzing, static analysis of
+> both editions, four firmware builds with API, manifest, imported-symbol and
 > module verification). On physical hardware there is only one tester report
 > so far, for the beta 2 code (RogueMaster: launches and works); **nothing in
-> betas 3 to 8 is verified on a device yet** — including the Dolphin Lab
-> interface that beta 8 adds and the research tools and on-demand modules of
-> beta 7. Expect rough edges, and see
+> betas 3 to 9 is verified on a device yet** — including the research lab
+> tools that beta 9 adds, the Dolphin Lab interface of beta 8 and the
+> on-demand modules of beta 7. Expect rough edges, and see
 > [VERIFICATION.md](docs/VERIFICATION.md) for exactly what has and hasn't been
 > tested. Testing on real hardware is the single most useful thing you can
 > contribute — the [hardware checklist](docs/HARDWARE_CHECKLIST.md) shows how.
@@ -89,11 +89,50 @@ RadioGeddon comes in two editions built from one source tree
 | **Multi-Capture Compare** (up to 8 recordings) | — | ✓ |
 | **Research Sessions** (groups of recordings, grouping suggestions) | — | ✓ |
 | **Dolphin Lab** (animated mascot, dashboard, Cyber Lab / Classic styles, lab room) | Classic menus | ✓ |
+| **Find Similar Signals** (signal fingerprints, explained matches) | — | ✓ |
+| **Pulse Studio** (waveform, cursor, marker, bits, hex, diff, timing) | — | ✓ |
+| **Smart Protocol Discovery** (competing readings with evidence) | improved analyzer | ✓ |
+| **Adaptive Scanner**, **RF Activity Logger** | — | ✓ |
+| **Research Journal**, optional Research XP, **Dolphin Assistant**, customization | — | ✓ |
 | App name / appid | RadioGeddon / `radiogeddon` | RadioGeddon Full / `radiogeddon_full` |
 
 Both editions keep their data in `/ext/apps_data/radiogeddon`, so recordings,
 settings, favorites and profiles carry over when you switch — see
 [Features → Editions](docs/FEATURES.md#editions).
+
+## 🔬 Research Lab (beta 9)
+
+The Full edition is a standalone research lab: everything runs on the
+Flipper, with no computer, phone, network or cloud service.
+
+- **Find Similar Signals** — each RAW recording gets a 64-byte fingerprint
+  (timing ratios, pulse and gap histograms, preamble, sync, frames, repeats,
+  bit length, encoding). *Find Similar* ranks your recordings against one and
+  says why: what agrees and what contradicts. Thin evidence caps the score.
+- **Pulse Studio** — a RAW capture on one screen: waveform with zoom, cursor
+  and measuring marker, preamble/glitch/frame-end marks, the decoded bit under
+  each symbol (`?` where unsure), and Frame, Bits, Hex, Diff and Timing pages.
+- **Smart Protocol Discovery** — competing readings, each with its evidence
+  and score, instead of a single answer; on the firmware's 50 test captures
+  the encoding family is right for 48 (beta 8: 43) and the frame length for 42
+  (beta 8: 35). No protocol answer is hardcoded.
+- **Adaptive Scanner** — Balanced Adaptive, Activity Focused and Custom modes
+  visit busy frequencies more while every frequency keeps a bounded wait.
+- **RF Activity Logger** — hours of passive observation to CSV, keeping
+  "quiet" and "not observed" apart, with a summary; it never overwrites.
+- **Research Journal**, optional **Research XP** and 12 achievements (real
+  events only, nothing for transmitting), a rule-based **Dolphin Assistant**
+  (one dismissable tip at a time, never while recording), dolphin
+  customization, *Animation level* Off / Minimal / Normal / Full, and a lab
+  room with six stations.
+
+Nothing in beta 9 transmits; RadioGeddon does not recover keys, predict
+rolling codes or brute-force anything.
+
+<img src="docs/assets/beta9-previews.png" alt="Synthetic previews: Pulse Studio's waveform and timing pages, the Adaptive Scanner, the lab room's workbench, equipment rack, dolphin corner and research terminal, and Pulse Studio's frame page" width="100%">
+
+<sub>Synthetic development previews drawn by the host UI tests (`make -C test ui`)
+with the firmware's own fonts — not screenshots of a Flipper Zero.</sub>
 
 ## 🐬 Dolphin Lab
 
@@ -111,10 +150,11 @@ follows the same state.
   *Cyber Lab*, and *Classic* — the Beta 7 menus with no mascot and no
   animation. *Transitions* and optional *UI feedback* (Off / Minimal / Full)
   are settings too, and none of them changes what the radio does.
-- **Dolphin Lab room** (main menu > Dolphin Lab): a radar, an oscilloscope
-  that shows a saved RAW recording's first pulses, an antenna, a recorder, a
-  terminal with counts read from your SD card, and a gallery of every pose.
-  It never uses the radio; OK on a station opens the real tool.
+- **Dolphin Lab room** (main menu > Dolphin Lab): a workbench with the
+  recording you are working on, an oscilloscope that shows its first pulses,
+  a radar, a research terminal with your journal, an equipment rack that
+  opens the real tools, and the dolphin's corner (every pose, customization).
+  It never uses the radio.
 - Animation runs on the app's existing 100 ms tick, redraws only when the
   picture changes, never delays a key, and stops when the screen is not
   shown. The room's code is a module loaded only while it is open.
@@ -127,16 +167,16 @@ with the firmware's own fonts — not screenshots of a Flipper Zero.</sub>
 ## ⬇ Download
 
 Grab the build that matches your firmware from the
-[**v1.0.0-beta.8 release**](https://github.com/mrSlime-man/RADIOGEDDON/releases/tag/v1.0.0-beta.8),
+[**v1.0.0-beta.9 release**](https://github.com/mrSlime-man/RADIOGEDDON/releases/tag/v1.0.0-beta.9),
 then copy it to `apps/Sub-GHz/` on the SD card (full steps in
 [Installation](docs/INSTALLATION.md)).
 
 | Your firmware | Edition | Download this file |
 |---------------|---------|--------------------|
-| **Official** (flipperzero.one) | Catalog | [`radiogeddon-catalog-official.fap`](https://github.com/mrSlime-man/RADIOGEDDON/releases/download/v1.0.0-beta.8/radiogeddon-catalog-official.fap) |
-| **RogueMaster** | Full | [`radiogeddon-full-roguemaster.fap`](https://github.com/mrSlime-man/RADIOGEDDON/releases/download/v1.0.0-beta.8/radiogeddon-full-roguemaster.fap) |
-| **Momentum** | Full | [`radiogeddon-full-momentum.fap`](https://github.com/mrSlime-man/RADIOGEDDON/releases/download/v1.0.0-beta.8/radiogeddon-full-momentum.fap) |
-| **Unleashed** | Full | [`radiogeddon-full-unleashed.fap`](https://github.com/mrSlime-man/RADIOGEDDON/releases/download/v1.0.0-beta.8/radiogeddon-full-unleashed.fap) |
+| **Official** (flipperzero.one) | Catalog | [`radiogeddon-catalog-official.fap`](https://github.com/mrSlime-man/RADIOGEDDON/releases/download/v1.0.0-beta.9/radiogeddon-catalog-official.fap) |
+| **RogueMaster** | Full | [`radiogeddon-full-roguemaster.fap`](https://github.com/mrSlime-man/RADIOGEDDON/releases/download/v1.0.0-beta.9/radiogeddon-full-roguemaster.fap) |
+| **Momentum** | Full | [`radiogeddon-full-momentum.fap`](https://github.com/mrSlime-man/RADIOGEDDON/releases/download/v1.0.0-beta.9/radiogeddon-full-momentum.fap) |
+| **Unleashed** | Full | [`radiogeddon-full-unleashed.fap`](https://github.com/mrSlime-man/RADIOGEDDON/releases/download/v1.0.0-beta.9/radiogeddon-full-unleashed.fap) |
 
 Each firmware family has its own SDK and symbol table, so **install the file
 for your firmware** — the wrong one is refused ("Outdated App / Firmware" or
@@ -159,7 +199,12 @@ Catalog; it is **not** in the catalog yet.
 | **RAW Signal Capture** | Streams the raw on/off timing to a standard RAW `.sub` file on the SD card while recording, so length is limited by the card, not RAM; shows time, samples and any samples lost to a slow card. |
 | **Protocol Identification** | Live decoding with the firmware's own decoders (Princeton, CAME, Nice FLO, Holtek, KeeLoq-family, …) — marked `[CONFIRMED]`. |
 | **Signal Analyzer** | Pulse-width groups and base time unit for RAW; bit/field breakdown for decoded protocols. |
-| **Unknown Protocol Analysis** | Streams a whole RAW capture: measured timing, noise and frames (`[OBSERVED]`), then the encoding (PWM/PPM/Manchester) with a confidence score, bit patterns, frame-by-frame comparison and field map (`[HYPOTHESIS]`). Full: also tests whether the frames end in a common checksum (XOR, sum, CRC-8, parity). |
+| **Unknown Protocol Analysis** (Full: **Smart Protocol Discovery**) | Streams a whole RAW capture: measured timing, noise and frames (`[OBSERVED]`), then the encoding (PWM/PPM/Manchester) with a confidence score, competing readings with their evidence, bit patterns, frame-by-frame comparison and field map (`[HYPOTHESIS]`). Full: also tests whether independent frames end in a common checksum (XOR, sum, CRC-8, parity). |
+| **Find Similar Signals** *(Full)* | Ranks your recordings by signal fingerprint against one, with the features that agree and contradict; open or compare any match. |
+| **Pulse Studio** *(Full)* | One RAW capture's frames: waveform with zoom, cursor and marker, decoded bits under the symbols, Frame, Bits, Hex, Diff and Timing pages. |
+| **Adaptive Scanner** *(Full)* | Standard, Balanced Adaptive, Activity Focused or Custom scheduling of the Scanner's list, with each frequency's share and the longest wait shown. |
+| **RF Activity Logger** *(Full)* | Passive observation for up to 8 h (or until stopped): per-interval CSV rows, size-limited parts, a summary of the busiest frequencies and coverage. |
+| **Research Journal** *(Full)* | Real research events, optional XP, levels and achievements, and the Dolphin Assistant's tips. |
 | **Pulse Timeline** | Zoomable, scrollable waveform of a RAW capture with frame markers and pulse durations, streamed from the SD card. |
 | **Bitstream Explorer** *(Full)* | The bits the analyzer infers from a RAW capture, frame by frame: binary with positions, whole bytes from any bit offset (leading and trailing bits shown apart, never padded), which bits stay constant or change across comparable frames (`?` where the evidence is too thin), and any bit range's binary, hex and decimal value. |
 | **Multi-Capture Compare** *(Full)* | Up to 8 recordings analysed one after another: frequency, preset, timing, encoding and length consistency, identical frames, similarity, and the bits that stay constant or change — reported as constant, button-like, counter-like or no simple rule, with an `[OBSERVED]`/`[HEURISTIC]`/`[HYPOTHESIS]` label on every line. |
@@ -193,9 +238,11 @@ Physical buttons only: **Up/Down** move, **OK** selects, **Left/Right** change
 settings (and **Left** toggles RAW recording while receiving), **Back** returns.
 
 The Full edition's main menu groups the tools: **Scan** (Frequency Scanner,
-Range Scanner, Waterfall, Frequency Hopper, Favorites), **Receive & Record**,
-**Analyze** (open a recording, Bitstream Explorer, Multi-Capture Compare,
-Unknown Analysis, Decode with Firmware, Pulse Timeline), **Database**,
+Adaptive Scanner, RF Activity Logger, Range Scanner, Waterfall, Frequency
+Hopper, Favorites), **Receive & Record**, **Analyze** (the current recording,
+open a recording, Pulse Studio, Find Similar, Bitstream Explorer,
+Multi-Capture Compare, Protocol Discovery, Decode with Firmware, Pulse
+Timeline, Research Journal), **Database**,
 **Sessions**, **Settings**, **About**. The Catalog edition's menu is unchanged.
 
 A typical session: open the **Scanner** to find a device's frequency → press
@@ -221,9 +268,11 @@ flowchart LR
 The radio layer uses only the portable `subghz_devices` API — the same one the
 stock app uses — so a single source tree builds both editions for all four
 firmware families. The Full edition's optional tools (Waterfall and Bitstream
-Explorer screens, Multi-Capture Compare, Unknown Protocol Analysis, Sessions)
-are plugins packed inside the `.fap` and loaded only while their screen is
-open, so their code takes RAM only then. The analysis engine (`helpers/rg_analyzer.*`, `helpers/radiogeddon_dsp.*`)
+Explorer screens, Multi-Capture Compare, Unknown Protocol Analysis, Sessions,
+the lab room and journal, Find Similar, Pulse Studio and the Pulse Timeline,
+the activity logger and adaptive setup, analysis reports — ten modules) are
+plugins packed inside the `.fap` and loaded only while their screen is open,
+so their code takes RAM only then. The analysis engine (`helpers/rg_analyzer.*`, `helpers/radiogeddon_dsp.*`)
 has no firmware dependencies, so it is unit-tested on a normal computer. Deeper
 dive: [Architecture](docs/ARCHITECTURE.md).
 
@@ -252,12 +301,14 @@ manifest and that every symbol it imports is exported by that SDK. A plain
 ## Testing & verification
 
 ```bash
-make -C test check               # 1,962 host checks (both editions) and the fuzz corpus, ASan + UBSan
+make -C test check               # 2,528 host checks (both editions) and the fuzz corpus, ASan + UBSan
 make -C test formats             # the firmware's file code, its 85 Sub-GHz test files, settings, favorites, profiles
 make -C test decoders            # the firmware's Sub-GHz decoders on its RAW test captures, and its presets
 make -C test captures            # the analyzer on those captures, scored against the decoders
 make -C test lifecycle           # Scanner, Range Scanner, Waterfall, Hopper started/stopped repeatedly, allocations counted
 make -C test ui                  # screens drawn on a host 128x64 canvas with the firmware's fonts (synthetic previews)
+make -C test fpindex             # the fingerprint index through the firmware's FlipperFormat on a stub SD card
+make -C test actlogfiles         # activity log files: rotation, summary, a full card
 python3 scripts/check_catalog.py # the Catalog edition against the Apps Catalog's rules
 python3 scripts/check_links.py   # documentation links and anchors
 ```

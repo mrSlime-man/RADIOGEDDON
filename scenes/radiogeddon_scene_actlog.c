@@ -50,7 +50,8 @@ typedef struct {
 } ActlogRun;
 
 static const uint16_t actlog_minutes[] = {15, 30, 60, 120, 240, 480, 0};
-static const char* const actlog_minutes_text[] = {"15 min", "30 min", "1 h", "2 h", "4 h", "8 h", "Until stop"};
+static const char* const actlog_minutes_text[] =
+    {"15 min", "30 min", "1 h", "2 h", "4 h", "8 h", "Until stop"};
 static const uint16_t actlog_intervals[] = {10, 30, 60, 300};
 static const char* const actlog_intervals_text[] = {"10 s", "30 s", "1 min", "5 min"};
 static const uint16_t actlog_sizes[] = {64, 256, 1024};
@@ -151,7 +152,8 @@ static void actlog_show_setup(RadioGeddonApp* app) {
     s->log_interval_s = actlog_intervals[ii];
 
     uint8_t si = actlog_find16(actlog_sizes, COUNT_OF(actlog_sizes), s->log_max_kb);
-    item = variable_item_list_add(list, "File part", COUNT_OF(actlog_sizes), actlog_size_changed, app);
+    item = variable_item_list_add(
+        list, "File part", COUNT_OF(actlog_sizes), actlog_size_changed, app);
     variable_item_set_current_value_index(item, si);
     actlog_set(item, actlog_sizes_text[si]);
     s->log_max_kb = actlog_sizes[si];
@@ -233,7 +235,8 @@ static void actlog_stop(RadioGeddonApp* app, const char* reason) {
     radiogeddon_scanner_stop(app->scanner);
     radiogeddon_scanner_set_observer(app->scanner, NULL, NULL);
     radiogeddon_ui_set_scanning(app, false);
-    radiogeddon_actlog_finish(run->log, reason, furi_get_tick(), run->summary, ACTLOG_SUMMARY_SIZE);
+    radiogeddon_actlog_finish(
+        run->log, reason, furi_get_tick(), run->summary, ACTLOG_SUMMARY_SIZE);
     run->log = NULL;
 #if RG_FEATURE_JOURNAL
     radiogeddon_research_record(app, RgJrnActlog, 1, NULL);
@@ -299,7 +302,12 @@ static bool actlog_start(RadioGeddonApp* app) {
     if(!app->scanner) app->scanner = radiogeddon_scanner_alloc(app->subghz);
     radiogeddon_scanner_set_mode(app->scanner, app->settings.scan_mode);
     radiogeddon_scanner_configure(
-        app->scanner, freqs, n, app->settings.scan_dwell_ms, app->settings.scan_threshold_db, false);
+        app->scanner,
+        freqs,
+        n,
+        app->settings.scan_dwell_ms,
+        app->settings.scan_threshold_db,
+        false);
     radiogeddon_scanner_set_callback(app->scanner, NULL, NULL);
     radiogeddon_scanner_set_observer(app->scanner, radiogeddon_actlog_observe, run->log);
     radiogeddon_subghz_set_preset(app->subghz, app->preset_index);
@@ -332,7 +340,7 @@ static void actlog_tick(RadioGeddonApp* app) {
     if(!alive || st.state != RadioGeddonActlogRunning) {
         const char* reason = st.state == RadioGeddonActlogDone ? "duration reached" :
                              st.state == RadioGeddonActlogFull ? "size limit reached" :
-                                                                  "SD write failed";
+                                                                 "SD write failed";
         if(!alive && st.state == RadioGeddonActlogRunning) reason = "SD write failed";
         actlog_stop(app, reason);
         actlog_show_summary(app);
@@ -361,7 +369,8 @@ bool radiogeddon_scene_actlog_on_event(void* context, SceneManagerEvent event) {
     }
     if(event.type != SceneManagerEventTypeCustom) return false;
     if(event.event == ActlogEventStart && mode == ActlogModeSetup) {
-        if(!actlog_start(app)) radiogeddon_scene_show_message(app, app->message_header, app->message_text);
+        if(!actlog_start(app))
+            radiogeddon_scene_show_message(app, app->message_header, app->message_text);
         return true;
     }
     return false;

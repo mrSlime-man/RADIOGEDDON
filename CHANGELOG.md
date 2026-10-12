@@ -30,7 +30,7 @@ Flipper; nothing new transmits. Not yet verified on hardware.
   structure caps at 30, RAW against decoded at 60, disagreeing timing at 65;
   bit-pattern evidence counts only between recordings of the same encoding.
 - **Pulse Studio** (Full; Analyze → Pulse Studio..., or a recording's
-  menu): the waveform with six zoom levels, pan, a cursor on a pulse or gap
+  menu): the waveform with eight zoom levels, pan, a cursor on a pulse or gap
   (its duration in µs and Te), a measuring marker (long OK) with the
   distance to the cursor, preamble, glitch and frame-end marks and the bit
   each symbol decodes to; Frame, Bits, Hex, Diff (against the most common
@@ -38,7 +38,7 @@ Flipper; nothing new transmits. Not yet verified on hardware.
   file through the RAW reader's checkpoints one at a time.
 - **Adaptive Scanner** (Full; Scan → Adaptive Scanner): Standard (the
   classic round robin), Balanced Adaptive, Activity Focused and Custom
-  (priority 0–3 per frequency). Stride scheduling weighted by a decaying
+  (the favorites in the list first). Stride scheduling weighted by a decaying
   activity score; every frequency is visited at least once per bounded
   number of picks (fairness), one frequency at most three times in a row,
   and dwell stays within bounds. The Scanner shows the mode, the selected
@@ -122,8 +122,8 @@ Flipper; nothing new transmits. Not yet verified on hardware.
   `Lab_decoration`, `Scan_mode`, `Log_interval_s`, `Log_minutes`,
   `Log_max_kb`).
 - Analysis reports, crypto heuristics, comparison results and the Pulse
-  Timeline moved into modules; the resident Full edition is 118,948 B (beta
-  8: 119,428 B). Catalog: 80,521 B (beta 8: 77,782 B).
+  Timeline moved into modules; the resident Full edition is 119,124 B (beta
+  8: 119,428 B). Catalog: 80,553 B (beta 8: 77,782 B).
 - The Scanner's observer reports every visit (frequency, activity, reading,
   floor and dwell) to the logger and the adaptive scheduler.
 

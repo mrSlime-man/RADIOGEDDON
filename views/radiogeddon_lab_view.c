@@ -556,8 +556,7 @@ uint8_t radiogeddon_lab_view_get_selected(RadioGeddonLabView* instance) {
 }
 
 void radiogeddon_lab_view_set_decoration(RadioGeddonLabView* instance, uint8_t decoration) {
-    with_view_model(
-        instance->view, LabModel * m, { m->decoration = decoration; }, false);
+    with_view_model(instance->view, LabModel * m, { m->decoration = decoration; }, false);
 }
 
 void radiogeddon_lab_view_set_status(
