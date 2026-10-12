@@ -132,7 +132,7 @@ void rg_fp_builder_feed(RgFpBuilder* b, const int32_t* samples, size_t count);
  */
 void rg_fp_from_analysis(
     RgFingerprint* fp,
-    const RgAnalysis* analysis,
+    const RgAnalysis* r,
     RgFpBuilder* b,
     uint32_t frequency,
     uint8_t preset);

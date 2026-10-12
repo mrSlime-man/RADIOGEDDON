@@ -166,7 +166,7 @@ uint8_t rg_adapt_share(const RgAdapt* a, size_t index) {
     uint64_t total = 0;
     for(size_t i = 0; i < a->count; i++)
         total += a->ch[i].visits;
-    return total ? (uint8_t)(a->ch[index].visits * 100u / total) : 0;
+    return total ? (uint8_t)((uint64_t)a->ch[index].visits * 100u / total) : 0;
 }
 
 uint32_t rg_adapt_worst_gap(const RgAdapt* a, uint32_t now_ms) {

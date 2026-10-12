@@ -45,7 +45,7 @@ void radiogeddon_room_load_terminal(
         sizeof(lines[3]),
         "Saved %lu, analysed %lu",
         (unsigned long)j->counters[RgJrnCapture],
-        (unsigned long)(j->counters[RgJrnAnalysis] + j->counters[RgJrnDiscovery]));
+        (unsigned long)j->counters[RgJrnAnalysis] + (unsigned long)j->counters[RgJrnDiscovery]);
     uint32_t badges = 0;
     for(size_t a = 0; a < RgAchCount; a++)
         if(j->achievements & (1u << a)) badges++;

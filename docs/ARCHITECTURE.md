@@ -216,7 +216,7 @@ scenes reach the app through the host table (`radiogeddon_host.h`), which
 in beta 9 also carries the research hooks (journal record, current
 recording, steps) and the session helpers.
 
-**Beta 9 memory.** The resident Full edition is 119,124 B (beta 8:
+**Beta 9 memory.** The resident Full edition is 119,132 B (beta 8:
 119,428 B) although it holds the new tools' entry points, the research hub,
 the adaptive scheduler and the scanner observer: the new screens, the
 analysis/crypto/comparison reports and the Pulse Timeline are modules, the

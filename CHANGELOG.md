@@ -122,7 +122,7 @@ Flipper; nothing new transmits. Not yet verified on hardware.
   `Lab_decoration`, `Scan_mode`, `Log_interval_s`, `Log_minutes`,
   `Log_max_kb`).
 - Analysis reports, crypto heuristics, comparison results and the Pulse
-  Timeline moved into modules; the resident Full edition is 119,124 B (beta
+  Timeline moved into modules; the resident Full edition is 119,132 B (beta
   8: 119,428 B). Catalog: 80,553 B (beta 8: 77,782 B).
 - The Scanner's observer reports every visit (frequency, activity, reading,
   floor and dwell) to the logger and the adaptive scheduler.

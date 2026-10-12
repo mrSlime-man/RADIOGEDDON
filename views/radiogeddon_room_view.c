@@ -186,7 +186,7 @@ static void room_draw(Canvas* canvas, void* model) {
         // A rack of the real tools: Up/Down choose, OK opens.
         canvas_draw_rframe(canvas, 44, 12, 84, 40, 2);
         canvas_set_font(canvas, FontSecondary);
-        for(uint8_t i = 0; i < RadioGeddonRackCount; i++) {
+        for(int i = 0; i < RadioGeddonRackCount; i++) {
             int32_t y = 14 + i * 9;
             if(i == m->rack) {
                 canvas_draw_box(canvas, 46, y, 80, 9);

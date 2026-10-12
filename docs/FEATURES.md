@@ -33,7 +33,7 @@ settings — is the same code in both.
 | [Research Journal, Research XP, Dolphin Assistant](#research-journal-xp-and-assistant-full-edition) | — | ✓ |
 | Main menu | the tools listed directly | grouped: Scan, Receive & Record, Analyze, Database, Sessions, Settings, About |
 | [Replay](#authorized-signal-replay) | the app checks the firmware's region first and explains a refusal; then the firmware's own check | the firmware's own check only |
-| Resident code (from the built files, beta 9) | 80,553 B | 119,124 B, plus [modules](#modules-full-edition) loaded only while used |
+| Resident code (from the built files, beta 9) | 80,553 B | 119,132 B, plus [modules](#modules-full-edition) loaded only while used |
 
 The Catalog edition keeps every receiving and analysis feature the app had;
 the Full-only features are the research tools that go beyond the built-in

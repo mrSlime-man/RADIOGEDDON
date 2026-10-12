@@ -126,7 +126,7 @@ static void rg_fp_shares(const uint32_t* count, uint8_t* out) {
     for(size_t i = 0; i < RG_FP_BINS; i++)
         total += count[i];
     for(size_t i = 0; i < RG_FP_BINS; i++)
-        out[i] = total ? (uint8_t)((count[i] * 100u + total / 2u) / total) : 0;
+        out[i] = total ? (uint8_t)(((uint64_t)count[i] * 100u + total / 2u) / total) : 0;
 }
 
 void rg_fp_from_analysis(
@@ -532,7 +532,8 @@ bool rg_fp_decode(const uint8_t in[RG_FP_BYTES], RgFingerprint* fp) {
 
 void rg_fp_header_encode(uint32_t count, uint8_t out[RG_FP_HEADER_BYTES]) {
     memset(out, 0, RG_FP_HEADER_BYTES);
-    memcpy(out, RG_FP_INDEX_MAGIC, 4);
+    for(size_t i = 0; i < 4; i++)
+        out[i] = (uint8_t)RG_FP_INDEX_MAGIC[i];
     rg_fp_put16(out + 4, RG_FP_INDEX_VERSION);
     rg_fp_put16(out + 6, RG_FP_RECORD_BYTES);
     rg_fp_put32(out + 8, count);

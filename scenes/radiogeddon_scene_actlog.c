@@ -129,8 +129,8 @@ static void actlog_show_setup(RadioGeddonApp* app) {
     variable_item_list_reset(list);
     RadioGeddonSettings* s = &app->settings;
     uint8_t mi = 0;
-    for(uint8_t i = 0; i < COUNT_OF(actlog_modes); i++)
-        if(actlog_modes[i] == s->scan_mode) mi = i;
+    for(size_t i = 0; i < COUNT_OF(actlog_modes); i++)
+        if(actlog_modes[i] == s->scan_mode) mi = (uint8_t)i;
     s->scan_mode = (uint8_t)actlog_modes[mi];
     VariableItem* item =
         variable_item_list_add(list, "Schedule", COUNT_OF(actlog_modes), actlog_mode_changed, app);

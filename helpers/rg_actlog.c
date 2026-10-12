@@ -190,11 +190,10 @@ static bool rg_actlog_before(const RgActlog* log, uint8_t a, uint8_t b) {
 
 size_t rg_actlog_ranking(const RgActlog* log, uint8_t* order, size_t max) {
     uint8_t all[RG_ACTLOG_MAX_CHANNELS];
-    size_t n = log->count;
-    for(size_t i = 0; i < n; i++)
-        all[i] = (uint8_t)i;
-    for(size_t i = 1; i < n; i++) {
-        uint8_t v = all[i];
+    size_t n = log->count < RG_ACTLOG_MAX_CHANNELS ? log->count : RG_ACTLOG_MAX_CHANNELS;
+    // Insertion sort: channel i goes into the sorted first i entries.
+    for(size_t i = 0; i < n; i++) {
+        uint8_t v = (uint8_t)i;
         size_t j = i;
         while(j > 0 && rg_actlog_before(log, v, all[j - 1])) {
             all[j] = all[j - 1];

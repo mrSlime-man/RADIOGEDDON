@@ -275,8 +275,8 @@ size_t rg_journal_encode(const RgJournal* j, uint8_t* out, size_t size) {
     if(size < total) return 0;
     memset(out, 0, total);
     uint8_t* p = out;
-    memcpy(p, RG_JOURNAL_MAGIC, 4);
-    p += 4;
+    for(size_t i = 0; i < 4; i++)
+        *p++ = (uint8_t)RG_JOURNAL_MAGIC[i];
     *p++ = (uint8_t)RG_JOURNAL_VERSION;
     *p++ = (uint8_t)(RG_JOURNAL_VERSION >> 8);
     *p++ = RgJrnEventCount;

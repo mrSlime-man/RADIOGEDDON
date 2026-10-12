@@ -27,8 +27,8 @@ static const RgAdaptMode adaptive_modes[] = {RgAdaptBalanced, RgAdaptFocused, Rg
 #define ADAPTIVE_MODES COUNT_OF(adaptive_modes)
 
 static uint8_t adaptive_mode_index(RadioGeddonApp* app) {
-    for(uint8_t i = 0; i < ADAPTIVE_MODES; i++)
-        if(adaptive_modes[i] == app->settings.scan_mode) return i;
+    for(size_t i = 0; i < ADAPTIVE_MODES; i++)
+        if(adaptive_modes[i] == app->settings.scan_mode) return (uint8_t)i;
     return 0;
 }
 

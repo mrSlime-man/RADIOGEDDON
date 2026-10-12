@@ -23,7 +23,9 @@
 #include <furi.h>
 #include <gui/view.h>
 #include <storage/storage.h>
+#include <gui/scene_manager.h>
 #include "radiogeddon_progress.h"
+#include "radiogeddon_host.h"
 
 /* The plugin manager's application id and API version for every module. */
 #define RADIOGEDDON_MODULE_APPID "radiogeddon_full"
@@ -103,8 +105,6 @@ typedef struct {
 #endif
 
 #if RG_FEATURE_SESSIONS
-#include <gui/scene_manager.h>
-#include "radiogeddon_host.h"
 /* The Sessions screens, in the order of RadioGeddonSessionsScene. */
 typedef enum {
     RadioGeddonSessionsSceneList,
@@ -138,8 +138,6 @@ typedef struct {
  *   radiogeddon_lab.fal     0 Dolphin Lab room, 1 Research Journal,
  *                           2 Dolphin customization, 3 Dolphin Assistant tip
  */
-#include <gui/scene_manager.h>
-#include "radiogeddon_host.h"
 #define RADIOGEDDON_TOOL_SCENES 4u
 typedef struct {
     void (*set_host)(const RadioGeddonHost* host);

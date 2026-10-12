@@ -125,7 +125,7 @@ size_t radiogeddon_journal_achievements_text(
     }
     uint8_t level = rg_journal_level(rg_journal_xp(j));
     jcat(&t, "\nLab decorations:\n");
-    for(uint8_t d = RgDecoPlant; d < RgDecoCount; d++)
+    for(int d = RgDecoPlant; d < RgDecoCount; d++)
         jcat(
             &t,
             "%s %s (level %u)\n",
