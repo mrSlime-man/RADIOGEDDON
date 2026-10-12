@@ -71,6 +71,10 @@ jobs:
         run: make -C test lifecycle
       - name: Run offline UI tests (screens on a host 128x64 canvas, firmware fonts)
         run: make -C test ui
+      - name: Run fingerprint index tests (index files through the firmware FlipperFormat)
+        run: make -C test fpindex
+      - name: Run activity log file tests (rotation, summary, card full)
+        run: make -C test actlogfiles
       # Synthetic development previews of the drawing code: not device
       # screenshots, never for the Apps Catalog.
       - name: Keep the synthetic UI previews

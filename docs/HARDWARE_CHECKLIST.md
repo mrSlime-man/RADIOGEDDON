@@ -25,7 +25,7 @@ region's rules.
 
 | ID | Step | Pass when |
 |----|------|-----------|
-| W1 | Launch: Apps → Sub-GHz → RadioGeddon (Catalog) or RadioGeddon Full. | Catalog: the menu lists Scanner, Receive & Record, Frequency Hopper, Database, Settings, About. Full: header `RadioGeddon Full` and Scan, Receive & Record, Analyze, Database, Sessions, Settings, About (Scan holds Frequency Scanner, Range Scanner, Waterfall, Frequency Hopper, Favorites). No error in the log. |
+| W1 | Launch: Apps → Sub-GHz → RadioGeddon (Catalog) or RadioGeddon Full. | Catalog: the menu lists Scanner, Receive & Record, Frequency Hopper, Database, Settings, About. Full: header `RadioGeddon Full` and Scan, Receive & Record, Analyze, Database, Sessions, Settings, About (Scan holds Frequency Scanner, Adaptive Scanner, RF Activity Logger, Range Scanner, Waterfall, Frequency Hopper, Favorites; in the Dolphin Lab style these are on the dashboard). No error in the log. |
 | W2 | Start the receiver: Settings `433.92`, `AM 650`; open `Receive & Record`. | Header reads `433.92 AM 650`; RSSI bar reacts to a nearby remote; `Listening...` (not `No radio`). |
 | W3 | Capture a supported transmission: a fixed-code remote, or send `princeton_ref_a.sub` from a second Flipper. | `Decoded: 1` with `[1] <protocol>`; green LED blink. |
 | W4 | Review decoded info: Up/Down through the list. | Each entry shows its protocol name; newest stays selected. |
@@ -163,6 +163,35 @@ you measured (a phone's slow-motion video of the screen works).
 | D12 | Memory: note About's figures on a fresh start in Dolphin Lab and in Classic (restart between). | Note both; the difference should be small (the lab view's few hundred bytes). Compare `At app start` with beta 7 if you have it (about 15 KB less is expected: the larger resident code). |
 | D13 | Settings → UI feedback → Minimal, then Full; record, run an analysis, browse the menu, scan with a busy remote. | Minimal: a short vibration when a recording starts and when an analysis finishes. Full: also short sounds, a menu click and at most one blip every 2 s on detections. Off: as beta 7. |
 | D14 | Leave the dashboard open for 30 minutes on battery, then the same in Classic. | Note the battery drop of each; the dashboard should not drain noticeably more (it redraws only on changes). |
+
+## Research Lab (Full edition, new in beta 9)
+
+None of these is verified yet. Nothing here transmits; check that the LED
+never shows a transmission. Note the firmware, the number of recordings on
+the card, and for battery items the start and end charge.
+
+| ID | Check | Pass when |
+|----|-------|-----------|
+| RL1 | With 20 or more RAW recordings on the card (several of one remote, others of different devices): Analyze → Find Similar... on one recording of the remote. | `Fingerprinting...` with a percentage the first time (note how long it takes); a list of matches where the same remote's other recordings come first with the highest scores; a line with the number compared. |
+| RL2 | Run the same search again; then record one more capture and search again. | The second search is quick (only the new file is fingerprinted); the new recording appears in the list if it matches. `fingerprints.idx` exists in `apps_data/radiogeddon`. |
+| RL3 | On a match: `Why similar?`, `Open recording`, `Compare with this`, then `Compare all matches`. | The explanation lists agreeing and contradicting features in words; Open shows the recording's menu; Compare shows the two-file report; Compare all opens a multi-capture report. |
+| RL4 | Find Similar on a recording with no structure (record a few seconds of noise). | `No structure to match` or matches scored 30 or below — never a confident match. |
+| RL5 | Corrupt the index: copy a random file over `fingerprints.idx` with qFlipper, then search. | The search works (the index is rebuilt); no crash. |
+| RL6 | Pulse Studio on a RAW capture of a fixed-code remote: cycle every page with OK, Up/Down through frames, hold Right/Left on Wave, hold OK, move the cursor. | Frames change (`Reading frame...` at most briefly); the bits under the symbols match the Bits page; zoom changes the time scale; the marker `A` and the distance in the footer appear; Hex and Diff agree with the Bitstream Explorer on the same file. |
+| RL7 | Pulse Studio on a very long RAW recording (1 minute or more) and on a decoded (non-RAW) file. | The long one opens and moves between frames without `Not enough memory`; the decoded one says Pulse Studio needs a RAW capture. Note About's `Free now` before and after. |
+| RL8 | Protocol Discovery on captures of a PWM remote (Princeton / CAME / Nice) and a Manchester one if you have it. | A `Readings [HYPOTHESIS]` section listing more than one reading with scores and evidence; the first is the right encoding. Compare the frame length with what the stock Sub-GHz app decodes. |
+| RL9 | Scan → Adaptive Scanner → `Balanced`, `Start scanner`; press a 433.92 MHz remote repeatedly for a minute, then stop. | The header shows `Balanced` and `gap x.xs`; 433.92 MHz's share rises while it is busy; every other frequency is still measured (the cursor visits them) and the gap stays a few seconds at most. After you stop, its share falls back over time. |
+| RL10 | Adaptive Scanner in `Focused` and `Custom` (with two favorites in the scan list); `Reset learning`. | Focused favours the busy frequency more; Custom favours the favorites; Reset returns every share to even. `Standard` behaves exactly like beta 8's Scanner. |
+| RL11 | Scan → RF Activity Logger: 15 min, `Log every 10 s`, part `64 KB`; press a remote now and then; let it finish. | The running screen counts events, rows and KB; at the end a summary with the busiest frequency and coverage; `activity/activity_*.csv` with a header, one row per frequency per 10 s and an `# End` line; a `_summary.txt`. |
+| RL12 | Logger with `Until stop` for 8 hours (or overnight) on battery, screen off. | Note the battery drop and the file size; the log has rows for the whole period; no crash; Back stops it and writes the summary. |
+| RL13 | Logger with part size `64 KB` on a busy band until the parts fill (or a nearly full SD card). | It stops with a message that the log is full or the card cannot be written; existing files are never overwritten; the CSV parts are complete lines. |
+| RL14 | Pull the SD card (or reboot) during a log; open the CSV on a computer. | Every complete line is readable; the summary of a later run is unaffected; the file lacks `# End` (interrupted). |
+| RL15 | Research Journal: save a recording, analyse it, run Find Similar and Pulse Studio, export a session report; open Analyze → Research Journal. | Each event is counted once; recent events have the right times; achievements earned show (`New badge!` in the status bar until viewed). Reboot: the journal is kept. |
+| RL16 | Settings → Research XP `Off`; repeat an event; open the journal, the room's terminal and Customize. | No XP, level, badge notice or celebration; the journal still counts; every wall decoration is selectable. |
+| RL17 | Assistant: after saving a RAW capture, return to the dashboard. Wait; dismiss with long OK; record (Receive → Left). | A tip such as `Analyze it?` as the first menu row; OK opens that tool; long OK removes it for this recording; no tip ever appears while recording; a new tip takes at least 15 s. Settings → Assistant tips Off: none. |
+| RL18 | Room 2.0: every station with Left/Right; OK on Workbench, Radar, Terminal, each Rack tool, Corner; customize the dolphin (every row). | Each opens the right screen; the look changes at once on the dashboard and room and survives a restart; nothing uses the radio unless you start a tool. |
+| RL19 | Settings → Animation: `Off`, `Minimal`, `Normal`, `Full`; watch the dashboard 30 s each. | Off: a still dolphin; Minimal: only blinks and state changes; Full: more movement. Keys respond equally fast in every level. Optional: 30 min battery drop in Off vs Full. |
+| RL20 | Memory: About after a fresh start; then open and close Find Similar, Pulse Studio, Activity Logger, the journal and the room five times each; About again. | `At app start` is close to beta 8's; `Free now` returns close to `At app start` (modules unloaded); no crash. |
 
 ## Catalog edition transmit check (Official)
 

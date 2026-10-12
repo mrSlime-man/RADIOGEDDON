@@ -1,14 +1,18 @@
 /**
  * @file radiogeddon_room_view.h
- * @brief Dolphin Lab room (Full edition, a module): a small lab to walk
- * through with Left/Right.
+ * @brief Dolphin Lab room 2.0 (Full edition, a module): a small lab to walk
+ * through with Left/Right; every station opens a real tool.
  *
- * Stations: the radar (an illustration, labelled so; OK opens the real
- * Scanner), the oscilloscope (a saved RAW recording's first pulses, as
- * recorded), the antenna (OK opens Receive), the recorder (the number of
- * recordings; OK opens the Database), the terminal (counts read from the SD
- * card, firmware and version) and the gallery (Up/Down: every pose of the
- * mascot). Nothing here uses the radio; only OK on a station opens a tool.
+ * Stations: the radio workbench (the recording in context and the active
+ * session; OK opens the recording, or the Database), the oscilloscope (that
+ * recording's first pulses as stored, or another RAW chosen with OK), the
+ * radar (an illustration, labelled so; OK opens the real Scanner), the
+ * research terminal (the Research Journal's figures, firmware and version;
+ * OK opens the journal), the equipment rack (Up/Down: Scanner, Adaptive
+ * Scanner, Activity Logger, Receive; OK opens it) and the dolphin corner
+ * (the dolphin as customised, Up/Down: every pose; OK: customization).
+ * Nothing here uses the radio, and the terminal reads no folder: its
+ * figures are the journal's counts.
  */
 #pragma once
 
@@ -19,14 +23,23 @@
 typedef struct RadioGeddonRoomView RadioGeddonRoomView;
 
 typedef enum {
-    RadioGeddonRoomRadar,
+    RadioGeddonRoomWorkbench,
     RadioGeddonRoomScope,
-    RadioGeddonRoomAntenna,
-    RadioGeddonRoomRecorder,
+    RadioGeddonRoomRadar,
     RadioGeddonRoomTerminal,
-    RadioGeddonRoomGallery,
+    RadioGeddonRoomRack,
+    RadioGeddonRoomCorner,
     RadioGeddonRoomCount,
 } RadioGeddonRoomStation;
+
+/* The equipment rack's tools (RadioGeddonRoomRack). */
+typedef enum {
+    RadioGeddonRackScanner,
+    RadioGeddonRackAdaptive,
+    RadioGeddonRackLogger,
+    RadioGeddonRackReceive,
+    RadioGeddonRackCount,
+} RadioGeddonRackTool;
 
 /* OK on @p station. */
 typedef void (*RadioGeddonRoomCallback)(uint8_t station, void* context);
@@ -61,17 +74,32 @@ void radiogeddon_room_view_set_scope(
     const RadioGeddonRoomTrace* scope);
 
 #include <storage/storage.h>
-/** Count the recordings, saved reports and sessions on the SD card, and
- * show them with firmware @p fw (version_get_version) and the app's version. */
+#include "../helpers/rg_journal.h"
+/** The research terminal: the journal's level (with Research XP on, @p xp_on)
+ * and counts, firmware @p fw (version_get_version) and the app's version.
+ * Reads nothing from the card. */
 void radiogeddon_room_load_terminal(
     RadioGeddonRoomView* instance,
-    Storage* storage,
+    const RgJournal* journal,
+    bool xp_on,
     const char* fw);
+
+/** The workbench: the recording in context and the active session ("" none). */
+void radiogeddon_room_view_set_workbench(
+    RadioGeddonRoomView* instance,
+    const char* recording,
+    const char* session);
+
+/** The lab decoration shown in the corner (RgDecoration, 0: none). */
+void radiogeddon_room_view_set_decoration(RadioGeddonRoomView* instance, uint8_t decoration);
+
+/** The rack's selected tool (RadioGeddonRackTool). */
+uint8_t radiogeddon_room_view_get_rack(RadioGeddonRoomView* instance);
 /** Read the first RAW samples of @p path into the oscilloscope. */
 void radiogeddon_room_load_scope(RadioGeddonRoomView* instance, Storage* storage, const char* path);
 
 uint8_t radiogeddon_room_view_get_station(RadioGeddonRoomView* instance);
-/** The pose shown in the gallery (RgMascotState). */
+/** The pose shown in the corner's gallery (RgMascotState). */
 uint8_t radiogeddon_room_view_get_gallery(RadioGeddonRoomView* instance);
 
 /** Advance to @p now with the dolphin's @p frame; redraws only on a change. */

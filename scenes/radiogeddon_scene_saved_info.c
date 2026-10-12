@@ -14,6 +14,8 @@ typedef enum {
     SavedInfoIndexRename,
     SavedInfoIndexReport,
     SavedInfoIndexDelete,
+    SavedInfoIndexSimilar, // Full edition
+    SavedInfoIndexStudio, // Full edition
 } SavedInfoIndex;
 
 /* Custom events for the delete confirmation (offset clear of menu indices). */
@@ -97,11 +99,23 @@ static void radiogeddon_scene_saved_info_show_menu(RadioGeddonApp* app) {
     }
     submenu_add_item(
         submenu,
-        "Unknown Protocol Analysis",
+        RG_EDITION_FULL ? "Smart Protocol Discovery" : "Unknown Protocol Analysis",
         SavedInfoIndexUnknown,
         radiogeddon_scene_saved_info_cb,
         app);
+#if RG_FEATURE_FINGERPRINT
+    submenu_add_item(
+        submenu,
+        "Find Similar Signals",
+        SavedInfoIndexSimilar,
+        radiogeddon_scene_saved_info_cb,
+        app);
+#endif
     if(app->loaded.kind == RadioGeddonSignalKindRaw) {
+#if RG_FEATURE_PULSE_STUDIO
+        submenu_add_item(
+            submenu, "Pulse Studio", SavedInfoIndexStudio, radiogeddon_scene_saved_info_cb, app);
+#endif
         submenu_add_item(
             submenu,
             "Pulse Timeline",
@@ -166,6 +180,15 @@ static void radiogeddon_scene_saved_info_show_confirm(RadioGeddonApp* app) {
 
 void radiogeddon_scene_saved_info_on_enter(void* context) {
     RadioGeddonApp* app = context;
+#if RG_FEATURE_JOURNAL
+    // The recording opened is the one in context for the workflow.
+    if(!app->file_damaged) {
+        radiogeddon_research_set_context(
+            app,
+            furi_string_get_cstr(app->file_path),
+            app->loaded.kind == RadioGeddonSignalKindRaw);
+    }
+#endif
     radiogeddon_scene_saved_info_set_mode(app, SavedInfoStateMenu);
     radiogeddon_scene_saved_info_show_menu(app);
 }
@@ -192,6 +215,19 @@ bool radiogeddon_scene_saved_info_on_event(void* context, SceneManagerEvent even
             scene_manager_next_scene(app->scene_manager, RadioGeddonSceneTimeline);
             consumed = true;
             break;
+#if RG_FEATURE_FINGERPRINT
+        case SavedInfoIndexSimilar:
+            scene_manager_set_scene_state(app->scene_manager, RadioGeddonSceneSimilar, 0);
+            scene_manager_next_scene(app->scene_manager, RadioGeddonSceneSimilar);
+            consumed = true;
+            break;
+#endif
+#if RG_FEATURE_PULSE_STUDIO
+        case SavedInfoIndexStudio:
+            scene_manager_next_scene(app->scene_manager, RadioGeddonSceneStudio);
+            consumed = true;
+            break;
+#endif
 #if RG_FEATURE_BITSTREAM
         case SavedInfoIndexBitstream:
             scene_manager_next_scene(app->scene_manager, RadioGeddonSceneBitstream);

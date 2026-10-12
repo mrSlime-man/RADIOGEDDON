@@ -52,6 +52,7 @@ typedef struct {
     char status_left[24];
     char status_right[20];
     char readout[24];
+    uint8_t decoration; // RgDecoration on the wall
     // Card
     char title[32];
     char text[RADIOGEDDON_LAB_TEXT_MAX];
@@ -225,6 +226,8 @@ static void lab_draw_home_dolphin(Canvas* canvas, LabModel* m) {
     canvas_draw_dot(canvas, 2, 3);
     canvas_draw_dot(canvas, 7, 3);
     canvas_draw_frame(canvas, 3, 0, 3, 2);
+    // The decoration (unlocked by Research level) hangs on the wall.
+    rg_draw_decoration(canvas, 36, 1, m->decoration);
     rg_draw_mascot(canvas, 2, 9, f, HOME_DESK_Y, false);
     lab_draw_desk(canvas, 0, HOME_DESK_Y, HOME_PANEL_W, HOME_STATUS_Y);
     rg_draw_prop(canvas, 33, HOME_DESK_Y, f->prop, f->prop_phase, f->progress);
@@ -550,6 +553,10 @@ uint8_t radiogeddon_lab_view_get_selected(RadioGeddonLabView* instance) {
     uint8_t sel = 0;
     with_view_model(instance->view, LabModel * m, { sel = m->selected; }, false);
     return sel;
+}
+
+void radiogeddon_lab_view_set_decoration(RadioGeddonLabView* instance, uint8_t decoration) {
+    with_view_model(instance->view, LabModel * m, { m->decoration = decoration; }, false);
 }
 
 void radiogeddon_lab_view_set_status(

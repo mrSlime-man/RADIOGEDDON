@@ -47,6 +47,8 @@
 /* A low at least this many times Te (and >= RG_ANALYZER_MIN_GAP_US) ends a frame. */
 #define RG_ANALYZER_GAP_FACTOR        7
 #define RG_ANALYZER_MIN_GAP_US        1000u
+/* A populous low cluster up to this many Te is data, not a frame gap. */
+#define RG_ANALYZER_DATA_MAX_TE       20u
 /* A high at least this many times Te also ends a frame (and is not data). */
 #define RG_ANALYZER_HIGH_GAP_FACTOR   14
 /* Timing peaks below this are receiver glitches, never Te or a bit width. The
@@ -95,6 +97,9 @@ typedef struct {
     uint32_t te_us;
     uint32_t pwm_short_us; /* two high-pulse widths, 0 when highs are not bimodal */
     uint32_t pwm_long_us;
+    /* PWM bit period (pulse + gap), measured from the pairing of the two
+     * pulse widths with the two gap widths; 0: pwm_short_us + pwm_long_us. */
+    uint32_t pwm_period_us;
     uint32_t ppm_high_us; /* dominant high-pulse width */
     uint32_t ppm_short_us; /* two in-frame low widths, 0 when lows are not bimodal */
     uint32_t ppm_long_us;
@@ -123,6 +128,43 @@ typedef struct {
     uint16_t repeat_bits; /* bits decoded before cutting */
     uint8_t bits[RG_ANALYZER_MAX_BITS / 8];
 } RgFrame;
+
+/* ---- hypotheses: every reading that fits, with its evidence ------------ */
+
+#define RG_ANALYZER_MAX_HYP 4
+
+/* Evidence flags of a hypothesis (RgHypothesis.support / .against). */
+typedef enum {
+    RgHypFitHigh = 1u << 0, /* grammar fit >= 80% */
+    RgHypLenStable = 1u << 1, /* most frames decode to one length */
+    RgHypTwoWidths = 1u << 2, /* the two widths the code needs are present */
+    RgHypPairRule = 1u << 3, /* pulses pair with gaps by one rule */
+    RgHypPairsMixed = 1u << 4, /* pulses pair with gaps both ways */
+    RgHypFitLow = 1u << 5, /* grammar fit < 60% */
+    RgHypLenVaries = 1u << 6, /* frame lengths disagree */
+    RgHypShort = 1u << 7, /* fewer than 8 bits */
+    RgHypSameTiming = 1u << 8, /* timing cannot tell it from another reading */
+    RgHypNoWidths = 1u << 9, /* the widths the code needs are missing */
+    RgHypFewFrames = 1u << 10, /* fewer than two frames fit */
+    RgHypNoRival = 1u << 11, /* no other reading could be tested (widths missing) */
+} RgHypEvidence;
+#define RG_HYP_EVIDENCE_COUNT 12
+
+/** One reading of the signal. A statistical fit, never an identification. */
+typedef struct {
+    uint8_t encoding; /* RgEncoding */
+    uint8_t differential; /* differential Manchester (same timing as Manchester) */
+    uint8_t fit; /* grammar fit of the voting frames, 0..100 */
+    uint8_t score; /* plausibility 0..95, the chosen reading first */
+    uint16_t bits; /* most common frame length under this reading */
+    uint16_t frames_len; /* frames with that length */
+    uint16_t frames; /* frames that fit this reading */
+    uint16_t support; /* RgHypEvidence flags for it */
+    uint16_t against; /* RgHypEvidence flags against it, or making it uncertain */
+} RgHypothesis;
+
+/** Short text of one evidence flag ("fit >= 80%", "lengths disagree", ...). */
+const char* rg_hyp_evidence_name(RgHypEvidence ev);
 
 /** Frames sharing one bit pattern. */
 typedef struct {
@@ -187,6 +229,12 @@ typedef struct {
     size_t id_start; /* longest constant run when some bits change */
     size_t id_len; /* 0 when there is no ID candidate */
 
+    /* Every reading with a fit of at least 30%, best first (the chosen
+     * encoding leads); differential Manchester is listed with Manchester
+     * because their timing is the same. Filled by rg_analyzer_hypotheses. */
+    RgHypothesis hypotheses[RG_ANALYZER_MAX_HYP];
+    size_t hypothesis_count;
+
     RgFrame frames[RG_ANALYZER_MAX_FRAMES];
 } RgAnalysis;
 
@@ -221,6 +269,11 @@ typedef struct {
     uint32_t pair_same; /* 1+1 or 2+2 Te */
     uint32_t pair_opposite; /* 1+2 or 2+1 Te */
     uint32_t pair_long; /* pairs with a 2 Te pulse */
+    /* Pass 2: per reading, the frame lengths of the frames that fit it (the
+     * four most frequent kept) and how many fit. */
+    uint16_t hyp_len[RgEncodingCount][4];
+    uint16_t hyp_len_n[RgEncodingCount][4];
+    uint16_t hyp_frames[RgEncodingCount];
 } RgAnalyzer;
 
 /** Reset @p a and start pass 1. */
@@ -235,6 +288,13 @@ void rg_analyzer_feed(RgAnalyzer* a, const int32_t* samples, size_t count);
  * and a->result is final.
  */
 bool rg_analyzer_next_pass(RgAnalyzer* a);
+
+/**
+ * After the last pass: fill a->result.hypotheses, every reading that fits
+ * with its evidence (only the reports need them, so it is a separate call
+ * and the screens that do not show them do not carry its code).
+ */
+void rg_analyzer_hypotheses(RgAnalyzer* a);
 
 /** Convenience: run every pass over an in-memory buffer (heap-allocates). */
 void rg_analyzer_run(const int32_t* samples, size_t count, RgAnalysis* out);
@@ -257,6 +317,31 @@ size_t rg_analyzer_decode(
     char* bits,
     size_t max_bits,
     int* fit_pct);
+
+/* Pulse-to-bit map entries (rg_analyzer_decode_map): the index, within the
+ * samples decoded, of the sample where the bit's symbol begins, and a flag
+ * when that symbol did not fit the encoding's grammar (or follows a broken
+ * one), so the bit is an uncertain reading. Indices past RG_BITMAP_INDEX
+ * saturate (a frame is at most RG_ANALYZER_FRAME_SAMPLES samples). */
+#define RG_BITMAP_UNSURE 0x8000u
+#define RG_BITMAP_INDEX  0x7FFFu
+
+/**
+ * rg_analyzer_decode, also writing for each bit where its symbol begins in
+ * @p samples (@p map, max_bits entries, may be NULL). A bit's symbol spans
+ * from its entry to the next bit's entry (PWM/PPM: one pulse and one gap;
+ * Manchester: two half-cells). This is the decoder's own reading, nothing
+ * more: entries flagged RG_BITMAP_UNSURE did not fit the grammar.
+ */
+size_t rg_analyzer_decode_map(
+    RgEncoding enc,
+    const RgDecodeParams* params,
+    const int32_t* samples,
+    size_t count,
+    char* bits,
+    size_t max_bits,
+    int* fit_pct,
+    uint16_t* map);
 
 /**
  * Best alignment of bit string @p b against @p a, shifting by up to

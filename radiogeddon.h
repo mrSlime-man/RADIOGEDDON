@@ -41,6 +41,7 @@
 #include "helpers/rg_multi.h"
 #include "helpers/radiogeddon_sessions.h"
 #include "helpers/radiogeddon_ui.h"
+#include "helpers/radiogeddon_research.h"
 #include "views/radiogeddon_scanner_view.h"
 #include "views/radiogeddon_receiver_view.h"
 #include "views/radiogeddon_timeline_view.h"
@@ -71,6 +72,7 @@ typedef enum {
     RadioGeddonViewBits, // Full: added only while the Bitstream Explorer is open
     RadioGeddonViewLab, // Full: dashboard and cards, while the style is not Classic
     RadioGeddonViewRoom, // Full: added only while the Dolphin Lab room is open
+    RadioGeddonViewStudio, // Full: added only while Pulse Studio is open
 } RadioGeddonView;
 
 /** What a frequency typed on the number keyboard is for. */
@@ -233,6 +235,39 @@ struct RadioGeddonApp {
     RadioGeddonUi ui;
     // The Dolphin Lab room: its screen (from a module) while it is open.
     RadioGeddonRoomView* room_view;
+#endif
+#if RG_EDITION_FULL
+    // Tool screens built into modules (scenes/radiogeddon_scene_tools.c): at
+    // most two loaded, each kept only while one of its screens is shown and
+    // unloaded on the next tick after.
+    struct {
+        RadioGeddonModule* module;
+        const void* api;
+        const char* file;
+        bool shown;
+    } tool[2];
+#endif
+#if RG_FEATURE_JOURNAL
+    // Research workflow: the recording in context, the journal, the tips.
+    RadioGeddonResearch research;
+#endif
+#if RG_FEATURE_PULSE_STUDIO
+    // Pulse Studio: its screen (from a module) and the open file, while it is open.
+    struct RadioGeddonStudioView* studio_view;
+    RadioGeddonRawFile* studio_file;
+#endif
+#if RG_FEATURE_FINGERPRINT
+    // Find Similar Signals: the last results, kept while their screens are
+    // on the stack (freed at the main menu).
+    struct RadioGeddonSimilar* similar;
+#endif
+#if RG_FEATURE_ADAPTIVE_SCAN
+    // The Scanner's schedule for its next start (RgAdaptMode).
+    uint8_t scan_mode_run;
+#endif
+#if RG_FEATURE_ACTIVITY_LOG
+    // RF Activity Logger: its state while it runs (module memory).
+    void* actlog;
 #endif
 };
 

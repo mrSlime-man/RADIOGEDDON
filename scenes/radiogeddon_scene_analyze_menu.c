@@ -2,9 +2,11 @@
 
 #if RG_EDITION_FULL
 
-// Full edition: Analyze, the tools that work on saved recordings. Each asks
-// for a file of the signals folder and opens the tool on it; Back returns
-// here. "Open recording" shows a file's whole menu, as the Database does.
+// Full edition: Analyze, the tools that work on saved recordings. The
+// recording in context (the last saved or opened) comes first, so the
+// workflow continues without picking it again; every tool below asks for a
+// file of the signals folder and opens on it. Back returns here. "Open
+// recording" shows a file's whole menu, as the Database does.
 
 typedef enum {
     AnalyzeMenuOpen,
@@ -13,6 +15,10 @@ typedef enum {
     AnalyzeMenuUnknown,
     AnalyzeMenuDecode,
     AnalyzeMenuTimeline,
+    AnalyzeMenuStudio,
+    AnalyzeMenuSimilar,
+    AnalyzeMenuJournal,
+    AnalyzeMenuCurrent, // the recording in context
 } AnalyzeMenuIndex;
 
 static void radiogeddon_scene_analyze_menu_cb(void* context, uint32_t index) {
@@ -25,8 +31,26 @@ void radiogeddon_scene_analyze_menu_on_enter(void* context) {
     Submenu* submenu = app->submenu;
     submenu_reset(submenu);
     submenu_set_header(submenu, "Analyze recordings");
+#if RG_FEATURE_JOURNAL
+    FuriString* ctx = furi_string_alloc();
+    if(radiogeddon_research_context_path(app, ctx)) {
+        char line[80];
+        snprintf(line, sizeof(line), "Current: %s", app->research.ctx_name);
+        submenu_add_item(
+            submenu, line, AnalyzeMenuCurrent, radiogeddon_scene_analyze_menu_cb, app);
+    }
+    furi_string_free(ctx);
+#endif
     submenu_add_item(
         submenu, "Open recording...", AnalyzeMenuOpen, radiogeddon_scene_analyze_menu_cb, app);
+#if RG_FEATURE_PULSE_STUDIO
+    submenu_add_item(
+        submenu, "Pulse Studio...", AnalyzeMenuStudio, radiogeddon_scene_analyze_menu_cb, app);
+#endif
+#if RG_FEATURE_FINGERPRINT
+    submenu_add_item(
+        submenu, "Find Similar...", AnalyzeMenuSimilar, radiogeddon_scene_analyze_menu_cb, app);
+#endif
     submenu_add_item(
         submenu,
         "Bitstream Explorer...",
@@ -36,7 +60,11 @@ void radiogeddon_scene_analyze_menu_on_enter(void* context) {
     submenu_add_item(
         submenu, "Multi-Capture Compare", AnalyzeMenuMulti, radiogeddon_scene_analyze_menu_cb, app);
     submenu_add_item(
-        submenu, "Unknown Analysis...", AnalyzeMenuUnknown, radiogeddon_scene_analyze_menu_cb, app);
+        submenu,
+        "Protocol Discovery...",
+        AnalyzeMenuUnknown,
+        radiogeddon_scene_analyze_menu_cb,
+        app);
     submenu_add_item(
         submenu,
         "Decode with Firmware...",
@@ -45,6 +73,10 @@ void radiogeddon_scene_analyze_menu_on_enter(void* context) {
         app);
     submenu_add_item(
         submenu, "Pulse Timeline...", AnalyzeMenuTimeline, radiogeddon_scene_analyze_menu_cb, app);
+#if RG_FEATURE_JOURNAL
+    submenu_add_item(
+        submenu, "Research Journal", AnalyzeMenuJournal, radiogeddon_scene_analyze_menu_cb, app);
+#endif
     submenu_set_selected_item(
         submenu, scene_manager_get_scene_state(app->scene_manager, RadioGeddonSceneAnalyzeMenu));
     view_dispatcher_switch_to_view(app->view_dispatcher, RadioGeddonViewSubmenu);
@@ -56,8 +88,17 @@ typedef enum {
     AnalyzePickFailed, // a message is shown
 } AnalyzePick;
 
-/* Ask for a recording and read its metadata into app->loaded. */
-static AnalyzePick radiogeddon_scene_analyze_menu_pick(RadioGeddonApp* app) {
+/* Ask for a recording (or take the one in context when @p current) and read
+ * its metadata into app->loaded. */
+static AnalyzePick radiogeddon_scene_analyze_menu_pick(RadioGeddonApp* app, bool current) {
+#if RG_FEATURE_JOURNAL
+    if(current) {
+        if(!radiogeddon_research_context_path(app, app->file_path)) return AnalyzePickCancelled;
+        goto load;
+    }
+#else
+    UNUSED(current);
+#endif
     DialogsFileBrowserOptions options;
     dialog_file_browser_set_basic_options(&options, RADIOGEDDON_SUB_EXTENSION, NULL);
     options.base_path = RADIOGEDDON_SIGNALS_FOLDER;
@@ -67,6 +108,9 @@ static AnalyzePick radiogeddon_scene_analyze_menu_pick(RadioGeddonApp* app) {
     bool chosen = dialog_file_browser_show(app->dialogs, app->file_path, start, &options);
     furi_string_free(start);
     if(!chosen) return AnalyzePickCancelled;
+#if RG_FEATURE_JOURNAL
+load:
+#endif
     radiogeddon_scene_show_busy(app, "Opening...");
     radiogeddon_loaded_signal_reset(&app->loaded);
     radiogeddon_loaded_signal_init(&app->loaded);
@@ -78,28 +122,46 @@ static AnalyzePick radiogeddon_scene_analyze_menu_pick(RadioGeddonApp* app) {
         radiogeddon_scene_show_message(app, "Cannot open", "Not a readable\n.sub file.");
         return AnalyzePickFailed;
     }
+#if RG_FEATURE_JOURNAL
+    // The recording picked is now the one in context.
+    radiogeddon_research_set_context(
+        app, furi_string_get_cstr(app->file_path), app->loaded.kind == RadioGeddonSignalKindRaw);
+#endif
     return AnalyzePickOk;
 }
 
 bool radiogeddon_scene_analyze_menu_on_event(void* context, SceneManagerEvent event) {
     RadioGeddonApp* app = context;
-    if(event.type != SceneManagerEventTypeCustom || event.event > AnalyzeMenuTimeline)
-        return false;
+    if(event.type != SceneManagerEventTypeCustom || event.event > AnalyzeMenuCurrent) return false;
     scene_manager_set_scene_state(app->scene_manager, RadioGeddonSceneAnalyzeMenu, event.event);
     if(event.event == AnalyzeMenuMulti) {
         scene_manager_set_scene_state(app->scene_manager, RadioGeddonSceneMulti, 0);
         scene_manager_next_scene(app->scene_manager, RadioGeddonSceneMulti);
         return true;
     }
-    AnalyzePick pick = radiogeddon_scene_analyze_menu_pick(app);
+#if RG_FEATURE_JOURNAL
+    if(event.event == AnalyzeMenuJournal) {
+        scene_manager_next_scene(app->scene_manager, RadioGeddonSceneJournal);
+        return true;
+    }
+#endif
+    bool current = event.event == AnalyzeMenuCurrent;
+    AnalyzePick pick = radiogeddon_scene_analyze_menu_pick(app, current);
     if(pick == AnalyzePickCancelled) radiogeddon_scene_analyze_menu_on_enter(app);
     if(pick != AnalyzePickOk) return true;
     bool raw = app->loaded.kind == RadioGeddonSignalKindRaw;
     switch(event.event) {
     case AnalyzeMenuOpen:
+    case AnalyzeMenuCurrent:
         scene_manager_set_scene_state(app->scene_manager, RadioGeddonSceneSavedInfo, 0);
         scene_manager_next_scene(app->scene_manager, RadioGeddonSceneSavedInfo);
         break;
+#if RG_FEATURE_FINGERPRINT
+    case AnalyzeMenuSimilar:
+        scene_manager_set_scene_state(app->scene_manager, RadioGeddonSceneSimilar, 0);
+        scene_manager_next_scene(app->scene_manager, RadioGeddonSceneSimilar);
+        break;
+#endif
     case AnalyzeMenuUnknown:
         scene_manager_next_scene(app->scene_manager, RadioGeddonSceneUnknown);
         break;
@@ -113,6 +175,10 @@ bool radiogeddon_scene_analyze_menu_on_event(void* context, SceneManagerEvent ev
             scene_manager_next_scene(app->scene_manager, RadioGeddonSceneBitstream);
         } else if(event.event == AnalyzeMenuDecode) {
             scene_manager_next_scene(app->scene_manager, RadioGeddonSceneDecode);
+#if RG_FEATURE_PULSE_STUDIO
+        } else if(event.event == AnalyzeMenuStudio) {
+            scene_manager_next_scene(app->scene_manager, RadioGeddonSceneStudio);
+#endif
         } else {
             scene_manager_next_scene(app->scene_manager, RadioGeddonSceneTimeline);
         }

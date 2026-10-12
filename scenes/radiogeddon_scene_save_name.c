@@ -62,12 +62,21 @@ static void
         const char* p = furi_string_get_cstr(path);
         const char* slash = strrchr(p, '/');
         furi_string_cat_str(app->temp_str, slash ? slash + 1 : p);
+#if RG_FEATURE_JOURNAL
+        // The new recording is the one in context: tips and tools use it.
+        radiogeddon_research_set_context(app, p, app->save_is_raw);
+        radiogeddon_research_record(app, RgJrnCapture, 1, slash ? slash + 1 : p);
+#endif
 #if RG_FEATURE_SESSIONS
         // The active session collects what is saved here.
         char session[RG_SESSION_NAME_MAX];
         if(radiogeddon_session_capture_saved(
                app->storage, slash ? slash + 1 : p, session, sizeof(session))) {
             furi_string_cat_printf(app->temp_str, "\n+ session %s", session);
+#if RG_FEATURE_JOURNAL
+            radiogeddon_research_session_added(app);
+            radiogeddon_research_step(app, p, RadioGeddonStepInSession, 0);
+#endif
         }
 #endif
         if(app->save_is_raw) {

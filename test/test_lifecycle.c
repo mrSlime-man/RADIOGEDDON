@@ -111,6 +111,77 @@ static void test_scanner_cycles(void) {
     CHECK(stub_live_bytes == base_bytes && stub_live_blocks == base_blocks, "scanner freed fully");
 }
 
+static _Atomic uint32_t g_observed;
+static _Atomic uint32_t g_observed_active[RADIOGEDDON_SCANNER_MAX_CHANNELS];
+
+static void scanner_observe(
+    void* context,
+    size_t index,
+    bool active,
+    bool started,
+    int16_t rssi_dbm,
+    int16_t floor_dbm,
+    uint16_t dwell_ms,
+    uint32_t now_ms) {
+    (void)context;
+    (void)started;
+    (void)rssi_dbm;
+    (void)floor_dbm;
+    (void)dwell_ms;
+    (void)now_ms;
+    atomic_fetch_add(&g_observed, 1);
+    if(active && index < RADIOGEDDON_SCANNER_MAX_CHANNELS)
+        atomic_fetch_add(&g_observed_active[index], 1);
+}
+
+/* Beta 9: the adaptive modes and the visit observer, started and stopped
+ * repeatedly, with mode changes in between (the schedule is allocated only
+ * in an adaptive mode and freed with the scanner). */
+static void test_scanner_adaptive(void) {
+    printf("test_scanner_adaptive\n");
+    size_t base_bytes = stub_live_bytes, base_blocks = stub_live_blocks;
+    uint32_t list[8];
+    for(size_t i = 0; i < 8; i++)
+        list[i] = 433000000 + i * 25000;
+    RadioGeddonScanner* sc = radiogeddon_scanner_alloc(fake_radio);
+    radiogeddon_scanner_configure(sc, list, 8, 1, 10, false);
+    radiogeddon_scanner_set_observer(sc, scanner_observe, NULL);
+    atomic_store(&fake_active_hz, 0);
+    for(int c = 0; c < CYCLES; c++) {
+        radiogeddon_scanner_set_mode(sc, (uint8_t)(c % RgAdaptModeCount));
+        radiogeddon_scanner_start(sc);
+        furi_delay_ms(2);
+        radiogeddon_scanner_stop(sc);
+    }
+    CHECK(atomic_load(&fake_scan_sessions) == 0, "every adaptive session closed");
+    CHECK(atomic_load(&g_observed) > 0, "the observer saw visits");
+
+    // Focused on a busy channel 3: it gets the most visits, all get some.
+    radiogeddon_scanner_set_mode(sc, RgAdaptFocused);
+    radiogeddon_scanner_reset_learning(sc);
+    atomic_store(&fake_active_hz, list[3]);
+    radiogeddon_scanner_start(sc);
+    furi_delay_ms(400);
+    radiogeddon_scanner_stop(sc);
+    atomic_store(&fake_active_hz, 0);
+    RadioGeddonScannerSnapshot* snap = malloc(sizeof(RadioGeddonScannerSnapshot));
+    radiogeddon_scanner_snapshot(sc, snap);
+    CHECK(snap->mode == RgAdaptFocused, "mode in the snapshot");
+    bool most = true, all = true;
+    for(size_t i = 0; i < 8; i++) {
+        if(i != 3 && snap->share[i] > snap->share[3]) most = false;
+        if(snap->share[i] == 0) all = false;
+    }
+    CHECK(most, "the busy channel gets the most visits");
+    CHECK(all, "every channel still visited");
+    CHECK(atomic_load(&g_observed_active[3]) > 0, "observer saw the activity");
+    free(snap);
+    radiogeddon_scanner_set_observer(sc, NULL, NULL);
+    radiogeddon_scanner_set_mode(sc, RgAdaptStandard);
+    radiogeddon_scanner_free(sc);
+    CHECK(stub_live_bytes == base_bytes && stub_live_blocks == base_blocks, "freed fully");
+}
+
 static void test_rangescan_cycles(void) {
     printf("test_rangescan_cycles\n");
     size_t base_bytes = stub_live_bytes, base_blocks = stub_live_blocks;
@@ -320,6 +391,7 @@ static void test_hopper_cycles(void) {
 
 int main(void) {
     test_scanner_cycles();
+    test_scanner_adaptive();
     test_rangescan_cycles();
     test_waterfall_cycles();
     test_hopper_cycles();

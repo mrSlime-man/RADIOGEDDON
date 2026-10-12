@@ -13,20 +13,6 @@
 /* Kept free for a session, its save buffers and a recording's file menu. */
 #define SESSIONS_WORK         (sizeof(RgSession) + RADIOGEDDON_SESSION_SCRATCH + 6u * 1024u)
 
-static const RadioGeddonHost radiogeddon_sessions_host = {
-    .show_message = radiogeddon_scene_show_message,
-    .show_confirm = radiogeddon_scene_show_confirm,
-    .show_busy = radiogeddon_scene_show_busy,
-    .show_progress = radiogeddon_scene_show_progress,
-    .progress = radiogeddon_scene_progress,
-    .progress_end = radiogeddon_scene_progress_end,
-    .module_load = radiogeddon_scene_module_load,
-    .module_unload = radiogeddon_scene_module_unload,
-    .multi_add = radiogeddon_multi_add,
-    .multi_clear = radiogeddon_multi_clear,
-    .multi_memory = radiogeddon_scene_multi_memory,
-};
-
 void radiogeddon_scene_sessions_release(RadioGeddonApp* app) {
     free(app->session_list);
     app->session_list = NULL;
@@ -46,7 +32,7 @@ static const RadioGeddonSessionsModule* radiogeddon_sessions_api(RadioGeddonApp*
             radiogeddon_module_error(status, &app->message_header, &app->message_text);
             return NULL;
         }
-        ((const RadioGeddonSessionsModule*)app->sessions_api)->set_host(&radiogeddon_sessions_host);
+        ((const RadioGeddonSessionsModule*)app->sessions_api)->set_host(&radiogeddon_host_table);
         radiogeddon_memdiag_sample("Sessions");
     }
     return app->sessions_api;

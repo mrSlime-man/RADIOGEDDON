@@ -53,8 +53,8 @@ static int g_checks = 0;
 /* Totals the engine reached on these 50 captures when they were set. Raise
  * them when the engine improves; a drop is a regression. */
 #define MIN_TE_OK     50
-#define MIN_FAMILY_OK 43
-#define MIN_BITS_OK   35
+#define MIN_FAMILY_OK 48
+#define MIN_BITS_OK   42
 
 typedef struct {
     const char* capture; /* as subghz_test.c names it */
@@ -239,6 +239,7 @@ static bool analyse(const char* path, RgAnalyzer* a, int32_t** samples, size_t* 
         again = rg_analyzer_next_pass(a);
         if(again) rg_raw_reader_rewind(r);
     } while(again);
+    rg_analyzer_hypotheses(a);
     bool ok = r->any_data && !r->corrupt;
     free(r);
     fclose(f);
@@ -256,6 +257,8 @@ int main(void) {
     RgAnalyzer* a = malloc(sizeof(RgAnalyzer));
     RgAnalysis* mem = malloc(sizeof(RgAnalysis));
     unsigned te_ok = 0, family_ok = 0, bits_ok = 0, unknown = 0, analysed = 0;
+    unsigned hyp_family = 0, hyp_bits = 0, conf_right = 0, conf_wrong = 0, n_right = 0,
+             n_wrong = 0;
 
     printf(
         "\n%-26s %-12s %-16s %-16s %s\n",
@@ -307,6 +310,31 @@ int main(void) {
         bool family = r->encoding != RgEncodingUnknown &&
                       (r->encoding == RgEncodingManchester) == t.manchester;
         bool bits = r->bit_count && diff((unsigned)r->bit_count, t.min_bits) <= 1;
+        /* Hypotheses: is the decoder's family, and its length, among them? */
+        bool in_hyp = false, len_in_hyp = false;
+        for(size_t h = 0; h < r->hypothesis_count; h++) {
+            const RgHypothesis* x = &r->hypotheses[h];
+            bool fam = (x->encoding == RgEncodingManchester) == t.manchester;
+            if(fam) in_hyp = true;
+            if(fam && x->bits && diff(x->bits, t.min_bits) <= 1) len_in_hyp = true;
+        }
+        hyp_family += in_hyp;
+        hyp_bits += len_in_hyp || bits;
+        if(r->encoding != RgEncodingUnknown) {
+            if(family) {
+                conf_right += (unsigned)r->encoding_confidence;
+                n_right++;
+            } else {
+                conf_wrong += (unsigned)r->encoding_confidence;
+                n_wrong++;
+            }
+        }
+        snprintf(msg, sizeof(msg), "%s: the chosen reading leads the hypotheses", p->capture);
+        CHECK(
+            r->encoding == RgEncodingUnknown ||
+                (r->hypothesis_count > 0 && r->hypotheses[0].encoding == r->encoding &&
+                 !r->hypotheses[0].differential),
+            msg);
         te_ok += te;
         family_ok += family;
         bits_ok += bits;
@@ -333,6 +361,19 @@ int main(void) {
         family_ok,
         unknown,
         bits_ok);
+    printf(
+        "Hypotheses: the decoder's family is among them for %u, with its frame length for %u\n"
+        "Confidence: mean %u when the family is right (%u), %u when wrong (%u)\n",
+        hyp_family,
+        hyp_bits,
+        n_right ? conf_right / n_right : 0,
+        n_right,
+        n_wrong ? conf_wrong / n_wrong : 0,
+        n_wrong);
+    CHECK(hyp_family >= family_ok, "hypotheses include every right chosen family");
+    CHECK(
+        n_wrong == 0 || conf_wrong / n_wrong < conf_right / n_right,
+        "confidence is lower when the family is wrong");
     CHECK(analysed == PAIR_COUNT, "every paired capture analysed");
     CHECK(te_ok >= MIN_TE_OK, "Te score did not drop");
     CHECK(family_ok >= MIN_FAMILY_OK, "encoding family score did not drop");

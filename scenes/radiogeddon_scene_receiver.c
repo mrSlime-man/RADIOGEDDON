@@ -204,6 +204,22 @@ bool radiogeddon_scene_receiver_on_event(void* context, SceneManagerEvent event)
         switch(event.event) {
         case ReceiverCustomDecoded:
             radiogeddon_scene_receiver_refresh_history(app);
+#if RG_FEATURE_JOURNAL
+            {
+                // A firmware decoder identified a protocol: the journal keeps its
+                // name (distinct protocols only count towards progress).
+                char proto[RG_JOURNAL_PROTO_LEN] = "";
+                furi_mutex_acquire(app->history_mutex, FuriWaitForever);
+                size_t count = radiogeddon_history_count(app->history);
+                if(count)
+                    strlcpy(
+                        proto,
+                        radiogeddon_history_get_name(app->history, count - 1),
+                        sizeof(proto));
+                furi_mutex_release(app->history_mutex);
+                if(proto[0]) radiogeddon_research_record(app, RgJrnProtocol, 1, proto);
+            }
+#endif
             notification_message(app->notifications, &sequence_blink_green_10);
             radiogeddon_ui_event(app, RgMascotEventSignalActivity, 0);
             consumed = true;

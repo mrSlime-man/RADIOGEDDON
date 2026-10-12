@@ -41,6 +41,13 @@ int main(void) {
     CHECK(RG_FEATURE_MULTI_COMPARE == EXPECT_FULL, "multi-capture compare only in Full");
     CHECK(RG_FEATURE_SESSIONS == EXPECT_FULL, "sessions only in Full");
     CHECK(RG_FEATURE_DOLPHIN_LAB == EXPECT_FULL, "Dolphin Lab only in Full");
+    // Beta 9 research system.
+    CHECK(RG_FEATURE_FINGERPRINT == EXPECT_FULL, "fingerprints only in Full");
+    CHECK(RG_FEATURE_PULSE_STUDIO == EXPECT_FULL, "Pulse Studio only in Full");
+    CHECK(RG_FEATURE_ADAPTIVE_SCAN == EXPECT_FULL, "Adaptive Scanner only in Full");
+    CHECK(RG_FEATURE_ACTIVITY_LOG == EXPECT_FULL, "Activity Logger only in Full");
+    CHECK(RG_FEATURE_JOURNAL == EXPECT_FULL, "journal only in Full");
+    CHECK(RG_FEATURE_ASSISTANT == EXPECT_FULL, "assistant only in Full");
     // The app's own region gate is in every build except Full.
     CHECK(RG_FEATURE_REGION_TX_GATE == !EXPECT_FULL, "region gate in Catalog");
     printf("%d checks, %d failures\n", g_checks, g_failures);

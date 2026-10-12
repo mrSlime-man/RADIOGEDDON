@@ -23,11 +23,13 @@
 #include <furi.h>
 #include <gui/view.h>
 #include <storage/storage.h>
+#include <gui/scene_manager.h>
 #include "radiogeddon_progress.h"
+#include "radiogeddon_host.h"
 
 /* The plugin manager's application id and API version for every module. */
 #define RADIOGEDDON_MODULE_APPID "radiogeddon_full"
-#define RADIOGEDDON_MODULE_API   2u
+#define RADIOGEDDON_MODULE_API   3u
 
 /* File names in the app's assets folder (APP_ASSETS_PATH("plugins/...")). */
 #define RADIOGEDDON_MODULE_BITS      "radiogeddon_bits.fal"
@@ -36,6 +38,10 @@
 #define RADIOGEDDON_MODULE_UNKNOWN   "radiogeddon_unknown.fal"
 #define RADIOGEDDON_MODULE_SESSIONS  "radiogeddon_sessions.fal"
 #define RADIOGEDDON_MODULE_LAB       "radiogeddon_lab.fal"
+#define RADIOGEDDON_MODULE_FP        "radiogeddon_fp.fal"
+#define RADIOGEDDON_MODULE_STUDIO    "radiogeddon_studio.fal"
+#define RADIOGEDDON_MODULE_LOG       "radiogeddon_log.fal"
+#define RADIOGEDDON_MODULE_REPORTS   "radiogeddon_reports.fal"
 
 #include "radiogeddon_analysis.h"
 /* Unknown Protocol Analysis report (radiogeddon_analysis_unknown). */
@@ -99,8 +105,6 @@ typedef struct {
 #endif
 
 #if RG_FEATURE_SESSIONS
-#include <gui/scene_manager.h>
-#include "radiogeddon_host.h"
 /* The Sessions screens, in the order of RadioGeddonSessionsScene. */
 typedef enum {
     RadioGeddonSessionsSceneList,
@@ -119,21 +123,28 @@ typedef struct {
 } RadioGeddonSessionsModule;
 #endif
 
-#if RG_FEATURE_DOLPHIN_LAB
-#include "../views/radiogeddon_room_view.h"
-/* The Dolphin Lab room's screen. */
+/*
+ * Tool screens built into a module (Full edition). The app keeps a small
+ * forwarder for each such scene (scenes/radiogeddon_scene_tools.c): it loads
+ * the module when the scene opens and hands every call over. A module's
+ * scenes call back into the app only through the host table
+ * (radiogeddon_host.h). Modules and their scenes, by index:
+ *
+ *   radiogeddon_fp.fal      0 Find Similar Signals
+ *   radiogeddon_studio.fal  0 Pulse Studio, 1 Pulse Timeline
+ *   radiogeddon_reports.fal 0 Signal Info & Analysis, 1 Crypto Analysis,
+ *                           2 Compare (two files), 3 Save report to SD
+ *   radiogeddon_log.fal     0 RF Activity Logger, 1 Adaptive Scanner setup
+ *   radiogeddon_lab.fal     0 Dolphin Lab room, 1 Research Journal,
+ *                           2 Dolphin customization, 3 Dolphin Assistant tip
+ */
+#define RADIOGEDDON_TOOL_SCENES 4u
 typedef struct {
-    RadioGeddonRoomView* (*alloc)(void);
-    void (*free)(RadioGeddonRoomView* view);
-    View* (*get_view)(RadioGeddonRoomView* view);
-    void (*set_callback)(RadioGeddonRoomView* view, RadioGeddonRoomCallback cb, void* ctx);
-    void (*load_terminal)(RadioGeddonRoomView* view, Storage* storage, const char* fw);
-    void (*load_scope)(RadioGeddonRoomView* view, Storage* storage, const char* path);
-    uint8_t (*get_station)(RadioGeddonRoomView* view);
-    uint8_t (*get_gallery)(RadioGeddonRoomView* view);
-    void (*update)(RadioGeddonRoomView* view, const RgMascotFrame* frame, uint32_t now);
-} RadioGeddonLabModule;
-#endif
+    void (*set_host)(const RadioGeddonHost* host);
+    void (*on_enter[RADIOGEDDON_TOOL_SCENES])(void* context);
+    bool (*on_event[RADIOGEDDON_TOOL_SCENES])(void* context, SceneManagerEvent event);
+    void (*on_exit[RADIOGEDDON_TOOL_SCENES])(void* context);
+} RadioGeddonToolModule;
 
 /* ---- host side --------------------------------------------------------------- */
 

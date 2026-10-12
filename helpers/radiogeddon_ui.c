@@ -105,6 +105,15 @@ static void ui_lab_cb(RadioGeddonLabEvent event, uint32_t index, void* context) 
     }
 }
 
+/* The look and animation level from the settings; with memory short the
+ * animation stops (a still pose costs no redraws). */
+static void ui_apply_look(RadioGeddonApp* app, bool low) {
+    RgMascotLook look;
+    memcpy(&look, app->settings.look, sizeof(look));
+    rg_mascot_set_look(
+        &app->ui.mascot, &look, low ? (uint8_t)RgAnimOff : app->settings.ui_animation);
+}
+
 static void ui_lab_alloc(RadioGeddonApp* app) {
     if(app->ui.lab) return;
     app->ui.lab = radiogeddon_lab_view_alloc();
@@ -126,6 +135,7 @@ void radiogeddon_ui_alloc(RadioGeddonApp* app) {
     memset(ui, 0, sizeof(*ui));
     uint32_t now = ui_now();
     rg_mascot_init(&ui->mascot, now, now ^ app->fw_tag);
+    ui_apply_look(app, false);
     rg_ui_feedback_init(&ui->feedback);
     // Short of memory at start: Classic for this run, nothing decorative.
     ui->style = (uint8_t)rg_ui_style_effective(app->settings.ui_style, radiogeddon_memdiag_free());
@@ -141,6 +151,7 @@ void radiogeddon_ui_apply_style(RadioGeddonApp* app) {
     ui->style = (uint8_t)rg_ui_style_effective(app->settings.ui_style, radiogeddon_memdiag_free());
     ui->reveal = false;
     ui->card_timed = false;
+    ui_apply_look(app, ui->mascot.low_memory);
     if(ui->style == RgUiStyleClassic) {
         ui_lab_free(app);
     } else {
@@ -189,6 +200,7 @@ void radiogeddon_ui_tick(RadioGeddonApp* app) {
     if(!receiving && !recording && !ui->scanning) low = !radiogeddon_scene_decoders_fit(app);
     if(recording && !ui->was_recording) ui_play(app, RgUiFbRecordStart);
     ui->was_recording = recording;
+    if(low != (ui->mascot.low_memory != 0)) ui_apply_look(app, low);
     rg_mascot_sync(&ui->mascot, ui->scanning, receiving, recording, low, now);
 
     if(!ui->lab) return;
@@ -320,9 +332,23 @@ void radiogeddon_ui_show_home(
             strlcat(right, session, sizeof(right));
         }
 #endif
+#if RG_FEATURE_JOURNAL
+        // A badge earned and not yet seen in the Research Journal.
+        if(!right[0] && app->research.fresh_achievements && app->settings.research_xp)
+            strlcpy(right, "New badge!", sizeof(right));
+#endif
         if(!right[0])
             strlcpy(right, cyber ? RG_EDITION_NAME " EDITION" : RG_EDITION_NAME, sizeof(right));
     }
+#if RG_FEATURE_JOURNAL
+    // A decoration shows only while its level is reached.
+    uint8_t level = rg_journal_unlock_level(&app->research.journal, app->settings.research_xp);
+    radiogeddon_lab_view_set_decoration(
+        ui->lab,
+        rg_decoration_unlocked((RgDecoration)app->settings.decoration, level) ?
+            app->settings.decoration :
+            0);
+#endif
     radiogeddon_lab_view_set_status(ui->lab, left, right, warn);
     char readout[24];
     snprintf(

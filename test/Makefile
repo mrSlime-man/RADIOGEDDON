@@ -29,6 +29,11 @@ MASCOT_SRC := test_mascot.c ../helpers/rg_mascot.c ../helpers/rg_ui.c ../helpers
 WATERFALL_SRC := test_waterfall.c ../helpers/rg_waterfall.c ../helpers/rg_range.c
 MEMSTAT_SRC := test_memstat.c ../helpers/rg_memstat.c
 DECODE_SRC := test_decode.c ../helpers/rg_decode.c ../helpers/rg_raw.c
+FP_SRC := test_fp.c ../helpers/rg_fp.c ../helpers/rg_analyzer.c ../helpers/rg_crc.c
+ADAPT_SRC := test_adapt.c ../helpers/rg_adapt.c
+ACTLOG_SRC := test_actlog.c ../helpers/rg_actlog.c
+STUDIO_SRC := test_studio.c ../helpers/rg_studio.c ../helpers/rg_analyzer.c
+JOURNAL_SRC := test_journal.c ../helpers/rg_journal.c ../helpers/rg_assist.c ../helpers/rg_crc.c
 DBLOAD_SRC := test_dbload.c stubs/furi_stub.c ../helpers/radiogeddon_db.c ../helpers/rg_db.c
 STUB_HDRS := stubs/furi.h stubs/storage/storage.h stubs/datetime/datetime.h \
 		stubs/lib/toolbox/stream/stream.h stubs/core/check.h stubs/core/common_defines.h \
@@ -49,6 +54,12 @@ FORMATS_SRC := test_formats.c stubs/furi_stub.c ../helpers/radiogeddon_storage.c
 		../helpers/radiogeddon_settings.c ../helpers/radiogeddon_bands.c ../helpers/rg_freq.c \
 		../helpers/radiogeddon_dsp.c ../helpers/rg_range.c ../helpers/radiogeddon_profiles.c \
 		../helpers/rg_db.c ../helpers/rg_raw.c ../helpers/rg_analyzer.c ../helpers/rg_ui.c
+
+# Fingerprint index tests: Find Similar Signals over real files through the
+# stub Storage, the recordings parsed by the firmware's FlipperFormat code.
+FPINDEX_SRC := test_fpindex.c stubs/furi_stub.c ../helpers/radiogeddon_fp.c ../helpers/rg_fp.c \
+		../helpers/rg_crc.c ../helpers/radiogeddon_analysis_run.c ../helpers/radiogeddon_storage.c \
+		../helpers/rg_raw.c ../helpers/rg_analyzer.c ../helpers/radiogeddon_dsp.c
 
 # Decoder tests: the firmware's own Sub-GHz receiver and protocol decoders
 # (lib/subghz, every protocol it registers) run over its own RAW test captures
@@ -78,7 +89,9 @@ FUZZ_DB_SRC := fuzz/fuzz_db.c ../helpers/rg_db.c ../helpers/radiogeddon_dsp.c
 FUZZ_SAMPLES_SRC := fuzz/fuzz_samples.c ../helpers/rg_analyzer.c ../helpers/rg_timeline.c
 FUZZ_SESSION_SRC := fuzz/fuzz_session.c ../helpers/rg_session.c ../helpers/rg_elf.c
 FUZZ_UI_SRC := fuzz/fuzz_ui.c ../helpers/rg_mascot.c ../helpers/rg_ui.c
-FUZZ_TARGETS := fuzz_raw fuzz_db fuzz_samples fuzz_session fuzz_ui
+FUZZ_FP_SRC := fuzz/fuzz_fp.c ../helpers/rg_fp.c ../helpers/rg_journal.c ../helpers/rg_crc.c \
+		../helpers/rg_analyzer.c
+FUZZ_TARGETS := fuzz_raw fuzz_db fuzz_samples fuzz_session fuzz_ui fuzz_fp
 FUZZ_CC ?= clang
 FUZZ_TIME ?= 60
 
@@ -90,7 +103,8 @@ FUZZ_TIME ?= 60
 LIFECYCLE_SRC := test_lifecycle.c stubs/furi_stub.c stubs/radio_fake.c \
 		../helpers/radiogeddon_scanner.c ../helpers/radiogeddon_rangescan.c \
 		../helpers/radiogeddon_hopper.c ../helpers/rg_scan.c ../helpers/rg_hop.c \
-		../helpers/rg_range.c ../helpers/rg_spectrum.c ../helpers/rg_freq.c ../helpers/rg_waterfall.c
+		../helpers/rg_range.c ../helpers/rg_spectrum.c ../helpers/rg_freq.c ../helpers/rg_waterfall.c \
+		../helpers/rg_adapt.c
 
 # Offline UI tests: the Waterfall and Bitstream Explorer screens drawn into
 # a host 128x64 canvas with the firmware's own u8g2 fonts (ui/fetch_fonts.sh,
@@ -106,11 +120,11 @@ UI_SRC := test_ui.c ui/canvas_host.c ../views/radiogeddon_waterfall_view.c \
 UI_HDRS := ui/canvas_host.h ui/stubs/gui/view.h ui/stubs/gui/canvas.h ui/stubs/gui/elements.h \
 		../views/radiogeddon_waterfall_view.h ../views/radiogeddon_bits_view.h synth.h
 
-.PHONY: check clean tsan fuzz formats decoders captures lifecycle ui
+.PHONY: check clean tsan fuzz formats decoders captures lifecycle ui fpindex actlogfiles
 check: $(BUILD)/test_dsp $(BUILD)/test_analyzer $(BUILD)/test_scan $(BUILD)/test_hop $(BUILD)/test_raw \
 		$(BUILD)/test_timeline $(BUILD)/test_ring $(BUILD)/test_rawfmt $(BUILD)/test_recorder \
 		$(BUILD)/test_db $(BUILD)/test_memstat $(BUILD)/test_dbload $(BUILD)/test_decode $(BUILD)/test_freq $(BUILD)/test_preset $(BUILD)/test_range \
-		$(BUILD)/test_txpolicy $(BUILD)/test_spectrum $(BUILD)/test_checksum $(BUILD)/test_waterfall $(BUILD)/test_bits $(BUILD)/test_multi $(BUILD)/test_session $(BUILD)/test_elf $(BUILD)/test_mascot $(BUILD)/sprites.ok $(BUILD)/test_edition_full $(BUILD)/test_edition_catalog \
+		$(BUILD)/test_txpolicy $(BUILD)/test_spectrum $(BUILD)/test_checksum $(BUILD)/test_waterfall $(BUILD)/test_bits $(BUILD)/test_multi $(BUILD)/test_session $(BUILD)/test_elf $(BUILD)/test_mascot $(BUILD)/test_fp $(BUILD)/test_adapt $(BUILD)/test_actlog $(BUILD)/test_journal $(BUILD)/test_studio $(BUILD)/sprites.ok $(BUILD)/test_edition_full $(BUILD)/test_edition_catalog \
 		$(BUILD)/test_edition_default $(BUILD)/edition_conflict.ok \
 		$(addprefix $(BUILD)/replay_,$(FUZZ_TARGETS))
 	$(BUILD)/test_dsp
@@ -138,6 +152,11 @@ check: $(BUILD)/test_dsp $(BUILD)/test_analyzer $(BUILD)/test_scan $(BUILD)/test
 	$(BUILD)/test_session
 	$(BUILD)/test_elf
 	$(BUILD)/test_mascot
+	$(BUILD)/test_fp
+	$(BUILD)/test_adapt
+	$(BUILD)/test_actlog
+	$(BUILD)/test_journal
+	$(BUILD)/test_studio
 	$(BUILD)/test_edition_full
 	$(BUILD)/test_edition_catalog
 	$(BUILD)/test_edition_default
@@ -209,6 +228,21 @@ $(BUILD)/test_elf: $(ELF_SRC) ../helpers/rg_elf.h | $(BUILD)
 $(BUILD)/test_mascot: $(MASCOT_SRC) ../helpers/rg_mascot.h ../helpers/rg_ui.h ../helpers/rg_sprites.h | $(BUILD)
 	$(CC) $(CFLAGS) $(SAN) -DRADIOGEDDON_EDITION_FULL -o $@ $(MASCOT_SRC)
 
+$(BUILD)/test_fp: $(FP_SRC) ../helpers/rg_fp.h ../helpers/rg_analyzer.h ../helpers/rg_crc.h | $(BUILD)
+	$(CC) $(CFLAGS) $(SAN) -DRADIOGEDDON_EDITION_FULL -o $@ $(FP_SRC)
+
+$(BUILD)/test_adapt: $(ADAPT_SRC) ../helpers/rg_adapt.h | $(BUILD)
+	$(CC) $(CFLAGS) $(SAN) -DRADIOGEDDON_EDITION_FULL -o $@ $(ADAPT_SRC)
+
+$(BUILD)/test_actlog: $(ACTLOG_SRC) ../helpers/rg_actlog.h | $(BUILD)
+	$(CC) $(CFLAGS) $(SAN) -DRADIOGEDDON_EDITION_FULL -o $@ $(ACTLOG_SRC)
+
+$(BUILD)/test_studio: $(STUDIO_SRC) ../helpers/rg_studio.h ../helpers/rg_analyzer.h | $(BUILD)
+	$(CC) $(CFLAGS) $(SAN) -DRADIOGEDDON_EDITION_FULL -o $@ $(STUDIO_SRC)
+
+$(BUILD)/test_journal: $(JOURNAL_SRC) ../helpers/rg_journal.h ../helpers/rg_assist.h | $(BUILD)
+	$(CC) $(CFLAGS) $(SAN) -DRADIOGEDDON_EDITION_FULL -o $@ $(JOURNAL_SRC)
+
 # The generated sprites match their text art (tools/dolphin/build_sprites.py).
 $(BUILD)/sprites.ok: ../tools/dolphin/build_sprites.py $(wildcard ../art/dolphin/*.txt) \
 		../helpers/rg_sprites.c ../helpers/rg_sprites.h | $(BUILD)
@@ -268,9 +302,12 @@ UI_LAB_SRC := test_ui_lab.c ui/canvas_host.c ../views/radiogeddon_lab_view.c \
 		../views/radiogeddon_scanner_view.c ../views/radiogeddon_receiver_view.c \
 		../views/radiogeddon_spectrum_view.c ../views/radiogeddon_waterfall_view.c \
 		../helpers/rg_mascot.c ../helpers/rg_ui.c ../helpers/rg_sprites.c ../helpers/rg_freq.c \
-		../helpers/rg_spectrum.c ../helpers/rg_scan.c ../helpers/rg_range.c stubs/furi_stub.c
+		../helpers/rg_spectrum.c ../helpers/rg_scan.c ../helpers/rg_adapt.c ../helpers/rg_range.c \
+		../views/radiogeddon_studio_view.c ../helpers/rg_studio.c ../helpers/rg_analyzer.c \
+		../helpers/rg_raw.c stubs/furi_stub.c
 UI_LAB_HDRS := $(UI_HDRS) ../views/radiogeddon_lab_view.h ../views/radiogeddon_mascot_draw.h \
-		../views/radiogeddon_room_view.h ../helpers/rg_mascot.h ../helpers/rg_ui.h ../helpers/rg_sprites.h
+		../views/radiogeddon_room_view.h ../helpers/rg_mascot.h ../helpers/rg_ui.h ../helpers/rg_sprites.h \
+		../views/radiogeddon_studio_view.h ../helpers/rg_studio.h
 
 $(UI_MESSAGES): ui/messages.py $(wildcard ../scenes/*.c) $(wildcard ../helpers/*.c) | $(BUILD)
 	mkdir -p $(dir $@)
@@ -307,6 +344,25 @@ $(BUILD)/fwobj/%.o: $(FW)/%.c $(STUB_HDRS)
 $(BUILD)/test_formats: $(FORMATS_SRC) $(STUB_HDRS) $(FW_OBJ) | $(BUILD)
 	$(CC) $(CFLAGS) $(SAN) -D_GNU_SOURCE -I$(FW) -I$(FW)/lib -Istubs -DSTUB_TRACK_ALLOC -DRADIOGEDDON_EDITION_FULL -pthread \
 		-o $@ $(FORMATS_SRC) $(FW_OBJ)
+
+ACTLOGFILES_SRC := test_actlog_files.c stubs/furi_stub.c ../helpers/radiogeddon_actlog.c \
+		../helpers/rg_actlog.c
+
+actlogfiles: $(BUILD)/test_actlog_files
+	$(BUILD)/test_actlog_files
+
+$(BUILD)/test_actlog_files: $(ACTLOGFILES_SRC) $(STUB_HDRS) ../helpers/radiogeddon_actlog.h \
+		../helpers/rg_actlog.h | $(BUILD)
+	$(CC) $(CFLAGS) $(SAN) -D_GNU_SOURCE -Istubs -DSTUB_TRACK_ALLOC -DRADIOGEDDON_EDITION_FULL \
+		-pthread -o $@ $(ACTLOGFILES_SRC)
+
+fpindex: $(BUILD)/test_fpindex
+	$(BUILD)/test_fpindex
+
+$(BUILD)/test_fpindex: $(FPINDEX_SRC) $(STUB_HDRS) $(FW_OBJ) ../helpers/radiogeddon_fp.h \
+		../helpers/rg_fp.h | $(BUILD)
+	$(CC) $(CFLAGS) $(SAN) -D_GNU_SOURCE -I$(FW) -I$(FW)/lib -I$(FW)/lib/mlib -Istubs \
+		-DSTUB_TRACK_ALLOC -DRADIOGEDDON_EDITION_FULL -pthread -o $@ $(FPINDEX_SRC) $(FW_OBJ)
 
 decoders: $(BUILD)/test_fwdecode $(BUILD)/test_fwpreset
 	$(BUILD)/test_fwdecode
@@ -365,6 +421,10 @@ $(BUILD)/replay_fuzz_ui: fuzz/replay.c $(FUZZ_UI_SRC) ../helpers/rg_mascot.h ../
 		| $(BUILD)
 	$(CC) $(CFLAGS) $(SAN) -DRADIOGEDDON_EDITION_FULL -o $@ fuzz/replay.c $(FUZZ_UI_SRC)
 
+$(BUILD)/replay_fuzz_fp: fuzz/replay.c $(FUZZ_FP_SRC) ../helpers/rg_fp.h ../helpers/rg_journal.h \
+		| $(BUILD)
+	$(CC) $(CFLAGS) $(SAN) -DRADIOGEDDON_EDITION_FULL -o $@ fuzz/replay.c $(FUZZ_FP_SRC)
+
 # libFuzzer builds. New inputs go to build/corpus/<target>; the committed
 # corpus is only read. A failing input is saved as build/<target>-crash-*.
 $(BUILD)/fuzz_raw: $(FUZZ_RAW_SRC) | $(BUILD)
@@ -382,6 +442,10 @@ $(BUILD)/fuzz_session: $(FUZZ_SESSION_SRC) | $(BUILD)
 $(BUILD)/fuzz_ui: $(FUZZ_UI_SRC) | $(BUILD)
 	$(FUZZ_CC) $(CFLAGS) -g -DRADIOGEDDON_EDITION_FULL -fsanitize=fuzzer,address,undefined \
 		-fno-sanitize-recover=all -o $@ $(FUZZ_UI_SRC)
+
+$(BUILD)/fuzz_fp: $(FUZZ_FP_SRC) | $(BUILD)
+	$(FUZZ_CC) $(CFLAGS) -g -DRADIOGEDDON_EDITION_FULL -fsanitize=fuzzer,address,undefined \
+		-fno-sanitize-recover=all -o $@ $(FUZZ_FP_SRC)
 
 $(BUILD)/fuzz_samples: $(FUZZ_SAMPLES_SRC) | $(BUILD)
 	$(FUZZ_CC) $(CFLAGS) -g -fsanitize=fuzzer,address,undefined -fno-sanitize-recover=all \

@@ -15,15 +15,28 @@ void radiogeddon_scene_compare_result_on_enter(void* context) {
     if(app->loaded.kind == RadioGeddonSignalKindRaw &&
        app->loaded_b.kind == RadioGeddonSignalKindRaw) {
         radiogeddon_scene_show_progress(app, "Comparing...");
+#ifdef RADIOGEDDON_MODULE
+        radiogeddon_analysis_set_progress(radiogeddon_scene_progress, app);
+#endif
         furi_string_cat_str(app->temp_str, "----------------\n");
         radiogeddon_analysis_raw_similarity(
             app->storage,
             furi_string_get_cstr(app->file_path),
             furi_string_get_cstr(app->file_path_b),
             app->temp_str);
+#ifdef RADIOGEDDON_MODULE
+        radiogeddon_analysis_set_progress(NULL, NULL);
+#endif
         radiogeddon_scene_progress_end(app);
     }
 
+#if RG_FEATURE_JOURNAL
+    radiogeddon_research_record(app, RgJrnCompare, 1, furi_string_get_cstr(app->loaded_b.name));
+    radiogeddon_research_step(
+        app, furi_string_get_cstr(app->file_path), RadioGeddonStepCompared, 0);
+    radiogeddon_research_step(
+        app, furi_string_get_cstr(app->file_path_b), RadioGeddonStepCompared, 0);
+#endif
     text_box_reset(app->text_box);
     text_box_set_font(app->text_box, TextBoxFontText);
     text_box_set_text(app->text_box, furi_string_get_cstr(app->temp_str));

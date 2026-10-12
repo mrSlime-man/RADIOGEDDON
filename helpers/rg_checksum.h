@@ -21,7 +21,10 @@
  * with enough distinct frames for a chance match to be unlikely (see
  * RG_CHECKSUM_MIN_*). Even then it is a hypothesis about structure: nothing
  * is decoded, decrypted or predicted, and a frame that merely repeats proves
- * nothing, so identical frames count once.
+ * nothing, so identical frames count once. For the checksums that are
+ * affine over GF(2) (XOR, CRC-8, parity) the frames must also be linearly
+ * independent: a frame that is the XOR of others satisfies such a checksum
+ * whenever they do, so it is no evidence (the rank of the frames counts).
  *
  * Pure C with no SDK includes; host-tested (test/test_checksum.c).
  */

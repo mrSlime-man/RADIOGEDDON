@@ -7,6 +7,130 @@ to follow [Semantic Versioning](https://semver.org/) (pre-1.0.0 releases use
 
 ## [Unreleased]
 
+## [1.0.0-beta.9] - 2026-10-11
+
+Standalone Research Lab (Full edition): signal fingerprints and Find Similar
+Signals, Pulse Studio, Smart Protocol Discovery, the Adaptive Scanner, the RF
+Activity Logger, the Research Journal with optional XP and achievements, the
+Dolphin Assistant, dolphin customization and Room 2.0. Everything runs on the
+Flipper; nothing new transmits. Not yet verified on hardware.
+
+### Added
+- **Signal fingerprints** (`rg_fp`, pure C, host-tested and fuzzed): a
+  64-byte summary of a RAW recording computed in one streaming pass of the
+  analyzer: frequency, modulation, Te, pulse/gap ratio histogram (12 bins of
+  Te ratios), preamble cells, sync ratio, frame count and spacing, repeats,
+  bit length, encoding and pattern stability. Kept in
+  `apps_data/radiogeddon/fingerprints.idx` (fixed-size records with a CRC,
+  written to a temporary file and renamed; a damaged index is rebuilt).
+- **Find Similar Signals** (Full; Analyze → Find Similar..., or a
+  recording's menu): the 8 closest recordings with a score, "Why similar?"
+  (the features that agree and those that contradict), Open, Compare with
+  this and Compare all matches. Scores are capped by the evidence: no frame
+  structure caps at 30, RAW against decoded at 60, disagreeing timing at 65;
+  bit-pattern evidence counts only between recordings of the same encoding.
+- **Pulse Studio** (Full; Analyze → Pulse Studio..., or a recording's
+  menu): the waveform with eight zoom levels, pan, a cursor on a pulse or gap
+  (its duration in µs and Te), a measuring marker (long OK) with the
+  distance to the cursor, preamble, glitch and frame-end marks and the bit
+  each symbol decodes to; Frame, Bits, Hex, Diff (against the most common
+  pattern) and Timing (half-Te histogram) pages. Frames are read from the
+  file through the RAW reader's checkpoints one at a time.
+- **Adaptive Scanner** (Full; Scan → Adaptive Scanner): Standard (the
+  classic round robin), Balanced Adaptive, Activity Focused and Custom
+  (the favorites in the list first). Stride scheduling weighted by a decaying
+  activity score; every frequency is visited at least once per bounded
+  number of picks (fairness), one frequency at most three times in a row,
+  and dwell stays within bounds. The Scanner shows the mode, the selected
+  frequency's share of the visits and the longest wait. Reset learning
+  starts afresh.
+- **RF Activity Logger** (Full; Scan → RF Activity Logger): schedule
+  (Standard, Balanced or Focused), duration (15 min – 8 h or until stopped),
+  interval (10 s – 5 min), part size (64 KB – 1 MB, up to 8 parts) and
+  threshold. Rows per frequency and interval in `activity/activity_*.csv`
+  with empty fields for "not observed" (never written as quiet), a header
+  and an `# End` footer; a `_summary.txt` with the busiest frequencies,
+  first and last activity and coverage. It stops when the time is up, on
+  Back, when the card is full or a write fails — never overwriting.
+- **Research Journal** (Full; Analyze → Research Journal, Room → Terminal):
+  counters of real events (recordings, analyses, fingerprints, searches,
+  comparisons, sessions, reports, activity logs, Pulse Studio, identified
+  protocols, scans, Protocol Discovery), the 12 most recent events and up to
+  8 identified protocol names. Saved in `journal.bin` with a CRC, written a
+  few seconds after a change and never while recording; a damaged file is
+  kept as `journal.bad` and the journal starts again. Clear history keeps
+  counts and XP; Reset all progress clears everything. Recordings are never
+  touched.
+- **Research XP and achievements** (optional, Settings → Assistant tips
+  and the journal): XP derived from the counters (each event type capped),
+  12 achievements (First Capture, First Analysis, Fingerprinter, Comparer,
+  Session Starter, Reporter, Night Watch, Explorer, Pulse Reader, Protocol
+  Spotter, Lab Regular, Polymath) and levels (20·n·(n−1) XP). Nothing is
+  awarded for transmitting.
+- **Dolphin Assistant** (Full; Settings → Assistant tips): one rule-based
+  tip at a time on the dashboard's first menu row (try Classic on low
+  memory, record more samples, analyze, find similar, compare, inspect pulse
+  timing, add to the session, export a report). Never while recording; at
+  least 15 s between new tips and 5 min before one repeats; long OK
+  dismisses it for the current recording; OK opens the suggested tool.
+- **Dolphin customization** (Full; Dolphin Lab → Corner → OK, or the
+  journal): headphones, goggles (as posed / always / off), antenna (classic,
+  whip, dish, none), tool (wrench, probe, notebook), expression and
+  accessory (bow tie, scarf, ID badge); wall decorations (plant, poster,
+  lamp, mug, trophy) unlocked by research level. 14 new sprites (47 in all,
+  496 bytes).
+- **Animation level** (Settings → Animation): Off (a still pose per state),
+  Minimal (state changes and blinks), Normal (beta 8) and Full (a swaying
+  antenna, more tail and eye movement). Measured on the host over 40 s
+  idle: 0, 23, 87 and 129 redraws. Off is used automatically on low memory.
+- **Room 2.0**: six stations — Workbench (the recording and session you are
+  working on; OK opens it), Oscilloscope, Radar (illustration), Research
+  Terminal (level, XP, counts and badges from the journal), Equipment Rack
+  (Scanner, Adaptive Scanner, Activity Logger, Receive; OK opens the real
+  tool) and the Dolphin Corner (pose gallery, decoration).
+- **New dolphin reactions**: Celebrate (an achievement, a strong match, a
+  level) and Greeting (the first dashboard of a run).
+- **Unified workflow**: the recording you last saved, opened or analysed is
+  the *current recording*; Analyze offers it first, and the journal records
+  which steps (analysed, searched, compared, studied, in a session) it went
+  through, which the assistant reads.
+- **Modules**: `radiogeddon_fp`, `radiogeddon_studio`, `radiogeddon_log`
+  and `radiogeddon_reports` join the six of beta 8 (the lab module now also
+  holds the journal, assistant and customization screens). A generic tool
+  forwarder hosts module scenes in two slots and unloads a module once its
+  screens are gone.
+- Tests: `test_fp`, `test_adapt`, `test_actlog`, `test_journal`,
+  `test_studio`, `make -C test fpindex` and `make -C test actlogfiles` (both
+  in CI), the adaptive scanner in the lifecycle test, Pulse Studio, the
+  adaptive Scanner, the room stations and every dolphin look in the UI test,
+  and a `fuzz_fp` libFuzzer target for fingerprint index and journal files.
+
+### Changed
+- **Smart Protocol Discovery** (Unknown Protocol Analysis): a
+  `Readings [HYPOTHESIS]` section lists competing readings (encoding, Te,
+  frame length) with their evidence and scores; confidence drops when no
+  rival reading was ruled out or noise is high. The analyzer maps each
+  pulse to its bit (and marks unsure ones), keeps a populous short gap
+  cluster as data (long-gap PWM), and measures PWM periods from pulse
+  pairing. Benchmark on the firmware's 50 RAW test captures: encoding
+  family right for 48 (was 43, 3 unidentified), frame length right for 42
+  (was 35), mean confidence 87 when right and 67 when wrong (was 84).
+- **Checksum hypotheses** (Full) require frames that are independent over
+  GF(2): repeats of one frame no longer "confirm" an XOR or CRC.
+- Settings are read and written from one table; beta 8 files load with the
+  new settings' defaults (`Ui_animation`, `Assistant`, `Dolphin_look`,
+  `Lab_decoration`, `Scan_mode`, `Log_interval_s`, `Log_minutes`,
+  `Log_max_kb`).
+- Analysis reports, crypto heuristics, comparison results and the Pulse
+  Timeline moved into modules; the resident Full edition is 119,132 B (beta
+  8: 119,428 B). Catalog: 80,553 B (beta 8: 77,782 B).
+- The Scanner's observer reports every visit (frequency, activity, reading,
+  floor and dwell) to the logger and the adaptive scheduler.
+
+### Fixed
+- The Pulse Studio bit cursor at the left edge, and labels that would have
+  run off the screen (found by the new UI tests before release).
+
 ## [1.0.0-beta.8] - 2026-10-11
 
 Dolphin Lab: an original animated dolphin mascot, a dashboard home screen,

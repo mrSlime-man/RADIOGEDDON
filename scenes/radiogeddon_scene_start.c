@@ -16,11 +16,13 @@ typedef enum {
     StartIndexAnalyze, // Full edition
     StartIndexSessions, // Full edition
     StartIndexLab, // Full edition: the Dolphin Lab room (lab styles)
+    StartIndexTip, // Full edition: the Dolphin Assistant's tip, when there is one
 } StartIndex;
 
 #if RG_FEATURE_DOLPHIN_LAB
 // The dashboard (Dolphin Lab and Cyber Lab styles): every Full menu item,
-// and the Dolphin Lab room. Its events are positions in this list.
+// and the Dolphin Lab room, after the assistant's tip when there is one.
+// Its events are positions in start_lab_shown.
 static const RadioGeddonLabItem start_lab_items[] = {
     {"Scan", RgSpriteIconScan},
     {"Receive", RgSpriteIconReceive},
@@ -42,7 +44,30 @@ static const uint8_t start_lab_index[] = {
     StartIndexAbout,
 };
 #define START_LAB_COUNT (sizeof(start_lab_items) / sizeof(start_lab_items[0]))
+/* What the dashboard shows now: the items above, maybe after a tip. */
+static RadioGeddonLabItem start_lab_shown[START_LAB_COUNT + 1];
+static uint8_t start_lab_shown_index[START_LAB_COUNT + 1];
+static uint8_t start_lab_shown_count;
 #endif
+
+#if RG_FEATURE_ASSISTANT
+static char start_tip_label[40]; // the Classic menu's row
+static char start_tip_short[16]; // the dashboard's row
+#endif
+
+/* The assistant's tip for now (none in the Catalog edition). */
+static bool radiogeddon_scene_start_tip(RadioGeddonApp* app) {
+#if RG_FEATURE_ASSISTANT
+    RgTip tip = radiogeddon_research_tip(app);
+    if(tip == RgTipNone) return false;
+    snprintf(start_tip_label, sizeof(start_tip_label), "Tip: %s", rg_tip_text(tip));
+    snprintf(start_tip_short, sizeof(start_tip_short), "%s", rg_tip_short(tip));
+    return true;
+#else
+    UNUSED(app);
+    return false;
+#endif
+}
 
 static void radiogeddon_scene_start_submenu_callback(void* context, uint32_t index) {
     RadioGeddonApp* app = context;
@@ -65,15 +90,36 @@ void radiogeddon_scene_start_on_enter(void* context) {
 #if RG_FEATURE_SESSIONS
     radiogeddon_scene_sessions_release(app);
 #endif
+#if RG_FEATURE_FINGERPRINT
+    // Find Similar Signals' results (its screens are all closed now).
+    free(app->similar);
+    app->similar = NULL;
+#endif
+#if RG_FEATURE_ADAPTIVE_SCAN
+    app->scan_mode_run = RgAdaptStandard;
+#endif
+    bool tip = radiogeddon_scene_start_tip(app);
 #if RG_FEATURE_DOLPHIN_LAB
     if(radiogeddon_ui_active(app)) {
+        start_lab_shown_count = 0;
+#if RG_FEATURE_ASSISTANT
+        if(tip) {
+            start_lab_shown[0] = (RadioGeddonLabItem){start_tip_short, RgSpriteIconTip};
+            start_lab_shown_index[0] = StartIndexTip;
+            start_lab_shown_count = 1;
+        }
+#endif
+        for(size_t i = 0; i < START_LAB_COUNT; i++) {
+            start_lab_shown[start_lab_shown_count] = start_lab_items[i];
+            start_lab_shown_index[start_lab_shown_count++] = start_lab_index[i];
+        }
         // Scene state: the position on the dashboard.
         uint32_t pos = scene_manager_get_scene_state(app->scene_manager, RadioGeddonSceneStart);
         radiogeddon_ui_show_home(
             app,
-            start_lab_items,
-            START_LAB_COUNT,
-            (uint8_t)(pos < START_LAB_COUNT ? pos : 0),
+            start_lab_shown,
+            start_lab_shown_count,
+            (uint8_t)(pos < start_lab_shown_count ? pos : 0),
             true);
         return;
     }
@@ -83,6 +129,12 @@ void radiogeddon_scene_start_on_enter(void* context) {
     submenu_set_header(submenu, RG_EDITION_FULL ? "RadioGeddon Full" : "RadioGeddon");
 
 #if RG_EDITION_FULL
+#if RG_FEATURE_ASSISTANT
+    if(tip) {
+        submenu_add_item(
+            submenu, start_tip_label, StartIndexTip, radiogeddon_scene_start_submenu_callback, app);
+    }
+#endif
     submenu_add_item(
         submenu, "Scan", StartIndexScan, radiogeddon_scene_start_submenu_callback, app);
     submenu_add_item(
@@ -98,6 +150,7 @@ void radiogeddon_scene_start_on_enter(void* context) {
     submenu_add_item(
         submenu, "Sessions", StartIndexSessions, radiogeddon_scene_start_submenu_callback, app);
 #else
+    UNUSED(tip);
     submenu_add_item(
         submenu, "Scanner", StartIndexScanner, radiogeddon_scene_start_submenu_callback, app);
     submenu_add_item(
@@ -165,6 +218,11 @@ static bool radiogeddon_scene_start_open(RadioGeddonApp* app, uint32_t index) {
         scene_manager_next_scene(app->scene_manager, RadioGeddonSceneRoom);
         break;
 #endif
+#if RG_FEATURE_ASSISTANT
+    case StartIndexTip:
+        scene_manager_next_scene(app->scene_manager, RadioGeddonSceneAssistant);
+        break;
+#endif
     default:
         break;
     }
@@ -181,8 +239,17 @@ bool radiogeddon_scene_start_on_event(void* context, SceneManagerEvent event) {
         uint32_t pos = event.event;
         bool shortcut = pos >= RADIOGEDDON_UI_SHORTCUT_BASE;
         if(shortcut) pos -= RADIOGEDDON_UI_SHORTCUT_BASE;
-        if(pos >= START_LAB_COUNT) return false;
-        uint8_t index = start_lab_index[pos];
+        if(pos >= start_lab_shown_count) return false;
+        uint8_t index = start_lab_shown_index[pos];
+#if RG_FEATURE_ASSISTANT
+        if(shortcut && index == StartIndexTip) {
+            // Long OK on the tip dismisses it.
+            radiogeddon_research_dismiss_tip(app);
+            scene_manager_set_scene_state(app->scene_manager, RadioGeddonSceneStart, 0);
+            radiogeddon_scene_start_on_enter(app);
+            return true;
+        }
+#endif
         if(shortcut && index == StartIndexScan) {
             scene_manager_next_scene(app->scene_manager, RadioGeddonSceneScanner);
         } else if(shortcut && index == StartIndexReceiver) {
@@ -200,7 +267,8 @@ bool radiogeddon_scene_start_on_event(void* context, SceneManagerEvent event) {
 #endif
 
     // Only menu indices are ours; ignore late events from a scene just closed.
-    if(event.type == SceneManagerEventTypeCustom && event.event <= StartIndexSessions) {
+    if(event.type == SceneManagerEventTypeCustom &&
+       (event.event <= StartIndexSessions || event.event == StartIndexTip)) {
         scene_manager_set_scene_state(app->scene_manager, RadioGeddonSceneStart, event.event);
         radiogeddon_scene_start_open(app, event.event);
         consumed = true;

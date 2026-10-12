@@ -161,6 +161,49 @@ static void test_nibble_and_parity(void) {
     CHECK(!has(&r, RgChecksumParityEven, 1, 0), "not even parity");
 }
 
+/* Distinct but dependent frames: the fifth is the XOR of three others, so
+ * a nibble XOR that holds on four holds on it by construction. Five distinct
+ * frames, four independent ones: not enough for a nibble checksum. */
+static void test_dependent_frames(void) {
+    printf("test_dependent_frames\n");
+    RgChecksumSet set;
+    rg_checksum_set_init(&set);
+    char bits[RG_CHECKSUM_MAX_BITS + 1];
+    unsigned frames[RG_CHECKSUM_MIN_NIBBLE][6];
+    for(unsigned f = 0; f < RG_CHECKSUM_MIN_NIBBLE; f++) {
+        unsigned x = 0;
+        for(int i = 0; i < 5; i++) {
+            frames[f][i] = f < 4 ? (rnd8() & 0xFu) : (frames[0][i] ^ frames[1][i] ^ frames[2][i]);
+            x ^= frames[f][i];
+        }
+        frames[f][5] = x; // nibble XOR
+        size_t k = 0;
+        for(int i = 0; i < 6; i++)
+            for(int b = 3; b >= 0; b--)
+                bits[k++] = ((frames[f][i] >> b) & 1) ? '1' : '0';
+        bits[k] = '\0';
+        CHECK(rg_checksum_set_add(&set, bits, k), "distinct frame added");
+    }
+    RgChecksumResult r;
+    rg_checksum_analyze(&set, &r);
+    CHECK(!has(&r, RgChecksumXor, 4, 0), "dependent frames do not make a nibble XOR");
+    // One more independent frame and it is reported.
+    unsigned x = 0;
+    size_t k = 0;
+    for(int i = 0; i < 5; i++) {
+        unsigned v = rnd8() & 0xFu;
+        x ^= v;
+        for(int b = 3; b >= 0; b--)
+            bits[k++] = ((v >> b) & 1) ? '1' : '0';
+    }
+    for(int b = 3; b >= 0; b--)
+        bits[k++] = ((x >> b) & 1) ? '1' : '0';
+    bits[k] = '\0';
+    rg_checksum_set_add(&set, bits, k);
+    rg_checksum_analyze(&set, &r);
+    CHECK(has(&r, RgChecksumXor, 4, 0), "with an independent frame it is");
+}
+
 static void test_no_false_hits(void) {
     printf("test_no_false_hits\n");
     RgChecksumSet set;
@@ -213,6 +256,7 @@ static void test_no_false_hits(void) {
 }
 
 int main(void) {
+    test_dependent_frames();
     test_crc8_vectors();
     test_xor_byte();
     test_crc_and_sum();

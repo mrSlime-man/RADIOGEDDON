@@ -43,6 +43,9 @@ static void radiogeddon_scanner_view_draw_header(Canvas* canvas, RadioGeddonScan
     canvas_set_font(canvas, FontSecondary);
 
     const char* status = m->external ? "RSSI EXT" : "RSSI scan";
+#if RG_FEATURE_ADAPTIVE_SCAN
+    if(s->mode != RgAdaptStandard) status = rg_adapt_mode_name((RgAdaptMode)s->mode);
+#endif
     if(s->paused) {
         status = "PAUSED";
     } else if(s->hold_index >= 0) {
@@ -51,7 +54,18 @@ static void radiogeddon_scanner_view_draw_header(Canvas* canvas, RadioGeddonScan
     canvas_draw_str(canvas, 2, 9, status);
 
     char right[24];
-    if(s->global_floor <= RG_SCAN_RSSI_NONE) {
+#if RG_FEATURE_ADAPTIVE_SCAN
+    if(s->mode != RgAdaptStandard) {
+        // The longest any frequency waited unheard: the honest coverage figure.
+        snprintf(
+            right,
+            sizeof(right),
+            "gap %lu.%lus",
+            (unsigned long)(s->worst_gap_ms / 1000u),
+            (unsigned long)(s->worst_gap_ms % 1000u / 100u));
+    } else
+#endif
+        if(s->global_floor <= RG_SCAN_RSSI_NONE) {
         snprintf(right, sizeof(right), "NF -- T+%u", (unsigned)s->threshold_db);
     } else {
         snprintf(
@@ -101,6 +115,13 @@ static void radiogeddon_scanner_view_draw_row(
         (unsigned long)(hz / 1000000),
         (unsigned long)((hz % 1000000) / 10000));
     canvas_draw_str(canvas, 6, y + 10, text);
+#if RG_FEATURE_ADAPTIVE_SCAN
+    // Adaptive: the share of visits this frequency gets, under its name.
+    if(s->mode != RgAdaptStandard && s->share[idx]) {
+        int32_t w = (int32_t)s->share[idx] * 30 / 100;
+        canvas_draw_line(canvas, 6, y + 12, 6 + (w > 0 ? w : 1), y + 12);
+    }
+#endif
 
     canvas_draw_frame(canvas, BAR_X, y + 2, BAR_W, 9);
     if(ch->samples > 0) {

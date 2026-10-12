@@ -16,7 +16,8 @@
  * important wins:
  *
  *   Error > Low memory > Recording > Receiving > Signal detected >
- *   Scanning > Analyzing > Saved > Asleep > Bored > Idle
+ *   Scanning > Analyzing > Celebrate > Saved > Greeting > Asleep >
+ *   Bored > Idle
  *
  * A detection while receiving or recording still shows as a short "!" on
  * the higher state's pose. Bored and asleep follow a long time without a
@@ -42,6 +43,8 @@ typedef enum {
     RgMascotStateRecording,
     RgMascotStateLowMemory,
     RgMascotStateError, // an operation failed (short)
+    RgMascotStateCelebrate, // an achievement, a fingerprint match, a milestone (short)
+    RgMascotStateGreet, // back after a long quiet time (short)
     RgMascotStateCount,
 } RgMascotState;
 
@@ -61,16 +64,21 @@ typedef enum {
     RgMascotEventLowMemory,
     RgMascotEventMemoryOk,
     RgMascotEventUserInput,
+    RgMascotEventAchievement, // a research achievement was earned
+    RgMascotEventMatch, // Find Similar Signals found a strong match
+    RgMascotEventMilestone, // a session report, a long analysis, a log completed
     RgMascotEventCount,
 } RgMascotEvent;
 
 /* How long a reaction shows (ms). */
-#define RG_MASCOT_DETECT_MS 1500u
-#define RG_MASCOT_SAVED_MS  2000u
-#define RG_MASCOT_ERROR_MS  3000u
+#define RG_MASCOT_DETECT_MS    1500u
+#define RG_MASCOT_SAVED_MS     2000u
+#define RG_MASCOT_ERROR_MS     3000u
+#define RG_MASCOT_CELEBRATE_MS 2500u
+#define RG_MASCOT_GREET_MS     1600u
 /* Quiet time before the mascot gets bored, then falls asleep (ms). */
-#define RG_MASCOT_BORED_MS  45000u
-#define RG_MASCOT_ASLEEP_MS 120000u
+#define RG_MASCOT_BORED_MS     45000u
+#define RG_MASCOT_ASLEEP_MS    120000u
 
 /* Progress not known (an analysis that does not report it). */
 #define RG_MASCOT_PROGRESS_NONE 0xFFu
@@ -140,7 +148,103 @@ typedef struct {
     uint8_t fx_phase; // 0..3
     uint8_t fx_on; // the effect is visible in this frame (blinking)
     uint8_t progress; // 0..100, or RG_MASCOT_PROGRESS_NONE
+    // The look (Dolphin Customization), copied from RgMascotLook.
+    uint8_t phones; // headphones worn
+    uint8_t goggles_mode; // RgLookGoggles
+    uint8_t antenna_kind; // RgLookAntenna
+    uint8_t tool; // RgLookTool
+    uint8_t accessory; // RgLookAccessory
 } RgMascotFrame;
+
+/* ---- the look: Dolphin Customization ------------------------------------- */
+
+typedef enum {
+    RgLookGogglesAuto, // on the forehead when the pose says so
+    RgLookGogglesAlways,
+    RgLookGogglesOff,
+    RgLookGogglesCount,
+} RgLookGoggles;
+
+typedef enum {
+    RgLookAntennaClassic,
+    RgLookAntennaWhip,
+    RgLookAntennaDish,
+    RgLookAntennaNone,
+    RgLookAntennaCount,
+} RgLookAntenna;
+
+typedef enum {
+    RgLookToolNone,
+    RgLookToolWrench,
+    RgLookToolProbe,
+    RgLookToolNotebook,
+    RgLookToolCount,
+} RgLookTool;
+
+typedef enum {
+    RgLookExpressionNormal,
+    RgLookExpressionCheerful,
+    RgLookExpressionFocused,
+    RgLookExpressionCount,
+} RgLookExpression;
+
+typedef enum {
+    RgLookAccessoryNone,
+    RgLookAccessoryBowtie,
+    RgLookAccessoryScarf,
+    RgLookAccessoryBadge,
+    RgLookAccessoryCount,
+} RgLookAccessory;
+
+/** How the dolphin looks. Stored by number in settings: append only. */
+typedef struct {
+    uint8_t phones; // 0/1
+    uint8_t goggles; // RgLookGoggles
+    uint8_t antenna; // RgLookAntenna
+    uint8_t tool; // RgLookTool
+    uint8_t expression; // RgLookExpression
+    uint8_t accessory; // RgLookAccessory
+} RgMascotLook;
+
+/** The "Animation level" setting. Stored by number: append only. */
+typedef enum {
+    RgAnimOff, // a still pose per state: redrawn only when the state changes
+    RgAnimMinimal, // state changes and blinks; no breathing, tail or wandering eyes
+    RgAnimNormal, // the Beta 8 animation
+    RgAnimFull, // also a swaying antenna, more tail and eye movement
+    RgAnimCount,
+} RgAnimLevel;
+
+/** The default look: headphones, goggles as posed, classic antenna. (Inline:
+ * the settings of both editions use it.) */
+static inline void rg_mascot_look_default(RgMascotLook* look) {
+    look->phones = 1;
+    look->goggles = RgLookGogglesAuto;
+    look->antenna = RgLookAntennaClassic;
+    look->tool = RgLookToolNone;
+    look->expression = RgLookExpressionNormal;
+    look->accessory = RgLookAccessoryNone;
+}
+
+/** Clamp every field into range (a damaged setting reads as the default). */
+static inline void rg_mascot_look_sanitize(RgMascotLook* look) {
+    if(look->phones > 1) look->phones = 1;
+    if(look->goggles >= RgLookGogglesCount) look->goggles = RgLookGogglesAuto;
+    if(look->antenna >= RgLookAntennaCount) look->antenna = RgLookAntennaClassic;
+    if(look->tool >= RgLookToolCount) look->tool = RgLookToolNone;
+    if(look->expression >= RgLookExpressionCount) look->expression = RgLookExpressionNormal;
+    if(look->accessory >= RgLookAccessoryCount) look->accessory = RgLookAccessoryNone;
+}
+
+/**
+ * Apply @p look and animation level @p anim to a pose @p f of a state shown
+ * for @p t ms: expressions in calm states, accessories copied in, and the
+ * animation thinned (Off, Minimal) or enriched (Full). Information is never
+ * removed: the REC label, the memory chip and a detection's mark stay.
+ */
+void rg_mascot_style(RgMascotFrame* f, const RgMascotLook* look, uint8_t anim, uint32_t t);
+
+const char* rg_anim_level_name(RgAnimLevel level);
 
 typedef struct {
     uint32_t now; // time of the last event or update
@@ -161,10 +265,20 @@ typedef struct {
     uint8_t detect_live; // a detection deadline is set
     uint8_t saved_live;
     uint8_t error_live;
+    uint32_t celebrate_until;
+    uint32_t greet_until;
+    uint8_t celebrate_live;
+    uint8_t greet_live;
+    uint8_t anim; // RgAnimLevel
+    RgMascotLook look;
 } RgMascot;
 
-/** Start idle at @p now; @p seed varies the idle behaviour. */
+/** Start idle at @p now; @p seed varies the idle behaviour. Normal
+ * animation and the default look until set. */
 void rg_mascot_init(RgMascot* m, uint32_t now, uint32_t seed);
+
+/** Set the look and the animation level (rg_mascot_frame applies them). */
+void rg_mascot_set_look(RgMascot* m, const RgMascotLook* look, uint8_t anim);
 
 /** Report an event at @p now. Unknown events are ignored. */
 void rg_mascot_event(RgMascot* m, RgMascotEvent event, uint32_t arg, uint32_t now);

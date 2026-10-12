@@ -1,0 +1,127 @@
+# RadioGeddon dolphin: accessories and lab decorations for Dolphin
+# Customization (Beta 9). Original pixel art drawn for RadioGeddon (MIT).
+# Same format as dolphin.txt. Each is a small overlay composed onto the
+# body or the lab scene when drawn (views/radiogeddon_mascot_draw.c), so no
+# combination of accessories is stored as a picture of its own.
+
+# A bow tie at the throat, drawn at (19, 16).
+sprite bowtie
+#...#
+##.##
+#.#.#
+##.##
+#...#
+
+# A scarf round the neck with a loose end, drawn at (7, 15).
+sprite scarf
+.##############
+##############.
+....##.........
+....###........
+.....##........
+
+# A lab ID badge on a clip, drawn at (15, 19).
+sprite id_badge
+.#..
+####
+#..#
+####
+
+# Tools held at the flipper's tip, drawn at (23, 17).
+sprite wrench
+.#.#...
+.###...
+..#....
+...#...
+....#..
+.....#.
+......#
+
+sprite probe
+#........
+.#######.
+.#######.
+#........
+
+sprite notebook
+######
+#.#..#
+#.#..#
+#.#..#
+######
+
+# A small dish on the antenna's tip, centred on it.
+sprite dish
+#...#
+.#.#.
+..#..
+.###.
+
+# Decorations for the lab wall and desk, unlocked by Research level.
+sprite deco_plant
+...#.#...
+..#.#.#..
+.#..#..#.
+#..###..#
+..#.#.#..
+....#....
+.#######.
+.#.....#.
+..#...#..
+..#####..
+
+sprite deco_poster
+###########
+#.........#
+#.#.#.#.#.#
+#..#...#..#
+#.........#
+#.##.##.#.#
+#.........#
+###########
+
+sprite deco_lamp
+...###...
+..#...#..
+.#.....#.
+#########
+....#....
+....#....
+.....#...
+....#....
+..#####..
+
+sprite deco_mug
+.####...
+#....##.
+#....#.#
+#....##.
+.####...
+
+sprite deco_trophy
+#######
+##...##
+.#...#.
+..###..
+...#...
+..###..
+.#####.
+
+# Dashboard icons (7x7): the Dolphin Assistant's tip, the Research Journal.
+sprite icon_tip
+..###..
+.#...#.
+.#...#.
+..#.#..
+..###..
+.......
+..###..
+
+sprite icon_journal
+######.
+#.#..#.
+#.#.##.
+#.#..#.
+#.#.##.
+#.#..#.
+######.

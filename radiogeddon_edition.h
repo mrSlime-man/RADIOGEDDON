@@ -83,3 +83,28 @@
  * optional UI feedback and the Dolphin Lab room (helpers/rg_mascot.h,
  * helpers/radiogeddon_ui.h). The Catalog edition keeps the Classic menus. */
 #define RG_FEATURE_DOLPHIN_LAB RG_EDITION_FULL
+
+/* Signal Fingerprint: compact structural summaries of saved recordings, an
+ * index of them on the SD card and Find Similar Signals (helpers/rg_fp.h). */
+#define RG_FEATURE_FINGERPRINT RG_EDITION_FULL
+
+/* Pulse Studio: waveform, frames, bits and timing of a RAW capture on one
+ * screen, with the inferred pulse-to-bit mapping (a module). */
+#define RG_FEATURE_PULSE_STUDIO RG_EDITION_FULL
+
+/* Adaptive Scanner: a Scanner whose schedule favours frequencies with
+ * observed activity, with a bounded revisit interval (helpers/rg_adapt.h). */
+#define RG_FEATURE_ADAPTIVE_SCAN RG_EDITION_FULL
+
+/* RF Activity Logger: long passive observation of a frequency list, logged
+ * to the SD card with coverage (helpers/rg_actlog.h). Uses the Adaptive
+ * Scanner's schedule. */
+#define RG_FEATURE_ACTIVITY_LOG (RG_EDITION_FULL && RG_FEATURE_ADAPTIVE_SCAN)
+
+/* Research Journal, Research XP and achievements: counts of real research
+ * events kept in one small file (helpers/rg_journal.h). */
+#define RG_FEATURE_JOURNAL RG_EDITION_FULL
+
+/* Dolphin Assistant: rule-based next-step suggestions from what the app
+ * really did (helpers/rg_assist.h). Needs the journal's event stream. */
+#define RG_FEATURE_ASSISTANT (RG_EDITION_FULL && RG_FEATURE_JOURNAL)

@@ -10,6 +10,8 @@ typedef enum {
     ScanMenuWaterfall,
     ScanMenuHopper,
     ScanMenuFavorites,
+    ScanMenuAdaptive,
+    ScanMenuLogger,
 } ScanMenuIndex;
 
 static void radiogeddon_scene_scan_menu_cb(void* context, uint32_t index) {
@@ -24,6 +26,14 @@ void radiogeddon_scene_scan_menu_on_enter(void* context) {
     submenu_set_header(submenu, "Scan");
     submenu_add_item(
         submenu, "Frequency Scanner", ScanMenuScanner, radiogeddon_scene_scan_menu_cb, app);
+#if RG_FEATURE_ADAPTIVE_SCAN
+    submenu_add_item(
+        submenu, "Adaptive Scanner", ScanMenuAdaptive, radiogeddon_scene_scan_menu_cb, app);
+#endif
+#if RG_FEATURE_ACTIVITY_LOG
+    submenu_add_item(
+        submenu, "RF Activity Logger", ScanMenuLogger, radiogeddon_scene_scan_menu_cb, app);
+#endif
     submenu_add_item(submenu, "Range Scanner", ScanMenuRange, radiogeddon_scene_scan_menu_cb, app);
     submenu_add_item(submenu, "Waterfall", ScanMenuWaterfall, radiogeddon_scene_scan_menu_cb, app);
     submenu_add_item(
@@ -36,12 +46,25 @@ void radiogeddon_scene_scan_menu_on_enter(void* context) {
 
 bool radiogeddon_scene_scan_menu_on_event(void* context, SceneManagerEvent event) {
     RadioGeddonApp* app = context;
-    if(event.type != SceneManagerEventTypeCustom || event.event > ScanMenuFavorites) return false;
+    if(event.type != SceneManagerEventTypeCustom || event.event > ScanMenuLogger) return false;
     scene_manager_set_scene_state(app->scene_manager, RadioGeddonSceneScanMenu, event.event);
     switch(event.event) {
     case ScanMenuScanner:
+#if RG_FEATURE_ADAPTIVE_SCAN
+        app->scan_mode_run = RgAdaptStandard; // the classic sweep
+#endif
         scene_manager_next_scene(app->scene_manager, RadioGeddonSceneScanner);
         break;
+#if RG_FEATURE_ADAPTIVE_SCAN
+    case ScanMenuAdaptive:
+        scene_manager_next_scene(app->scene_manager, RadioGeddonSceneAdaptive);
+        break;
+#endif
+#if RG_FEATURE_ACTIVITY_LOG
+    case ScanMenuLogger:
+        scene_manager_next_scene(app->scene_manager, RadioGeddonSceneActlog);
+        break;
+#endif
     case ScanMenuRange:
         scene_manager_set_scene_state(app->scene_manager, RadioGeddonSceneRangeSetup, 0);
         scene_manager_next_scene(app->scene_manager, RadioGeddonSceneRangeSetup);
@@ -58,9 +81,11 @@ bool radiogeddon_scene_scan_menu_on_event(void* context, SceneManagerEvent event
     case ScanMenuHopper:
         scene_manager_next_scene(app->scene_manager, RadioGeddonSceneHopper);
         break;
-    default:
+    case ScanMenuFavorites:
         scene_manager_set_scene_state(app->scene_manager, RadioGeddonSceneFavorites, 0);
         scene_manager_next_scene(app->scene_manager, RadioGeddonSceneFavorites);
+        break;
+    default:
         break;
     }
     return true;

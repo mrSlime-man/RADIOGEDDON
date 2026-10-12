@@ -26,6 +26,9 @@
 #include "storage/storage.h"
 #include "../helpers/radiogeddon_storage.h"
 #include "../helpers/radiogeddon_settings.h"
+#include "../helpers/rg_mascot.h"
+#include "../helpers/rg_adapt.h"
+#include "../helpers/rg_journal.h"
 #include "../helpers/rg_ui.h"
 #include "../helpers/radiogeddon_profiles.h"
 #include "../helpers/radiogeddon_bands.h"
@@ -390,7 +393,11 @@ static bool same_settings(const RadioGeddonSettings* a, const RadioGeddonSetting
            a->range_hold_on_hit == b->range_hold_on_hit && a->scan_source == b->scan_source &&
            a->hop_source == b->hop_source && a->freq_step_hz == b->freq_step_hz &&
            a->ui_style == b->ui_style && a->ui_feedback == b->ui_feedback &&
-           a->ui_transitions == b->ui_transitions;
+           a->ui_transitions == b->ui_transitions && a->ui_animation == b->ui_animation &&
+           a->assistant == b->assistant && memcmp(a->look, b->look, sizeof(a->look)) == 0 &&
+           a->decoration == b->decoration && a->scan_mode == b->scan_mode &&
+           a->log_interval_s == b->log_interval_s && a->log_minutes == b->log_minutes &&
+           a->log_max_kb == b->log_max_kb && a->research_xp == b->research_xp;
 }
 
 static RadioGeddonSettings custom_settings(void) {
@@ -422,6 +429,20 @@ static RadioGeddonSettings custom_settings(void) {
     s.ui_style = RgUiStyleCyberLab;
     s.ui_feedback = RgUiFeedbackFull;
     s.ui_transitions = false;
+    s.ui_animation = RgAnimFull;
+    s.assistant = false;
+    s.research_xp = false;
+    s.look[0] = 0;
+    s.look[1] = RgLookGogglesAlways;
+    s.look[2] = RgLookAntennaDish;
+    s.look[3] = RgLookToolProbe;
+    s.look[4] = RgLookExpressionFocused;
+    s.look[5] = RgLookAccessoryScarf;
+    s.decoration = RgDecoLamp;
+    s.scan_mode = RgAdaptFocused;
+    s.log_interval_s = 30;
+    s.log_minutes = 0;
+    s.log_max_kb = 1024;
     return s;
 }
 
@@ -504,6 +525,30 @@ static void test_settings_editions(void) {
         got.ui_style == RgUiStyleClassic && got.ui_feedback == RgUiFeedbackMinimal &&
             !got.ui_transitions,
         "UI fields read");
+
+    // A file from 1.0.0-beta.8 (no Beta 9 keys): their defaults; a damaged
+    // look or out-of-range values fall back field by field.
+    reset_card();
+    write_settings_text("Filetype: RadioGeddon Settings\nVersion: 1\nUi_style: 1\n");
+    radiogeddon_settings_load(CARD, &got);
+    CHECK(
+        got.ui_style == RgUiStyleCyberLab && got.ui_animation == RgAnimNormal && got.assistant &&
+            got.look[0] == 1 && got.scan_mode == RgAdaptStandard && got.log_interval_s == 60 &&
+            got.research_xp,
+        "beta.8 file: Beta 9 defaults");
+    reset_card();
+    write_settings_text("Filetype: RadioGeddon Settings\nVersion: 1\nUi_animation: 9\n"
+                        "Dolphin_look: 5 9 1 7 2 3\nScan_mode: 4\nLog_interval_s: 2\n"
+                        "Log_max_kb: 99999\nLab_decoration: 6\n");
+    radiogeddon_settings_load(CARD, &got);
+    CHECK(got.ui_animation == RgAnimNormal && got.scan_mode == RgAdaptStandard, "bad enums");
+    CHECK(
+        got.look[0] == 1 && got.look[1] == RgLookGogglesAuto && got.look[2] == 1 &&
+            got.look[3] == RgLookToolNone && got.look[4] == 2 && got.look[5] == 3,
+        "look sanitized field by field");
+    CHECK(
+        got.log_interval_s == 60 && got.log_max_kb == 256 && got.decoration == RgDecoNone,
+        "out-of-range logger and decoration fall back");
 
     // Whichever edition saves, the other edition's fields are written back.
     RadioGeddonSettings want = custom_settings();

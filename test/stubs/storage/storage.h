@@ -75,6 +75,7 @@ bool storage_dir_close(File* file);
 bool file_info_is_dir(const FileInfo* info);
 
 FS_Error storage_common_timestamp(Storage* storage, const char* path, uint32_t* timestamp);
+FS_Error storage_common_stat(Storage* storage, const char* path, FileInfo* fileinfo);
 
 /* Used by the firmware's FlipperFormat and stream code (test_formats). */
 bool storage_file_is_open(File* file);

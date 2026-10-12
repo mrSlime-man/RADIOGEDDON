@@ -47,6 +47,10 @@ typedef enum {
     ConfigItemUiStyle,
     ConfigItemUiFeedback,
     ConfigItemTransitions,
+    // Beta 9 (Full edition).
+    ConfigItemAnimation,
+    ConfigItemAssistant,
+    ConfigItemResearchXp,
 } ConfigItem;
 
 #define ConfigCustomEditScanList 600
@@ -315,6 +319,26 @@ static void radiogeddon_scene_config_transitions_changed(VariableItem* item) {
     app->settings.ui_transitions = variable_item_get_current_value_index(item) == 1;
     variable_item_set_current_value_text(item, app->settings.ui_transitions ? "On" : "Off");
 }
+
+static void radiogeddon_scene_config_animation_changed(VariableItem* item) {
+    RadioGeddonApp* app = variable_item_get_context(item);
+    app->settings.ui_animation = variable_item_get_current_value_index(item);
+    variable_item_set_current_value_text(
+        item, rg_anim_level_name((RgAnimLevel)app->settings.ui_animation));
+    radiogeddon_ui_apply_style(app); // at once
+}
+
+static void radiogeddon_scene_config_assistant_changed(VariableItem* item) {
+    RadioGeddonApp* app = variable_item_get_context(item);
+    app->settings.assistant = variable_item_get_current_value_index(item) == 1;
+    variable_item_set_current_value_text(item, app->settings.assistant ? "On" : "Off");
+}
+
+static void radiogeddon_scene_config_xp_changed(VariableItem* item) {
+    RadioGeddonApp* app = variable_item_get_context(item);
+    app->settings.research_xp = variable_item_get_current_value_index(item) == 1;
+    variable_item_set_current_value_text(item, app->settings.research_xp ? "On" : "Off");
+}
 #endif
 
 static uint8_t radiogeddon_config_nearest_u16(const uint16_t* values, size_t n, uint16_t v) {
@@ -532,6 +556,19 @@ void radiogeddon_scene_config_on_enter(void* context) {
         list, "Transitions", 2, radiogeddon_scene_config_transitions_changed, app);
     variable_item_set_current_value_index(item, app->settings.ui_transitions ? 1 : 0);
     variable_item_set_current_value_text(item, app->settings.ui_transitions ? "On" : "Off");
+    item = variable_item_list_add(
+        list, "Animation", RgAnimCount, radiogeddon_scene_config_animation_changed, app);
+    variable_item_set_current_value_index(item, app->settings.ui_animation);
+    variable_item_set_current_value_text(
+        item, rg_anim_level_name((RgAnimLevel)app->settings.ui_animation));
+    item = variable_item_list_add(
+        list, "Assistant tips", 2, radiogeddon_scene_config_assistant_changed, app);
+    variable_item_set_current_value_index(item, app->settings.assistant ? 1 : 0);
+    variable_item_set_current_value_text(item, app->settings.assistant ? "On" : "Off");
+    item =
+        variable_item_list_add(list, "Research XP", 2, radiogeddon_scene_config_xp_changed, app);
+    variable_item_set_current_value_index(item, app->settings.research_xp ? 1 : 0);
+    variable_item_set_current_value_text(item, app->settings.research_xp ? "On" : "Off");
 #endif
 
     variable_item_list_set_enter_callback(list, radiogeddon_scene_config_enter_cb, app);

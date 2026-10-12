@@ -87,6 +87,9 @@ void radiogeddon_lab_view_set_status(
     const char* right,
     bool warn);
 
+/** The decoration on the lab wall (RgDecoration, 0: none). */
+void radiogeddon_lab_view_set_decoration(RadioGeddonLabView* instance, uint8_t decoration);
+
 /** Cyber Lab readout line (free heap and the like), copied. */
 void radiogeddon_lab_view_set_readout(RadioGeddonLabView* instance, const char* text);
 

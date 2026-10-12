@@ -699,7 +699,170 @@ static void test_degenerate(void) {
     CHECK(g_a.encoding_confidence < 60, "pure noise never gets a confident encoding");
 }
 
+/* Beta 9 regression (hollarm_raw.sub): a pulse-position code whose long gap
+ * is 8 Te, longer than the 7 Te frame-gap rule. That gap is a populous
+ * cluster, so it is data and must not cut every frame at each 1. */
+static void test_long_data_gap(void) {
+    printf("test_long_data_gap\n");
+    static int32_t buf[6000];
+    size_t pos = 0;
+    const char* code = "101100111000101011110001101100111000101011";
+    for(int r = 0; r < 6; r++) {
+        for(const char* b = code; *b; b++) {
+            buf[pos++] = 200;
+            buf[pos++] = *b == '1' ? -1600 : -1000;
+        }
+        buf[pos++] = 200;
+        buf[pos++] = -12 * 200 - 6000;
+    }
+    rg_analyzer_run(buf, pos, &g_a);
+    CHECK(g_a.encoding == RgEncodingPPM, "PPM despite a gap longer than 7 Te");
+    CHECK(g_a.gap_us > 1600, "the 8 Te gap is data, below the frame-gap threshold");
+    CHECK(g_a.bit_count == strlen(code), "whole frames, not cut at every 1");
+    CHECK(strcmp(g_a.bits, code) == 0, "bits recovered");
+}
+
+/* Beta 9 regression (marantec24_raw.sub): a pulse-width code with a 5 Te
+ * period (1 Te pulse + 4 Te gap, 2 Te pulse + 3 Te gap). The two gap
+ * clusters are close (ratio 1.33): both must be found, and the period is
+ * read from the pairing, not assumed to be short + long. */
+static void test_pwm_five_te_period(void) {
+    printf("test_pwm_five_te_period\n");
+    static int32_t buf[6000];
+    size_t pos = 0;
+    const char* code = "110100111010001110101101";
+    for(int r = 0; r < 8; r++) {
+        for(const char* b = code; *b; b++) {
+            buf[pos++] = *b == '1' ? 1600 : 800;
+            buf[pos++] = *b == '1' ? -2400 : -3200;
+        }
+        buf[pos++] = 1600;
+        buf[pos++] = -16000;
+    }
+    rg_analyzer_run(buf, pos, &g_a);
+    CHECK(
+        g_a.low_peak_count >= 2 && g_a.low_peaks[0].center_us > 2000 &&
+            g_a.low_peaks[0].center_us < 2600,
+        "the larger of two close gap clusters is a peak");
+    CHECK(
+        g_a.params.pwm_period_us >= 3800 && g_a.params.pwm_period_us <= 4200,
+        "period read from the pairing");
+    CHECK(g_a.encoding == RgEncodingPWM, "PWM");
+    CHECK(g_a.bit_count + 1 >= strlen(code) && g_a.bit_count <= strlen(code), "frame length");
+}
+
+/* A rare, long frame gap stays a gap even when frames are short (8 bits):
+ * the data rule only takes lows of at most RG_ANALYZER_DATA_MAX_TE Te. */
+static void test_short_frames_keep_gap(void) {
+    printf("test_short_frames_keep_gap\n");
+    static int32_t buf[4000];
+    size_t pos = 0;
+    for(int r = 0; r < 40; r++) {
+        const char* code = "10010110";
+        for(const char* b = code; *b; b++) {
+            buf[pos++] = *b == '1' ? 2000 : 480;
+            buf[pos++] = *b == '1' ? -2050 : -3570;
+        }
+        buf[pos++] = -34700;
+    }
+    rg_analyzer_run(buf, pos, &g_a);
+    CHECK(g_a.gap_us < 34700, "the 75 Te pause still ends frames");
+    CHECK(g_a.frame_count >= 30, "one frame per transmission");
+}
+
+/* The pulse-to-bit map: where each bit's symbol begins, and which bits did
+ * not fit the grammar. */
+static void test_bit_map(void) {
+    printf("test_bit_map\n");
+    RgDecodeParams p = {0};
+    p.pwm_short_us = TE;
+    p.pwm_long_us = 3 * TE;
+    char bits[RG_ANALYZER_MAX_BITS + 1];
+    uint16_t map[RG_ANALYZER_MAX_BITS];
+    int fit = 0;
+    // Idle low first, then 0, 1, a broken pair (Te + Te), 1.
+    int32_t s[] = {-5000, TE, -3 * TE, 3 * TE, -TE, TE, -TE, 3 * TE, -TE};
+    size_t n =
+        rg_analyzer_decode_map(RgEncodingPWM, &p, s, 9, bits, RG_ANALYZER_MAX_BITS, &fit, map);
+    CHECK(n == 4 && strcmp(bits, "0101") == 0, "bits");
+    CHECK((map[0] & RG_BITMAP_INDEX) == 1 && (map[1] & RG_BITMAP_INDEX) == 3, "symbol starts");
+    CHECK((map[2] & RG_BITMAP_INDEX) == 5 && (map[3] & RG_BITMAP_INDEX) == 7, "every pair");
+    CHECK(!(map[0] & RG_BITMAP_UNSURE) && !(map[1] & RG_BITMAP_UNSURE), "good pairs sure");
+    CHECK(map[2] & RG_BITMAP_UNSURE, "the broken pair is flagged");
+    CHECK(!(map[3] & RG_BITMAP_UNSURE), "the next pair is fine again");
+    // The same decode without a map gives the same bits (one decoder).
+    char again[RG_ANALYZER_MAX_BITS + 1];
+    rg_analyzer_decode(RgEncodingPWM, &p, s, 9, again, RG_ANALYZER_MAX_BITS, NULL);
+    CHECK(strcmp(again, bits) == 0, "map does not change the reading");
+    // Manchester: a bit starts at the sample holding its first half-cell.
+    p.te_us = 400;
+    int32_t man[] = {400, -800, 400, -400, 800};
+    n = rg_analyzer_decode_map(
+        RgEncodingManchester, &p, man, 5, bits, RG_ANALYZER_MAX_BITS, &fit, map);
+    CHECK(n == 4, "Manchester bits");
+    CHECK((map[0] & RG_BITMAP_INDEX) == 0 && (map[1] & RG_BITMAP_INDEX) == 1, "first halves");
+    CHECK((map[2] & RG_BITMAP_INDEX) == 3 && (map[3] & RG_BITMAP_INDEX) == 4, "later halves");
+    CHECK(map[3] & RG_BITMAP_UNSURE, "a bit completed by the idle low is uncertain");
+    // A long frame's map saturates instead of wrapping.
+    static int32_t longs[2 * 300];
+    for(size_t i = 0; i < 300; i++) {
+        longs[2 * i] = TE;
+        longs[2 * i + 1] = -3 * TE;
+    }
+    n = rg_analyzer_decode_map(
+        RgEncodingPWM, &p, longs, 600, bits, RG_ANALYZER_MAX_BITS, &fit, map);
+    CHECK(n == RG_ANALYZER_MAX_BITS && (map[n - 1] & RG_BITMAP_INDEX) == 2 * (n - 1), "bounded");
+}
+
+/* Hypotheses: every reading that fits, the chosen one first, with evidence. */
+static void test_hypotheses(void) {
+    printf("test_hypotheses\n");
+    static int32_t buf[20000];
+    size_t pos = 0;
+    // A clean PWM remote: one reading, well supported.
+    for(int i = 0; i < 6; i++)
+        emit_pwm(buf, &pos, "101100111000101011110001", 0);
+    rg_analyzer_run(buf, pos, &g_a);
+    CHECK(g_a.hypothesis_count >= 1, "at least one hypothesis");
+    const RgHypothesis* h = &g_a.hypotheses[0];
+    CHECK(h->encoding == RgEncodingPWM && h->score == g_a.encoding_confidence, "chosen first");
+    CHECK(h->bits == g_a.bit_count && h->frames == g_a.signal_frames, "its frame length");
+    CHECK(h->support & RgHypFitHigh && h->support & RgHypLenStable, "supported");
+    CHECK(h->support & RgHypTwoWidths, "two widths");
+    for(size_t i = 1; i < g_a.hypothesis_count; i++)
+        CHECK(g_a.hypotheses[i].score < h->score, "others rank below");
+    // Manchester: differential Manchester is listed with it (same timing).
+    pos = 0;
+    for(int i = 0; i < 6; i++)
+        emit_manchester(buf, &pos, "1011001110001010111100011100");
+    rg_analyzer_run(buf, pos, &g_a);
+    bool man = false, diff = false;
+    for(size_t i = 0; i < g_a.hypothesis_count; i++) {
+        const RgHypothesis* x = &g_a.hypotheses[i];
+        if(x->encoding == RgEncodingManchester && !x->differential) man = true;
+        if(x->differential) {
+            diff = true;
+            CHECK(x->against & RgHypSameTiming, "differential: same timing noted");
+            CHECK(x->encoding == RgEncodingManchester, "differential is a Manchester reading");
+        }
+    }
+    CHECK(man && diff, "Manchester and differential Manchester both listed");
+    CHECK(strcmp(rg_hyp_evidence_name(RgHypShort), "under 8 bits") == 0, "evidence names");
+    CHECK(strcmp(rg_hyp_evidence_name((RgHypEvidence)3), "?") == 0, "not a single flag");
+    // Noise: no reading claims much.
+    pos = 0;
+    emit_noise(buf, &pos, 4000);
+    rg_analyzer_run(buf, pos, &g_a);
+    for(size_t i = 0; i < g_a.hypothesis_count; i++)
+        CHECK(g_a.hypotheses[i].score <= 60, "noise readings stay weak");
+}
+
 int main(void) {
+    test_bit_map();
+    test_hypotheses();
+    test_long_data_gap();
+    test_pwm_five_te_period();
+    test_short_frames_keep_gap();
     test_pairing_equal();
     test_pairing_opposite();
     test_pairing_keeps_manchester();

@@ -120,9 +120,14 @@ static size_t rg_find_peaks(const RgHistogram* h, RgPeakWork* out, size_t max) {
         for(size_t i = lo; i <= hi; i++)
             claimed[i] = true;
 
-        /* Prominence: both flanks must fall to half height (or the edge). */
+        /* Prominence: both flanks must fall to half height (or the edge).
+         * The claim stops either below the floor or where the next bin rises
+         * again (a valley before a neighbouring peak); the lower of the last
+         * claimed bin and the next one is the bottom of that flank. */
         uint32_t left_floor = lo > 0 ? smooth[lo - 1] : 0;
         uint32_t right_floor = hi + 1 < bins ? smooth[hi + 1] : 0;
+        if(lo != top && smooth[lo] < left_floor) left_floor = smooth[lo];
+        if(hi != top && smooth[hi] < right_floor) right_floor = smooth[hi];
         bool prominent = left_floor * 2u <= height && right_floor * 2u <= height;
 
         uint32_t count = 0;
@@ -163,8 +168,14 @@ static size_t rg_find_peaks(const RgHistogram* h, RgPeakWork* out, size_t max) {
 }
 
 /* The two most populous peaks at or above RG_ANALYZER_MIN_TE_US, returned as
- * (shorter, longer); 0 if missing. */
-static void rg_top_two(const RgPeak* p, size_t n, uint32_t* shorter, uint32_t* longer) {
+ * (shorter, longer) when the longer is at least @p ratio_x10 / 10 times the
+ * shorter; 0 if missing. */
+static void rg_top_two_ratio(
+    const RgPeak* p,
+    size_t n,
+    uint32_t* shorter,
+    uint32_t* longer,
+    uint32_t ratio_x10) {
     size_t a = n, b = n;
     for(size_t i = 0; i < n; i++) {
         if(p[i].center_us < RG_ANALYZER_MIN_TE_US) continue;
@@ -184,10 +195,14 @@ static void rg_top_two(const RgPeak* p, size_t n, uint32_t* shorter, uint32_t* l
         x = y;
         y = t;
     }
-    /* Two widths must be clearly distinct to carry a bit. */
-    if((uint64_t)y * 10u < (uint64_t)x * 14u) return;
+    if((uint64_t)y * 10u < (uint64_t)x * ratio_x10) return;
     *shorter = x;
     *longer = y;
+}
+
+/* As above for widths that carry a bit: they must be clearly distinct. */
+static void rg_top_two(const RgPeak* p, size_t n, uint32_t* shorter, uint32_t* longer) {
+    rg_top_two_ratio(p, n, shorter, longer, 14u);
 }
 
 /* Shortest peak holding at least a quarter of the side's largest peak: a
@@ -229,12 +244,13 @@ static size_t rg_decode_pairs_phase(
     int phase,
     char* bits,
     size_t max_bits,
-    int* fit) {
+    int* fit,
+    uint16_t* map) {
     size_t b = 0, pairs = 0, good = 0;
     uint32_t split, period = 0;
     if(enc == RgEncodingPWM) {
         split = (p->pwm_short_us + p->pwm_long_us) / 2u;
-        period = p->pwm_short_us + p->pwm_long_us;
+        period = p->pwm_period_us ? p->pwm_period_us : p->pwm_short_us + p->pwm_long_us;
     } else {
         split = (p->ppm_short_us + p->ppm_long_us) / 2u;
     }
@@ -280,6 +296,9 @@ static size_t rg_decode_pairs_phase(
         }
         if(ok) good++;
         if(bits && b < max_bits) bits[b] = bit;
+        if(map && b < max_bits)
+            map[b] = (uint16_t)((i > RG_BITMAP_INDEX ? RG_BITMAP_INDEX : i) |
+                                (ok ? 0u : RG_BITMAP_UNSURE));
         if(b < max_bits) b++;
     }
     if(bits) bits[b] = '\0';
@@ -294,11 +313,12 @@ static size_t rg_decode_pairs(
     size_t n,
     char* bits,
     size_t max_bits,
-    int* fit) {
+    int* fit,
+    uint16_t* map) {
     int fit0 = 0, fit1 = 0;
-    rg_decode_pairs_phase(enc, p, s, n, 0, NULL, max_bits, &fit0);
-    rg_decode_pairs_phase(enc, p, s, n, 1, NULL, max_bits, &fit1);
-    return rg_decode_pairs_phase(enc, p, s, n, fit1 > fit0 ? 1 : 0, bits, max_bits, fit);
+    rg_decode_pairs_phase(enc, p, s, n, 0, NULL, max_bits, &fit0, NULL);
+    rg_decode_pairs_phase(enc, p, s, n, 1, NULL, max_bits, &fit1, NULL);
+    return rg_decode_pairs_phase(enc, p, s, n, fit1 > fit0 ? 1 : 0, bits, max_bits, fit, map);
 }
 
 /*
@@ -315,10 +335,13 @@ static size_t rg_decode_manchester_phase(
     char* bits,
     size_t max_bits,
     size_t* valid,
-    size_t* bad) {
+    size_t* bad,
+    uint16_t* map) {
     uint32_t te = p->te_us;
     bool have_half = phase == 1;
     bool half = false; /* level of the pending first half-cell */
+    size_t half_at = 0; /* sample holding the pending half-cell */
+    bool unsure = phase == 1; /* the bit follows a broken or assumed cell */
     size_t b = 0;
     *valid = 0;
     *bad = 0;
@@ -333,20 +356,28 @@ static size_t rg_decode_manchester_phase(
         } else {
             (*bad)++; /* off the 1/2 Te grid: break the bit stream */
             have_half = false;
+            unsure = true;
             continue;
         }
         for(size_t c = 0; c < cells; c++) {
             if(!have_half) {
                 have_half = true;
                 half = level;
+                half_at = i;
             } else if(half != level) {
                 (*valid)++;
                 if(bits && b < max_bits) bits[b] = half ? '0' : '1';
+                if(map && b < max_bits)
+                    map[b] = (uint16_t)((half_at > RG_BITMAP_INDEX ? RG_BITMAP_INDEX : half_at) |
+                                        (unsure ? RG_BITMAP_UNSURE : 0u));
                 if(b < max_bits) b++;
                 have_half = false;
+                unsure = false;
             } else {
                 (*bad)++;
                 half = level; /* resync: this cell starts the next bit */
+                half_at = i;
+                unsure = true;
             }
         }
     }
@@ -354,6 +385,9 @@ static size_t rg_decode_manchester_phase(
     if(have_half && half) {
         (*valid)++;
         if(bits && b < max_bits) bits[b] = '0';
+        if(map && b < max_bits)
+            map[b] = (uint16_t)((half_at > RG_BITMAP_INDEX ? RG_BITMAP_INDEX : half_at) |
+                                RG_BITMAP_UNSURE); /* its second half was not seen */
         if(b < max_bits) b++;
     }
     if(bits) bits[b] = '\0';
@@ -366,15 +400,50 @@ static size_t rg_decode_manchester(
     size_t n,
     char* bits,
     size_t max_bits,
-    int* fit) {
+    int* fit,
+    uint16_t* map) {
     size_t v0, b0, v1, b1;
-    rg_decode_manchester_phase(p, s, n, 0, NULL, max_bits, &v0, &b0);
-    rg_decode_manchester_phase(p, s, n, 1, NULL, max_bits, &v1, &b1);
+    rg_decode_manchester_phase(p, s, n, 0, NULL, max_bits, &v0, &b0, NULL);
+    rg_decode_manchester_phase(p, s, n, 1, NULL, max_bits, &v1, &b1, NULL);
     int phase = ((long)v1 - (long)b1 > (long)v0 - (long)b0) ? 1 : 0;
     size_t valid, bad;
-    size_t nb = rg_decode_manchester_phase(p, s, n, phase, bits, max_bits, &valid, &bad);
+    size_t nb = rg_decode_manchester_phase(p, s, n, phase, bits, max_bits, &valid, &bad, map);
     *fit = (valid + bad) ? (int)((valid * 100u) / (valid + bad)) : 0;
     return nb;
+}
+
+size_t rg_analyzer_decode_map(
+    RgEncoding enc,
+    const RgDecodeParams* params,
+    const int32_t* samples,
+    size_t count,
+    char* bits,
+    size_t max_bits,
+    int* fit_pct,
+    uint16_t* map) {
+    int fit = 0;
+    size_t n = 0;
+    if(bits) bits[0] = '\0';
+    if(samples && count > 0) {
+        switch(enc) {
+        case RgEncodingPWM:
+            if(params->pwm_short_us && params->pwm_long_us)
+                n = rg_decode_pairs(enc, params, samples, count, bits, max_bits, &fit, map);
+            break;
+        case RgEncodingPPM:
+            if(params->ppm_high_us && params->ppm_short_us && params->ppm_long_us)
+                n = rg_decode_pairs(enc, params, samples, count, bits, max_bits, &fit, map);
+            break;
+        case RgEncodingManchester:
+            if(params->te_us)
+                n = rg_decode_manchester(params, samples, count, bits, max_bits, &fit, map);
+            break;
+        default:
+            break;
+        }
+    }
+    if(fit_pct) *fit_pct = fit;
+    return n;
 }
 
 size_t rg_analyzer_decode(
@@ -385,29 +454,7 @@ size_t rg_analyzer_decode(
     char* bits,
     size_t max_bits,
     int* fit_pct) {
-    int fit = 0;
-    size_t n = 0;
-    if(bits) bits[0] = '\0';
-    if(samples && count > 0) {
-        switch(enc) {
-        case RgEncodingPWM:
-            if(params->pwm_short_us && params->pwm_long_us)
-                n = rg_decode_pairs(enc, params, samples, count, bits, max_bits, &fit);
-            break;
-        case RgEncodingPPM:
-            if(params->ppm_high_us && params->ppm_short_us && params->ppm_long_us)
-                n = rg_decode_pairs(enc, params, samples, count, bits, max_bits, &fit);
-            break;
-        case RgEncodingManchester:
-            if(params->te_us)
-                n = rg_decode_manchester(params, samples, count, bits, max_bits, &fit);
-            break;
-        default:
-            break;
-        }
-    }
-    if(fit_pct) *fit_pct = fit;
-    return n;
+    return rg_analyzer_decode_map(enc, params, samples, count, bits, max_bits, fit_pct, NULL);
 }
 
 /* ---- alignment ---------------------------------------------------------- */
@@ -507,6 +554,24 @@ size_t rg_analyzer_repeat_period(const char* bits, size_t n) {
     return 0;
 }
 
+/* Count a frame of @p nb bits that fits reading @p e (pass 2). */
+static void rg_hyp_tally(RgAnalyzer* a, int e, size_t nb) {
+    if(a->hyp_frames[e] < UINT16_MAX) a->hyp_frames[e]++;
+    uint16_t len = (uint16_t)(nb > UINT16_MAX ? UINT16_MAX : nb);
+    size_t k, weakest = 0;
+    for(k = 0; k < 4; k++) {
+        if(a->hyp_len_n[e][k] && a->hyp_len[e][k] == len) break;
+        if(a->hyp_len_n[e][k] < a->hyp_len_n[e][weakest]) weakest = k;
+    }
+    if(k < 4) {
+        if(a->hyp_len_n[e][k] < UINT16_MAX) a->hyp_len_n[e][k]++;
+    } else if(a->hyp_len_n[e][weakest] <= 1) {
+        // A new length replaces one seen at most once.
+        a->hyp_len[e][weakest] = len;
+        a->hyp_len_n[e][weakest] = 1;
+    }
+}
+
 static void rg_frame_reset(RgAnalyzer* a) {
     a->frame_n = 0;
     a->frame_samples = 0;
@@ -536,9 +601,10 @@ static void rg_frame_end(RgAnalyzer* a) {
             return;
         }
         int fits[RgEncodingCount] = {0};
+        size_t lens[RgEncodingCount] = {0};
         int best = 0;
         for(int e = RgEncodingPWM; e < RgEncodingCount; e++) {
-            size_t nb = rg_analyzer_decode(
+            size_t nb = lens[e] = rg_analyzer_decode(
                 (RgEncoding)e,
                 &r->params,
                 a->frame,
@@ -548,6 +614,9 @@ static void rg_frame_end(RgAnalyzer* a) {
                 &fits[e]);
             if(nb < 4) fits[e] = 0; /* too short to carry information */
             if(fits[e] > best) best = fits[e];
+        }
+        for(int e = RgEncodingPWM; e < RgEncodingCount; e++) {
+            if(fits[e] >= RG_ANALYZER_GOOD_FIT) rg_hyp_tally(a, e, lens[e]);
         }
         if(best >= RG_ANALYZER_GOOD_FIT) {
             /* Weighted by length: a long frame is more evidence than a short
@@ -724,6 +793,26 @@ static void rg_finish_timing(RgAnalyzer* a) {
         }
     }
 
+    /* A populous low cluster is data, not a gap, even when it is longer than
+     * GAP_FACTOR x Te (a pulse-position code whose long gap is 8 Te): the
+     * threshold moves above every low peak of at most RG_ANALYZER_DATA_MAX_TE
+     * Te holding at least a quarter as many edges as the most populous one, to
+     * halfway to the next peak. Frame gaps are rare (one per frame) and long,
+     * and stay above it. */
+    if(te) {
+        uint32_t most = 0;
+        for(size_t i = 0; i < nl; i++)
+            if(r->low_peaks[i].count > most) most = r->low_peaks[i].count;
+        for(size_t i = 0; i < nl; i++) {
+            const RgPeak* pk = &r->low_peaks[i];
+            if(pk->center_us < r->gap_us || pk->center_us < RG_ANALYZER_MIN_TE_US) continue;
+            if(pk->count * 4u < most) break;
+            if((uint64_t)pk->center_us > (uint64_t)te * RG_ANALYZER_DATA_MAX_TE) break;
+            uint32_t next = i + 1 < nl ? r->low_peaks[i + 1].center_us : pk->center_us * 2u;
+            r->gap_us = (pk->center_us + next) / 2u;
+        }
+    }
+
     /* Decoder parameters: two high widths (PWM), dominant high plus two
      * in-frame low widths (PPM). Gap-sized lows are not data. */
     rg_top_two(r->high_peaks, nh, &r->params.pwm_short_us, &r->params.pwm_long_us);
@@ -737,6 +826,20 @@ static void rg_finish_timing(RgAnalyzer* a) {
     while(nl_in < nl && r->low_peaks[nl_in].center_us < r->gap_us)
         nl_in++;
     rg_top_two(r->low_peaks, nl_in, &r->params.ppm_short_us, &r->params.ppm_long_us);
+    /* PWM's bit period: a short pulse with the long gap, or a long pulse with
+     * the short gap. When both pairings give one period (within 15%) that is
+     * it, whatever the duty ratio (1:3 Te makes 4 Te; 1:4 and 2:3 Te make 5
+     * Te); otherwise the classic short + long. */
+    r->params.pwm_period_us = r->params.pwm_short_us + r->params.pwm_long_us;
+    uint32_t gap_short = 0, gap_long = 0;
+    rg_top_two_ratio(r->low_peaks, nl_in, &gap_short, &gap_long, 11u);
+    if(r->params.pwm_short_us && gap_short) {
+        uint32_t p1 = r->params.pwm_short_us + gap_long;
+        uint32_t p2 = r->params.pwm_long_us + gap_short;
+        uint32_t hi = p1 > p2 ? p1 : p2, lo = p1 > p2 ? p2 : p1;
+        if((uint64_t)(hi - lo) * 100u <= (uint64_t)hi * 15u)
+            r->params.pwm_period_us = (p1 + p2) / 2u;
+    }
 
     if(nh + nl == 0 || r->noise_pct > 50 || r->jitter_pct > 25)
         r->quality = RgQualityPoor;
@@ -812,6 +915,133 @@ static void rg_finish_encoding(RgAnalyzer* a) {
             r->encoding_confidence = conf > 70 ? 70 : conf;
         }
     }
+}
+
+/* The chosen reading had no testable rival: Manchester chosen while neither
+ * the pulse-width nor the pulse-position decoder had the widths it needs. */
+static bool rg_no_rival(const RgAnalysis* r) {
+    return r->encoding == RgEncodingManchester &&
+           !(r->params.pwm_short_us && r->params.pwm_long_us) &&
+           !(r->params.ppm_short_us && r->params.ppm_long_us);
+}
+
+/* The evidence for and against reading the signal as @p e. */
+static void rg_hyp_evidence(const RgAnalyzer* a, int e, RgHypothesis* h) {
+    const RgAnalysis* r = &a->result;
+    if(h->fit >= 80) h->support |= RgHypFitHigh;
+    if(h->fit < RG_ANALYZER_GOOD_FIT) h->against |= RgHypFitLow;
+    if(h->frames < 2) h->against |= RgHypFewFrames;
+    if(h->frames >= 2) {
+        if(h->frames_len * 10u >= h->frames * 6u)
+            h->support |= RgHypLenStable;
+        else
+            h->against |= RgHypLenVaries;
+    }
+    if(h->bits && h->bits < 8) h->against |= RgHypShort;
+    if(e == RgEncodingPWM)
+        h->support |= r->params.pwm_short_us && r->params.pwm_long_us ? RgHypTwoWidths : 0;
+    if(e == RgEncodingPPM)
+        h->support |= r->params.ppm_short_us && r->params.ppm_long_us ? RgHypTwoWidths : 0;
+    if((e == RgEncodingPWM || e == RgEncodingPPM) && !(h->support & RgHypTwoWidths))
+        h->against |= RgHypNoWidths;
+    if(e == (int)r->encoding && rg_no_rival(r)) h->against |= RgHypNoRival;
+    if(r->pair_count >= RG_ANALYZER_PAIR_MIN) {
+        uint32_t ruled = r->pair_same_pct > r->pair_opposite_pct ? r->pair_same_pct :
+                                                                   r->pair_opposite_pct;
+        bool rule = ruled >= RG_ANALYZER_PAIR_RULE_PCT;
+        if(e == RgEncodingManchester) {
+            if(rule)
+                h->against |= RgHypPairRule;
+            else
+                h->support |= RgHypPairsMixed;
+        } else if(e == RgEncodingPWM) {
+            if(rule)
+                h->support |= RgHypPairRule;
+            else
+                h->against |= RgHypPairsMixed;
+        }
+    }
+}
+
+void rg_analyzer_hypotheses(RgAnalyzer* a) {
+    RgAnalysis* r = &a->result;
+    RgHypothesis* out = r->hypotheses;
+    size_t n = 0;
+    int chosen_score = r->encoding != RgEncodingUnknown ? r->encoding_confidence : 95;
+    for(int e = RgEncodingPWM; e < RgEncodingCount && n < RG_ANALYZER_MAX_HYP; e++) {
+        bool chosen = e == (int)r->encoding;
+        if(!chosen && r->encoding_fit[e] < 30) continue;
+        RgHypothesis h;
+        memset(&h, 0, sizeof(h));
+        h.encoding = (uint8_t)e;
+        h.fit = r->encoding_fit[e];
+        if(chosen) {
+            h.bits = (uint16_t)r->bit_count;
+            h.frames_len = (uint16_t)r->bit_count_frames;
+            h.frames = (uint16_t)r->signal_frames;
+        } else {
+            h.frames = a->hyp_frames[e];
+            for(size_t k = 0; k < 4; k++) {
+                uint16_t c = a->hyp_len_n[e][k];
+                if(c > h.frames_len || (c == h.frames_len && c && a->hyp_len[e][k] > h.bits)) {
+                    h.frames_len = c;
+                    h.bits = a->hyp_len[e][k];
+                }
+            }
+        }
+        rg_hyp_evidence(a, e, &h);
+        int score = chosen ? r->encoding_confidence : h.fit;
+        if(!chosen) {
+            for(size_t b = 0; b < RG_HYP_EVIDENCE_COUNT; b++)
+                if(h.against & (1u << b)) score -= 15;
+            // The chosen reading leads: the others rank below it.
+            if(score >= chosen_score) score = chosen_score - 1;
+            if(score > 90) score = 90;
+        }
+        h.score = (uint8_t)(score < 0 ? 0 : score > 95 ? 95 : score);
+        out[n++] = h;
+        // Differential Manchester has Manchester's timing: listed next to it.
+        if(e == RgEncodingManchester && h.fit >= RG_ANALYZER_GOOD_FIT && n < RG_ANALYZER_MAX_HYP) {
+            RgHypothesis d = h;
+            d.differential = 1;
+            d.against |= RgHypSameTiming;
+            int ds = (int)h.score - 10;
+            d.score = (uint8_t)(ds < 0 ? 0 : ds);
+            out[n++] = d;
+        }
+    }
+    // Best first (insertion sort; at most four).
+    for(size_t i = 1; i < n; i++) {
+        RgHypothesis k = out[i];
+        size_t j = i;
+        while(j > 0 && out[j - 1].score < k.score) {
+            out[j] = out[j - 1];
+            j--;
+        }
+        out[j] = k;
+    }
+    r->hypothesis_count = n;
+}
+
+static const char* const rg_hyp_names[RG_HYP_EVIDENCE_COUNT] = {
+    "fit >= 80%",
+    "one frame length",
+    "both widths present",
+    "pulse/gap pairs follow one rule",
+    "pulse/gap pairs mixed",
+    "fit < 60%",
+    "frame lengths disagree",
+    "under 8 bits",
+    "same timing as Manchester",
+    "widths missing",
+    "fewer than 2 frames",
+    "no other reading testable",
+};
+
+const char* rg_hyp_evidence_name(RgHypEvidence ev) {
+    for(size_t i = 0; i < RG_HYP_EVIDENCE_COUNT; i++)
+        if((uint32_t)ev == (1u << i)) return rg_hyp_names[i];
+    return "?";
 }
 
 /* Pass 3 done: group, align and compare the kept frames. */
@@ -975,6 +1205,12 @@ static void rg_finish_frames(RgAnalyzer* a) {
     if(r->group_count > 0 && r->groups[0].exact >= 2) conf += 5;
     if(modal < 8 && conf > 40) conf = 40;
     if(r->encoding_by_pairing && conf > 70) conf = 70; /* a structure rule, not a fit */
+    /* Calibration (benchmarked on the firmware's captures): a reading that
+     * won because no rival could even be tried (the pulse-width and
+     * pulse-position decoders lacked their two widths) has beaten nothing,
+     * and heavy noise makes every grammar fit by chance more often. */
+    if(rg_no_rival(r)) conf -= 15;
+    if(r->noise_pct > 40) conf -= 10;
     if(conf < 0) conf = 0;
     if(conf > 95) conf = 95;
     r->encoding_confidence = conf;
@@ -1021,6 +1257,7 @@ void rg_analyzer_run(const int32_t* samples, size_t count, RgAnalysis* out) {
     do {
         rg_analyzer_feed(a, samples, count);
     } while(rg_analyzer_next_pass(a));
+    rg_analyzer_hypotheses(a);
     memcpy(out, &a->result, sizeof(*out));
     free(a);
 }
