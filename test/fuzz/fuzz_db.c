@@ -146,7 +146,26 @@ int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
         if(rg_db_needs_content_hash(&db, index))
             rg_db_set_content_hash(e, rg_db_hash(2166136261u, b, len));
     }
-    rg_db_mark_duplicates(&db);
+    // The single-pass candidate list is exactly the per-entry test's.
+    static uint16_t cand[MAX_ENTRIES];
+    size_t nc = rg_db_hash_candidates(&db, cand);
+    size_t k = 0;
+    for(size_t i = 0; i < db.count; i++) {
+        if(!rg_db_needs_content_hash(&db, i)) continue;
+        REQUIRE(k < nc && cand[k] == i);
+        k++;
+    }
+    REQUIRE(k == nc);
+    static uint16_t scratch[MAX_ENTRIES];
+    rg_db_mark_duplicates(&db, scratch);
+    // Sort-based grouping gives what comparing every pair gives.
+    for(size_t i = 0; i < db.count; i++) {
+        uint32_t same = 0;
+        for(size_t j = 0; j < db.count; j++)
+            if(j != i && rg_db_same_signal(&entries[i], &entries[j])) same++;
+        REQUIRE(entries[i].dup_count == (same > UINT16_MAX ? UINT16_MAX : same));
+        REQUIRE(((entries[i].flags & RG_DB_FLAG_DUPLICATE) != 0) == (same > 0));
+    }
 
     for(size_t i = 0; i < db.count; i++) {
         int32_t found = rg_db_find(&db, rg_db_name(&db, &entries[i]));

@@ -110,11 +110,28 @@ uint32_t rg_db_hash(uint32_t hash, const void* data, size_t len);
 /** True for a RAW entry that shares its size with another RAW entry. */
 bool rg_db_needs_content_hash(const RgDb* db, size_t index);
 
+/* rg_db_mark_duplicates takes work space and rg_db_hash_candidates exists
+ * (beta 10); the host benchmark builds against older versions too. */
+#define RG_DB_HAS_SCRATCH 1
+
+/**
+ * Every entry rg_db_needs_content_hash() is true for, in index order, in one
+ * O(n log n) pass instead of n O(n) ones. @p out holds `cap` indices and must
+ * not be the scratch space. Returns how many.
+ */
+size_t rg_db_hash_candidates(const RgDb* db, uint16_t* out);
+
 /** Record the whole-content hash of a RAW entry. */
 void rg_db_set_content_hash(RgDbEntry* e, uint32_t hash);
 
-/** Set RG_DB_FLAG_DUPLICATE and dup_count on every entry (call after hashing). */
-void rg_db_mark_duplicates(RgDb* db);
+/**
+ * Set RG_DB_FLAG_DUPLICATE and dup_count on every entry (call after hashing).
+ * @p scratch holds `cap` indices (e.g. the list's view array, which
+ * rg_db_select refills afterwards). Sorts by what makes two entries the same
+ * signal and groups equal runs, in O(n log n): the result is that of
+ * comparing every pair with rg_db_same_signal, an equivalence relation.
+ */
+void rg_db_mark_duplicates(RgDb* db, uint16_t* scratch);
 
 /** True if the two entries hold the same signal (see the file comment). */
 bool rg_db_same_signal(const RgDbEntry* a, const RgDbEntry* b);

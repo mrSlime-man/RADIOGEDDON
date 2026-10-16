@@ -23,6 +23,42 @@ void rg_db_init(RgDb* db, RgDbEntry* entries, size_t cap, char* names, size_t na
     db->names_cap = names_cap;
 }
 
+/* ---- In-place heap sort of entry indices ---------------------------------
+ * O(n log n) compares, no allocation and no recursion. Not stable by itself:
+ * every comparator below ends with the index, so the order is total and
+ * matches what a stable sort of the indices in ascending order gives. */
+
+typedef int (*RgDbCmp)(const RgDb* db, uint16_t a, uint16_t b, int arg);
+
+static void rg_db_sift(const RgDb* db, uint16_t* v, size_t root, size_t n, RgDbCmp cmp, int arg) {
+    uint16_t top = v[root];
+    while(true) {
+        size_t child = 2 * root + 1;
+        if(child >= n) break;
+        if(child + 1 < n && cmp(db, v[child], v[child + 1], arg) < 0) child++;
+        if(cmp(db, top, v[child], arg) >= 0) break;
+        v[root] = v[child];
+        root = child;
+    }
+    v[root] = top;
+}
+
+static void rg_db_heapsort(const RgDb* db, uint16_t* v, size_t n, RgDbCmp cmp, int arg) {
+    if(n < 2) return;
+    for(size_t i = n / 2; i-- > 0;)
+        rg_db_sift(db, v, i, n, cmp, arg);
+    for(size_t end = n - 1; end > 0; end--) {
+        uint16_t t = v[0];
+        v[0] = v[end];
+        v[end] = t;
+        rg_db_sift(db, v, 0, end, cmp, arg);
+    }
+}
+
+static int rg_db_cmp_u32(uint32_t a, uint32_t b) {
+    return a == b ? 0 : (a < b ? -1 : 1);
+}
+
 RgDbEntry* rg_db_add(RgDb* db, const char* name) {
     size_t len = strlen(name) + 1;
     if(db->count >= db->cap || db->names_len + len > db->names_cap) return NULL;
@@ -169,6 +205,40 @@ bool rg_db_needs_content_hash(const RgDb* db, size_t index) {
     return false;
 }
 
+/* RAW entries by size, then index. */
+static int rg_db_cmp_size(const RgDb* db, uint16_t a, uint16_t b, int arg) {
+    (void)arg;
+    int c = rg_db_cmp_u32(db->entries[a].size, db->entries[b].size);
+    return c ? c : rg_db_cmp_u32(a, b);
+}
+
+static int rg_db_cmp_index(const RgDb* db, uint16_t a, uint16_t b, int arg) {
+    (void)db;
+    (void)arg;
+    return rg_db_cmp_u32(a, b);
+}
+
+size_t rg_db_hash_candidates(const RgDb* db, uint16_t* out) {
+    size_t n = 0;
+    for(size_t i = 0; i < db->count; i++)
+        if(db->entries[i].kind == RgDbKindRaw) out[n++] = (uint16_t)i;
+    rg_db_heapsort(db, out, n, rg_db_cmp_size, 0);
+    // Keep the runs of two or more equal sizes.
+    size_t kept = 0;
+    for(size_t i = 0; i < n;) {
+        size_t j = i + 1;
+        while(j < n && db->entries[out[j]].size == db->entries[out[i]].size)
+            j++;
+        if(j - i > 1)
+            for(size_t k = i; k < j; k++)
+                out[kept++] = out[k];
+        i = j;
+    }
+    // Back to index order: files are then read in folder order.
+    rg_db_heapsort(db, out, kept, rg_db_cmp_index, 0);
+    return kept;
+}
+
 void rg_db_set_content_hash(RgDbEntry* e, uint32_t hash) {
     e->hash = hash;
     e->flags |= RG_DB_FLAG_HASHED;
@@ -188,19 +258,55 @@ bool rg_db_same_signal(const RgDbEntry* a, const RgDbEntry* b) {
     return false;
 }
 
-void rg_db_mark_duplicates(RgDb* db) {
+/* Only these can be the same signal as another entry (rg_db_same_signal). */
+static bool rg_db_dup_eligible(const RgDbEntry* e) {
+    if(e->kind == RgDbKindProtocol) return e->flags & RG_DB_FLAG_HAS_KEY;
+    if(e->kind == RgDbKindRaw) return e->flags & RG_DB_FLAG_HASHED;
+    return false;
+}
+
+/* Equal (0, before the index) exactly when rg_db_same_signal is true. */
+static int rg_db_cmp_signal_key(const RgDb* db, uint16_t ia, uint16_t ib) {
+    const RgDbEntry* a = &db->entries[ia];
+    const RgDbEntry* b = &db->entries[ib];
+    int c = rg_db_cmp_u32(a->kind, b->kind);
+    if(!c) c = rg_db_cmp_u32(a->hash, b->hash);
+    if(c) return c;
+    if(a->kind == RgDbKindRaw) return rg_db_cmp_u32(a->size, b->size);
+    c = rg_db_cmp_u32(a->frequency, b->frequency);
+    if(!c) c = rg_db_cmp_u32(a->bits, b->bits);
+    if(!c) c = strcmp(a->protocol, b->protocol);
+    return c;
+}
+
+static int rg_db_cmp_signal(const RgDb* db, uint16_t a, uint16_t b, int arg) {
+    (void)arg;
+    int c = rg_db_cmp_signal_key(db, a, b);
+    return c ? c : rg_db_cmp_u32(a, b);
+}
+
+void rg_db_mark_duplicates(RgDb* db, uint16_t* scratch) {
+    // Each run of equal keys is one group, every member a duplicate of the others.
+    uint16_t* v = scratch;
+    size_t n = 0;
     for(size_t i = 0; i < db->count; i++) {
-        db->entries[i].flags &= (uint8_t)~RG_DB_FLAG_DUPLICATE;
-        db->entries[i].dup_count = 0;
+        RgDbEntry* e = &db->entries[i];
+        e->flags &= (uint8_t)~RG_DB_FLAG_DUPLICATE;
+        e->dup_count = 0;
+        if(rg_db_dup_eligible(e)) v[n++] = (uint16_t)i;
     }
-    for(size_t i = 0; i < db->count; i++) {
-        for(size_t j = i + 1; j < db->count; j++) {
-            if(!rg_db_same_signal(&db->entries[i], &db->entries[j])) continue;
-            db->entries[i].flags |= RG_DB_FLAG_DUPLICATE;
-            db->entries[j].flags |= RG_DB_FLAG_DUPLICATE;
-            if(db->entries[i].dup_count < UINT16_MAX) db->entries[i].dup_count++;
-            if(db->entries[j].dup_count < UINT16_MAX) db->entries[j].dup_count++;
+    rg_db_heapsort(db, v, n, rg_db_cmp_signal, 0);
+    for(size_t i = 0; i < n;) {
+        size_t j = i + 1;
+        while(j < n && rg_db_cmp_signal_key(db, v[i], v[j]) == 0)
+            j++;
+        size_t others = j - i - 1;
+        uint16_t count = others > UINT16_MAX ? UINT16_MAX : (uint16_t)others;
+        for(size_t k = i; k < j && others; k++) {
+            db->entries[v[k]].flags |= RG_DB_FLAG_DUPLICATE;
+            db->entries[v[k]].dup_count = count;
         }
+        i = j;
     }
 }
 
@@ -271,21 +377,20 @@ static int rg_db_compare(const RgDb* db, const RgDbEntry* a, const RgDbEntry* b,
     return c;
 }
 
+static int rg_db_cmp_view(const RgDb* db, uint16_t a, uint16_t b, int sort) {
+    int c = rg_db_compare(db, &db->entries[a], &db->entries[b], (RgDbSort)sort);
+    return c ? c : rg_db_cmp_u32(a, b);
+}
+
 size_t rg_db_select(const RgDb* db, const RgDbQuery* q, uint16_t* out, size_t max) {
     size_t n = 0;
     for(size_t i = 0; i < db->count && n < max; i++) {
         if(rg_db_shown(db, &db->entries[i], q)) out[n++] = (uint16_t)i;
     }
-    // Insertion sort: stable, no allocation, fine for a few hundred files.
-    for(size_t i = 1; i < n; i++) {
-        uint16_t v = out[i];
-        size_t j = i;
-        while(j > 0 && rg_db_compare(db, &db->entries[out[j - 1]], &db->entries[v], q->sort) > 0) {
-            out[j] = out[j - 1];
-            j--;
-        }
-        out[j] = v;
-    }
+    // Heap sort with the index as the last tie-break: the same order the
+    // stable insertion sort before beta 10 gave, in O(n log n) compares (it
+    // runs on every sort, filter and search change in the list).
+    rg_db_heapsort(db, out, n, rg_db_cmp_view, (int)q->sort);
     return n;
 }
 
