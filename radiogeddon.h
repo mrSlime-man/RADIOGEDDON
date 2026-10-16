@@ -50,6 +50,7 @@
 #include "views/radiogeddon_waterfall_view.h"
 #include "views/radiogeddon_bits_view.h"
 #include "views/radiogeddon_room_view.h"
+#include "views/radiogeddon_heatmap_view.h"
 
 #define RADIOGEDDON_TEXT_INPUT_BUFFER_SIZE 64
 #define RADIOGEDDON_TAG                    "RadioGeddon"
@@ -73,6 +74,7 @@ typedef enum {
     RadioGeddonViewLab, // Full: dashboard and cards, while the style is not Classic
     RadioGeddonViewRoom, // Full: added only while the Dolphin Lab room is open
     RadioGeddonViewStudio, // Full: added only while Pulse Studio is open
+    RadioGeddonViewHeatmap, // Full: added only while an activity heatmap is open
 } RadioGeddonView;
 
 /** What a frequency typed on the number keyboard is for. */
@@ -268,6 +270,8 @@ struct RadioGeddonApp {
 #if RG_FEATURE_ACTIVITY_LOG
     // RF Activity Logger: its state while it runs (module memory).
     void* actlog;
+    // Activity Heatmap: the map of a saved log while it is shown.
+    void* heatmap;
 #endif
 };
 

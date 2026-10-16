@@ -241,3 +241,20 @@ App(
     ],
     fal_embedded=True,
 )
+
+App(
+    appid="radiogeddon_heatmap",
+    apptype=FlipperAppType.PLUGIN,
+    entry_point="radiogeddon_heatmap_module_ep",
+    requires=["radiogeddon_full"],
+    cdefines=["RADIOGEDDON_EDITION_FULL", "RADIOGEDDON_MODULE"],
+    sources=[
+        "modules/radiogeddon_module_heatmap.c",
+        "scenes/radiogeddon_scene_heatmap.c",
+        "helpers/radiogeddon_heatmap.c",
+        "helpers/rg_heatmap.c",
+        "helpers/rg_actlog.c",
+        "views/radiogeddon_heatmap_view.c",
+    ],
+    fal_embedded=True,
+)

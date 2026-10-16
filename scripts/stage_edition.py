@@ -78,6 +78,10 @@ FULL_MODULE_ONLY = (
     "helpers/rg_fp.c",
     "helpers/radiogeddon_actlog.c",
     "helpers/rg_actlog.c",
+    "helpers/rg_heatmap.c",
+    "helpers/radiogeddon_heatmap.c",
+    "views/radiogeddon_heatmap_view.c",
+    "scenes/radiogeddon_scene_heatmap.c",
     # The analyzer and its runner: every Full tool that analyses is a module.
     "helpers/radiogeddon_analysis_run.c",
     "helpers/rg_analyzer.c",

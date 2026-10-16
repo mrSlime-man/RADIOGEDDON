@@ -42,6 +42,7 @@ static const ToolScene tool_scenes[] = {
 #if RG_FEATURE_ACTIVITY_LOG
     {RadioGeddonSceneActlog, RADIOGEDDON_MODULE_LOG, 0, 8},
     {RadioGeddonSceneAdaptive, RADIOGEDDON_MODULE_LOG, 1, 1},
+    {RadioGeddonSceneHeatmap, RADIOGEDDON_MODULE_HEATMAP, 0, 12},
 #endif
 #if RG_FEATURE_DOLPHIN_LAB
     {RadioGeddonSceneRoom, RADIOGEDDON_MODULE_LAB, 0, 4},
@@ -307,6 +308,7 @@ TOOL_SCENE(report, Report)
 #if RG_FEATURE_ACTIVITY_LOG
 TOOL_SCENE(actlog, Actlog)
 TOOL_SCENE(adaptive, Adaptive)
+TOOL_SCENE(heatmap, Heatmap)
 #endif
 #if RG_FEATURE_DOLPHIN_LAB
 TOOL_SCENE(room, Room)

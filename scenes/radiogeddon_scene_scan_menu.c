@@ -12,6 +12,7 @@ typedef enum {
     ScanMenuFavorites,
     ScanMenuAdaptive,
     ScanMenuLogger,
+    ScanMenuHeatmap,
 } ScanMenuIndex;
 
 static void radiogeddon_scene_scan_menu_cb(void* context, uint32_t index) {
@@ -33,6 +34,8 @@ void radiogeddon_scene_scan_menu_on_enter(void* context) {
 #if RG_FEATURE_ACTIVITY_LOG
     submenu_add_item(
         submenu, "RF Activity Logger", ScanMenuLogger, radiogeddon_scene_scan_menu_cb, app);
+    submenu_add_item(
+        submenu, "Activity Heatmap", ScanMenuHeatmap, radiogeddon_scene_scan_menu_cb, app);
 #endif
     submenu_add_item(submenu, "Range Scanner", ScanMenuRange, radiogeddon_scene_scan_menu_cb, app);
     submenu_add_item(submenu, "Waterfall", ScanMenuWaterfall, radiogeddon_scene_scan_menu_cb, app);
@@ -46,7 +49,7 @@ void radiogeddon_scene_scan_menu_on_enter(void* context) {
 
 bool radiogeddon_scene_scan_menu_on_event(void* context, SceneManagerEvent event) {
     RadioGeddonApp* app = context;
-    if(event.type != SceneManagerEventTypeCustom || event.event > ScanMenuLogger) return false;
+    if(event.type != SceneManagerEventTypeCustom || event.event > ScanMenuHeatmap) return false;
     scene_manager_set_scene_state(app->scene_manager, RadioGeddonSceneScanMenu, event.event);
     switch(event.event) {
     case ScanMenuScanner:
@@ -63,6 +66,9 @@ bool radiogeddon_scene_scan_menu_on_event(void* context, SceneManagerEvent event
 #if RG_FEATURE_ACTIVITY_LOG
     case ScanMenuLogger:
         scene_manager_next_scene(app->scene_manager, RadioGeddonSceneActlog);
+        break;
+    case ScanMenuHeatmap:
+        scene_manager_next_scene(app->scene_manager, RadioGeddonSceneHeatmap);
         break;
 #endif
     case ScanMenuRange:

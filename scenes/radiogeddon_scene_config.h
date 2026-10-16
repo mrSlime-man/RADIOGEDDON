@@ -66,6 +66,7 @@ ADD_SCENE(radiogeddon, adaptive, Adaptive)
 #endif
 #if RG_FEATURE_ACTIVITY_LOG
 ADD_SCENE(radiogeddon, actlog, Actlog)
+ADD_SCENE(radiogeddon, heatmap, Heatmap)
 #endif
 #if RG_FEATURE_JOURNAL
 ADD_SCENE(radiogeddon, journal, Journal)

@@ -43,6 +43,7 @@
 #define RADIOGEDDON_MODULE_LOG       "radiogeddon_log.fal"
 #define RADIOGEDDON_MODULE_REPORTS   "radiogeddon_reports.fal"
 #define RADIOGEDDON_MODULE_RECOVER   "radiogeddon_recover.fal"
+#define RADIOGEDDON_MODULE_HEATMAP   "radiogeddon_heatmap.fal"
 
 #include <dialogs/dialogs.h>
 /* Recording recovery at startup (radiogeddon_recovery.h), only when a
