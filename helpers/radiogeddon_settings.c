@@ -1,4 +1,5 @@
 #include "radiogeddon_settings.h"
+#include "radiogeddon_safefile.h"
 #include "radiogeddon_bands.h"
 #include "rg_db.h"
 #include "rg_freq.h"
@@ -227,8 +228,16 @@ static void settings_load_special(FlipperFormat* ff, RadioGeddonSettings* settin
     }
 }
 
+static const RgSafeFile settings_file = {
+    RADIOGEDDON_SETTINGS_PATH,
+    RADIOGEDDON_SETTINGS_TEMP,
+    RADIOGEDDON_SETTINGS_MARK,
+};
+
 void radiogeddon_settings_load(Storage* storage, RadioGeddonSettings* settings) {
     radiogeddon_settings_default(settings);
+    // A save cut off by a reboot is finished (or dropped) before reading.
+    radiogeddon_safefile_recover(storage, &settings_file);
 
     FlipperFormat* ff = flipper_format_file_alloc(storage);
     FuriString* type = furi_string_alloc();
@@ -264,8 +273,10 @@ void radiogeddon_settings_load(Storage* storage, RadioGeddonSettings* settings) 
 }
 
 bool radiogeddon_settings_save(Storage* storage, const RadioGeddonSettings* settings) {
-    // Write a new file next to the old one and swap it in only when complete,
-    // so a failed write never leaves a cut-off settings file.
+    // Write a new file next to the old one and swap it in only when complete
+    // (radiogeddon_safefile.h), so neither a failed write nor a reboot during
+    // the swap leaves a cut-off settings file.
+    if(!radiogeddon_safefile_begin(storage, &settings_file)) return false;
     FlipperFormat* ff = flipper_format_file_alloc(storage);
     bool ok = false;
     do {
@@ -300,17 +311,7 @@ bool radiogeddon_settings_save(Storage* storage, const RadioGeddonSettings* sett
     } while(false);
     ok = flipper_format_file_close(ff) && ok;
     flipper_format_free(ff);
-    if(ok) {
-        FS_Error err =
-            storage_common_rename(storage, RADIOGEDDON_SETTINGS_TEMP, RADIOGEDDON_SETTINGS_PATH);
-        if(err == FSE_EXIST) {
-            // Firmware that does not replace on rename.
-            storage_common_remove(storage, RADIOGEDDON_SETTINGS_PATH);
-            err = storage_common_rename(
-                storage, RADIOGEDDON_SETTINGS_TEMP, RADIOGEDDON_SETTINGS_PATH);
-        }
-        ok = err == FSE_OK;
-    }
-    if(!ok) storage_common_remove(storage, RADIOGEDDON_SETTINGS_TEMP);
-    return ok;
+    if(ok) return radiogeddon_safefile_commit(storage, &settings_file);
+    storage_common_remove(storage, RADIOGEDDON_SETTINGS_TEMP);
+    return false;
 }

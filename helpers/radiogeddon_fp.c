@@ -4,6 +4,7 @@
 
 #include "radiogeddon_analysis.h"
 #include "radiogeddon_storage.h"
+#include "radiogeddon_safefile.h"
 
 #define TAG "RadioGeddonFp"
 
@@ -158,6 +159,12 @@ size_t radiogeddon_fp_memory(void) {
            FP_BATCH * RG_FP_NAME_MAX + 2048u;
 }
 
+static const RgSafeFile fp_index_file = {
+    RADIOGEDDON_FP_INDEX,
+    RADIOGEDDON_FP_TEMP,
+    RADIOGEDDON_FP_MARK,
+};
+
 /* Rewrite the index: keep current records, add the missing recordings. */
 static bool fp_update(
     Storage* storage,
@@ -173,7 +180,10 @@ static bool fp_update(
 
     File* in = storage_file_alloc(storage);
     File* tmp = storage_file_alloc(storage);
-    bool ok = storage_file_open(tmp, RADIOGEDDON_FP_TEMP, FSAM_WRITE, FSOM_CREATE_ALWAYS);
+    // Finishes an update a reboot cut off first, so the old index is read
+    // whole (radiogeddon_safefile.h): its records are hours of analysis.
+    bool ok = radiogeddon_safefile_begin(storage, &fp_index_file) &&
+              storage_file_open(tmp, RADIOGEDDON_FP_TEMP, FSAM_WRITE, FSOM_CREATE_ALWAYS);
     uint8_t header[RG_FP_HEADER_BYTES];
     rg_fp_header_encode(0, header);
     ok = ok && storage_file_write(tmp, header, sizeof(header)) == sizeof(header);
@@ -240,17 +250,11 @@ static bool fp_update(
     storage_file_free(tmp);
     storage_file_free(in);
     if(ok) {
-        FS_Error err = storage_common_rename(storage, RADIOGEDDON_FP_TEMP, RADIOGEDDON_FP_INDEX);
-        if(err == FSE_EXIST) {
-            storage_common_remove(storage, RADIOGEDDON_FP_INDEX);
-            err = storage_common_rename(storage, RADIOGEDDON_FP_TEMP, RADIOGEDDON_FP_INDEX);
-        }
-        ok = err == FSE_OK;
-    }
-    if(!ok) {
+        ok = radiogeddon_safefile_commit(storage, &fp_index_file);
+    } else {
         storage_common_remove(storage, RADIOGEDDON_FP_TEMP);
-        FURI_LOG_W(TAG, "index not written");
     }
+    if(!ok) FURI_LOG_W(TAG, "index not written");
     out->indexed = count;
     return ok;
 }

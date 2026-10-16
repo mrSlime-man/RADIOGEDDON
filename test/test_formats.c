@@ -965,6 +965,94 @@ static void test_repeated(void) {
     printf("  peak while saving and loading: %u bytes\n", (unsigned)(stub_peak_bytes - live));
 }
 
+/* ---- Interrupted saves (rg_safefile through the firmware's FlipperFormat) - */
+
+static long host_read(const char* path, char* buf, size_t max) {
+    FILE* fp = fopen(path, "rb");
+    if(!fp) return -1;
+    long n = (long)fread(buf, 1, max, fp);
+    fclose(fp);
+    return n;
+}
+
+static void host_write(const char* path, const char* buf, size_t len) {
+    FILE* fp = fopen(path, "wb");
+    if(!fp) exit(2);
+    if(len) fwrite(buf, 1, len, fp);
+    fclose(fp);
+}
+
+static void test_settings_interrupted(void) {
+    printf("test_settings_interrupted\n");
+    RadioGeddonSettings old_s, new_s, got;
+    radiogeddon_settings_default(&old_s);
+    old_s.frequency = 315000000;
+    new_s = custom_settings();
+    char old_text[1024], new_text[1024];
+    reset_card();
+    CHECK(radiogeddon_settings_save(CARD, &new_s), "new version saved");
+    long new_len = host_read(RADIOGEDDON_SETTINGS_PATH, new_text, sizeof(new_text));
+    CHECK(radiogeddon_settings_save(CARD, &old_s), "old version saved");
+    long old_len = host_read(RADIOGEDDON_SETTINGS_PATH, old_text, sizeof(old_text));
+    CHECK(new_len > 64 && old_len > 64, "both versions read");
+
+    /* Cut off during the rename's copy: the file is half the new version,
+     * the .tmp and the marker are complete. The new version is finished. */
+    host_write(RADIOGEDDON_SETTINGS_TEMP, new_text, (size_t)new_len);
+    host_write(RADIOGEDDON_SETTINGS_MARK, "", 0);
+    host_write(RADIOGEDDON_SETTINGS_PATH, new_text, (size_t)new_len / 2);
+    radiogeddon_settings_load(CARD, &got);
+    CHECK(same_settings(&got, &new_s), "cut-off copy: the new version, not defaults");
+    CHECK(!storage_common_exists(CARD, RADIOGEDDON_SETTINGS_TEMP), "tmp gone");
+    CHECK(!storage_common_exists(CARD, RADIOGEDDON_SETTINGS_MARK), "marker gone");
+
+    /* Cut off after the old file was removed: only the .tmp and marker. */
+    host_write(RADIOGEDDON_SETTINGS_TEMP, old_text, (size_t)old_len);
+    host_write(RADIOGEDDON_SETTINGS_MARK, "", 0);
+    remove(RADIOGEDDON_SETTINGS_PATH);
+    radiogeddon_settings_load(CARD, &got);
+    CHECK(same_settings(&got, &old_s), "file missing: restored from the complete tmp");
+
+    /* Cut off while the .tmp was written (no marker): the file is kept. */
+    host_write(RADIOGEDDON_SETTINGS_TEMP, new_text, 40);
+    radiogeddon_settings_load(CARD, &got);
+    CHECK(same_settings(&got, &old_s), "half-written tmp: the old version");
+    CHECK(!storage_common_exists(CARD, RADIOGEDDON_SETTINGS_TEMP), "half tmp dropped");
+
+    /* A save after a cut-off one finishes it first, then saves. */
+    host_write(RADIOGEDDON_SETTINGS_TEMP, new_text, (size_t)new_len);
+    host_write(RADIOGEDDON_SETTINGS_MARK, "", 0);
+    host_write(RADIOGEDDON_SETTINGS_PATH, old_text, 10);
+    old_s.frequency = 433920000;
+    CHECK(radiogeddon_settings_save(CARD, &old_s), "save over an interrupted one");
+    radiogeddon_settings_load(CARD, &got);
+    CHECK(same_settings(&got, &old_s), "the latest save wins");
+
+    /* The same on firmware whose rename refuses an existing target. */
+    stub_rename_keeps_target = true;
+    host_write(RADIOGEDDON_SETTINGS_TEMP, new_text, (size_t)new_len);
+    host_write(RADIOGEDDON_SETTINGS_MARK, "", 0);
+    host_write(RADIOGEDDON_SETTINGS_PATH, new_text, 7);
+    radiogeddon_settings_load(CARD, &got);
+    CHECK(same_settings(&got, &new_s), "non-replacing rename: finished too");
+    CHECK(radiogeddon_settings_save(CARD, &old_s), "and saves normally");
+    radiogeddon_settings_load(CARD, &got);
+    CHECK(same_settings(&got, &old_s), "read back");
+    stub_rename_keeps_target = false;
+
+    /* Favorites go through the same path. */
+    RadioGeddonFavorites fav = {0}, fav_got;
+    radiogeddon_favorites_add(&fav, 433920000);
+    radiogeddon_favorites_add(&fav, 868350000);
+    CHECK(radiogeddon_favorites_save(CARD, &fav), "favorites saved");
+    long fl = host_read(RADIOGEDDON_FAVORITES_PATH, new_text, sizeof(new_text));
+    host_write(RADIOGEDDON_FAVORITES_TEMP, new_text, (size_t)fl);
+    host_write(RADIOGEDDON_FAVORITES_MARK, "", 0);
+    remove(RADIOGEDDON_FAVORITES_PATH);
+    radiogeddon_favorites_load(CARD, &fav_got);
+    CHECK(fav_got.count == 2, "favorites restored from the complete tmp");
+}
+
 int main(int argc, char** argv) {
     bool verbose = argc > 1 && strcmp(argv[1], "-v") == 0;
     test_firmware_files(verbose);
@@ -976,6 +1064,7 @@ int main(int argc, char** argv) {
     test_profiles();
     test_settings_malformed();
     test_settings_failed_save();
+    test_settings_interrupted();
     test_write_signal();
     test_repeated();
     if(system("rm -rf build/ext") != 0) return 2;

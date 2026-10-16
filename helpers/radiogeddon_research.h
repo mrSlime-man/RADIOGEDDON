@@ -29,6 +29,7 @@
 
 #define RADIOGEDDON_JOURNAL_PATH EXT_PATH("apps_data/radiogeddon/journal.bin")
 #define RADIOGEDDON_JOURNAL_TEMP EXT_PATH("apps_data/radiogeddon/journal.tmp")
+#define RADIOGEDDON_JOURNAL_MARK EXT_PATH("apps_data/radiogeddon/journal.cmt")
 #define RADIOGEDDON_JOURNAL_BAD  EXT_PATH("apps_data/radiogeddon/journal.bad")
 
 /* Recordings remembered as similar to the one in context (for Compare). */

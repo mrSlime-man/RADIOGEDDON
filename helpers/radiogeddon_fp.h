@@ -33,6 +33,7 @@
 
 #define RADIOGEDDON_FP_INDEX EXT_PATH("apps_data/radiogeddon/fingerprints.idx")
 #define RADIOGEDDON_FP_TEMP  EXT_PATH("apps_data/radiogeddon/fingerprints.tmp")
+#define RADIOGEDDON_FP_MARK  EXT_PATH("apps_data/radiogeddon/fingerprints.cmt")
 
 /* Matches shown are at least this similar. */
 #define RADIOGEDDON_FP_MIN_SCORE 50u

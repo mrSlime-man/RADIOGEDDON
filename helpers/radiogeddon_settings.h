@@ -13,6 +13,7 @@
 
 #define RADIOGEDDON_SETTINGS_PATH EXT_PATH("apps_data/radiogeddon/settings.txt")
 #define RADIOGEDDON_SETTINGS_TEMP EXT_PATH("apps_data/radiogeddon/settings.tmp")
+#define RADIOGEDDON_SETTINGS_MARK EXT_PATH("apps_data/radiogeddon/settings.cmt")
 
 typedef struct {
     uint32_t frequency; // Hz, receiver / default frequency

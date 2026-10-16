@@ -33,6 +33,7 @@ FP_SRC := test_fp.c ../helpers/rg_fp.c ../helpers/rg_analyzer.c ../helpers/rg_cr
 ADAPT_SRC := test_adapt.c ../helpers/rg_adapt.c
 ACTLOG_SRC := test_actlog.c ../helpers/rg_actlog.c
 STUDIO_SRC := test_studio.c ../helpers/rg_studio.c ../helpers/rg_analyzer.c
+SAFEFILE_SRC := test_safefile.c ../helpers/rg_safefile.c
 JOURNAL_SRC := test_journal.c ../helpers/rg_journal.c ../helpers/rg_assist.c ../helpers/rg_crc.c
 DBLOAD_SRC := test_dbload.c stubs/furi_stub.c ../helpers/radiogeddon_db.c ../helpers/rg_db.c
 STUB_HDRS := stubs/furi.h stubs/storage/storage.h stubs/datetime/datetime.h \
@@ -50,14 +51,14 @@ FW_SRC := $(FW)/lib/flipper_format/flipper_format.c $(FW)/lib/flipper_format/fli
 		$(FW)/lib/toolbox/stream/file_stream.c $(FW)/lib/toolbox/stream/buffered_file_stream.c \
 		$(FW)/lib/toolbox/stream/stream_cache.c $(FW)/lib/toolbox/hex.c $(FW)/lib/toolbox/strint.c
 FW_OBJ := $(patsubst $(FW)/%.c,$(BUILD)/fwobj/%.o,$(FW_SRC))
-FORMATS_SRC := test_formats.c stubs/furi_stub.c ../helpers/radiogeddon_storage.c \
+FORMATS_SRC := test_formats.c stubs/furi_stub.c ../helpers/radiogeddon_storage.c ../helpers/radiogeddon_safefile.c ../helpers/rg_safefile.c \
 		../helpers/radiogeddon_settings.c ../helpers/radiogeddon_bands.c ../helpers/rg_freq.c \
 		../helpers/radiogeddon_dsp.c ../helpers/rg_range.c ../helpers/radiogeddon_profiles.c \
 		../helpers/rg_db.c ../helpers/rg_raw.c ../helpers/rg_analyzer.c ../helpers/rg_ui.c
 
 # Fingerprint index tests: Find Similar Signals over real files through the
 # stub Storage, the recordings parsed by the firmware's FlipperFormat code.
-FPINDEX_SRC := test_fpindex.c stubs/furi_stub.c ../helpers/radiogeddon_fp.c ../helpers/rg_fp.c \
+FPINDEX_SRC := test_fpindex.c stubs/furi_stub.c ../helpers/radiogeddon_fp.c ../helpers/radiogeddon_safefile.c ../helpers/rg_safefile.c ../helpers/rg_fp.c \
 		../helpers/rg_crc.c ../helpers/radiogeddon_analysis_run.c ../helpers/radiogeddon_analysis_status.c ../helpers/radiogeddon_storage.c \
 		../helpers/rg_raw.c ../helpers/rg_analyzer.c ../helpers/radiogeddon_dsp.c
 
@@ -124,7 +125,7 @@ UI_HDRS := ui/canvas_host.h ui/stubs/gui/view.h ui/stubs/gui/canvas.h ui/stubs/g
 check: $(BUILD)/test_dsp $(BUILD)/test_analyzer $(BUILD)/test_scan $(BUILD)/test_hop $(BUILD)/test_raw \
 		$(BUILD)/test_timeline $(BUILD)/test_ring $(BUILD)/test_rawfmt $(BUILD)/test_recorder \
 		$(BUILD)/test_db $(BUILD)/test_memstat $(BUILD)/test_dbload $(BUILD)/test_decode $(BUILD)/test_freq $(BUILD)/test_preset $(BUILD)/test_range \
-		$(BUILD)/test_txpolicy $(BUILD)/test_spectrum $(BUILD)/test_checksum $(BUILD)/test_waterfall $(BUILD)/test_bits $(BUILD)/test_multi $(BUILD)/test_session $(BUILD)/test_elf $(BUILD)/test_mascot $(BUILD)/test_fp $(BUILD)/test_adapt $(BUILD)/test_actlog $(BUILD)/test_journal $(BUILD)/test_studio $(BUILD)/sprites.ok $(BUILD)/test_edition_full $(BUILD)/test_edition_catalog \
+		$(BUILD)/test_txpolicy $(BUILD)/test_spectrum $(BUILD)/test_checksum $(BUILD)/test_waterfall $(BUILD)/test_bits $(BUILD)/test_multi $(BUILD)/test_session $(BUILD)/test_elf $(BUILD)/test_mascot $(BUILD)/test_fp $(BUILD)/test_adapt $(BUILD)/test_actlog $(BUILD)/test_journal $(BUILD)/test_studio $(BUILD)/test_safefile $(BUILD)/sprites.ok $(BUILD)/test_edition_full $(BUILD)/test_edition_catalog \
 		$(BUILD)/test_edition_default $(BUILD)/edition_conflict.ok \
 		$(addprefix $(BUILD)/replay_,$(FUZZ_TARGETS))
 	$(BUILD)/test_dsp
@@ -157,6 +158,7 @@ check: $(BUILD)/test_dsp $(BUILD)/test_analyzer $(BUILD)/test_scan $(BUILD)/test
 	$(BUILD)/test_actlog
 	$(BUILD)/test_journal
 	$(BUILD)/test_studio
+	$(BUILD)/test_safefile
 	$(BUILD)/test_edition_full
 	$(BUILD)/test_edition_catalog
 	$(BUILD)/test_edition_default
@@ -236,6 +238,9 @@ $(BUILD)/test_adapt: $(ADAPT_SRC) ../helpers/rg_adapt.h | $(BUILD)
 
 $(BUILD)/test_actlog: $(ACTLOG_SRC) ../helpers/rg_actlog.h | $(BUILD)
 	$(CC) $(CFLAGS) $(SAN) -DRADIOGEDDON_EDITION_FULL -o $@ $(ACTLOG_SRC)
+
+$(BUILD)/test_safefile: $(SAFEFILE_SRC) ../helpers/rg_safefile.h | $(BUILD)
+	$(CC) $(CFLAGS) $(SAN) -o $@ $(SAFEFILE_SRC)
 
 $(BUILD)/test_studio: $(STUDIO_SRC) ../helpers/rg_studio.h ../helpers/rg_analyzer.h | $(BUILD)
 	$(CC) $(CFLAGS) $(SAN) -DRADIOGEDDON_EDITION_FULL -o $@ $(STUDIO_SRC)

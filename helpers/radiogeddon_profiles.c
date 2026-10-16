@@ -1,4 +1,5 @@
 #include "radiogeddon_profiles.h"
+#include "radiogeddon_safefile.h"
 #include "../radiogeddon_edition.h"
 
 #if RG_EDITION_FULL
@@ -43,8 +44,15 @@ bool radiogeddon_favorites_remove(RadioGeddonFavorites* favorites, size_t index)
     return true;
 }
 
+static const RgSafeFile favorites_file = {
+    RADIOGEDDON_FAVORITES_PATH,
+    RADIOGEDDON_FAVORITES_TEMP,
+    RADIOGEDDON_FAVORITES_MARK,
+};
+
 void radiogeddon_favorites_load(Storage* storage, RadioGeddonFavorites* favorites) {
     favorites->count = 0;
+    radiogeddon_safefile_recover(storage, &favorites_file);
     FlipperFormat* ff = flipper_format_file_alloc(storage);
     FuriString* type = furi_string_alloc();
     uint32_t version = 0;
@@ -69,18 +77,9 @@ void radiogeddon_favorites_load(Storage* storage, RadioGeddonFavorites* favorite
     flipper_format_free(ff);
 }
 
-static bool radiogeddon_profiles_replace(Storage* storage, const char* temp, const char* path) {
-    FS_Error err = storage_common_rename(storage, temp, path);
-    if(err == FSE_EXIST) {
-        // Firmware that does not replace on rename.
-        storage_common_remove(storage, path);
-        err = storage_common_rename(storage, temp, path);
-    }
-    return err == FSE_OK;
-}
-
 bool radiogeddon_favorites_save(Storage* storage, const RadioGeddonFavorites* favorites) {
     radiogeddon_storage_ensure_paths(storage);
+    if(!radiogeddon_safefile_begin(storage, &favorites_file)) return false;
     FlipperFormat* ff = flipper_format_file_alloc(storage);
     bool ok = false;
     do {
@@ -96,11 +95,9 @@ bool radiogeddon_favorites_save(Storage* storage, const RadioGeddonFavorites* fa
     } while(false);
     ok = flipper_format_file_close(ff) && ok;
     flipper_format_free(ff);
-    if(ok)
-        ok = radiogeddon_profiles_replace(
-            storage, RADIOGEDDON_FAVORITES_TEMP, RADIOGEDDON_FAVORITES_PATH);
-    if(!ok) storage_common_remove(storage, RADIOGEDDON_FAVORITES_TEMP);
-    return ok;
+    if(ok) return radiogeddon_safefile_commit(storage, &favorites_file);
+    storage_common_remove(storage, RADIOGEDDON_FAVORITES_TEMP);
+    return false;
 }
 
 /* ---- Scan profiles ------------------------------------------------------- */
@@ -138,10 +135,19 @@ bool radiogeddon_profile_save(
 
     FuriString* path = furi_string_alloc();
     FuriString* temp = furi_string_alloc();
+    FuriString* mark = furi_string_alloc();
     radiogeddon_profile_path(path, name);
-    furi_string_printf(temp, "%s/.profile.tmp", RADIOGEDDON_PROFILES_FOLDER);
+    // Each profile has its own .tmp and marker (neither ends in the profile
+    // extension, so the list never shows them).
+    furi_string_printf(temp, "%s.tmp", furi_string_get_cstr(path));
+    furi_string_printf(mark, "%s.cmt", furi_string_get_cstr(path));
+    RgSafeFile safe = {
+        furi_string_get_cstr(path), furi_string_get_cstr(temp), furi_string_get_cstr(mark)};
+    // The tmp name before beta 10, shared by every profile.
+    storage_common_remove(storage, RADIOGEDDON_PROFILES_FOLDER "/.profile.tmp");
     bool ok = false;
-    if(overwrite || !storage_common_exists(storage, furi_string_get_cstr(path))) {
+    if((overwrite || !storage_common_exists(storage, safe.path)) &&
+       radiogeddon_safefile_begin(storage, &safe)) {
         FlipperFormat* ff = flipper_format_file_alloc(storage);
         do {
             if(!flipper_format_file_open_always(ff, furi_string_get_cstr(temp))) break;
@@ -166,11 +172,12 @@ bool radiogeddon_profile_save(
         ok = flipper_format_file_close(ff) && ok;
         flipper_format_free(ff);
         if(ok) {
-            ok = radiogeddon_profiles_replace(
-                storage, furi_string_get_cstr(temp), furi_string_get_cstr(path));
+            ok = radiogeddon_safefile_commit(storage, &safe);
+        } else {
+            storage_common_remove(storage, safe.tmp);
         }
-        if(!ok) storage_common_remove(storage, furi_string_get_cstr(temp));
     }
+    furi_string_free(mark);
     furi_string_free(temp);
     furi_string_free(path);
     return ok;
@@ -180,6 +187,15 @@ bool radiogeddon_profile_load(Storage* storage, const char* name, RadioGeddonSca
     FuriString* path = furi_string_alloc();
     FuriString* text = furi_string_alloc();
     radiogeddon_profile_path(path, name);
+    {
+        // Finish or drop a save of this profile cut off by a reboot.
+        FuriString* mark = furi_string_alloc_printf("%s.cmt", furi_string_get_cstr(path));
+        furi_string_printf(text, "%s.tmp", furi_string_get_cstr(path));
+        RgSafeFile safe = {
+            furi_string_get_cstr(path), furi_string_get_cstr(text), furi_string_get_cstr(mark)};
+        radiogeddon_safefile_recover(storage, &safe);
+        furi_string_free(mark);
+    }
     FlipperFormat* ff = flipper_format_file_alloc(storage);
     RadioGeddonScanProfile p;
     memset(&p, 0, sizeof(p));

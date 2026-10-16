@@ -4,6 +4,7 @@
 
 #include "../radiogeddon.h"
 #include "../scenes/radiogeddon_scene.h"
+#include "radiogeddon_safefile.h"
 #include <furi_hal_rtc.h>
 
 #define TAG "RadioGeddonJournal"
@@ -14,6 +15,12 @@
 static uint32_t research_time(void) {
     return furi_hal_rtc_get_timestamp();
 }
+
+static const RgSafeFile journal_file = {
+    RADIOGEDDON_JOURNAL_PATH,
+    RADIOGEDDON_JOURNAL_TEMP,
+    RADIOGEDDON_JOURNAL_MARK,
+};
 
 static RadioGeddonResearch* research(RadioGeddonApp* app) {
     return &app->research;
@@ -26,6 +33,7 @@ void radiogeddon_research_alloc(RadioGeddonApp* app) {
     rg_assist_init(&r->assist, app->settings.assistant);
     size_t size = rg_journal_encoded_size();
     uint8_t* buf = malloc(size);
+    radiogeddon_safefile_recover(app->storage, &journal_file);
     File* file = storage_file_alloc(app->storage);
     bool present = false;
     size_t got = 0;
@@ -53,25 +61,21 @@ bool radiogeddon_research_save(RadioGeddonApp* app) {
     size_t size = rg_journal_encoded_size();
     uint8_t* buf = malloc(size);
     size_t n = rg_journal_encode(&r->journal, buf, size);
-    File* file = storage_file_alloc(app->storage);
-    bool ok = n == size &&
-              storage_file_open(file, RADIOGEDDON_JOURNAL_TEMP, FSAM_WRITE, FSOM_CREATE_ALWAYS) &&
-              storage_file_write(file, buf, n) == n;
-    ok = storage_file_close(file) && ok;
-    storage_file_free(file);
-    free(buf);
+    bool ok = n == size && radiogeddon_safefile_begin(app->storage, &journal_file);
     if(ok) {
-        FS_Error err = storage_common_rename(
-            app->storage, RADIOGEDDON_JOURNAL_TEMP, RADIOGEDDON_JOURNAL_PATH);
-        if(err == FSE_EXIST) {
-            storage_common_remove(app->storage, RADIOGEDDON_JOURNAL_PATH);
-            err = storage_common_rename(
-                app->storage, RADIOGEDDON_JOURNAL_TEMP, RADIOGEDDON_JOURNAL_PATH);
+        File* file = storage_file_alloc(app->storage);
+        ok = storage_file_open(file, RADIOGEDDON_JOURNAL_TEMP, FSAM_WRITE, FSOM_CREATE_ALWAYS) &&
+             storage_file_write(file, buf, n) == n;
+        ok = storage_file_close(file) && ok;
+        storage_file_free(file);
+        if(ok) {
+            ok = radiogeddon_safefile_commit(app->storage, &journal_file);
+        } else {
+            storage_common_remove(app->storage, RADIOGEDDON_JOURNAL_TEMP);
         }
-        ok = err == FSE_OK;
     }
+    free(buf);
     if(!ok) {
-        storage_common_remove(app->storage, RADIOGEDDON_JOURNAL_TEMP);
         FURI_LOG_W(TAG, "journal not saved");
         // Retry later rather than at every tick.
         r->dirty_tick = furi_get_tick() + 30000u;
