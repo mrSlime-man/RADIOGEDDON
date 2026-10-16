@@ -771,7 +771,8 @@ static void test_pairs(RunResult* r, Totals* t) {
                 if(strcmp(fw_decoded_bits[d].file, p->file) == 0) ref = &fw_decoded_bits[d];
             bool same = true;
             for(size_t j = 0; j < r->keys; j++) {
-                bool listed = ref && (ref->bits[0] == r->key[j].bits || ref->bits[1] == r->key[j].bits);
+                bool listed = ref &&
+                              (ref->bits[0] == r->key[j].bits || ref->bits[1] == r->key[j].bits);
                 if(!listed) same = false;
             }
             for(int k = 0; ref && k < 2; k++) {

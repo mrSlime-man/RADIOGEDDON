@@ -9,7 +9,7 @@ struct RadioGeddonScanner {
     RadioGeddonSubGhz* subghz;
     FuriMutex* mutex;
     FuriThread* thread;
-    volatile bool stop_requested;
+    bool stop_requested; /* set by the app thread, polled by the engine (atomics) */
 
     // Guarded by mutex.
     size_t count;
@@ -162,7 +162,7 @@ static int32_t radiogeddon_scanner_thread(void* context) {
     size_t next = 0;
     uint32_t sweep_start = furi_get_tick();
 
-    while(!instance->stop_requested) {
+    while(!__atomic_load_n(&instance->stop_requested, __ATOMIC_ACQUIRE)) {
         furi_mutex_acquire(instance->mutex, FuriWaitForever);
         bool paused = instance->paused;
         size_t count = instance->count;
@@ -246,7 +246,7 @@ void radiogeddon_scanner_start(RadioGeddonScanner* instance) {
 
 void radiogeddon_scanner_stop(RadioGeddonScanner* instance) {
     if(!instance->thread) return;
-    instance->stop_requested = true;
+    __atomic_store_n(&instance->stop_requested, true, __ATOMIC_RELEASE);
     furi_thread_join(instance->thread);
     furi_thread_free(instance->thread);
     instance->thread = NULL;

@@ -53,7 +53,8 @@ RadioGeddonModule* radiogeddon_module_load(
     const void** ep,
     RadioGeddonModuleStatus* status) {
     uint32_t start = furi_get_tick();
-    RadioGeddonModule* module = radiogeddon_module_load_timed(storage, file, extra_heap, ep, status);
+    RadioGeddonModule* module =
+        radiogeddon_module_load_timed(storage, file, extra_heap, ep, status);
     radiogeddon_memdiag_module(file, (int)*status, furi_get_tick() - start);
     return module;
 }

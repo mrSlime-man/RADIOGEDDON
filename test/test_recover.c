@@ -184,10 +184,9 @@ static void test_not_raw(void) {
     CHECK(rg_recover_finish(&s) == RgRecoverEmpty);
     CHECK(s.frequency == 315000000);
     // Overlong numbers and stray bytes stop the scan where they start.
-    const char* junk =
-        "Filetype: Flipper SubGhz RAW File\nVersion: 1\nFrequency: 433920000\n"
-        "Preset: FuriHalSubGhzPresetOok650Async\nProtocol: RAW\nRAW_Data: 400 -800 "
-        "99999999999 -400\n";
+    const char* junk = "Filetype: Flipper SubGhz RAW File\nVersion: 1\nFrequency: 433920000\n"
+                       "Preset: FuriHalSubGhzPresetOok650Async\nProtocol: RAW\nRAW_Data: 400 -800 "
+                       "99999999999 -400\n";
     rg_recover_init(&s);
     rg_recover_feed(&s, (const uint8_t*)junk, strlen(junk));
     CHECK(rg_recover_finish(&s) == RgRecoverPartial);

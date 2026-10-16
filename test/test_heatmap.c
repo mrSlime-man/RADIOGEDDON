@@ -48,7 +48,9 @@ static void build_log(int intervals) {
     g_len = 0;
     memset(g_events, 0, sizeof(g_events));
     char line[512];
-    append(line, rg_actlog_header(&log, "AM650, dwell 20 ms", "2026-10-16 10:00", line, sizeof(line)));
+    append(
+        line,
+        rg_actlog_header(&log, "AM650, dwell 20 ms", "2026-10-16 10:00", line, sizeof(line)));
     uint32_t now = 0;
     for(int k = 0; k < intervals; k++) {
         for(int v = 0; v < 50; v++) { // visits within the interval
@@ -104,7 +106,8 @@ static void test_states(void) {
     }
     // 315 MHz: always listened, never active.
     for(size_t col = 0; col < 12; col++)
-        CHECK(rg_heatmap_level(&h, rg_heatmap_cell(&h, 0, col), RgHeatMetricEvents) == RgHeatQuiet);
+        CHECK(
+            rg_heatmap_level(&h, rg_heatmap_cell(&h, 0, col), RgHeatMetricEvents) == RgHeatQuiet);
     // 433.92 (row 2) is active in intervals 0, 3, 6, 9.
     for(size_t col = 0; col < 12; col++) {
         RgHeatLevel l = rg_heatmap_level(&h, rg_heatmap_cell(&h, 2, col), RgHeatMetricEvents);
@@ -123,7 +126,8 @@ static void test_states(void) {
     CHECK(strstr(text, "quiet, cov"));
     printf("  e.g. \"%s\"\n", text);
     // Beyond the log: no data, not quiet.
-    CHECK(rg_heatmap_level(&h, rg_heatmap_cell(&h, 0, 40), RgHeatMetricEvents) == RgHeatNotObserved);
+    CHECK(
+        rg_heatmap_level(&h, rg_heatmap_cell(&h, 0, 40), RgHeatMetricEvents) == RgHeatNotObserved);
     rg_heatmap_cell_text(&h, 0, 40, text, sizeof(text));
     CHECK(strstr(text, "no data"));
     // Coverage: 13 of 50 visits a 10 s interval, 20 ms dwell... measured, not assumed.
@@ -151,7 +155,10 @@ static void test_merging(void) {
     // observed (some visits), with the coverage that says how little.
     const RgHeatCell* c = rg_heatmap_cell(&h, 1, 3);
     CHECK(rg_heatmap_level(&h, c, RgHeatMetricEvents) == RgHeatQuiet);
-    printf("  600 intervals -> %u columns of %lu s\n", (unsigned)h.cols_used, (unsigned long)h.span_s);
+    printf(
+        "  600 intervals -> %u columns of %lu s\n",
+        (unsigned)h.cols_used,
+        (unsigned long)h.span_s);
 }
 
 static void test_parts_and_junk(void) {
@@ -173,23 +180,23 @@ static void test_parts_and_junk(void) {
     CHECK(memcmp(cells, g_cells, rg_heatmap_cells_bytes(&whole)) == 0);
     free(cells);
     // Junk lines are skipped, the rest still read.
-    const char* junk =
-        "t_s,freq_hz,visits,observed_ms,active_visits,events,peak_dbm,floor_dbm\n"
-        "10,433920000,5,100,0,0,-90,-95\n"
-        "10,315000000,5,100,0,0,-91,-95\n"
-        "20,433920000,5,100,1,1,-40,-95\n"
-        "20,433920000,x,1,1,1,1,1\n"
-        "20,433920000,5,100,1,1,-40\n"
-        "20,433920000,5,100,1,1,-40,-95,7\n"
-        "20,999000000,5,100,1,1,-40,-95\n"
-        "garbage line\n"
-        "30,315000000,0,0,,,,\n"
-        "30,433920000,99999999999,100,1,1,-40,-95";
+    const char* junk = "t_s,freq_hz,visits,observed_ms,active_visits,events,peak_dbm,floor_dbm\n"
+                       "10,433920000,5,100,0,0,-90,-95\n"
+                       "10,315000000,5,100,0,0,-91,-95\n"
+                       "20,433920000,5,100,1,1,-40,-95\n"
+                       "20,433920000,x,1,1,1,1,1\n"
+                       "20,433920000,5,100,1,1,-40\n"
+                       "20,433920000,5,100,1,1,-40,-95,7\n"
+                       "20,999000000,5,100,1,1,-40,-95\n"
+                       "garbage line\n"
+                       "30,315000000,0,0,,,,\n"
+                       "30,433920000,99999999999,100,1,1,-40,-95";
     static RgHeatmap j;
     map_log(&j, junk, strlen(junk), 5);
     CHECK(j.channels == 2 && j.rows == 4 && j.skipped == 5);
     CHECK(!j.ended);
-    CHECK(rg_heatmap_level(&j, rg_heatmap_cell(&j, 0, 2), RgHeatMetricEvents) == RgHeatNotObserved);
+    CHECK(
+        rg_heatmap_level(&j, rg_heatmap_cell(&j, 0, 2), RgHeatMetricEvents) == RgHeatNotObserved);
     // An empty or header-only file has no frequencies.
     static RgHeatmap e;
     rg_heatmap_probe_begin(&e);

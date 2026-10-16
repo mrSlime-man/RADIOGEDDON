@@ -95,5 +95,4 @@ RadioGeddonHeatmapStatus radiogeddon_actlog_heatmap(
     return status;
 }
 
-
 #endif

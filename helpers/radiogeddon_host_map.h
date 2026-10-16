@@ -60,17 +60,18 @@ extern const RadioGeddonHost* radiogeddon_host;
 #define RADIOGEDDON_PRESET_LABEL(index)      (radiogeddon_host->preset_label(index))
 #define radiogeddon_memdiag_stats            (radiogeddon_host->memdiag_stats)
 #define radiogeddon_memdiag_diags            (radiogeddon_host->memdiag_diags)
-#define radiogeddon_subghz_get_radio(subghz) \
-    (radiogeddon_host->subghz_is_external(subghz) ? RadioGeddonRadioExternal : RadioGeddonRadioInternal)
+#define radiogeddon_subghz_get_radio(subghz)                                   \
+    (radiogeddon_host->subghz_is_external(subghz) ? RadioGeddonRadioExternal : \
+                                                    RadioGeddonRadioInternal)
 #define radiogeddon_subghz_device_name  (radiogeddon_host->subghz_device_name)
 #define radiogeddon_subghz_region_name  (radiogeddon_host->subghz_region_name)
 #define radiogeddon_subghz_session_cost (radiogeddon_host->subghz_session_cost)
 #define radiogeddon_scene_radio_cost    (radiogeddon_host->radio_cost)
-#define radiogeddon_scene_show_report        (radiogeddon_host->show_report)
-#define radiogeddon_scene_unknown_begin      (radiogeddon_host->unknown_begin)
-#define radiogeddon_scene_unknown_end        (radiogeddon_host->unknown_end)
-#define radiogeddon_scene_decoders_fit       (radiogeddon_host->decoders_fit)
-#define radiogeddon_analysis_decode          (radiogeddon_host->analysis_decode)
+#define radiogeddon_scene_show_report   (radiogeddon_host->show_report)
+#define radiogeddon_scene_unknown_begin (radiogeddon_host->unknown_begin)
+#define radiogeddon_scene_unknown_end   (radiogeddon_host->unknown_end)
+#define radiogeddon_scene_decoders_fit  (radiogeddon_host->decoders_fit)
+#define radiogeddon_analysis_decode     (radiogeddon_host->analysis_decode)
 #else
 #define RADIOGEDDON_PRESET_LABEL(index) (radiogeddon_presets[(index)].label)
 #endif

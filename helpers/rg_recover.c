@@ -10,9 +10,8 @@ enum {
     ModeComment, /* a '#' line */
 };
 
-static const char rg_recover_note[] =
-    "# Recovered: recording interrupted (reboot or power loss); "
-    "anything after this point is missing\n";
+static const char rg_recover_note[] = "# Recovered: recording interrupted (reboot or power loss); "
+                                      "anything after this point is missing\n";
 
 void rg_recover_init(RgRecoverScan* s) {
     memset(s, 0, sizeof(*s));
@@ -75,8 +74,6 @@ static void rg_recover_byte(RgRecoverScan* s, uint8_t c) {
         if(c == '\n' && s->key_len == 0) { // an empty line
             s->cut = at + 1;
             s->cut_at_line_end = true;
-        } else if(c == '\n') {
-            s->stopped = true; // a key without ':' is not this file's layout
         } else if(c == '\r') {
             // part of a line ending
         } else if(c == '#' && s->key_len == 0) {
@@ -92,6 +89,8 @@ static void rg_recover_byte(RgRecoverScan* s, uint8_t c) {
         } else if(rg_recover_printable(c) && c != ' ') {
             rg_recover_key_add(s, c);
         } else {
+            // Anything else, a key without ':' ending its line included, is
+            // not this file's layout.
             s->stopped = true;
         }
         break;
@@ -100,8 +99,7 @@ static void rg_recover_byte(RgRecoverScan* s, uint8_t c) {
         if(c == '\n') {
             if(s->mode == ModeHeader) {
                 rg_recover_header(s);
-            } else if(
-                strncmp(s->key, "# Lost:", 7) == 0 || strncmp(s->key, "# Recovered:", 12) == 0) {
+            } else if(strncmp(s->key, "# Lost:", 7) == 0 || strncmp(s->key, "# Recovered:", 12) == 0) {
                 s->finished = true;
             }
             s->cut = at + 1;
@@ -150,6 +148,9 @@ static void rg_recover_byte(RgRecoverScan* s, uint8_t c) {
         } else {
             s->stopped = true;
         }
+        break;
+    default:
+        s->stopped = true;
         break;
     }
 }

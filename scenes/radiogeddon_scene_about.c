@@ -134,7 +134,9 @@ bool radiogeddon_scene_about_on_event(void* context, SceneManagerEvent event) {
     snprintf(app->tx_text, sizeof(app->tx_text), "%s", ok && slash ? slash + 1 : "");
     furi_string_free(path);
     radiogeddon_scene_show_message(
-        app, ok ? "Report saved" : "Report not saved", ok ? app->tx_text : "The SD card refused\nthe file.");
+        app,
+        ok ? "Report saved" : "Report not saved",
+        ok ? app->tx_text : "The SD card refused\nthe file.");
     return true;
 }
 

@@ -18,20 +18,24 @@
 #include <string.h>
 
 static int checks, failures;
-#define CHECK(c)                                                         \
-    do {                                                                 \
-        checks++;                                                        \
-        if(!(c)) {                                                       \
-            failures++;                                                  \
-            printf("  FAIL %s:%d: %s\n", __FILE__, __LINE__, #c);        \
-        }                                                                \
+#define CHECK(c)                                                  \
+    do {                                                          \
+        checks++;                                                 \
+        if(!(c)) {                                                \
+            failures++;                                           \
+            printf("  FAIL %s:%d: %s\n", __FILE__, __LINE__, #c); \
+        }                                                         \
     } while(0)
 
 #define MAX_FILES 8
 #define MAX_LEN   512
 #define CHUNK     16
 
-typedef enum { RenameCopy, RenameAtomic, RenameNoReplace } RenameKind;
+typedef enum {
+    RenameCopy,
+    RenameAtomic,
+    RenameNoReplace
+} RenameKind;
 
 typedef struct {
     char name[32];
@@ -210,8 +214,12 @@ static void test_power_loss(RenameKind kind, const char* label, const char* old)
         // Recovery is idempotent: a second boot changes nothing.
         CHECK(rg_safe_recover(&fs, &FILE_X) == RgSafeClean);
     }
-    printf("  %ld cut points: old kept %d, new kept %d (%d rolled forward)\n",
-           total + 1, old_seen, new_seen, rolled);
+    printf(
+        "  %ld cut points: old kept %d, new kept %d (%d rolled forward)\n",
+        total + 1,
+        old_seen,
+        new_seen,
+        rolled);
     CHECK(bad == 0);
     CHECK(old_seen > 0 && new_seen > 0);
     // A cut during the rename's copy is exactly what used to lose both.
@@ -297,8 +305,10 @@ static void test_previous_protocol(void) {
             if(!(content_is(&s, NEW_TEXT) || content_is(&s, OLD_TEXT))) lost++;
         }
         if(pass) {
-            printf("  %ld of %ld cut points leave neither version (old file gone)\n",
-                   lost, total + 1);
+            printf(
+                "  %ld of %ld cut points leave neither version (old file gone)\n",
+                lost,
+                total + 1);
             CHECK(lost > 0); // the defect rg_safefile fixes
         }
     }

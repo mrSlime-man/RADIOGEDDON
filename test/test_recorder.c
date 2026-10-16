@@ -354,9 +354,10 @@ static void test_crash_mid_recording(void) {
         expect_us += i + 1;
     if(scan.duration_us != expect_us) ordered = false;
     CHECK(ordered, "exactly the first samples, in order");
-    printf("  %lu of %lu samples readable after the cut\n",
-           (unsigned long)scan.samples,
-           (unsigned long)pushed);
+    printf(
+        "  %lu of %lu samples readable after the cut\n",
+        (unsigned long)scan.samples,
+        (unsigned long)pushed);
     RadioGeddonRecordStats st;
     radiogeddon_recorder_finish(rec, &st);
     CHECK(st.samples == pushed && st.lost == 0, "the recording itself goes on unharmed");

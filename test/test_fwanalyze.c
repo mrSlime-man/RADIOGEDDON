@@ -52,9 +52,9 @@ static int g_checks = 0;
 
 /* Totals the engine reached on these 50 captures when they were set. Raise
  * them when the engine improves; a drop is a regression. */
-#define MIN_TE_OK     50
-#define MIN_FAMILY_OK 48
-#define MIN_BITS_OK   43
+#define MIN_TE_OK      50
+#define MIN_FAMILY_OK  48
+#define MIN_BITS_OK    43
 /* Against the lengths the decoders decode from the captures (fw_decoded_bits.h). */
 #define MIN_DECODED_OK 44
 

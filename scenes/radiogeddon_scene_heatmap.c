@@ -71,7 +71,9 @@ void radiogeddon_scene_heatmap_on_enter(void* context) {
     run->view = radiogeddon_heatmap_view_alloc();
     radiogeddon_heatmap_view_set_map(run->view, &run->map);
     view_dispatcher_add_view(
-        app->view_dispatcher, RadioGeddonViewHeatmap, radiogeddon_heatmap_view_get_view(run->view));
+        app->view_dispatcher,
+        RadioGeddonViewHeatmap,
+        radiogeddon_heatmap_view_get_view(run->view));
     radiogeddon_memdiag_sample("Activity heatmap");
     view_dispatcher_switch_to_view(app->view_dispatcher, RadioGeddonViewHeatmap);
 }

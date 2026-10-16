@@ -112,7 +112,8 @@ static void hm_draw(Canvas* canvas, void* model) {
         int y = HM_TOP + r * rh;
         for(uint8_t c = 0; c < h->cols_used; c++) {
             const RgHeatCell* cell = rg_heatmap_cell(h, m->top + r, c);
-            hm_cell(canvas, c * HM_CELL_W, y, (uint8_t)(rh - 1), rg_heatmap_level(h, cell, metric));
+            hm_cell(
+                canvas, c * HM_CELL_W, y, (uint8_t)(rh - 1), rg_heatmap_level(h, cell, metric));
         }
     }
     // The cursor: an inverted frame around its cell, visible on any state.

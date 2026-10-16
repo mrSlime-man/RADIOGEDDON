@@ -106,4 +106,3 @@ uint8_t rg_mem_fragmentation_pct(uint32_t free_bytes, uint32_t largest_block);
 
 /** SD write throughput of the recordings so far, bytes per second (0: none). */
 uint32_t rg_diag_rec_rate(const RgDiag* d);
-

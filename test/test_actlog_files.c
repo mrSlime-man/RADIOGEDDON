@@ -184,8 +184,9 @@ static void test_heatmap_of_parts(void) {
     static RgHeatmap map;
     RgHeatCell* cells = NULL;
     size_t before = stub_live_bytes;
-    CHECK(radiogeddon_actlog_heatmap(CARD, path, &map, &cells, 1024) == RadioGeddonHeatmapOk,
-          "read from any part");
+    CHECK(
+        radiogeddon_actlog_heatmap(CARD, path, &map, &cells, 1024) == RadioGeddonHeatmapOk,
+        "read from any part");
     CHECK(map.channels == 3 && map.rows == rows && map.skipped == 0, "every row of every part");
     CHECK(map.ended, "the footer of the last part read");
     uint32_t bursts = 0;
@@ -198,14 +199,16 @@ static void test_heatmap_of_parts(void) {
     // Too little heap: refused, nothing allocated.
     size_t heap = stub_heap_free;
     stub_heap_free = 512;
-    CHECK(radiogeddon_actlog_heatmap(CARD, path, &map, &cells, 1024) == RadioGeddonHeatmapNoMemory &&
-              cells == NULL,
-          "refused without the memory for its grid");
+    CHECK(
+        radiogeddon_actlog_heatmap(CARD, path, &map, &cells, 1024) == RadioGeddonHeatmapNoMemory &&
+            cells == NULL,
+        "refused without the memory for its grid");
     stub_heap_free = heap;
     CHECK(stub_live_bytes == before, "and nothing leaked");
     snprintf(path, sizeof(path), "%s/none.csv", RADIOGEDDON_ACTLOG_FOLDER);
-    CHECK(radiogeddon_actlog_heatmap(CARD, path, &map, &cells, 1024) == RadioGeddonHeatmapNoFile,
-          "a missing file");
+    CHECK(
+        radiogeddon_actlog_heatmap(CARD, path, &map, &cells, 1024) == RadioGeddonHeatmapNoFile,
+        "a missing file");
     CHECK(stub_files_open == 0, "files closed");
 }
 

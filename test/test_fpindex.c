@@ -368,8 +368,9 @@ static void test_time_window(void) {
     CHECK(search("w_0.sub") && g_res.computed == 0, "the index is reused");
     CHECK(g_res.compared == 2 && g_res.out_of_scope == 3, "within an hour: 2 (10 and 50 min)");
     for(size_t i = 0; i < g_res.count; i++)
-        CHECK(strcmp(g_res.hit[i].name, "w_1.sub") == 0 || strcmp(g_res.hit[i].name, "w_2.sub") == 0,
-              "only those in the window");
+        CHECK(
+            strcmp(g_res.hit[i].name, "w_1.sub") == 0 || strcmp(g_res.hit[i].name, "w_2.sub") == 0,
+            "only those in the window");
     g_window = 86400;
     CHECK(search("w_0.sub") && g_res.compared == 4 && g_res.out_of_scope == 1, "within a day: 4");
     g_window = 0;

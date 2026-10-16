@@ -510,12 +510,19 @@ fuzz: $(addprefix $(BUILD)/,$(FUZZ_TARGETS))
 	done
 
 # Optional: the ring under ThreadSanitizer (not part of check; needs TSan).
-tsan: | $(BUILD)
+# ThreadSanitizer: the ring and recorder (radio thread, writer thread) and
+# the Scanner, Range Scanner and Hopper engines started and stopped on real
+# threads (the lifecycle tests, on the firmware's Sub-GHz headers).
+tsan: $(FW)/.fetched | $(BUILD)
 	$(CC) $(CFLAGS) -fsanitize=thread -pthread -o $(BUILD)/test_ring_tsan $(RING_SRC)
 	$(CC) $(CFLAGS) -fsanitize=thread -Istubs -DSTUB_TRACK_ALLOC -pthread \
 		-o $(BUILD)/test_recorder_tsan $(RECORDER_SRC)
-	$(BUILD)/test_ring_tsan
-	$(BUILD)/test_recorder_tsan
+	$(CC) $(CFLAGS) -fsanitize=thread -D_GNU_SOURCE -I$(FW) -I$(FW)/lib -I$(FW)/lib/mlib -Istubs \
+		-DSTUB_TRACK_ALLOC -DRADIOGEDDON_EDITION_FULL -pthread -o $(BUILD)/test_lifecycle_tsan \
+		$(LIFECYCLE_SRC)
+	TSAN_OPTIONS=halt_on_error=1 $(BUILD)/test_ring_tsan
+	TSAN_OPTIONS=halt_on_error=1 $(BUILD)/test_recorder_tsan
+	TSAN_OPTIONS=halt_on_error=1 $(BUILD)/test_lifecycle_tsan
 
 $(BUILD):
 	mkdir -p $(BUILD)

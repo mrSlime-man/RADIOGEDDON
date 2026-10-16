@@ -54,7 +54,7 @@ static bool heat_parse(const char* line, HeatRow* r) {
     if(*p != '\0') return false; // too many
     if(empty[0] || empty[1] || empty[2]) return false;
     for(int i = 0; i < 6; i++)
-        if(v[i] < 0 || v[i] > 0xFFFFFFFFll) return false;
+        if(v[i] < 0 || v[i] > 0xFFFFFFFFLL) return false;
     r->t_s = (uint32_t)v[0];
     r->freq = (uint32_t)v[1];
     r->visits = (uint32_t)v[2];
@@ -294,7 +294,8 @@ uint8_t rg_heatmap_coverage(const RgHeatmap* h, const RgHeatCell* c) {
 
 static void heat_time(char* out, size_t size, uint32_t s) {
     if(s >= 3600u)
-        snprintf(out, size, "%luh%02lu", (unsigned long)(s / 3600u), (unsigned long)(s / 60u % 60u));
+        snprintf(
+            out, size, "%luh%02lu", (unsigned long)(s / 3600u), (unsigned long)(s / 60u % 60u));
     else
         snprintf(out, size, "%lu:%02lu", (unsigned long)(s / 60u), (unsigned long)(s % 60u));
 }

@@ -385,7 +385,8 @@ static void test_filler(void) {
     size_t n = rg_analyzer_strip_filler(bits, strlen(bits));
     CHECK(n == 40 && strncmp(bits, key, 40) == 0, "trailing filler stripped");
     // A last data bit equal to the filler cannot be told from it: one short.
-    snprintf(bits, sizeof(bits), "%.39s0%s", key, "0000000000000000000000000000000000000000000000000");
+    snprintf(
+        bits, sizeof(bits), "%.39s0%s", key, "0000000000000000000000000000000000000000000000000");
     CHECK(rg_analyzer_strip_filler(bits, strlen(bits)) == 39, "the ambiguous last bit goes");
     // Filler first, then the data: the data moves to the front.
     snprintf(bits, sizeof(bits), "%s%s", "11111111111111111111", key);
@@ -398,7 +399,9 @@ static void test_filler(void) {
     memset(bits, '0', 64);
     CHECK(rg_analyzer_strip_filler(bits, 64) == 64, "all one symbol: kept as it is");
     snprintf(bits, sizeof(bits), "%s", "0000000000000000000010110000000000000000000000");
-    CHECK(rg_analyzer_strip_filler(bits, strlen(bits)) == strlen(bits), "too little data left: kept");
+    CHECK(
+        rg_analyzer_strip_filler(bits, strlen(bits)) == strlen(bits),
+        "too little data left: kept");
 
     // End to end: PWM repeats with a 20-symbol preamble, no gap between.
     static int32_t buf[8192];

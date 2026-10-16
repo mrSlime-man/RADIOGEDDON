@@ -45,10 +45,11 @@ bool radiogeddon_recovery_repair(Storage* storage, const RadioGeddonRecovery* re
     char tail[128];
     size_t tlen = rg_recover_tail(&rec->scan, tail, sizeof(tail));
     File* file = storage_file_alloc(storage);
-    bool ok = tlen > 0 &&
-              storage_file_open(file, RADIOGEDDON_RECORD_TEMP, FSAM_READ_WRITE, FSOM_OPEN_EXISTING) &&
-              storage_file_seek(file, rec->scan.cut, true) && storage_file_truncate(file) &&
-              storage_file_write(file, tail, tlen) == tlen;
+    bool ok =
+        tlen > 0 &&
+        storage_file_open(file, RADIOGEDDON_RECORD_TEMP, FSAM_READ_WRITE, FSOM_OPEN_EXISTING) &&
+        storage_file_seek(file, rec->scan.cut, true) && storage_file_truncate(file) &&
+        storage_file_write(file, tail, tlen) == tlen;
     ok = storage_file_close(file) && ok;
     storage_file_free(file);
     return ok;
@@ -123,7 +124,10 @@ void radiogeddon_recovery_offer(Storage* storage, DialogsApp* dialogs) {
             const char* slash = strrchr(furi_string_get_cstr(path), '/');
             snprintf(text, sizeof(text), "Saved as\n%s", slash ? slash + 1 : "");
         } else {
-            snprintf(text, sizeof(text), "Could not save it now.\nIt is offered again\nat the next start.");
+            snprintf(
+                text,
+                sizeof(text),
+                "Could not save it now.\nIt is offered again\nat the next start.");
         }
         dialog_message_set_text(msg, text, 64, 34, AlignCenter, AlignCenter);
         dialog_message_show(dialogs, msg);
@@ -132,4 +136,3 @@ void radiogeddon_recovery_offer(Storage* storage, DialogsApp* dialogs) {
     dialog_message_free(msg);
     free(rec);
 }
-

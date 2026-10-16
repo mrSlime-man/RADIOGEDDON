@@ -77,4 +77,3 @@ void radiogeddon_memdiag_report_diag(FuriString* out) {
         (unsigned long)d->messages,
         d->last_message ? d->last_message : "-");
 }
-

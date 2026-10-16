@@ -72,4 +72,3 @@ RgAnalyzer* radiogeddon_analysis_run_file(
     radiogeddon_storage_raw_close(file);
     return a;
 }
-

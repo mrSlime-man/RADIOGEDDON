@@ -34,8 +34,19 @@ static uint32_t rnd(void) {
     return rng >> 8;
 }
 
-static const char* protos[] = {"Princeton", "CAME", "Nice FLO", "Holtek", "Linear", "GateTX",
-                               "Chamberlain", "Ansonic", "BETT", "Doitrand", "Marantec", "KeeLoq"};
+static const char* protos[] = {
+    "Princeton",
+    "CAME",
+    "Nice FLO",
+    "Holtek",
+    "Linear",
+    "GateTX",
+    "Chamberlain",
+    "Ansonic",
+    "BETT",
+    "Doitrand",
+    "Marantec",
+    "KeeLoq"};
 
 static uint32_t fold(uint32_t h, uint32_t v) {
     return (h ^ v) * 16777619u;
@@ -43,15 +54,23 @@ static uint32_t fold(uint32_t h, uint32_t v) {
 
 /* The checksums the beta 9 engine (insertion sort, every pair compared)
  * gives for these inputs: the faster engine must give the same results. */
-static const uint32_t expected[] = {
-    0xefcf5e1bu, 0x4cbc7653u, 0x9bfba06eu, 0xc263de5fu, 0xcbafc84eu, 0xfd1ce28cu};
+static const uint32_t expected[] =
+    {0xefcf5e1bu, 0x4cbc7653u, 0x9bfba06eu, 0xc263de5fu, 0xcbafc84eu, 0xfd1ce28cu};
 
 int main(int argc, char** argv) {
     static const size_t sizes[] = {10, 100, 500, 1000, 2000, 5000};
     int mismatches = 0;
     int reps = argc > 1 ? atoi(argv[1]) : 5;
-    printf("%6s %12s %12s %12s %12s %12s %12s  %s\n", "N", "dup_work_us", "sort_date",
-           "sort_name", "sort_freq", "sort_proto", "search", "checksum");
+    printf(
+        "%6s %12s %12s %12s %12s %12s %12s  %s\n",
+        "N",
+        "dup_work_us",
+        "sort_date",
+        "sort_name",
+        "sort_freq",
+        "sort_proto",
+        "search",
+        "checksum");
     for(size_t si = 0; si < sizeof(sizes) / sizeof(sizes[0]); si++) {
         size_t n = sizes[si];
         RgDbEntry* entries = malloc(sizeof(RgDbEntry) * n);
@@ -133,9 +152,16 @@ int main(int argc, char** argv) {
                     sum = fold(sum, view[i]);
         }
         n = db.count;
-        printf("%6zu %12.1f %12.1f %12.1f %12.1f %12.1f %12.1f  %08x\n", n, t_dup / 1e3,
-               t_sort[0] / 1e3, t_sort[1] / 1e3, t_sort[2] / 1e3, t_sort[3] / 1e3, t_search / 1e3,
-               (unsigned)sum);
+        printf(
+            "%6zu %12.1f %12.1f %12.1f %12.1f %12.1f %12.1f  %08x\n",
+            n,
+            t_dup / 1e3,
+            t_sort[0] / 1e3,
+            t_sort[1] / 1e3,
+            t_sort[2] / 1e3,
+            t_sort[3] / 1e3,
+            t_search / 1e3,
+            (unsigned)sum);
         if(sum != expected[si]) {
             printf("  checksum differs from the beta 9 engine's %08x\n", (unsigned)expected[si]);
             mismatches++;

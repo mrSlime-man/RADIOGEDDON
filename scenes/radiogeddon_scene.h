@@ -74,7 +74,6 @@ void radiogeddon_scene_unknown_end(void* context);
  */
 void radiogeddon_scene_show_report(RadioGeddonApp* app, const char* title, const char* text);
 
-
 /**
  * Whether a live screen should refresh its view on this tick. Always true
  * unless the battery saver is on, then at most every

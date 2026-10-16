@@ -85,4 +85,3 @@ uint32_t rg_diag_rec_rate(const RgDiag* d) {
     if(d->rec_ms == 0) return 0;
     return (uint32_t)((uint64_t)d->rec_bytes * 1000u / d->rec_ms);
 }
-
