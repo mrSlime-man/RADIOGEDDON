@@ -258,3 +258,21 @@ App(
     ],
     fal_embedded=True,
 )
+
+App(
+    appid="radiogeddon_about",
+    apptype=FlipperAppType.PLUGIN,
+    entry_point="radiogeddon_about_module_ep",
+    requires=["radiogeddon_full"],
+    cdefines=["RADIOGEDDON_EDITION_FULL", "RADIOGEDDON_MODULE"],
+    sources=[
+        "modules/radiogeddon_module_about.c",
+        "scenes/radiogeddon_scene_about.c",
+        "helpers/radiogeddon_memdiag_text.c",
+        "helpers/rg_memstat.c",
+        "helpers/radiogeddon_storage.c",
+        "helpers/radiogeddon_dsp.c",
+        "helpers/rg_raw.c",
+    ],
+    fal_embedded=True,
+)

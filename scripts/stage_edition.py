@@ -82,6 +82,9 @@ FULL_MODULE_ONLY = (
     "helpers/radiogeddon_heatmap.c",
     "views/radiogeddon_heatmap_view.c",
     "scenes/radiogeddon_scene_heatmap.c",
+    # About and the diagnostics text (only the counters stay resident).
+    "scenes/radiogeddon_scene_about.c",
+    "helpers/radiogeddon_memdiag_text.c",
     # The analyzer and its runner: every Full tool that analyses is a module.
     "helpers/radiogeddon_analysis_run.c",
     "helpers/rg_analyzer.c",

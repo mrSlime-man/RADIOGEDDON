@@ -44,6 +44,7 @@ static const ToolScene tool_scenes[] = {
     {RadioGeddonSceneAdaptive, RADIOGEDDON_MODULE_LOG, 1, 1},
     {RadioGeddonSceneHeatmap, RADIOGEDDON_MODULE_HEATMAP, 0, 12},
 #endif
+    {RadioGeddonSceneAbout, RADIOGEDDON_MODULE_ABOUT, 0, 2},
 #if RG_FEATURE_DOLPHIN_LAB
     {RadioGeddonSceneRoom, RADIOGEDDON_MODULE_LAB, 0, 4},
 #endif
@@ -77,6 +78,10 @@ static void
     radiogeddon_research_step(app, path, (RadioGeddonResearchStep)step, arg);
 }
 #endif
+
+static uint32_t host_subghz_is_external(RadioGeddonSubGhz* subghz) {
+    return radiogeddon_subghz_get_radio(subghz) == RadioGeddonRadioExternal;
+}
 
 static void host_ui_event(RadioGeddonApp* app, uint32_t event, uint32_t arg) {
     radiogeddon_ui_event(app, (RgMascotEvent)event, arg);
@@ -177,6 +182,13 @@ const RadioGeddonHost radiogeddon_host_table = {
     .unknown_end = radiogeddon_scene_unknown_end,
     .decoders_fit = radiogeddon_scene_decoders_fit,
     .analysis_decode = radiogeddon_analysis_decode,
+    .memdiag_stats = radiogeddon_memdiag_stats,
+    .memdiag_diags = radiogeddon_memdiag_diags,
+    .subghz_is_external = host_subghz_is_external,
+    .subghz_device_name = radiogeddon_subghz_device_name,
+    .subghz_region_name = radiogeddon_subghz_region_name,
+    .subghz_session_cost = radiogeddon_subghz_session_cost,
+    .radio_cost = radiogeddon_scene_radio_cost,
 };
 
 /* ---- slots ----------------------------------------------------------------- */
@@ -305,6 +317,7 @@ TOOL_SCENE(analyze, Analyze)
 TOOL_SCENE(crypto, Crypto)
 TOOL_SCENE(compare_result, CompareResult)
 TOOL_SCENE(report, Report)
+TOOL_SCENE(about, About)
 #if RG_FEATURE_ACTIVITY_LOG
 TOOL_SCENE(actlog, Actlog)
 TOOL_SCENE(adaptive, Adaptive)

@@ -11,6 +11,7 @@
 #pragma once
 
 #include <furi.h>
+#include "rg_memstat.h"
 
 /** Start a new record from the current free heap. */
 void radiogeddon_memdiag_start(void);
@@ -53,3 +54,7 @@ void radiogeddon_memdiag_message(const char* header);
 
 /** Append the diagnostics (responsiveness, modules, recordings, messages). */
 void radiogeddon_memdiag_report_diag(FuriString* out);
+
+/* The counters behind both reports (read by radiogeddon_memdiag_text.c). */
+const RgMemStat* radiogeddon_memdiag_stats(void);
+const RgDiag* radiogeddon_memdiag_diags(void);

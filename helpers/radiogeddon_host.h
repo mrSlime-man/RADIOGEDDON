@@ -16,6 +16,7 @@
 #include <stdint.h>
 #include <furi.h>
 #include <storage/storage.h>
+#include "rg_memstat.h"
 
 typedef struct RadioGeddonApp RadioGeddonApp;
 typedef struct RadioGeddonScanner RadioGeddonScanner;
@@ -106,6 +107,14 @@ typedef struct {
         RadioGeddonSubGhz* subghz,
         const char* path,
         FuriString* out);
+    /* About and its diagnostics report (the about module). */
+    const RgMemStat* (*memdiag_stats)(void);
+    const RgDiag* (*memdiag_diags)(void);
+    uint32_t (*subghz_is_external)(RadioGeddonSubGhz* subghz);
+    const char* (*subghz_device_name)(RadioGeddonSubGhz* subghz);
+    const char* (*subghz_region_name)(void);
+    uint32_t (*subghz_session_cost)(RadioGeddonSubGhz* subghz);
+    uint32_t (*radio_cost)(RadioGeddonApp* app);
 } RadioGeddonHost;
 
 /** The table (scenes/radiogeddon_scene_tools.c). */
