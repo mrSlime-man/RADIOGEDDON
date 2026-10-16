@@ -78,6 +78,9 @@ FULL_MODULE_ONLY = (
     "helpers/rg_fp.c",
     "helpers/radiogeddon_actlog.c",
     "helpers/rg_actlog.c",
+    # The analyzer and its runner: every Full tool that analyses is a module.
+    "helpers/radiogeddon_analysis_run.c",
+    "helpers/rg_analyzer.c",
 )
 FULL_MODULES_FAM = "modules/modules.fam"
 

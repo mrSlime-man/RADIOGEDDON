@@ -4,7 +4,10 @@
  * The analyzer over a RAW file (radiogeddon_analysis_run_*), apart from the
  * reports in radiogeddon_analysis.c so the Full edition's Multi-Capture
  * Compare module (radiogeddon_modules.h) can link it on its own: it needs
- * nothing but the analyzer, the RAW reader and the firmware's storage.
+ * nothing but the analyzer, the RAW reader and the firmware's storage. In
+ * the Full edition it is linked only into modules (the resident app keeps
+ * radiogeddon_analysis_status.c), so the analyzer's ~9 KB of code takes RAM
+ * only while a tool that analyses is open.
  */
 
 #define RG_ANALYSIS_CHUNK           64u
@@ -14,23 +17,15 @@
 #define RG_ANALYSIS_PROGRESS_CHUNKS 16u
 #define RG_ANALYSIS_PASSES          3u
 
-static RadioGeddonProgressCallback radiogeddon_analysis_progress_cb;
-static void* radiogeddon_analysis_progress_ctx;
-
-void radiogeddon_analysis_set_progress(RadioGeddonProgressCallback callback, void* context) {
-    radiogeddon_analysis_progress_cb = callback;
-    radiogeddon_analysis_progress_ctx = context;
-}
-
 /* Progress in kilobytes over all passes; passes the engine skips just jump. */
 static void radiogeddon_analysis_progress(RadioGeddonRawFile* file, int pass) {
-    if(!radiogeddon_analysis_progress_cb) return;
+    if(!radiogeddon_analysis_progress_wanted()) return;
     uint64_t size = stream_size(file->stream);
     uint64_t pos = stream_tell(file->stream);
     if(pos > size) pos = size;
     uint32_t done = (uint32_t)(((uint64_t)(pass - 1) * size + pos) / 1024u);
     uint32_t total = (uint32_t)(RG_ANALYSIS_PASSES * size / 1024u);
-    radiogeddon_analysis_progress_cb(radiogeddon_analysis_progress_ctx, done, total);
+    radiogeddon_analysis_report_progress(done, total);
 }
 
 RgAnalyzer*
@@ -78,29 +73,3 @@ RgAnalyzer* radiogeddon_analysis_run_file(
     return a;
 }
 
-void radiogeddon_analysis_report_progress(uint32_t done, uint32_t total) {
-    if(radiogeddon_analysis_progress_cb)
-        radiogeddon_analysis_progress_cb(radiogeddon_analysis_progress_ctx, done, total);
-}
-
-void radiogeddon_analysis_cat_status(FuriString* out, RadioGeddonAnalysisStatus status) {
-    switch(status) {
-    case RadioGeddonAnalysisNoMemory:
-        furi_string_cat_str(
-            out, "Not enough free memory\nfor the analysis. Close\nother apps and retry.\n");
-        break;
-    case RadioGeddonAnalysisOpenFailed:
-        furi_string_cat_str(out, "Could not open the file.\n");
-        break;
-    case RadioGeddonAnalysisCorrupt:
-        furi_string_cat_str(out, "RAW data is damaged:\nnon-numeric values were\nskipped.\n");
-        break;
-    case RadioGeddonAnalysisNoRaw:
-        furi_string_cat_str(
-            out,
-            "No RAW timing data.\nUnknown-protocol analysis\nneeds a RAW capture.\nRecord one via Receive &\nRecord (Left button).\n");
-        break;
-    default:
-        break;
-    }
-}

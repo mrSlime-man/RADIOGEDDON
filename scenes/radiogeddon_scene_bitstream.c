@@ -3,9 +3,10 @@
 #if RG_FEATURE_BITSTREAM
 
 // Full edition: Bitstream Explorer for the open RAW capture. Its screen is a
-// module (radiogeddon_modules.h), loaded first; the analyzer then streams
-// the file (three passes, never loaded whole) and only its result, the
-// frames and their bits (an RgAnalysis), is kept while the explorer is open.
+// module (radiogeddon_modules.h), loaded first; the module's analyzer then
+// streams the file (three passes, never loaded whole) and only its result,
+// the frames and their bits (an RgAnalysis), is kept while the explorer is
+// open. The analyzer's code is the module's, not the resident app's.
 // Screen, result and module are freed on exit.
 
 typedef enum {
@@ -37,18 +38,18 @@ void radiogeddon_scene_bitstream_on_enter(void* context) {
         view_dispatcher_send_custom_event(app->view_dispatcher, BitstreamEventFailed);
         return;
     }
+    const RadioGeddonBitsModule* api = app->module_api;
     if(memmgr_heap_get_max_free_block() < work) {
         status = RadioGeddonAnalysisNoMemory;
     } else {
         radiogeddon_scene_show_progress(app, "Reading bits...");
-        RgAnalyzer* a = radiogeddon_analysis_run_file(
-            app->storage, furi_string_get_cstr(app->file_path), &status);
+        app->bits_doc = api->analyze(
+            app->storage,
+            furi_string_get_cstr(app->file_path),
+            &status,
+            radiogeddon_scene_progress,
+            app);
         radiogeddon_scene_progress_end(app);
-        if(a) {
-            app->bits_doc = malloc(sizeof(RgAnalysis));
-            memcpy(app->bits_doc, &a->result, sizeof(RgAnalysis));
-            free(a);
-        }
     }
     if(!app->bits_doc) {
         radiogeddon_scene_module_unload(app);
@@ -58,7 +59,6 @@ void radiogeddon_scene_bitstream_on_enter(void* context) {
         return;
     }
 
-    const RadioGeddonBitsModule* api = app->module_api;
     app->bits_view = api->alloc();
     view_dispatcher_add_view(
         app->view_dispatcher, RadioGeddonViewBits, api->get_view(app->bits_view));

@@ -29,7 +29,7 @@
 
 /* The plugin manager's application id and API version for every module. */
 #define RADIOGEDDON_MODULE_APPID "radiogeddon_full"
-#define RADIOGEDDON_MODULE_API   3u
+#define RADIOGEDDON_MODULE_API   4u
 
 /* File names in the app's assets folder (APP_ASSETS_PATH("plugins/...")). */
 #define RADIOGEDDON_MODULE_BITS      "radiogeddon_bits.fal"
@@ -56,6 +56,18 @@ typedef struct {
     void (*free)(RadioGeddonBitsView* view);
     View* (*get_view)(RadioGeddonBitsView* view);
     void (*set_analysis)(RadioGeddonBitsView* view, const RgAnalysis* analysis);
+    /**
+     * Stream @p path through the analyzer (in this module, so the analyzer's
+     * code is in RAM only while the explorer is) and return its result in a
+     * new allocation the caller frees, or NULL with @p status saying why.
+     * Progress goes to @p progress.
+     */
+    RgAnalysis* (*analyze)(
+        Storage* storage,
+        const char* path,
+        RadioGeddonAnalysisStatus* status,
+        RadioGeddonProgressCallback progress,
+        void* context);
 } RadioGeddonBitsModule;
 #endif
 
