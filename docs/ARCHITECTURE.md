@@ -199,6 +199,12 @@ compiled into each module that needs them as well.
 | `radiogeddon_studio.fal` | Pulse Studio and Pulse Timeline scenes and views, `rg_studio`, `rg_timeline` | — | 21,904 B |
 | `radiogeddon_log.fal` | Activity Logger and Adaptive setup scenes, log files | — | 9,158 B |
 | `radiogeddon_reports.fal` | Analysis, crypto, comparison and report scenes, report writer | — | 18,198 B |
+| `radiogeddon_range.fal` | Range Scanner setup and scan, Waterfall scene, scan profiles, the range engine and spectrum view | — | 20,988 B |
+| `radiogeddon_settings.fal` | Settings and Radio bands scenes | — | 7,170 B |
+| `radiogeddon_hopper.fal` | Frequency Hopper and its statistics, the hopper engine | — | 7,234 B |
+
+In the beta 9 memory fix `radiogeddon_bits.fal` became a tool module holding
+the whole Bitstream Explorer (scene, screen, analyzer): 16,460 B.
 
 Sizes are the bytes the loader places in RAM (`scripts/fap_size.py`),
 from the Momentum builds.
@@ -226,6 +232,18 @@ Catalog edition is 80,553 B (beta 8: 77,782 B), the growth being the
 analyzer's bit map and PWM fixes. The largest module is Pulse Studio
 (21,904 B); with its screen model (about 4 KB) and a frame buffer it
 checks the free heap before opening.
+
+**Beta 9 memory fix.** The resident Full edition above did not fit the free
+heap of some devices, so the app did not start. Without changing what any
+screen does, more screens became tool modules (the Range Scanner with the
+Waterfall and scan profiles, Settings with Radio bands, the Frequency
+Hopper with its statistics, and the Bitstream Explorer with the analyzer it
+runs): the resident Full edition is now 83,397 B, 35,734 B less. The
+Hopper's state outlives its screen (until the main menu), so the app keeps
+its own copy of `radiogeddon_hopper_free()` (the linker keeps only that and
+the stop it calls). The Range Scanner's and Hopper's engines reach the radio
+through the host table. Opening one of these screens now reads its module
+from the SD card first.
 
 Built into the app (as measured just before the move), the tools made the
 resident Full edition 128,309 B, 33,633 B more than beta 6; as modules it is

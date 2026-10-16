@@ -7,6 +7,17 @@ to follow [Semantic Versioning](https://semver.org/) (pre-1.0.0 releases use
 
 ## [Unreleased]
 
+### Fixed
+- **Full edition did not start on some devices (not enough memory).** The
+  app's resident code is 83,397 B instead of 119,131 B (Momentum build):
+  the Range Scanner (with the Waterfall and scan profiles), Settings (with
+  Radio bands), the Frequency Hopper (with its statistics) and the
+  Bitstream Explorer (with the analyzer) are now modules loaded only while
+  their screens are open, like the other beta 9 tools. Nothing they do has
+  changed; opening them reads the module from the SD card first, and when
+  it does not fit the free heap the screen says `Not enough memory`. The
+  Catalog edition is unchanged.
+
 ## [1.0.0-beta.9] - 2026-10-11
 
 Standalone Research Lab (Full edition): signal fingerprints and Find Similar

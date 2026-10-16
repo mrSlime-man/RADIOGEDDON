@@ -268,6 +268,8 @@ void radiogeddon_scene_hopper_on_exit(void* context) {
     if(app->hopper) radiogeddon_hopper_stop(app->hopper);
     radiogeddon_receiver_view_set_hopping(app->receiver_view, false);
     radiogeddon_receiver_view_set_threshold(app->receiver_view, -127.0f);
+    // This scene's code may be unloaded next (a module in the Full edition).
+    radiogeddon_receiver_view_set_callback(app->receiver_view, NULL, NULL);
     radiogeddon_subghz_rx_stop(app->subghz);
     radiogeddon_scene_radio_memory_learn(app);
     popup_reset(app->popup);

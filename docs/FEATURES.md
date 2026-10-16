@@ -33,7 +33,7 @@ settings — is the same code in both.
 | [Research Journal, Research XP, Dolphin Assistant](#research-journal-xp-and-assistant-full-edition) | — | ✓ |
 | Main menu | the tools listed directly | grouped: Scan, Receive & Record, Analyze, Database, Sessions, Settings, About |
 | [Replay](#authorized-signal-replay) | the app checks the firmware's region first and explains a refusal; then the firmware's own check | the firmware's own check only |
-| Resident code (from the built files, beta 9) | 80,553 B | 119,132 B, plus [modules](#modules-full-edition) loaded only while used |
+| Resident code (from the built files, beta 9) | 80,553 B | 83,397 B, plus [modules](#modules-full-edition) loaded only while used |
 
 The Catalog edition keeps every receiving and analysis feature the app had;
 the Full-only features are the research tools that go beyond the built-in
@@ -399,7 +399,7 @@ takes RAM only then:
 | Module | Size (beta 9) | Loaded while |
 |--------|------:|--------------|
 | `radiogeddon_wf.fal` | 4,496 B | the Waterfall is open |
-| `radiogeddon_bits.fal` | 6,720 B | the Bitstream Explorer is open |
+| `radiogeddon_bits.fal` | 16,460 B | the Bitstream Explorer is open |
 | `radiogeddon_multi.fal` | 16,987 B | a comparison or a session export runs |
 | `radiogeddon_unknown.fal` | 18,612 B | Protocol Discovery (or a report) runs |
 | `radiogeddon_sessions.fal` | 16,422 B | any Sessions screen is open |
@@ -408,6 +408,9 @@ takes RAM only then:
 | `radiogeddon_studio.fal` | 21,904 B | Pulse Studio or the Pulse Timeline is open |
 | `radiogeddon_log.fal` | 9,158 B | the Activity Logger or the adaptive setup is open |
 | `radiogeddon_reports.fal` | 18,198 B | an analysis, crypto, comparison or session report is shown |
+| `radiogeddon_range.fal` | 20,988 B | a Range Scanner, Waterfall or scan profile screen is open |
+| `radiogeddon_settings.fal` | 7,170 B | Settings or Radio bands is open |
+| `radiogeddon_hopper.fal` | 7,234 B | the Frequency Hopper or its statistics are open |
 
 Sizes are the bytes the loader places in RAM, measured from the Momentum
 build. Beta 9's screens are hosted by a generic forwarder with two module

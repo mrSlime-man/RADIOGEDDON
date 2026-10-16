@@ -183,8 +183,9 @@ void radiogeddon_app_free(RadioGeddonApp* app) {
     if(app->scanner) radiogeddon_scanner_free(app->scanner);
     if(app->hopper) radiogeddon_hopper_free(app->hopper);
 #if RG_FEATURE_RANGE_SCAN
-    // Normally freed when the Range Scanner screen closes.
-    if(app->rangescan) radiogeddon_rangescan_free(app->rangescan);
+    // The engine lives in the Range Scanner's module and is always freed
+    // when its screen closes, before the app can exit.
+    furi_assert(!app->rangescan);
 #endif
 #if RG_FEATURE_WATERFALL
     free(app->wf_buf); // normally freed when the Waterfall closes

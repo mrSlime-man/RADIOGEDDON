@@ -153,6 +153,7 @@ void radiogeddon_scene_tools_release(RadioGeddonApp* app);
 
 #if RG_FEATURE_WATERFALL
 /** Range Scanner setup's "Start waterfall" row (its scene state selects it). */
+#define RADIOGEDDON_RANGE_ITEM_WATERFALL 9u
 uint32_t radiogeddon_scene_range_setup_waterfall_item(void);
 /** Smallest Waterfall history for @p points points (one screen of rows). */
 size_t radiogeddon_scene_waterfall_min_bytes(uint32_t points);

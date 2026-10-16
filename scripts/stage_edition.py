@@ -78,6 +78,19 @@ FULL_MODULE_ONLY = (
     "helpers/rg_fp.c",
     "helpers/radiogeddon_actlog.c",
     "helpers/rg_actlog.c",
+    "scenes/radiogeddon_scene_range_setup.c",
+    "scenes/radiogeddon_scene_range_scan.c",
+    "scenes/radiogeddon_scene_profiles.c",
+    "scenes/radiogeddon_scene_profile_name.c",
+    "scenes/radiogeddon_scene_waterfall.c",
+    "helpers/radiogeddon_rangescan.c",
+    "views/radiogeddon_spectrum_view.c",
+    "helpers/rg_waterfall.c",
+    "scenes/radiogeddon_scene_config.c",
+    "scenes/radiogeddon_scene_bands.c",
+    "scenes/radiogeddon_scene_hopper.c",
+    "scenes/radiogeddon_scene_hopper_stats.c",
+    "scenes/radiogeddon_scene_bitstream.c",
 )
 FULL_MODULES_FAM = "modules/modules.fam"
 

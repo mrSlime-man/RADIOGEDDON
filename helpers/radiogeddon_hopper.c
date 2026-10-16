@@ -1,6 +1,9 @@
 #include "radiogeddon_hopper.h"
 #include "radiogeddon_storage.h"
 #include "rg_freq.h"
+/* Built into the Hopper's module (Full edition): the radio through the
+ * app's table. The app keeps its own copy of radiogeddon_hopper_free(). */
+#include "radiogeddon_host_map.h"
 
 #include <datetime/datetime.h>
 #include <furi_hal_rtc.h>
