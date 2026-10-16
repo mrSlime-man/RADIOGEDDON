@@ -513,7 +513,10 @@ static bool stub_exists(const char* path) {
     return stat(path, &st) == 0;
 }
 
+StubIo stub_io;
+
 bool storage_file_open(File* file, const char* path, FS_AccessMode access, FS_OpenMode mode) {
+    stub_io.file_opens++;
     if(stub_open_fails) return false;
     bool exists = stub_exists(path);
     const char* how = NULL;
@@ -641,6 +644,7 @@ void furi_hal_rtc_get_datetime(DateTime* datetime) {
 }
 
 size_t storage_file_read(File* file, void* buf, size_t size) {
+    stub_io.reads++;
     if(!file->fp) return 0;
     size_t n = fread(buf, 1, size, file->fp);
     if(ferror(file->fp)) file->error = true;
@@ -652,6 +656,7 @@ FS_Error storage_file_get_error(File* file) {
 }
 
 size_t storage_file_write(File* file, const void* buf, size_t size) {
+    stub_io.writes++;
     stub_write_calls++;
     if(stub_write_delay_us) {
         struct timespec ts = {0, (long)stub_write_delay_us * 1000L};
@@ -676,6 +681,7 @@ bool storage_file_close(File* file) {
 }
 
 bool storage_dir_open(File* file, const char* path) {
+    stub_io.dir_opens++;
     if(stub_open_fails) return false;
     file->dir = opendir(path);
     if(!file->dir) return false;
@@ -685,6 +691,7 @@ bool storage_dir_open(File* file, const char* path) {
 }
 
 bool storage_dir_read(File* file, FileInfo* info, char* name, uint16_t name_length) {
+    stub_io.dir_reads++;
     if(!file->dir) return false;
     struct dirent* d;
     while((d = readdir((DIR*)file->dir)) != NULL) {
@@ -715,6 +722,7 @@ bool file_info_is_dir(const FileInfo* info) {
 
 FS_Error storage_common_timestamp(Storage* storage, const char* path, uint32_t* timestamp) {
     (void)storage;
+    stub_io.stats++;
     struct stat st;
     if(stat(path, &st) != 0) return FSE_NOT_EXIST;
     *timestamp = (uint32_t)st.st_mtime;
@@ -723,6 +731,7 @@ FS_Error storage_common_timestamp(Storage* storage, const char* path, uint32_t* 
 
 FS_Error storage_common_stat(Storage* storage, const char* path, FileInfo* fileinfo) {
     (void)storage;
+    stub_io.stats++;
     struct stat st;
     if(stat(path, &st) != 0) return FSE_NOT_EXIST;
     if(fileinfo) {

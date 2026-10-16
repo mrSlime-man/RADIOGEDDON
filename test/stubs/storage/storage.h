@@ -111,6 +111,11 @@ extern unsigned stub_write_calls;
 /* storage_file_sync calls, and the file size at the last one: what a reboot
  * would leave readable on a FAT card (its size is updated only on sync). */
 extern unsigned stub_sync_calls;
+/* Every call into the "card", counted (benchmarks of SD-card work). */
+typedef struct {
+    unsigned dir_opens, dir_reads, file_opens, stats, reads, writes;
+} StubIo;
+extern StubIo stub_io;
 extern uint64_t stub_synced_size;
 extern unsigned stub_files_open; /* files and folders open now */
 extern bool stub_rename_keeps_target; /* rename onto an existing file fails (FSE_EXIST) */

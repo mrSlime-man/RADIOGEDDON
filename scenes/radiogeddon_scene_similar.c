@@ -70,12 +70,19 @@ static void similar_show_list(RadioGeddonApp* app, uint32_t selected) {
     } else if(r->count == 0) {
         submenu_add_item(submenu, "No similar recordings", SimilarItemInfo, similar_cb, app);
     }
-    snprintf(
-        line,
-        sizeof(line),
-        "%lu compared%s",
-        (unsigned long)r->compared,
-        r->index_failed ? ", index not saved" : (r->truncated ? ", first 500" : ""));
+    if(r->index_failed) {
+        snprintf(line, sizeof(line), "%lu compared, index not saved", (unsigned long)r->compared);
+    } else if(r->truncated) {
+        // The index holds what the heap (or RG_FP_INDEX_MAX) allowed.
+        snprintf(
+            line,
+            sizeof(line),
+            "%lu compared, first %lu",
+            (unsigned long)r->compared,
+            (unsigned long)r->limit);
+    } else {
+        snprintf(line, sizeof(line), "%lu compared", (unsigned long)r->compared);
+    }
     submenu_add_item(submenu, line, SimilarItemInfo, similar_cb, app);
     if(r->count > 1)
         submenu_add_item(submenu, "Compare all matches", SimilarItemCompareAll, similar_cb, app);

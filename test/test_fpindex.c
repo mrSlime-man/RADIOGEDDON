@@ -268,6 +268,83 @@ static void test_large_collection(void) {
     CHECK(stub_files_open == 0, "files closed");
 }
 
+/* A decoded key file: cheap to fingerprint, so a big library stays quick. */
+static void write_key(const char* name, unsigned key) {
+    char path[256];
+    path_of(name, path, sizeof(path));
+    FILE* fp = fopen(path, "wb");
+    fprintf(
+        fp,
+        "Filetype: Flipper SubGhz Key File\nVersion: 1\nFrequency: 433920000\n"
+        "Preset: FuriHalSubGhzPresetOok650Async\nProtocol: Princeton\nBit: 24\n"
+        "Key: 00 00 00 00 00 %02X %02X %02X\nTE: 400\n",
+        (key >> 16) & 0xFF,
+        (key >> 8) & 0xFF,
+        key & 0xFF);
+    fclose(fp);
+}
+
+/* Beyond beta 9's 500-record index, and with too little heap for all. */
+static void test_beyond_500(void) {
+    printf("test_beyond_500\n");
+    reset_card();
+    char name[32];
+    for(int i = 0; i < 700; i++) {
+        snprintf(name, sizeof(name), "k_%04d.sub", i);
+        write_key(name, (unsigned)i * 2654435761u);
+    }
+    CHECK(search("k_0001.sub"), "search over 700");
+    CHECK(g_res.indexed == 700 && !g_res.truncated, "all 700 indexed (beta 9: the first 500)");
+    CHECK(g_res.compared == 699, "every other recording ranked");
+    // Nothing new: one listing, nothing recomputed.
+    memset(&stub_io, 0, sizeof(stub_io));
+    CHECK(search("k_0001.sub") && g_res.computed == 0, "second search reuses the index");
+    CHECK(stub_io.dir_opens == 1, "one folder listing when nothing is new");
+    // A new recording is found with one more listing, never a full rebuild.
+    write_key("k_new.sub", 12345);
+    memset(&stub_io, 0, sizeof(stub_io));
+    CHECK(search("k_0001.sub") && g_res.computed == 1 && g_res.indexed == 701, "one added");
+    CHECK(stub_io.dir_opens == 2, "two listings for one new recording");
+    // A short heap: the index is limited to what fits, never refused.
+    size_t heap = stub_heap_free;
+    stub_heap_free = radiogeddon_fp_memory() + 2048 + 300 * 8;
+    CHECK(search("k_0001.sub"), "search with a short heap");
+#ifdef RG_FP_HAS_LIMIT
+    CHECK(g_res.truncated && g_res.limit < 701 && g_res.indexed == g_res.limit, "the first ones");
+    CHECK(g_res.limit >= 250, "as many as fit");
+#else
+    CHECK(false, "a short heap limits the index (beta 9: refused)");
+#endif
+    stub_heap_free = heap;
+    CHECK(search("k_0001.sub") && g_res.indexed == 701 && !g_res.truncated, "all again");
+    CHECK(stub_files_open == 0, "files closed");
+}
+
+/* Two names whose 32-bit FNV-1a hashes are equal (beta 9 kept the second
+ * out of the index): both are fingerprinted now. */
+static void test_hash_collision(void) {
+    printf("test_hash_collision\n");
+    reset_card();
+    // Found by a search over random names (FNV-1a 32 of both: 0x0a29967e).
+    const char* a = "rc967e6bc.sub";
+    const char* b = "r01a3505d.sub";
+    uint32_t ha = 2166136261u, hb = 2166136261u;
+    for(const char* p = a; *p; p++)
+        ha = (ha ^ (uint8_t)*p) * 16777619u;
+    for(const char* p = b; *p; p++)
+        hb = (hb ^ (uint8_t)*p) * 16777619u;
+    CHECK(ha == hb, "the pair collides in 32 bits");
+    write_key(a, 0x123456);
+    write_key(b, 0x654321);
+    CHECK(search(a), "search");
+    CHECK(g_res.indexed == 2 && g_res.compared == 1, "both names indexed");
+    // The next search keeps both records (beta 9 dropped the second as a
+    // duplicate of the first, then never added it back).
+    CHECK(search(a), "search again");
+    CHECK(g_res.indexed == 2 && g_res.compared == 1 && g_res.computed == 0, "both kept");
+    printf("  %s and %s share a 32-bit hash\n", a, b);
+}
+
 int main(void) {
     stub_write_fail_after = -1;
     test_ranking();
@@ -275,6 +352,8 @@ int main(void) {
     test_damage();
     test_write_failure_and_memory();
     test_large_collection();
+    test_beyond_500();
+    test_hash_collision();
     printf("\n%d checks, %d failures\n", g_checks, g_failures);
     return g_failures ? 1 : 0;
 }

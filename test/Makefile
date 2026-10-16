@@ -123,7 +123,7 @@ UI_SRC := test_ui.c ui/canvas_host.c ../views/radiogeddon_waterfall_view.c \
 UI_HDRS := ui/canvas_host.h ui/stubs/gui/view.h ui/stubs/gui/canvas.h ui/stubs/gui/elements.h \
 		../views/radiogeddon_waterfall_view.h ../views/radiogeddon_bits_view.h synth.h
 
-.PHONY: bench check clean tsan fuzz formats decoders captures lifecycle ui fpindex actlogfiles
+.PHONY: bench benchfp check clean tsan fuzz formats decoders captures lifecycle ui fpindex actlogfiles
 check: $(BUILD)/test_dsp $(BUILD)/test_analyzer $(BUILD)/test_scan $(BUILD)/test_hop $(BUILD)/test_raw \
 		$(BUILD)/test_timeline $(BUILD)/test_ring $(BUILD)/test_rawfmt $(BUILD)/test_recorder \
 		$(BUILD)/test_db $(BUILD)/test_memstat $(BUILD)/test_dbload $(BUILD)/test_decode $(BUILD)/test_freq $(BUILD)/test_preset $(BUILD)/test_range \
@@ -250,6 +250,15 @@ $(BUILD)/bench_db: bench_db.c ../helpers/rg_db.c ../helpers/rg_db.h | $(BUILD)
 
 bench: $(BUILD)/bench_db
 	$(BUILD)/bench_db 7
+
+# Find Similar over libraries of 10 to 1,000 recordings, every card call counted.
+BENCHFP_SRC := bench_fpindex.c $(filter-out test_fpindex.c,$(FPINDEX_SRC))
+$(BUILD)/bench_fpindex: $(BENCHFP_SRC) $(STUB_HDRS) $(FW_OBJ) ../helpers/radiogeddon_fp.h | $(BUILD)
+	$(CC) $(CFLAGS) $(SAN) -D_GNU_SOURCE -I$(FW) -I$(FW)/lib -I$(FW)/lib/mlib -Istubs \
+		-DSTUB_TRACK_ALLOC -DRADIOGEDDON_EDITION_FULL -pthread -o $@ $(BENCHFP_SRC) $(FW_OBJ)
+
+benchfp: $(BUILD)/bench_fpindex
+	$(BUILD)/bench_fpindex
 
 $(BUILD)/test_recover: $(RECOVER_SRC) ../helpers/rg_recover.h ../helpers/rg_rawfmt.h ../helpers/rg_raw.h | $(BUILD)
 	$(CC) $(CFLAGS) $(SAN) -o $@ $(RECOVER_SRC)

@@ -57,9 +57,12 @@ typedef struct {
     uint32_t dropped; // records dropped (file gone or changed, damaged)
     uint32_t unreadable; // recordings that could not be fingerprinted
     uint32_t compared; // recordings ranked against the target
-    bool truncated; // more recordings than RG_FP_INDEX_MAX
+    uint32_t limit; // records the index could hold in this search (RG_FP_HAS_LIMIT)
+    bool truncated; // more recordings than that (RG_FP_INDEX_MAX or the heap)
     bool index_failed; // the index could not be written (results from memory)
 } RadioGeddonFpResult;
+
+#define RG_FP_HAS_LIMIT 1
 
 /** Heap a search needs besides the module (an analysis, name hashes). */
 size_t radiogeddon_fp_memory(void);
