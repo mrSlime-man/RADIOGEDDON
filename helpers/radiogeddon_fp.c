@@ -333,6 +333,7 @@ static bool fp_update(
 bool radiogeddon_fp_find_similar(
     Storage* storage,
     const char* target,
+    uint32_t window_s,
     RadioGeddonFpResult* out,
     RadioGeddonProgressCallback progress,
     void* context) {
@@ -347,6 +348,7 @@ bool radiogeddon_fp_find_similar(
     RgFingerprint* tfp = malloc(sizeof(RgFingerprint));
     File* file = storage_file_alloc(storage);
     bool found = false;
+    uint32_t target_ts = 0;
     // The target's own fingerprint: from the index, or computed now.
     if(!out->index_failed &&
        storage_file_open(file, RADIOGEDDON_FP_INDEX, FSAM_READ, FSOM_OPEN_EXISTING)) {
@@ -355,12 +357,17 @@ bool radiogeddon_fp_find_similar(
         while(!end && !found) {
             if(fp_read_record(file, rec, &end) && strcmp(rec->name, tname) == 0) {
                 *tfp = rec->fp;
+                target_ts = rec->timestamp;
                 found = true;
             }
         }
     }
     storage_file_close(file);
-    if(!found) found = fp_compute(storage, tname, tfp);
+    if(!found) {
+        uint32_t size;
+        found = fp_compute(storage, tname, tfp);
+        if(found) fp_stat(storage, tname, &size, &target_ts);
+    }
     out->target_found = found;
     if(found) {
         out->target_structure = tfp->flags & RG_FP_FLAG_STRUCTURE;
@@ -381,6 +388,15 @@ bool radiogeddon_fp_find_similar(
         while(!end) {
             uint32_t this_id = id++;
             if(!fp_read_record(file, rec, &end) || strcmp(rec->name, tname) == 0) continue;
+            if(window_s) {
+                // In scope only with both times known and close enough.
+                uint32_t d = rec->timestamp > target_ts ? rec->timestamp - target_ts :
+                                                          target_ts - rec->timestamp;
+                if(!rec->timestamp || !target_ts || d > window_s) {
+                    out->out_of_scope++;
+                    continue;
+                }
+            }
             RgFpMatch m;
             rg_fp_compare(tfp, &rec->fp, &m);
             rg_fp_rank_offer(&rank, this_id, &m);

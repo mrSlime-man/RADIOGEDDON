@@ -11,14 +11,25 @@
  * the main menu. Similar structure is shown as a heuristic, never as proof
  * of a common transmitter.
  *
+ * Scope: all recordings, or those saved within an hour or a day of the
+ * target (the "Scope" row cycles and ranks again; the index is reused).
+ *
  * Scene state: the list (low byte 0) or a match's actions (1), and the
  * match chosen (above it).
  */
+
+static const uint32_t similar_scope_s[] = {0, 3600u, 86400u};
+static const char* const similar_scope_text[] = {
+    "Scope: all recordings",
+    "Scope: within 1 hour",
+    "Scope: within 1 day",
+};
 
 typedef struct RadioGeddonSimilar {
     RadioGeddonFpResult res;
     char why[RG_FP_TOP][200];
     char target[RG_FP_NAME_MAX];
+    uint8_t scope; // index into similar_scope_s
 } RadioGeddonSimilar;
 
 typedef enum {
@@ -34,6 +45,7 @@ typedef enum {
     SimilarItemOpen,
     SimilarItemCompare,
     SimilarItemCompareAll,
+    SimilarItemScope,
     SimilarEventFailed = 960,
 } SimilarItem;
 
@@ -80,10 +92,18 @@ static void similar_show_list(RadioGeddonApp* app, uint32_t selected) {
             "%lu compared, first %lu",
             (unsigned long)r->compared,
             (unsigned long)r->limit);
+    } else if(r->out_of_scope) {
+        snprintf(
+            line,
+            sizeof(line),
+            "%lu compared, %lu out of scope",
+            (unsigned long)r->compared,
+            (unsigned long)r->out_of_scope);
     } else {
         snprintf(line, sizeof(line), "%lu compared", (unsigned long)r->compared);
     }
     submenu_add_item(submenu, line, SimilarItemInfo, similar_cb, app);
+    submenu_add_item(submenu, similar_scope_text[s->scope], SimilarItemScope, similar_cb, app);
     if(r->count > 1)
         submenu_add_item(submenu, "Compare all matches", SimilarItemCompareAll, similar_cb, app);
     submenu_set_selected_item(submenu, selected);
@@ -108,14 +128,21 @@ static bool similar_search(RadioGeddonApp* app) {
         app->message_text = "Close other tools or\nuse Classic mode.";
         return false;
     }
-    if(!app->similar) app->similar = malloc(sizeof(RadioGeddonSimilar));
+    uint8_t scope = 0;
+    if(!app->similar) {
+        app->similar = malloc(sizeof(RadioGeddonSimilar));
+    } else {
+        scope = app->similar->scope; // a new scope ranks again
+    }
     RadioGeddonSimilar* s = app->similar;
     memset(s, 0, sizeof(*s));
+    s->scope = scope;
     strlcpy(s->target, similar_name(furi_string_get_cstr(app->file_path)), sizeof(s->target));
     radiogeddon_scene_show_progress(app, "Fingerprinting...");
     bool ok = radiogeddon_fp_find_similar(
         app->storage,
         furi_string_get_cstr(app->file_path),
+        similar_scope_s[s->scope],
         &s->res,
         radiogeddon_scene_progress,
         app);
@@ -217,6 +244,15 @@ bool radiogeddon_scene_similar_on_event(void* context, SceneManagerEvent event) 
         return true;
     }
     switch(event.event) {
+    case SimilarItemScope:
+        s->scope = (uint8_t)((s->scope + 1u) % COUNT_OF(similar_scope_s));
+        if(!similar_search(app)) {
+            view_dispatcher_send_custom_event(app->view_dispatcher, SimilarEventFailed);
+            return true;
+        }
+        scene_manager_set_scene_state(app->scene_manager, RadioGeddonSceneSimilar, 0);
+        similar_show_list(app, SimilarItemScope);
+        return true;
     case SimilarItemWhy:
         scene_manager_set_scene_state(
             app->scene_manager, RadioGeddonSceneSimilar, (state & ~0xFFu) | SimilarModeWhy);

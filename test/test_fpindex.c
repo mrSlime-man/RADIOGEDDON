@@ -18,6 +18,7 @@
 #include "../helpers/radiogeddon_storage.h"
 
 #include <sys/stat.h>
+#include <sys/time.h>
 #include <unistd.h>
 
 static int g_failures = 0;
@@ -37,6 +38,7 @@ extern size_t stub_heap_free;
 static int g_card;
 static Storage* const CARD = (Storage*)&g_card; // never dereferenced by the stub
 static RadioGeddonFpResult g_res;
+static uint32_t g_window = 0; // the search's time window (0: all)
 
 static void path_of(const char* name, char* out, size_t size) {
     snprintf(out, size, "%s/%s", RADIOGEDDON_SIGNALS_FOLDER, name);
@@ -119,7 +121,7 @@ static int hit_index(const char* name) {
 static bool search(const char* target) {
     char path[256];
     path_of(target, path, sizeof(path));
-    return radiogeddon_fp_find_similar(CARD, path, &g_res, NULL, NULL);
+    return radiogeddon_fp_find_similar(CARD, path, g_window, &g_res, NULL, NULL);
 }
 
 static const char* KEY_A = "101100111000101011110001";
@@ -345,6 +347,34 @@ static void test_hash_collision(void) {
     printf("  %s and %s share a 32-bit hash\n", a, b);
 }
 
+/* Find Similar within a time window of the target's recording time. */
+static void test_time_window(void) {
+    printf("test_time_window\n");
+    reset_card();
+    char name[32], path[256];
+    // Six copies of one remote, saved 0, 10 min, 50 min, 2 h, 20 h, 3 days apart.
+    static const long offs[] = {0, 600, 3000, 7200, 72000, 259200};
+    for(int i = 0; i < 6; i++) {
+        snprintf(name, sizeof(name), "w_%d.sub", i);
+        write_raw(name, KEY_A, 350, 5, 433920000);
+        path_of(name, path, sizeof(path));
+        struct timeval tv[2] = {{1760000000 + offs[i], 0}, {1760000000 + offs[i], 0}};
+        CHECK(utimes(path, tv) == 0, "time set");
+    }
+    g_window = 0;
+    CHECK(search("w_0.sub") && g_res.compared == 5 && g_res.out_of_scope == 0, "all: 5 ranked");
+    g_window = 3600;
+    memset(&stub_io, 0, sizeof(stub_io));
+    CHECK(search("w_0.sub") && g_res.computed == 0, "the index is reused");
+    CHECK(g_res.compared == 2 && g_res.out_of_scope == 3, "within an hour: 2 (10 and 50 min)");
+    for(size_t i = 0; i < g_res.count; i++)
+        CHECK(strcmp(g_res.hit[i].name, "w_1.sub") == 0 || strcmp(g_res.hit[i].name, "w_2.sub") == 0,
+              "only those in the window");
+    g_window = 86400;
+    CHECK(search("w_0.sub") && g_res.compared == 4 && g_res.out_of_scope == 1, "within a day: 4");
+    g_window = 0;
+}
+
 int main(void) {
     stub_write_fail_after = -1;
     test_ranking();
@@ -354,6 +384,7 @@ int main(void) {
     test_large_collection();
     test_beyond_500();
     test_hash_collision();
+    test_time_window();
     printf("\n%d checks, %d failures\n", g_checks, g_failures);
     return g_failures ? 1 : 0;
 }

@@ -57,6 +57,7 @@ typedef struct {
     uint32_t dropped; // records dropped (file gone or changed, damaged)
     uint32_t unreadable; // recordings that could not be fingerprinted
     uint32_t compared; // recordings ranked against the target
+    uint32_t out_of_scope; // left out by the time window (or of unknown time)
     uint32_t limit; // records the index could hold in this search (RG_FP_HAS_LIMIT)
     bool truncated; // more recordings than that (RG_FP_INDEX_MAX or the heap)
     bool index_failed; // the index could not be written (results from memory)
@@ -69,12 +70,16 @@ size_t radiogeddon_fp_memory(void);
 
 /**
  * Bring the index up to date and rank every recording against @p target
- * (a path in the signals folder). @p progress is told (done, total) over
- * the files. False only when nothing could be done (no card, no memory).
+ * (a path in the signals folder). With @p window_s, only recordings saved
+ * within that many seconds of the target are ranked (by the files' times;
+ * one of unknown time is left out), the rest counted in out_of_scope; 0
+ * ranks them all. @p progress is told (done, total) over the files. False
+ * only when nothing could be done (no card, no memory).
  */
 bool radiogeddon_fp_find_similar(
     Storage* storage,
     const char* target,
+    uint32_t window_s,
     RadioGeddonFpResult* out,
     RadioGeddonProgressCallback progress,
     void* context);
