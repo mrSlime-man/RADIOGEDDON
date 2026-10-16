@@ -224,3 +224,20 @@ App(
     ],
     fal_embedded=True,
 )
+
+App(
+    appid="radiogeddon_recover",
+    apptype=FlipperAppType.PLUGIN,
+    entry_point="radiogeddon_recover_module_ep",
+    requires=["radiogeddon_full"],
+    cdefines=["RADIOGEDDON_EDITION_FULL"],
+    sources=[
+        "modules/radiogeddon_module_recover.c",
+        "helpers/radiogeddon_recovery.c",
+        "helpers/rg_recover.c",
+        "helpers/radiogeddon_storage.c",
+        "helpers/radiogeddon_dsp.c",
+        "helpers/rg_raw.c",
+    ],
+    fal_embedded=True,
+)

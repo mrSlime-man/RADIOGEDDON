@@ -34,6 +34,7 @@
 #include "../helpers/radiogeddon_bands.h"
 #include "../helpers/rg_db.h"
 #include "../helpers/rg_raw.h"
+#include "../helpers/radiogeddon_recovery.h"
 #include "../helpers/rg_analyzer.h"
 
 #include <dirent.h>
@@ -1053,6 +1054,95 @@ static void test_settings_interrupted(void) {
     CHECK(fav_got.count == 2, "favorites restored from the complete tmp");
 }
 
+/* ---- Recording recovery (radiogeddon_recovery on the stub card) --------- */
+
+static size_t count_raw(const char* path) {
+    RadioGeddonRawFile* raw = radiogeddon_storage_raw_open(CARD, path);
+    if(!raw) return 0;
+    int32_t buf[64];
+    size_t n, total = 0;
+    while((n = rg_raw_reader_read(&raw->reader, buf, 64)) > 0)
+        total += n;
+    bool corrupt = raw->reader.corrupt;
+    radiogeddon_storage_raw_close(raw);
+    return corrupt ? 0 : total;
+}
+
+static void test_recovery(void) {
+    printf("test_recovery\n");
+    reset_card();
+    RadioGeddonRecovery rec;
+    CHECK(!radiogeddon_recovery_scan(CARD, &rec), "nothing left over: nothing to do");
+
+    /* Cut inside a value of the third line, as a reboot leaves it. */
+    const char* cut =
+        "Filetype: Flipper SubGhz RAW File\nVersion: 1\nFrequency: 433920000\n"
+        "Preset: FuriHalSubGhzPresetOok650Async\nProtocol: RAW\n"
+        "RAW_Data: 400 -1200 400 -1200\nRAW_Data: 1200 -400 1200 -400\nRAW_Data: 400 -12";
+    host_write(RADIOGEDDON_RECORD_TEMP, cut, strlen(cut));
+    CHECK(radiogeddon_recovery_scan(CARD, &rec), "leftover found");
+    CHECK(rec.verdict == RgRecoverPartial && rec.scan.samples == 9, "9 complete samples");
+    CHECK(rec.scan.frequency == 433920000, "frequency read");
+    CHECK(radiogeddon_recovery_repair(CARD, &rec), "repaired in place");
+    RadioGeddonRecovery again;
+    CHECK(radiogeddon_recovery_scan(CARD, &again), "rescanned");
+    CHECK(again.verdict == RgRecoverComplete && again.scan.samples == 9, "repair is complete");
+    FuriString* path = furi_string_alloc();
+    CHECK(radiogeddon_recovery_keep(CARD, &again, path), "kept");
+    CHECK(strstr(furi_string_get_cstr(path), "/signals/Recovered_") != NULL, "named Recovered_");
+    CHECK(!storage_common_exists(CARD, RADIOGEDDON_RECORD_TEMP), "temporary file moved");
+    RadioGeddonLoadedSignal sig;
+    radiogeddon_loaded_signal_init(&sig);
+    CHECK(
+        radiogeddon_storage_load(CARD, furi_string_get_cstr(path), &sig) &&
+            sig.kind == RadioGeddonSignalKindRaw && sig.frequency == 433920000,
+        "an ordinary RAW .sub through FlipperFormat");
+    radiogeddon_loaded_signal_reset(&sig);
+    CHECK(count_raw(furi_string_get_cstr(path)) == 9, "its 9 samples stream back");
+
+    /* A second leftover with the same time gets its own name. */
+    host_write(RADIOGEDDON_RECORD_TEMP, cut, strlen(cut));
+    CHECK(radiogeddon_recovery_scan(CARD, &rec), "second leftover");
+    rec.timestamp = again.timestamp;
+    radiogeddon_recovery_repair(CARD, &rec);
+    FuriString* path2 = furi_string_alloc();
+    CHECK(radiogeddon_recovery_keep(CARD, &rec, path2), "kept too");
+    CHECK(!furi_string_equal(path, path2), "never over the first");
+    furi_string_free(path2);
+    furi_string_free(path);
+
+    /* Header only: nothing to give back. */
+    const char* header = "Filetype: Flipper SubGhz RAW File\nVersion: 1\nFreq";
+    host_write(RADIOGEDDON_RECORD_TEMP, header, strlen(header));
+    CHECK(radiogeddon_recovery_scan(CARD, &rec) && rec.verdict == RgRecoverNothing, "no capture");
+    radiogeddon_recovery_discard(CARD);
+    CHECK(!storage_common_exists(CARD, RADIOGEDDON_RECORD_TEMP), "removed");
+
+    /* The startup flow, as the app runs it. */
+    reset_card();
+    host_write(RADIOGEDDON_RECORD_TEMP, cut, strlen(cut));
+    stub_dialog_shown = 0;
+    stub_dialog_answers[0] = DialogMessageButtonLeft; // Delete
+    radiogeddon_recovery_offer(CARD, NULL);
+    CHECK(stub_dialog_shown == 1, "asked once");
+    CHECK(!storage_common_exists(CARD, RADIOGEDDON_RECORD_TEMP), "Delete removes it");
+
+    host_write(RADIOGEDDON_RECORD_TEMP, cut, strlen(cut));
+    stub_dialog_shown = 0;
+    stub_dialog_answers[0] = DialogMessageButtonBack; // Back keeps
+    stub_dialog_answers[1] = DialogMessageButtonCenter;
+    radiogeddon_recovery_offer(CARD, NULL);
+    CHECK(stub_dialog_shown == 2, "asked, then told where it went");
+    CHECK(strstr(stub_dialog_text, "Recovered_") != NULL, "the new name is shown");
+    CHECK(!storage_common_exists(CARD, RADIOGEDDON_RECORD_TEMP), "moved out of the way");
+
+    host_write(RADIOGEDDON_RECORD_TEMP, header, strlen(header));
+    stub_dialog_shown = 0;
+    radiogeddon_recovery_offer(CARD, NULL);
+    CHECK(stub_dialog_shown == 0, "nothing of a capture: not asked");
+    CHECK(!storage_common_exists(CARD, RADIOGEDDON_RECORD_TEMP), "and removed");
+}
+
 int main(int argc, char** argv) {
     bool verbose = argc > 1 && strcmp(argv[1], "-v") == 0;
     test_firmware_files(verbose);
@@ -1065,6 +1155,7 @@ int main(int argc, char** argv) {
     test_settings_malformed();
     test_settings_failed_save();
     test_settings_interrupted();
+    test_recovery();
     test_write_signal();
     test_repeated();
     if(system("rm -rf build/ext") != 0) return 2;

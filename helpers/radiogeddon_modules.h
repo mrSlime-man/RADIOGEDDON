@@ -42,6 +42,14 @@
 #define RADIOGEDDON_MODULE_STUDIO    "radiogeddon_studio.fal"
 #define RADIOGEDDON_MODULE_LOG       "radiogeddon_log.fal"
 #define RADIOGEDDON_MODULE_REPORTS   "radiogeddon_reports.fal"
+#define RADIOGEDDON_MODULE_RECOVER   "radiogeddon_recover.fal"
+
+#include <dialogs/dialogs.h>
+/* Recording recovery at startup (radiogeddon_recovery.h), only when a
+ * capture was cut off by a restart. */
+typedef struct {
+    void (*offer)(Storage* storage, DialogsApp* dialogs);
+} RadioGeddonRecoverModule;
 
 #include "radiogeddon_analysis.h"
 /* Unknown Protocol Analysis report (radiogeddon_analysis_unknown). */

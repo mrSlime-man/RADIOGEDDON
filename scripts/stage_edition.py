@@ -81,6 +81,9 @@ FULL_MODULE_ONLY = (
     # The analyzer and its runner: every Full tool that analyses is a module.
     "helpers/radiogeddon_analysis_run.c",
     "helpers/rg_analyzer.c",
+    # Recording recovery runs once at startup, only after a cut-off capture.
+    "helpers/radiogeddon_recovery.c",
+    "helpers/rg_recover.c",
 )
 FULL_MODULES_FAM = "modules/modules.fam"
 

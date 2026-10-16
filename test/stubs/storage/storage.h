@@ -108,5 +108,9 @@ extern bool stub_open_fails;
 extern unsigned stub_write_delay_us; /* per write call */
 extern long stub_write_fail_after; /* bytes; -1 = never */
 extern unsigned stub_write_calls;
+/* storage_file_sync calls, and the file size at the last one: what a reboot
+ * would leave readable on a FAT card (its size is updated only on sync). */
+extern unsigned stub_sync_calls;
+extern uint64_t stub_synced_size;
 extern unsigned stub_files_open; /* files and folders open now */
 extern bool stub_rename_keeps_target; /* rename onto an existing file fails (FSE_EXIST) */

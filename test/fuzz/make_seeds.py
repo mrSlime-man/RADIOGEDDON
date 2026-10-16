@@ -51,6 +51,12 @@ RAW_CASES = {
 for i, (name, text) in enumerate(sorted(RAW_CASES.items())):
     write("fuzz_raw", name, bytes([(7 * i + 1) % 256, 13 * i % 64]) + text)
 
+# fuzz_recover: [chunk size] then what a reboot left of recording.tmp.
+for i, (name, text) in enumerate(sorted(RAW_CASES.items())):
+    write("fuzz_recover", name, bytes([(11 * i + 3) % 256]) + text)
+write("fuzz_recover", "zero_tail", bytes([17]) + RAW + b"RAW_Data: 400 -12" + bytes(64))
+write("fuzz_recover", "header_cut", bytes([5]) + RAW_HEAD[:40])
+
 
 def record(name, header, whole, mtime):
     head1 = min(len(header) // 4, 0x7F) | (0x80 if whole else 0)

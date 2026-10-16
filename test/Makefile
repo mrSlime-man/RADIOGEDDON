@@ -33,13 +33,14 @@ FP_SRC := test_fp.c ../helpers/rg_fp.c ../helpers/rg_analyzer.c ../helpers/rg_cr
 ADAPT_SRC := test_adapt.c ../helpers/rg_adapt.c
 ACTLOG_SRC := test_actlog.c ../helpers/rg_actlog.c
 STUDIO_SRC := test_studio.c ../helpers/rg_studio.c ../helpers/rg_analyzer.c
+RECOVER_SRC := test_recover.c ../helpers/rg_recover.c ../helpers/rg_rawfmt.c ../helpers/rg_raw.c
 SAFEFILE_SRC := test_safefile.c ../helpers/rg_safefile.c
 JOURNAL_SRC := test_journal.c ../helpers/rg_journal.c ../helpers/rg_assist.c ../helpers/rg_crc.c
 DBLOAD_SRC := test_dbload.c stubs/furi_stub.c ../helpers/radiogeddon_db.c ../helpers/rg_db.c
 STUB_HDRS := stubs/furi.h stubs/storage/storage.h stubs/datetime/datetime.h \
 		stubs/lib/toolbox/stream/stream.h stubs/core/check.h stubs/core/common_defines.h \
 		stubs/furi_hal_rtc.h stubs/lib/subghz/devices/preset.h
-RECORDER_SRC := test_recorder.c stubs/furi_stub.c ../helpers/radiogeddon_recorder.c \
+RECORDER_SRC := test_recorder.c stubs/furi_stub.c ../helpers/radiogeddon_recorder.c ../helpers/rg_recover.c \
 		../helpers/rg_ring.c ../helpers/rg_rawfmt.c ../helpers/rg_raw.c
 
 # Format tests: the firmware's own FlipperFormat and stream code and its
@@ -51,7 +52,7 @@ FW_SRC := $(FW)/lib/flipper_format/flipper_format.c $(FW)/lib/flipper_format/fli
 		$(FW)/lib/toolbox/stream/file_stream.c $(FW)/lib/toolbox/stream/buffered_file_stream.c \
 		$(FW)/lib/toolbox/stream/stream_cache.c $(FW)/lib/toolbox/hex.c $(FW)/lib/toolbox/strint.c
 FW_OBJ := $(patsubst $(FW)/%.c,$(BUILD)/fwobj/%.o,$(FW_SRC))
-FORMATS_SRC := test_formats.c stubs/furi_stub.c ../helpers/radiogeddon_storage.c ../helpers/radiogeddon_safefile.c ../helpers/rg_safefile.c \
+FORMATS_SRC := test_formats.c stubs/furi_stub.c ../helpers/radiogeddon_storage.c ../helpers/radiogeddon_recovery.c ../helpers/rg_recover.c ../helpers/radiogeddon_safefile.c ../helpers/rg_safefile.c \
 		../helpers/radiogeddon_settings.c ../helpers/radiogeddon_bands.c ../helpers/rg_freq.c \
 		../helpers/radiogeddon_dsp.c ../helpers/rg_range.c ../helpers/radiogeddon_profiles.c \
 		../helpers/rg_db.c ../helpers/rg_raw.c ../helpers/rg_analyzer.c ../helpers/rg_ui.c
@@ -92,7 +93,8 @@ FUZZ_SESSION_SRC := fuzz/fuzz_session.c ../helpers/rg_session.c ../helpers/rg_el
 FUZZ_UI_SRC := fuzz/fuzz_ui.c ../helpers/rg_mascot.c ../helpers/rg_ui.c
 FUZZ_FP_SRC := fuzz/fuzz_fp.c ../helpers/rg_fp.c ../helpers/rg_journal.c ../helpers/rg_crc.c \
 		../helpers/rg_analyzer.c
-FUZZ_TARGETS := fuzz_raw fuzz_db fuzz_samples fuzz_session fuzz_ui fuzz_fp
+FUZZ_RECOVER_SRC := fuzz/fuzz_recover.c ../helpers/rg_recover.c ../helpers/rg_raw.c
+FUZZ_TARGETS := fuzz_raw fuzz_db fuzz_samples fuzz_session fuzz_ui fuzz_fp fuzz_recover
 FUZZ_CC ?= clang
 FUZZ_TIME ?= 60
 
@@ -121,11 +123,11 @@ UI_SRC := test_ui.c ui/canvas_host.c ../views/radiogeddon_waterfall_view.c \
 UI_HDRS := ui/canvas_host.h ui/stubs/gui/view.h ui/stubs/gui/canvas.h ui/stubs/gui/elements.h \
 		../views/radiogeddon_waterfall_view.h ../views/radiogeddon_bits_view.h synth.h
 
-.PHONY: check clean tsan fuzz formats decoders captures lifecycle ui fpindex actlogfiles
+.PHONY: bench check clean tsan fuzz formats decoders captures lifecycle ui fpindex actlogfiles
 check: $(BUILD)/test_dsp $(BUILD)/test_analyzer $(BUILD)/test_scan $(BUILD)/test_hop $(BUILD)/test_raw \
 		$(BUILD)/test_timeline $(BUILD)/test_ring $(BUILD)/test_rawfmt $(BUILD)/test_recorder \
 		$(BUILD)/test_db $(BUILD)/test_memstat $(BUILD)/test_dbload $(BUILD)/test_decode $(BUILD)/test_freq $(BUILD)/test_preset $(BUILD)/test_range \
-		$(BUILD)/test_txpolicy $(BUILD)/test_spectrum $(BUILD)/test_checksum $(BUILD)/test_waterfall $(BUILD)/test_bits $(BUILD)/test_multi $(BUILD)/test_session $(BUILD)/test_elf $(BUILD)/test_mascot $(BUILD)/test_fp $(BUILD)/test_adapt $(BUILD)/test_actlog $(BUILD)/test_journal $(BUILD)/test_studio $(BUILD)/test_safefile $(BUILD)/sprites.ok $(BUILD)/test_edition_full $(BUILD)/test_edition_catalog \
+		$(BUILD)/test_txpolicy $(BUILD)/test_spectrum $(BUILD)/test_checksum $(BUILD)/test_waterfall $(BUILD)/test_bits $(BUILD)/test_multi $(BUILD)/test_session $(BUILD)/test_elf $(BUILD)/test_mascot $(BUILD)/test_fp $(BUILD)/test_adapt $(BUILD)/test_actlog $(BUILD)/test_journal $(BUILD)/test_studio $(BUILD)/test_safefile $(BUILD)/test_recover $(BUILD)/bench_db $(BUILD)/sprites.ok $(BUILD)/test_edition_full $(BUILD)/test_edition_catalog \
 		$(BUILD)/test_edition_default $(BUILD)/edition_conflict.ok \
 		$(addprefix $(BUILD)/replay_,$(FUZZ_TARGETS))
 	$(BUILD)/test_dsp
@@ -159,6 +161,8 @@ check: $(BUILD)/test_dsp $(BUILD)/test_analyzer $(BUILD)/test_scan $(BUILD)/test
 	$(BUILD)/test_journal
 	$(BUILD)/test_studio
 	$(BUILD)/test_safefile
+	$(BUILD)/test_recover
+	$(BUILD)/bench_db 1
 	$(BUILD)/test_edition_full
 	$(BUILD)/test_edition_catalog
 	$(BUILD)/test_edition_default
@@ -238,6 +242,17 @@ $(BUILD)/test_adapt: $(ADAPT_SRC) ../helpers/rg_adapt.h | $(BUILD)
 
 $(BUILD)/test_actlog: $(ACTLOG_SRC) ../helpers/rg_actlog.h | $(BUILD)
 	$(CC) $(CFLAGS) $(SAN) -DRADIOGEDDON_EDITION_FULL -o $@ $(ACTLOG_SRC)
+
+# Benchmarks (host CPU, relative cost only). `check` runs each once for its
+# result checksums; `make bench` repeats them for timings.
+$(BUILD)/bench_db: bench_db.c ../helpers/rg_db.c ../helpers/rg_db.h | $(BUILD)
+	$(CC) $(CFLAGS) -o $@ bench_db.c ../helpers/rg_db.c
+
+bench: $(BUILD)/bench_db
+	$(BUILD)/bench_db 7
+
+$(BUILD)/test_recover: $(RECOVER_SRC) ../helpers/rg_recover.h ../helpers/rg_rawfmt.h ../helpers/rg_raw.h | $(BUILD)
+	$(CC) $(CFLAGS) $(SAN) -o $@ $(RECOVER_SRC)
 
 $(BUILD)/test_safefile: $(SAFEFILE_SRC) ../helpers/rg_safefile.h | $(BUILD)
 	$(CC) $(CFLAGS) $(SAN) -o $@ $(SAFEFILE_SRC)
@@ -430,6 +445,10 @@ $(BUILD)/replay_fuzz_fp: fuzz/replay.c $(FUZZ_FP_SRC) ../helpers/rg_fp.h ../help
 		| $(BUILD)
 	$(CC) $(CFLAGS) $(SAN) -DRADIOGEDDON_EDITION_FULL -o $@ fuzz/replay.c $(FUZZ_FP_SRC)
 
+$(BUILD)/replay_fuzz_recover: fuzz/replay.c $(FUZZ_RECOVER_SRC) ../helpers/rg_recover.h \
+		../helpers/rg_raw.h | $(BUILD)
+	$(CC) $(CFLAGS) $(SAN) -o $@ fuzz/replay.c $(FUZZ_RECOVER_SRC)
+
 # libFuzzer builds. New inputs go to build/corpus/<target>; the committed
 # corpus is only read. A failing input is saved as build/<target>-crash-*.
 $(BUILD)/fuzz_raw: $(FUZZ_RAW_SRC) | $(BUILD)
@@ -451,6 +470,10 @@ $(BUILD)/fuzz_ui: $(FUZZ_UI_SRC) | $(BUILD)
 $(BUILD)/fuzz_fp: $(FUZZ_FP_SRC) | $(BUILD)
 	$(FUZZ_CC) $(CFLAGS) -g -DRADIOGEDDON_EDITION_FULL -fsanitize=fuzzer,address,undefined \
 		-fno-sanitize-recover=all -o $@ $(FUZZ_FP_SRC)
+
+$(BUILD)/fuzz_recover: $(FUZZ_RECOVER_SRC) | $(BUILD)
+	$(FUZZ_CC) $(CFLAGS) -g -fsanitize=fuzzer,address,undefined -fno-sanitize-recover=all \
+		-o $@ $(FUZZ_RECOVER_SRC)
 
 $(BUILD)/fuzz_samples: $(FUZZ_SAMPLES_SRC) | $(BUILD)
 	$(FUZZ_CC) $(CFLAGS) -g -fsanitize=fuzzer,address,undefined -fno-sanitize-recover=all \
