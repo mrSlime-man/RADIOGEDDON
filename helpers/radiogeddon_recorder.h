@@ -40,6 +40,7 @@ typedef struct {
     uint32_t first_gap; /* samples recorded before the first gap */
     uint32_t radio_overruns; /* the radio worker's own buffer overflowed */
     uint32_t elapsed_ms; /* recording time so far (or in total once stopped) */
+    uint32_t bytes; /* written to the card so far */
     uint32_t buffer; /* ring capacity in samples */
     uint8_t fill_pct; /* ring fill now */
     uint8_t peak_pct; /* highest ring fill seen */

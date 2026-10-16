@@ -177,21 +177,24 @@ bool radiogeddon_scene_receiver_on_event(void* context, SceneManagerEvent event)
             scene_manager_set_scene_state(app->scene_manager, RadioGeddonSceneReceiver, note - 1);
             if(note == 1) radiogeddon_receiver_view_set_status(app->receiver_view, "");
         }
+        bool redraw = radiogeddon_scene_redraw_due(app);
         if(radiogeddon_subghz_is_rx_running(app->subghz)) {
-            radiogeddon_receiver_view_set_rssi(
-                app->receiver_view, radiogeddon_subghz_get_rssi(app->subghz));
+            if(redraw)
+                radiogeddon_receiver_view_set_rssi(
+                    app->receiver_view, radiogeddon_subghz_get_rssi(app->subghz));
             RadioGeddonRecordStats st;
             if(radiogeddon_subghz_record_status(app->subghz, &st)) {
+                // Checked on every tick, whatever is drawn.
                 if(st.error != RadioGeddonRecordOk) {
                     // The card refused a write: stop rather than keep losing data.
                     radiogeddon_scene_receiver_stop_recording(app);
                     return true;
                 }
-                radiogeddon_receiver_view_set_recording(app->receiver_view, true, &st);
+                if(redraw) radiogeddon_receiver_view_set_recording(app->receiver_view, true, &st);
             }
-            radiogeddon_scene_receiver_show_selected(app);
+            if(redraw) radiogeddon_scene_receiver_show_selected(app);
         }
-        radiogeddon_scene_receiver_badge(app);
+        if(redraw) radiogeddon_scene_receiver_badge(app);
         consumed = true;
     } else if(event.type == SceneManagerEventTypeBack) {
         // Back while recording stops the capture and asks for a name; Back on

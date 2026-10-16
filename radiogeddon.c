@@ -20,6 +20,7 @@ static bool radiogeddon_back_event_callback(void* context) {
 static void radiogeddon_tick_event_callback(void* context) {
     furi_assert(context);
     RadioGeddonApp* app = context;
+    radiogeddon_memdiag_tick();
     radiogeddon_memdiag_sample(NULL);
 #if RG_FEATURE_DOLPHIN_LAB
     radiogeddon_ui_tick(app);

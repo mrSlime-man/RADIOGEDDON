@@ -195,11 +195,14 @@ bool radiogeddon_scene_hopper_on_event(void* context, SceneManagerEvent event) {
     bool consumed = false;
 
     if(event.type == SceneManagerEventTypeTick) {
-        if(app->scanner_running) {
-            radiogeddon_scene_hopper_refresh_status(app);
-            radiogeddon_scene_hopper_show_selected(app);
+        // The hopper thread keeps its own timing; only the screen waits.
+        if(radiogeddon_scene_redraw_due(app)) {
+            if(app->scanner_running) {
+                radiogeddon_scene_hopper_refresh_status(app);
+                radiogeddon_scene_hopper_show_selected(app);
+            }
+            radiogeddon_scene_receiver_badge(app);
         }
-        radiogeddon_scene_receiver_badge(app);
         consumed = true;
     } else if(event.type == SceneManagerEventTypeCustom) {
         consumed = true;

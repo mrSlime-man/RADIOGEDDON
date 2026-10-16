@@ -346,7 +346,8 @@ static void actlog_tick(RadioGeddonApp* app) {
         actlog_show_summary(app);
         return;
     }
-    if(now - run->last_draw >= 1000u) {
+    // The status screen only: rows are collected above on every tick.
+    if(now - run->last_draw >= (app->settings.battery_saver ? 5000u : 1000u)) {
         run->last_draw = now;
         actlog_draw_running(app);
     }

@@ -63,3 +63,26 @@ uint32_t rg_mem_firmware_tag(const char* version, const char* githash) {
     h = rg_mem_fnv(h ^ 0xFFu, githash);
     return h ? h : 1u;
 }
+
+void rg_diag_tick(RgDiag* d, uint32_t now_ms, const char* where) {
+    if(d->ticks++ > 0) {
+        uint32_t gap = now_ms - d->last_tick_ms;
+        if(gap > d->worst_gap_ms) {
+            d->worst_gap_ms = gap;
+            d->worst_at = where ? where : "?";
+        }
+        if(gap > RG_DIAG_STALL_MS) d->stalls++;
+    }
+    d->last_tick_ms = now_ms;
+}
+
+uint8_t rg_mem_fragmentation_pct(uint32_t free_bytes, uint32_t largest_block) {
+    if(free_bytes == 0 || largest_block >= free_bytes) return 0;
+    return (uint8_t)(100u - (uint32_t)((uint64_t)largest_block * 100u / free_bytes));
+}
+
+uint32_t rg_diag_rec_rate(const RgDiag* d) {
+    if(d->rec_ms == 0) return 0;
+    return (uint32_t)((uint64_t)d->rec_bytes * 1000u / d->rec_ms);
+}
+

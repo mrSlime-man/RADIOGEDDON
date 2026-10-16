@@ -207,6 +207,8 @@ bool radiogeddon_scene_waterfall_on_event(void* context, SceneManagerEvent event
     }
 
     if(event.type == SceneManagerEventTypeTick) {
+        // The history is the engine's; only the picture waits.
+        if(!radiogeddon_scene_redraw_due(app)) return true;
         WF_API(app)->update(
             app->waterfall_view, radiogeddon_rangescan_waterfall_frame_fn, app->rangescan);
         radiogeddon_ui_set_scanning(app, !radiogeddon_rangescan_is_paused(app->rangescan));

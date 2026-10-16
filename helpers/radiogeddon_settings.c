@@ -134,6 +134,7 @@ static const SettingsField settings_fields[] = {
     F("Log_minutes", log_minutes, FieldU16, 0, 1440),
     F("Log_max_kb", log_max_kb, FieldU16, 16, 4096),
     F("Research_xp", research_xp, FieldBool, 0, 1),
+    F("Battery_saver", battery_saver, FieldBool, 0, 1),
 };
 
 #undef F

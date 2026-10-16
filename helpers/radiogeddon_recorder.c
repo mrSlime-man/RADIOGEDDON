@@ -38,6 +38,7 @@ struct RadioGeddonRecorder {
     bool failed; /* a write failed; set by the writer, read anywhere */
 
     uint32_t radio_overruns;
+    uint32_t written; /* bytes on the card (writer thread; read atomically) */
     uint32_t last_sync;
     uint32_t start_tick;
     uint32_t stop_tick;
@@ -69,6 +70,7 @@ static bool radiogeddon_recorder_flush(RadioGeddonRecorder* rec) {
     if(rec->wlen == 0) return true;
     bool ok = !__atomic_load_n(&rec->failed, __ATOMIC_ACQUIRE) &&
               storage_file_write(rec->file, rec->wbuf, rec->wlen) == rec->wlen;
+    if(ok) __atomic_fetch_add(&rec->written, (uint32_t)rec->wlen, __ATOMIC_RELAXED);
     rec->wlen = 0;
     if(!ok) __atomic_store_n(&rec->failed, true, __ATOMIC_RELEASE);
     return ok;
@@ -163,6 +165,7 @@ void radiogeddon_recorder_stats(RadioGeddonRecorder* rec, RadioGeddonRecordStats
     out->radio_overruns = __atomic_load_n(&rec->radio_overruns, __ATOMIC_RELAXED);
     uint32_t end = rec->stop_tick ? rec->stop_tick : furi_get_tick();
     out->elapsed_ms = radiogeddon_recorder_ms(end - rec->start_tick);
+    out->bytes = __atomic_load_n(&rec->written, __ATOMIC_RELAXED);
     out->buffer = cap;
     out->fill_pct = (uint8_t)((uint64_t)rs.used * 100u / cap);
     out->peak_pct = (uint8_t)((uint64_t)rs.peak * 100u / cap);

@@ -131,6 +131,8 @@ bool radiogeddon_scene_range_scan_on_event(void* context, SceneManagerEvent even
     }
 
     if(event.type == SceneManagerEventTypeTick) {
+        // The sweep thread keeps every point; only the copy shown waits.
+        if(!radiogeddon_scene_redraw_due(app)) return true;
         radiogeddon_spectrum_view_update(app->spectrum_view, app->rangescan);
         radiogeddon_ui_set_scanning(app, radiogeddon_spectrum_view_sweeping(app->spectrum_view));
 #if RG_FEATURE_DOLPHIN_LAB

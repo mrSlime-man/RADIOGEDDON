@@ -85,11 +85,42 @@ static void test_tag(void) {
     CHECK(rg_mem_firmware_tag(NULL, NULL) != 0, "missing strings handled");
 }
 
+static void test_diag(void) {
+    printf("test_diag\n");
+    RgDiag d = {0};
+    rg_diag_tick(&d, 1000, "start");
+    CHECK(d.worst_gap_ms == 0 && d.stalls == 0, "first tick: no gap yet");
+    for(uint32_t t = 1100; t <= 2000; t += 100)
+        rg_diag_tick(&d, t, "idle");
+    CHECK(d.worst_gap_ms == 100 && d.stalls == 0, "regular ticks: no stall");
+    rg_diag_tick(&d, 2900, "Reading log");
+    CHECK(d.worst_gap_ms == 900 && d.stalls == 1, "a 900 ms gap is a stall");
+    CHECK(strcmp(d.worst_at, "Reading log") == 0, "and says where");
+    rg_diag_tick(&d, 3000, NULL);
+    CHECK(d.ticks == 13, "every tick counted");
+    // The tick counter wraps (49 days of uptime) without a false stall.
+    RgDiag w = {0};
+    rg_diag_tick(&w, 0xFFFFFFC0u, "a");
+    rg_diag_tick(&w, 0x24u, "b");
+    CHECK(w.worst_gap_ms == 100 && w.stalls == 0, "a wrap is a 100 ms gap");
+
+    CHECK(rg_mem_fragmentation_pct(0, 0) == 0, "no heap: 0");
+    CHECK(rg_mem_fragmentation_pct(40000, 40000) == 0, "one block: 0%");
+    CHECK(rg_mem_fragmentation_pct(40000, 10000) == 75, "a quarter in one block: 75%");
+    CHECK(rg_mem_fragmentation_pct(40000, 50000) == 0, "inconsistent figures: 0");
+    d.rec_bytes = 300000;
+    d.rec_ms = 60000;
+    CHECK(rg_diag_rec_rate(&d) == 5000, "5,000 B/s");
+    d.rec_ms = 0;
+    CHECK(rg_diag_rec_rate(&d) == 0, "nothing recorded: 0");
+}
+
 int main(void) {
     test_stat();
     test_session();
     test_cost();
     test_tag();
+    test_diag();
 
     printf("\n%d checks, %d failures\n", g_checks, g_failures);
     if(g_failures) {

@@ -60,3 +60,50 @@ uint32_t rg_mem_session_cost(
  * a cost measured under another firmware is not used.
  */
 uint32_t rg_mem_firmware_tag(const char* version, const char* githash);
+
+/* ---- runtime diagnostics (beta 10) ---------------------------------------- */
+
+/* A tick later than this after the previous one is a stall: the app thread
+ * was busy (SD-card work, an analysis) and the screen did not respond. */
+#define RG_DIAG_STALL_MS 250u
+
+typedef struct {
+    /* GUI responsiveness: gaps between the app's 100 ms ticks */
+    uint32_t ticks;
+    uint32_t last_tick_ms;
+    uint32_t worst_gap_ms;
+    uint32_t stalls;
+    const char* worst_at; /* the step the app was in (static string) */
+    /* modules */
+    uint32_t module_loads;
+    uint32_t module_refused; /* not enough memory, refused before loading */
+    uint32_t module_failed; /* missing or rejected by the loader */
+    uint32_t module_slowest_ms;
+    const char* module_slowest; /* its file name (static string) */
+    /* RAW recordings */
+    uint32_t recordings;
+    uint32_t rec_samples;
+    uint32_t rec_lost;
+    uint32_t rec_gaps;
+    uint32_t rec_overruns;
+    uint32_t rec_errors;
+    uint32_t rec_bytes;
+    uint32_t rec_ms;
+    /* messages shown (mostly errors) */
+    uint32_t messages;
+    const char* last_message; /* static string */
+} RgDiag;
+
+/** A tick at @p now_ms while the app was at step @p where. */
+void rg_diag_tick(RgDiag* d, uint32_t now_ms, const char* where);
+
+/**
+ * Heap fragmentation indicator, percent: how much of the free heap is NOT
+ * in its largest block (0: one block; high: many small pieces, so a large
+ * allocation fails although enough is free in total).
+ */
+uint8_t rg_mem_fragmentation_pct(uint32_t free_bytes, uint32_t largest_block);
+
+/** SD write throughput of the recordings so far, bytes per second (0: none). */
+uint32_t rg_diag_rec_rate(const RgDiag* d);
+

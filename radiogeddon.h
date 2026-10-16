@@ -145,6 +145,7 @@ struct RadioGeddonApp {
     // Why a transmission was refused (Replay), shown on its popup.
     char tx_text[96];
     uint32_t fw_tag; // identifies the running firmware (rg_mem_firmware_tag)
+    uint32_t redraw_tick; // last live-view redraw under the battery saver
 
     // Persisted settings (frequency/preset are mirrored in the fields below)
     RadioGeddonSettings settings;

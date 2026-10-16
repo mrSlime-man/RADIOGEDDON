@@ -51,6 +51,8 @@ typedef enum {
     ConfigItemAnimation,
     ConfigItemAssistant,
     ConfigItemResearchXp,
+    // Beta 10, both editions: always the last row.
+    ConfigItemBatterySaver,
 } ConfigItem;
 
 #define ConfigCustomEditScanList 600
@@ -341,6 +343,12 @@ static void radiogeddon_scene_config_xp_changed(VariableItem* item) {
 }
 #endif
 
+static void radiogeddon_scene_config_saver_changed(VariableItem* item) {
+    RadioGeddonApp* app = variable_item_get_context(item);
+    app->settings.battery_saver = variable_item_get_current_value_index(item) == 1;
+    variable_item_set_current_value_text(item, app->settings.battery_saver ? "On" : "Off");
+}
+
 static uint8_t radiogeddon_config_nearest_u16(const uint16_t* values, size_t n, uint16_t v) {
     uint8_t best = 0;
     for(size_t i = 0; i < n; i++) {
@@ -570,6 +578,12 @@ void radiogeddon_scene_config_on_enter(void* context) {
     variable_item_set_current_value_index(item, app->settings.research_xp ? 1 : 0);
     variable_item_set_current_value_text(item, app->settings.research_xp ? "On" : "Off");
 #endif
+    // Live screens redraw at most twice a second and the animation is calm;
+    // the radio's sampling, scanning and logging run exactly as without it.
+    item = variable_item_list_add(
+        list, "Battery saver", 2, radiogeddon_scene_config_saver_changed, app);
+    variable_item_set_current_value_index(item, app->settings.battery_saver ? 1 : 0);
+    variable_item_set_current_value_text(item, app->settings.battery_saver ? "On" : "Off");
 
     variable_item_list_set_enter_callback(list, radiogeddon_scene_config_enter_cb, app);
     variable_item_list_set_selected_item(

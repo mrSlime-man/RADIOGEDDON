@@ -37,6 +37,7 @@ typedef struct {
     uint8_t style; // RgUiStyle in effect
     bool scanning; // a Scanner / Range Scanner / Waterfall sweep runs
     bool was_recording;
+    uint32_t saver_frame; // last lab frame under the battery saver
     bool home_shown; // the dashboard's entry transition plays once a run
     RgMascot mascot;
     RgUiFeedback feedback;
