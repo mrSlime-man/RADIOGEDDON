@@ -39,6 +39,7 @@
  */
 #include "furi.h"
 #include "../helpers/rg_decode.h"
+#include "fw_decoded_bits.h"
 #include "../helpers/rg_raw.h"
 #include "../helpers/radiogeddon_decode_text.h"
 #include "../helpers/radiogeddon_bands.h"
@@ -758,6 +759,30 @@ static void test_pairs(RunResult* r, Totals* t) {
             t->data_only += decoded && table_crash;
         }
 
+        if(decoded) {
+            // The lengths this capture really decodes to: fw_decoded_bits.h
+            // (the analyzer's reference) must say exactly these.
+            printf("      decoded lengths:");
+            for(size_t j = 0; j < r->keys; j++)
+                printf(" %lu", (unsigned long)r->key[j].bits);
+            printf("\n");
+            const FwDecodedBits* ref = NULL;
+            for(size_t d = 0; d < sizeof(fw_decoded_bits) / sizeof(fw_decoded_bits[0]); d++)
+                if(strcmp(fw_decoded_bits[d].file, p->file) == 0) ref = &fw_decoded_bits[d];
+            bool same = true;
+            for(size_t j = 0; j < r->keys; j++) {
+                bool listed = ref && (ref->bits[0] == r->key[j].bits || ref->bits[1] == r->key[j].bits);
+                if(!listed) same = false;
+            }
+            for(int k = 0; ref && k < 2; k++) {
+                bool seen = ref->bits[k] == 0;
+                for(size_t j = 0; j < r->keys; j++)
+                    if(r->key[j].bits == ref->bits[k]) seen = true;
+                if(!seen) same = false;
+            }
+            if(r->keys == 0) same = ref == NULL;
+            CHECK(same, "fw_decoded_bits.h lists exactly the lengths decoded");
+        }
         KeyFile k;
         if(decoded && find_key_file(p->protocol, &k)) {
             bool match = false;
