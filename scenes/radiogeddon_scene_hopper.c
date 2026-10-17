@@ -268,7 +268,11 @@ void radiogeddon_scene_hopper_on_exit(void* context) {
     app->scanner_running = false;
     // Stop the engine (it saves an automatic capture in progress) before the
     // radio session it drives.
-    if(app->hopper) radiogeddon_hopper_stop(app->hopper);
+    if(app->hopper) {
+        radiogeddon_hopper_stop(app->hopper);
+        // The engine outlives this screen; its callback is this module's code.
+        radiogeddon_hopper_set_callback(app->hopper, NULL, NULL);
+    }
     radiogeddon_receiver_view_set_hopping(app->receiver_view, false);
     radiogeddon_receiver_view_set_threshold(app->receiver_view, -127.0f);
     // This scene's code may be unloaded next (a module in the Full edition).
