@@ -109,11 +109,12 @@ void rg_db_init(
     char* protos,
     size_t protos_cap);
 
-/* Protocol table bytes that hold every distinct name of @p cap entries
- * (RG_DB_PROTO_MAX each), capped at RG_DB_PROTOS_MAX: at least 128 distinct
- * protocol names, more than the firmware families have decoders. */
+/* Protocol table bytes for @p cap entries at @p per_entry bytes each, capped
+ * at RG_DB_PROTOS_MAX: at least 128 distinct protocol names, more than the
+ * firmware families have decoders. With per_entry = RG_DB_PROTO_MAX it holds
+ * a distinct name for every entry, so it can never fill up. */
 #define RG_DB_PROTOS_MAX 2048u
-size_t rg_db_protos_bytes(size_t cap);
+size_t rg_db_protos_bytes(size_t cap, size_t per_entry);
 
 /**
  * Append an entry for file @p name (copied into the pool), zeroed except for

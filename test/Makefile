@@ -126,7 +126,7 @@ UI_SRC := test_ui.c ui/canvas_host.c ../views/radiogeddon_waterfall_view.c \
 UI_HDRS := ui/canvas_host.h ui/stubs/gui/view.h ui/stubs/gui/canvas.h ui/stubs/gui/elements.h \
 		../views/radiogeddon_waterfall_view.h ../views/radiogeddon_bits_view.h synth.h
 
-.PHONY: bench benchfp benchmodules check clean tsan fuzz formats decoders captures lifecycle ui fpindex actlogfiles
+.PHONY: bench benchfp benchmodules benchmem memstress check clean tsan fuzz formats decoders captures lifecycle ui fpindex actlogfiles
 check: $(BUILD)/test_dsp $(BUILD)/test_div $(BUILD)/test_heap4 $(BUILD)/test_analyzer $(BUILD)/test_scan $(BUILD)/test_hop $(BUILD)/test_raw \
 		$(BUILD)/test_timeline $(BUILD)/test_ring $(BUILD)/test_rawfmt $(BUILD)/test_recorder \
 		$(BUILD)/test_db $(BUILD)/test_memstat $(BUILD)/test_dbload $(BUILD)/test_decode $(BUILD)/test_freq $(BUILD)/test_preset $(BUILD)/test_range \
@@ -416,6 +416,28 @@ $(BUILD)/test_actlog_files: $(ACTLOGFILES_SRC) $(STUB_HDRS) ../helpers/radiogedd
 		../helpers/rg_actlog.h | $(BUILD)
 	$(CC) $(CFLAGS) $(SAN) -D_GNU_SOURCE -Istubs -DSTUB_TRACK_ALLOC -DRADIOGEDDON_EDITION_FULL \
 		-pthread -o $@ $(ACTLOGFILES_SRC)
+
+# Memory benchmark and stress test on the heap model (bench_mem.c): the
+# firmware's FlipperFormat and stream objects are copied with their
+# malloc/free renamed to the counting stand-ins, so their blocks are in the
+# model too. `make benchmem` prints the tables, `make memstress` (CI) also
+# enforces every check.
+FWHEAP_OBJ := $(patsubst $(BUILD)/fwobj/%.o,$(BUILD)/fwheap/%.o,$(FW_OBJ))
+$(BUILD)/fwheap/%.o: $(BUILD)/fwobj/%.o
+	mkdir -p $(dir $@)
+	objcopy --redefine-sym malloc=stub_malloc --redefine-sym free=stub_free $< $@
+BENCHMEM_SRC := bench_mem.c stubs/heap4.c $(filter-out test_fpindex.c,$(FPINDEX_SRC)) \
+		../helpers/radiogeddon_db.c ../helpers/rg_db.c
+$(BUILD)/bench_mem: $(sort $(BENCHMEM_SRC)) $(STUB_HDRS) stubs/heap4.h $(FWHEAP_OBJ) | $(BUILD)
+	$(CC) $(CFLAGS) $(SAN) -D_GNU_SOURCE -I$(FW) -I$(FW)/lib -I$(FW)/lib/mlib -Istubs \
+		-DSTUB_TRACK_ALLOC -DSTUB_HEAP4 -DRADIOGEDDON_EDITION_FULL -pthread -o $@ \
+		$(sort $(BENCHMEM_SRC)) $(FWHEAP_OBJ)
+
+benchmem: $(BUILD)/bench_mem
+	$(BUILD)/bench_mem
+
+memstress: $(BUILD)/bench_mem
+	$(BUILD)/bench_mem --check
 
 fpindex: $(BUILD)/test_fpindex
 	$(BUILD)/test_fpindex

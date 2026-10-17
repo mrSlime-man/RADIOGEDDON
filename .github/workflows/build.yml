@@ -77,6 +77,11 @@ jobs:
         run: make -C test fpindex
       - name: Run activity log file tests (rotation, summary, card full)
         run: make -C test actlogfiles
+      # The heavy operations on a model of the firmware's heap allocator:
+      # low-memory sweep (no allocation may fail), a long session (no leak,
+      # no lasting fragmentation), heap restored after each operation.
+      - name: Run memory stress tests (heap model of the firmware's allocator)
+        run: make -C test memstress
       # Synthetic development previews of the drawing code: not device
       # screenshots, never for the Apps Catalog.
       - name: Keep the synthetic UI previews

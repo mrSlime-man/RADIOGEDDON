@@ -278,5 +278,52 @@ int main(int argc, char** argv) {
         refused11,
         unsafe10,
         unsafe11);
-    return unsafe11 ? 1 : 0;
+    // Repeated load and unload of every module, as a long session does,
+    // with the rest of the app's blocks coming and going in between: each
+    // load is checked with beta 11's rule first, nothing may fail or leak,
+    // and the free space must join up again.
+    heap4_init(ARENA);
+    static Load loads[32];
+    for(size_t m = 0; m < mods; m++) {
+        char path[4200];
+        snprintf(path, sizeof(path), "%s/%s", argv[1], names[m]);
+        read_load(path, &loads[m]);
+    }
+    size_t start_block = heap4_max_free_block();
+    void* rest[48] = {0};
+    unsigned cycles = 0, refused = 0;
+    rng = 99;
+    for(unsigned it = 0; it < 20000u; it++) {
+        size_t k = rnd() % 48;
+        if(rest[k]) {
+            heap4_free(rest[k]);
+            rest[k] = NULL;
+        } else {
+            rest[k] = heap4_malloc(16 + rnd() % 1500);
+        }
+        size_t m = rnd() % mods;
+        unsigned work = work_of(names[m]);
+        size_t later = loads[m].cost.temporary > work ? loads[m].cost.temporary : work;
+        size_t need = loads[m].cost.resident + LOADER_B11 + later + MARGIN;
+        if(heap4_max_free_block() < need) {
+            refused++;
+            continue;
+        }
+        if(!replay(&loads[m], work)) unsafe11++;
+        cycles++;
+    }
+    for(size_t k = 0; k < 48; k++)
+        heap4_free(rest[k]);
+    Heap4Stats st;
+    heap4_stats(&st);
+    bool joined = st.max_free_block == start_block && st.used_bytes == 0 && heap4_check();
+    printf(
+        "repeated loads: %u loaded and unloaded, %u refused, %u ran out, %u failed allocations, "
+        "heap %s afterwards\n",
+        cycles,
+        refused,
+        unsafe11,
+        (unsigned)st.failures,
+        joined ? "whole again" : "NOT restored");
+    return unsafe11 || !joined || st.failures ? 1 : 0;
 }

@@ -116,84 +116,100 @@ RadioGeddonDb* radiogeddon_db_load(
     radiogeddon_db_count(storage, name, &files, &name_bytes);
     free(name);
 
-    // Size the index to the listing, within what the heap can spare and
-    // DB_INDEX_MAX_BYTES.
-    size_t avail = memmgr_heap_get_max_free_block();
-    size_t work = DB_NAME_BUF + DB_HASH_CHUNK;
-    size_t budget = avail > DB_HEAP_SPARE + work ? avail - DB_HEAP_SPARE - work : 0;
-    if(budget > DB_INDEX_MAX_BYTES) budget = DB_INDEX_MAX_BYTES;
-    size_t avg_name = files ? name_bytes / files + 1 : 1;
-    size_t per_file = sizeof(RgDbEntry) + sizeof(uint16_t) + avg_name + 1u;
-    size_t cap = files < DB_MAX_FILES ? files : DB_MAX_FILES;
-    // The protocol table for that many first (it only shrinks with cap),
-    // then as many entries as fit beside it.
-    size_t fixed = db_align(sizeof(RadioGeddonDb)) + 64u + rg_db_protos_bytes(cap);
-    size_t fit = budget > fixed ? (budget - fixed) / per_file : 0;
-    if(cap > fit) cap = fit;
-    size_t protos = rg_db_protos_bytes(cap);
-    if(files > 0 && cap == 0) {
-        *status = RadioGeddonDbNoMemory;
-        return NULL;
-    }
-    size_t pool = cap == files ? name_bytes : cap * avg_name + 64;
-    if(pool > name_bytes) pool = name_bytes;
-    if(pool > UINT16_MAX) pool = UINT16_MAX;
+    // A protocol table of 8 bytes an entry (most libraries hold a handful of
+    // protocols); a library with more distinct names than that holds is read
+    // again with one that fits a name for every entry, which never fills.
+    RadioGeddonDb* db = NULL;
+    uint8_t* buf = NULL;
+    FuriString* path = NULL;
+    size_t cap = 0;
+    for(size_t per_entry = 8u; !db; per_entry = RG_DB_PROTO_MAX) {
+        // Size the index to the listing, within what the heap can spare and
+        // DB_INDEX_MAX_BYTES.
+        size_t avail = memmgr_heap_get_max_free_block();
+        size_t work = DB_NAME_BUF + DB_HASH_CHUNK;
+        size_t budget = avail > DB_HEAP_SPARE + work ? avail - DB_HEAP_SPARE - work : 0;
+        if(budget > DB_INDEX_MAX_BYTES) budget = DB_INDEX_MAX_BYTES;
+        size_t avg_name = files ? name_bytes / files + 1 : 1;
+        size_t per_file = sizeof(RgDbEntry) + sizeof(uint16_t) + avg_name + 1u;
+        cap = files < DB_MAX_FILES ? files : DB_MAX_FILES;
+        // The protocol table for that many first (it only shrinks with
+        // cap), then as many entries as fit beside it.
+        size_t fixed = db_align(sizeof(RadioGeddonDb)) + 64u + rg_db_protos_bytes(cap, per_entry);
+        size_t fit = budget > fixed ? (budget - fixed) / per_file : 0;
+        if(cap > fit) cap = fit;
+        size_t protos = rg_db_protos_bytes(cap, per_entry);
+        if(files > 0 && cap == 0) {
+            *status = RadioGeddonDbNoMemory;
+            return NULL;
+        }
+        size_t pool = cap == files ? name_bytes : cap * avg_name + 64;
+        if(pool > name_bytes) pool = name_bytes;
+        if(pool > UINT16_MAX) pool = UINT16_MAX;
 
-    // One block: the list's state, its entries, view, names and protocol
-    // names (beta 10: four blocks, 32 bytes of headers and a hole each time
-    // one of them was freed first).
-    DbLayout l;
-    db_layout(&l, cap, pool, protos);
-    uint8_t* block = malloc(l.total);
-    memset(block, 0, l.entries);
-    RadioGeddonDb* db = (RadioGeddonDb*)block;
-    db->view = cap ? (uint16_t*)(block + l.view) : NULL;
-    rg_db_init(
-        &db->db,
-        cap ? (RgDbEntry*)(block + l.entries) : NULL,
-        cap,
-        pool ? (char*)(block + l.names) : NULL,
-        pool,
-        protos ? (char*)(block + l.protos) : NULL,
-        protos);
-    db->total_files = files;
-    db->query.sort = RgDbSortDate;
-    db->query.show = RgDbShowAll;
+        // One block: the list's state, its entries, view, names and
+        // protocol names (beta 10: four blocks, 32 bytes of headers and a
+        // hole each time one of them was freed first).
+        DbLayout l;
+        db_layout(&l, cap, pool, protos);
+        uint8_t* block = malloc(l.total);
+        memset(block, 0, l.entries);
+        db = (RadioGeddonDb*)block;
+        db->view = cap ? (uint16_t*)(block + l.view) : NULL;
+        rg_db_init(
+            &db->db,
+            cap ? (RgDbEntry*)(block + l.entries) : NULL,
+            cap,
+            pool ? (char*)(block + l.names) : NULL,
+            pool,
+            protos ? (char*)(block + l.protos) : NULL,
+            protos);
+        db->total_files = files;
+        db->query.sort = RgDbSortDate;
+        db->query.show = RgDbShowAll;
 
-    // The work buffers, after the index: freed at the end, they leave the
-    // index alone at the bottom of the space it was given.
-    uint8_t* buf = malloc(work);
-    name = (char*)buf + DB_HASH_CHUNK;
-    FuriString* path = furi_string_alloc();
-    File* dir = storage_file_alloc(storage);
-    if(cap && storage_dir_open(dir, RADIOGEDDON_SIGNALS_FOLDER)) {
-        FileInfo info;
-        while(storage_dir_read(dir, &info, name, DB_NAME_BUF)) {
-            if(!radiogeddon_db_is_sub(&info, name)) continue;
-            RgDbEntry* e = rg_db_add(&db->db, name);
-            if(!e) {
-                db->truncated = true;
-                continue;
+        // The work buffers, after the index: freed at the end, they leave
+        // the index alone at the bottom of the space it was given.
+        buf = malloc(work);
+        name = (char*)buf + DB_HASH_CHUNK;
+        path = furi_string_alloc();
+        File* dir = storage_file_alloc(storage);
+        if(cap && storage_dir_open(dir, RADIOGEDDON_SIGNALS_FOLDER)) {
+            FileInfo info;
+            while(storage_dir_read(dir, &info, name, DB_NAME_BUF)) {
+                if(!radiogeddon_db_is_sub(&info, name)) continue;
+                RgDbEntry* e = rg_db_add(&db->db, name);
+                if(!e) {
+                    db->truncated = true;
+                    continue;
+                }
+                e->size = info.size > UINT32_MAX ? UINT32_MAX : (uint32_t)info.size;
             }
-            e->size = info.size > UINT32_MAX ? UINT32_MAX : (uint32_t)info.size;
         }
-    }
-    storage_dir_close(dir);
-    storage_file_free(dir);
-    if(db->db.count < files) db->truncated = true;
+        storage_dir_close(dir);
+        storage_file_free(dir);
+        if(db->db.count < files) db->truncated = true;
 
-    // Then read each file's head (with the directory closed again).
-    for(size_t i = 0; i < db->db.count; i++) {
-        RgDbEntry* e = &db->db.entries[i];
-        radiogeddon_db_path(db, e, path);
-        if(!radiogeddon_db_read_entry(storage, &db->db, e, furi_string_get_cstr(path), buf)) {
-            // More distinct protocol names than the table holds: the files
-            // before this one are indexed, as when memory runs out.
-            db->db.count = i;
-            db->truncated = true;
-            break;
+        // Then read each file's head (with the directory closed again).
+        for(size_t i = 0; i < db->db.count; i++) {
+            RgDbEntry* e = &db->db.entries[i];
+            radiogeddon_db_path(db, e, path);
+            if(!radiogeddon_db_read_entry(storage, &db->db, e, furi_string_get_cstr(path), buf)) {
+                if(per_entry < RG_DB_PROTO_MAX) {
+                    // The table is full: again with the one that fits all.
+                    furi_string_free(path);
+                    free(buf);
+                    free(block);
+                    db = NULL;
+                    break;
+                }
+                // Not reached (a name per entry fits); kept as a bound.
+                db->db.count = i;
+                db->truncated = true;
+                break;
+            }
+            if(progress) progress(context, i + 1, db->db.count);
         }
-        if(progress) progress(context, i + 1, db->db.count);
     }
 
     // Confirm RAW duplicates by content, only where sizes collide. The list's
@@ -212,10 +228,10 @@ RadioGeddonDb* radiogeddon_db_load(
 
     FURI_LOG_I(
         TAG,
-        "%u of %u files indexed, %u bytes",
+        "%u of %u files indexed, %u protocol bytes",
         (unsigned)db->db.count,
         (unsigned)files,
-        (unsigned)l.total);
+        (unsigned)db->db.protos_len);
     furi_string_free(path);
     free(buf);
     return db;

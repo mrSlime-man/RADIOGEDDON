@@ -33,8 +33,8 @@ void rg_db_init(
     db->protos_cap = protos_cap > RG_DB_NO_PROTO ? RG_DB_NO_PROTO : protos_cap;
 }
 
-size_t rg_db_protos_bytes(size_t cap) {
-    return cap < RG_DB_PROTOS_MAX / RG_DB_PROTO_MAX ? cap * RG_DB_PROTO_MAX : RG_DB_PROTOS_MAX;
+size_t rg_db_protos_bytes(size_t cap, size_t per_entry) {
+    return cap < RG_DB_PROTOS_MAX / per_entry ? cap * per_entry : RG_DB_PROTOS_MAX;
 }
 
 bool rg_db_set_protocol(RgDb* db, RgDbEntry* e, const char* protocol) {
