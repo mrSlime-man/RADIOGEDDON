@@ -59,6 +59,22 @@ bool rg_mem_session_fits(uint32_t free_now, uint32_t cost, uint32_t margin);
  */
 uint32_t rg_mem_cost_for_model(uint32_t stored, uint32_t stored_model, uint32_t dropped);
 
+/*
+ * The largest single block a receive session takes, on any of the five
+ * pinned firmwares: the Sub-GHz worker's stream buffer, 4,096 LevelDuration
+ * entries of 4 B in Official 1.4.3, Momentum and Unleashed (2,048 in
+ * RogueMaster 4f2e06200), with its header (lib/subghz/subghz_worker.c).
+ * Enough free heap in total is not enough: when it is in pieces, this one
+ * block must still fit, or the firmware stops with "out of memory".
+ */
+#define RG_MEM_SESSION_BLOCK (16u * 1024u + 256u)
+
+/**
+ * rg_mem_session_fits(), and the largest free block @p largest holds the
+ * session's largest block (RG_MEM_SESSION_BLOCK).
+ */
+bool rg_mem_session_fits_heap(uint32_t free_now, uint32_t largest, uint32_t cost, uint32_t margin);
+
 /** Whether a new measurement should replace the stored cost (none, or >1 KB off). */
 bool rg_mem_cost_changed(uint32_t stored, uint32_t measured);
 

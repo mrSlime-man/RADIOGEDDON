@@ -192,20 +192,25 @@ RG_UI_TEXT uint32_t radiogeddon_scene_radio_cost(RadioGeddonApp* app) {
 }
 
 RG_UI_TEXT bool radiogeddon_scene_decoders_fit(RadioGeddonApp* app) {
-    return rg_mem_session_fits(
-        radiogeddon_memdiag_free(), radiogeddon_scene_radio_cost(app), RADIOGEDDON_RADIO_MARGIN);
+    return rg_mem_session_fits_heap(
+        radiogeddon_memdiag_free(),
+        memmgr_heap_get_max_free_block(),
+        radiogeddon_scene_radio_cost(app),
+        RADIOGEDDON_RADIO_MARGIN);
 }
 
 /* @p what names the user ("Radio needs") in the refusal. */
 static RG_UI_TEXT bool radiogeddon_scene_session_memory_ok(RadioGeddonApp* app, const char* what) {
     uint32_t cost = radiogeddon_scene_radio_cost(app);
     uint32_t free_now = radiogeddon_memdiag_free();
-    if(rg_mem_session_fits(free_now, cost, RADIOGEDDON_RADIO_MARGIN)) return true;
+    uint32_t largest = memmgr_heap_get_max_free_block();
+    if(rg_mem_session_fits_heap(free_now, largest, cost, RADIOGEDDON_RADIO_MARGIN)) return true;
 
     FURI_LOG_W(
         TAG,
-        "Radio not started: %lu free, session took %lu",
+        "Radio not started: %lu free (largest block %lu), session took %lu",
         (unsigned long)free_now,
+        (unsigned long)largest,
         (unsigned long)cost);
     snprintf(
         app->memory_text,

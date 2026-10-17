@@ -211,6 +211,15 @@ static RG_CORE_TEXT void radiogeddon_subghz_environment_release(RadioGeddonSubGh
 }
 
 static RG_CORE_TEXT void radiogeddon_subghz_decoders_alloc(RadioGeddonSubGhz* instance) {
+    // The worker first: its stream buffer and thread stack are the session's
+    // largest blocks (RG_MEM_SESSION_BLOCK), so they take the largest free
+    // block the memory check saw before the keystore's and the decoders'
+    // hundred small blocks can cut it up. It is not started until rx_start.
+    instance->worker = subghz_worker_alloc();
+    subghz_worker_set_overrun_callback(instance->worker, radiogeddon_subghz_overrun_callback);
+    subghz_worker_set_pair_callback(instance->worker, radiogeddon_subghz_pair_callback);
+    subghz_worker_set_context(instance->worker, instance);
+
     radiogeddon_subghz_environment_acquire(instance, true);
 
     // Only the decoders the Decodable filter feeds (radiogeddon_decoders.h).
@@ -218,11 +227,6 @@ static RG_CORE_TEXT void radiogeddon_subghz_decoders_alloc(RadioGeddonSubGhz* in
         instance->environment, &subghz_protocol_registry, SubGhzProtocolFlag_Decodable);
     subghz_receiver_set_rx_callback(
         instance->receiver, radiogeddon_subghz_receiver_callback, instance);
-
-    instance->worker = subghz_worker_alloc();
-    subghz_worker_set_overrun_callback(instance->worker, radiogeddon_subghz_overrun_callback);
-    subghz_worker_set_pair_callback(instance->worker, radiogeddon_subghz_pair_callback);
-    subghz_worker_set_context(instance->worker, instance);
 }
 
 static RG_CORE_TEXT void radiogeddon_subghz_decoders_free(RadioGeddonSubGhz* instance) {

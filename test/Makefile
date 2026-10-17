@@ -266,6 +266,17 @@ FAPS ?= $(FAP_A) $(FAP_B)
 benchlaunch: $(BUILD)/bench_launch
 	$(BUILD)/bench_launch $(FAPS)
 
+# The memory-critical flows on the heap model with the built files
+# (bench_flows.c): the Logger after the Adaptive Scanner, a receive session,
+# repeated launches. FLOWS_NEW (and FLOWS_OLD to compare): "<.fap> <.fal folder>".
+$(BUILD)/bench_flows: bench_flows.c stubs/heap4.c stubs/heap4.h ../helpers/rg_elf.c \
+		../helpers/rg_elf.h | $(BUILD)
+	$(CC) $(CFLAGS) $(SAN) -DRADIOGEDDON_EDITION_FULL -o $@ bench_flows.c stubs/heap4.c \
+		../helpers/rg_elf.c
+
+benchflows: $(BUILD)/bench_flows
+	$(BUILD)/bench_flows $(FLOWS_NEW) $(FLOWS_OLD)
+
 # The load-cost model on built modules (scripts/module_cost.py --check).
 $(BUILD)/elf_cost: elf_cost.c ../helpers/rg_elf.c ../helpers/rg_elf.h | $(BUILD)
 	$(CC) $(CFLAGS) $(SAN) -DRADIOGEDDON_EDITION_FULL -o $@ elf_cost.c ../helpers/rg_elf.c

@@ -154,6 +154,10 @@ build_with_ufbt() {
     stage="${PROJECT_DIR}/.stage/${target}"
     python3 "${PROJECT_DIR}/scripts/stage_edition.py" "${edition}" "${stage}"
 
+    # From scratch: the staged copy keeps the files' modification times, and
+    # SCons's timestamp-then-content check can then reuse objects built from
+    # other contents of the same file.
+    rm -rf "${UFBT_HOME}/build"
     log "building"
     (cd "${stage}" && ufbt)
     [ -f "${stage}/dist/${appid}.fap" ] || die "ufbt produced no dist/${appid}.fap"
@@ -217,6 +221,8 @@ build_with_roguemaster() {
         find "${rm_dir}/build" -path "*/.extapps/${appid}.fap" -delete
     fi
 
+    # The app's objects from scratch (as for ufbt above).
+    find "${rm_dir}/build" -type d -path "*/.extapps/radiogeddon*" -prune -exec rm -rf {} + 2> /dev/null || true
     log "building with RogueMaster fbt"
     (cd "${rm_dir}" && ./fbt "fap_${appid}")
 

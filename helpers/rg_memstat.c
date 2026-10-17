@@ -38,6 +38,10 @@ uint32_t rg_mem_cost_for_model(uint32_t stored, uint32_t stored_model, uint32_t 
     return stored - dropped;
 }
 
+bool rg_mem_session_fits_heap(uint32_t free_now, uint32_t largest, uint32_t cost, uint32_t margin) {
+    return largest >= RG_MEM_SESSION_BLOCK && rg_mem_session_fits(free_now, cost, margin);
+}
+
 bool rg_mem_cost_changed(uint32_t stored, uint32_t measured) {
     if(measured == 0) return false;
     if(stored == 0) return true;

@@ -56,6 +56,9 @@ static const struct {
     {"radiogeddon_settings.fal", 1},
     {"radiogeddon_hopper.fal", 1},
     {"radiogeddon_bits.fal", 15},
+    {"radiogeddon_db.fal", 4},
+    {"radiogeddon_analyze.fal", 1},
+    {"radiogeddon_scan.fal", 1},
 };
 
 typedef struct {

@@ -55,6 +55,8 @@ jobs:
         run: python3 scripts/release_meta.py
       # Every NULL the firmware would furi_check() (the beta 11 Adaptive
       # Scanner crash): the contracts of the pinned firmware trees.
+      - name: Check every function carries its file's code section macro
+        run: python3 scripts/text_sections.py --check
       - name: Check calls against the firmware's furi_check contracts
         run: python3 scripts/check_fw_contracts.py --self-test && python3 scripts/check_fw_contracts.py
 
@@ -213,6 +215,11 @@ jobs:
           python3 scripts/module_cost.py --check test/build/elf_cost ".stage/${{ matrix.target }}/dist"
           python3 scripts/module_cost.py ".stage/${{ matrix.target }}/dist"
           make -C test benchmodules FAL_DIR="../.stage/${{ matrix.target }}/dist"
+          make -C test benchflows FLOWS_NEW="../out/radiogeddon-${{ matrix.target }}.fap ../.stage/${{ matrix.target }}/dist"
+          # Every function of the built app in its file's code section.
+          fw="${{ matrix.target }}"; fw="${fw#full-}"
+          PATH="$(ls -d .ufbt-${fw}/toolchain/*/bin | head -1):$PATH" \
+            python3 scripts/text_sections.py --elf ".stage/${{ matrix.target }}/dist/debug/radiogeddon_full_d.elf"
 
       - name: Lint (clang-format)
         if: matrix.target == 'catalog-official'
