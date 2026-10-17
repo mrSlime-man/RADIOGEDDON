@@ -109,6 +109,20 @@ extern const RadioGeddonHost* radiogeddon_host;
 #define radiogeddon_scene_decoders_memory_ok (radiogeddon_host->decoders_memory_ok)
 #define radiogeddon_favorites_save(storage, favorites) \
     (radiogeddon_host->favorites_save((storage), (favorites)))
+#define radiogeddon_memdiag_checkpoint   (radiogeddon_host->memdiag_checkpoint)
+#define radiogeddon_scanner_start_cost   (radiogeddon_host->scanner_start_cost)
+#define radiogeddon_scanner_frequency    (radiogeddon_host->scanner_frequency)
+#define radiogeddon_scanner_hold_index   (radiogeddon_host->scanner_hold_index)
+#define radiogeddon_scanner_is_paused    (radiogeddon_host->scanner_is_paused)
+#define radiogeddon_scanner_toggle_pause (radiogeddon_host->scanner_toggle_pause)
+#define radiogeddon_scanner_set_priority (radiogeddon_host->scanner_set_priority)
+#define radiogeddon_scanner_save_csv     (radiogeddon_host->scanner_save_csv)
+#define radiogeddon_scene_tools_settled  (radiogeddon_host->tools_settled)
+#define radiogeddon_scene_tools_tick     (radiogeddon_host->tools_tick)
+#define radiogeddon_scanner_snapshot(scanner, out) \
+    (radiogeddon_host->scanner_snapshot((scanner), (out)))
+#define rg_draw_badge(canvas, x, y, cyber, frame) \
+    (radiogeddon_host->draw_badge((canvas), (x), (y), (cyber), (frame)))
 #else
 #define RADIOGEDDON_PRESET_LABEL(index) (radiogeddon_presets[(index)].label)
 #endif

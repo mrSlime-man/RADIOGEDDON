@@ -166,6 +166,24 @@ typedef struct {
     void* (*favorites)(RadioGeddonApp* app);
     bool (*favorites_save)(Storage* storage, const void* favorites);
     bool (*decoders_memory_ok)(RadioGeddonApp* app);
+    /* The Scanner screen (the scan module); the engine stays in the app. */
+    void (*memdiag_checkpoint)(const char* where);
+    size_t (*scanner_start_cost)(RadioGeddonScanner* scanner, uint8_t mode);
+    uint32_t (*scanner_frequency)(RadioGeddonScanner* scanner, size_t index);
+    int32_t (*scanner_hold_index)(RadioGeddonScanner* scanner);
+    bool (*scanner_is_paused)(RadioGeddonScanner* scanner);
+    void (*scanner_toggle_pause)(RadioGeddonScanner* scanner);
+    void (*scanner_set_priority)(RadioGeddonScanner* scanner, size_t index, uint8_t prio);
+    void (*scanner_snapshot)(RadioGeddonScanner* scanner, void* snapshot);
+    bool (*scanner_save_csv)(
+        RadioGeddonScanner* scanner,
+        Storage* storage,
+        const char* path,
+        const char* preset_label);
+    bool (*tools_settled)(RadioGeddonApp* app);
+    void (*tools_tick)(RadioGeddonApp* app);
+    /* The radio screens' Dolphin Lab badge (views/radiogeddon_mascot_draw.h). */
+    void (*draw_badge)(void* canvas, int32_t x, int32_t y, bool cyber, const void* frame);
 } RadioGeddonHost;
 
 /** The table (scenes/radiogeddon_scene_tools.c). */

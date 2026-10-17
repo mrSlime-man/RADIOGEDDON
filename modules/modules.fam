@@ -422,3 +422,21 @@ App(
     ],
     fal_embedded=True,
 )
+
+App(
+    appid="radiogeddon_scan",
+    apptype=FlipperAppType.PLUGIN,
+    entry_point="radiogeddon_scan_module_ep",
+    requires=["radiogeddon_full"],
+    cdefines=["RADIOGEDDON_EDITION_FULL", "RADIOGEDDON_MODULE"],
+    sources=[
+        "modules/radiogeddon_module_scan.c",
+        "scenes/radiogeddon_scene_scanner.c",
+        "views/radiogeddon_scanner_view.c",
+        "helpers/radiogeddon_storage.c",
+        "helpers/radiogeddon_dsp.c",
+        "helpers/rg_adapt.c",
+        "helpers/rg_div.c",
+    ],
+    fal_embedded=True,
+)

@@ -4,6 +4,9 @@ typedef enum {
     ReceiverCustomDecoded = 200,
     ReceiverCustomSave,
     ReceiverCustomToggleRecord,
+    // Full edition: start the radio once the module that opened Receive is
+    // unloaded (radiogeddon_scene_receiver_on_enter).
+    ReceiverCustomBegin = 0x7102,
 } ReceiverCustomEvent;
 
 /* How long a note replaces the hint line, in 100 ms ticks. */
@@ -110,6 +113,8 @@ static RG_UI_TEXT void
     }
 }
 
+static RG_UI_TEXT void radiogeddon_scene_receiver_begin(RadioGeddonApp* app, bool autorecord);
+
 RG_UI_TEXT void radiogeddon_scene_receiver_on_enter(void* context) {
     RadioGeddonApp* app = context;
     bool autorecord = app->receiver_autorecord;
@@ -140,6 +145,22 @@ RG_UI_TEXT void radiogeddon_scene_receiver_on_enter(void* context) {
     radiogeddon_subghz_set_frequency(app->subghz, app->frequency);
     radiogeddon_subghz_set_preset(app->subghz, app->preset_index);
 
+#if RG_EDITION_FULL
+    // Opened from a tool module's screen (Range Scanner, Find Similar...):
+    // its code is still running now and is unloaded only afterwards. The
+    // session's memory check and its blocks come after that, from the event
+    // loop, so the check counts the module's memory as free and the session
+    // is not placed above the module's blocks.
+    if(!radiogeddon_scene_tools_settled(app)) {
+        app->receiver_autorecord = autorecord;
+        view_dispatcher_send_custom_event(app->view_dispatcher, ReceiverCustomBegin);
+        return;
+    }
+#endif
+    radiogeddon_scene_receiver_begin(app, autorecord);
+}
+
+static RG_UI_TEXT void radiogeddon_scene_receiver_begin(RadioGeddonApp* app, bool autorecord) {
     if(radiogeddon_subghz_is_device_present(app->subghz)) {
         if(!radiogeddon_scene_radio_memory_ok(app)) return;
         radiogeddon_subghz_rx_start(app->subghz, radiogeddon_scene_receiver_decode_cb, app);
@@ -206,6 +227,17 @@ RG_UI_TEXT bool radiogeddon_scene_receiver_on_event(void* context, SceneManagerE
         }
     } else if(event.type == SceneManagerEventTypeCustom) {
         switch(event.event) {
+#if RG_EDITION_FULL
+        case ReceiverCustomBegin: {
+            // No module code runs from the event loop: unload, then start.
+            bool autorecord = app->receiver_autorecord;
+            app->receiver_autorecord = false;
+            radiogeddon_scene_tools_tick(app);
+            radiogeddon_scene_receiver_begin(app, autorecord);
+            consumed = true;
+            break;
+        }
+#endif
         case ReceiverCustomDecoded:
             radiogeddon_scene_receiver_refresh_history(app);
 #if RG_FEATURE_JOURNAL

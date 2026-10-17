@@ -5,6 +5,11 @@
 #if RG_FEATURE_DOLPHIN_LAB
 #include "radiogeddon_mascot_draw.h"
 #endif
+#ifdef RADIOGEDDON_MODULE
+/* Built into the scan module: the engine's snapshot and the badge drawing
+ * are the app's, through the host table. */
+#include "../helpers/radiogeddon_host_map.h"
+#endif
 
 #define RSSI_FLOOR   (-110.0f)
 #define RSSI_CEIL    (-30.0f)
@@ -317,3 +322,33 @@ RG_VIEW_TEXT void radiogeddon_scanner_view_set_badge(
         true);
 }
 #endif
+
+RG_VIEW_TEXT void radiogeddon_scanner_view_get_place(
+    RadioGeddonScannerView* instance,
+    uint16_t* selected,
+    uint16_t* top) {
+    with_view_model(
+        instance->view,
+        RadioGeddonScannerModel * m,
+        {
+            *selected = (uint16_t)m->selected;
+            *top = (uint16_t)m->top;
+        },
+        false);
+}
+
+RG_VIEW_TEXT void radiogeddon_scanner_view_set_place(
+    RadioGeddonScannerView* instance,
+    uint16_t selected,
+    uint16_t top) {
+    with_view_model(
+        instance->view,
+        RadioGeddonScannerModel * m,
+        {
+            if(selected < m->snap.count) {
+                m->selected = selected;
+                m->top = top <= selected ? top : selected;
+            }
+        },
+        true);
+}

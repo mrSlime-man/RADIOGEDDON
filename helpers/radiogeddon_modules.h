@@ -50,6 +50,7 @@
 #define RADIOGEDDON_MODULE_HOPPER    "radiogeddon_hopper.fal"
 #define RADIOGEDDON_MODULE_DB        "radiogeddon_db.fal"
 #define RADIOGEDDON_MODULE_ANALYZE   "radiogeddon_analyze.fal"
+#define RADIOGEDDON_MODULE_SCAN      "radiogeddon_scan.fal"
 
 #include <dialogs/dialogs.h>
 /* Recording recovery at startup (radiogeddon_recovery.h), only when a
@@ -160,6 +161,7 @@ typedef struct {
  *   radiogeddon_analyze.fal 0 Analyze menu, 1 Multi-Capture Compare list,
  *                           2 its result, 3 Smart Protocol Discovery,
  *                           4 Decode with Firmware
+ *   radiogeddon_scan.fal    0 Frequency Scanner (the engine is the app's)
  */
 #define RADIOGEDDON_TOOL_SCENES 5u
 typedef struct {

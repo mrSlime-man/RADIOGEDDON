@@ -134,7 +134,6 @@ RadioGeddonApp* radiogeddon_app_alloc(void) {
     app->text_box = text_box_alloc();
     // Never without an enter callback: firmware forbids NULL (see the helper).
     radiogeddon_scene_var_list_release(app);
-    app->scanner_view = radiogeddon_scanner_view_alloc();
     app->receiver_view = radiogeddon_receiver_view_alloc();
 
     view_dispatcher_add_view(
@@ -151,10 +150,6 @@ RadioGeddonApp* radiogeddon_app_alloc(void) {
         app->view_dispatcher, RadioGeddonViewTextInput, text_input_get_view(app->text_input));
     view_dispatcher_add_view(
         app->view_dispatcher, RadioGeddonViewTextBox, text_box_get_view(app->text_box));
-    view_dispatcher_add_view(
-        app->view_dispatcher,
-        RadioGeddonViewScanner,
-        radiogeddon_scanner_view_get_view(app->scanner_view));
     view_dispatcher_add_view(
         app->view_dispatcher,
         RadioGeddonViewReceiver,
@@ -183,7 +178,6 @@ void radiogeddon_app_free(RadioGeddonApp* app) {
     view_dispatcher_remove_view(app->view_dispatcher, RadioGeddonViewPopup);
     view_dispatcher_remove_view(app->view_dispatcher, RadioGeddonViewTextInput);
     view_dispatcher_remove_view(app->view_dispatcher, RadioGeddonViewTextBox);
-    view_dispatcher_remove_view(app->view_dispatcher, RadioGeddonViewScanner);
     view_dispatcher_remove_view(app->view_dispatcher, RadioGeddonViewReceiver);
 #if RG_FEATURE_DOLPHIN_LAB
     radiogeddon_ui_free(app);
@@ -199,7 +193,8 @@ void radiogeddon_app_free(RadioGeddonApp* app) {
     popup_free(app->popup);
     text_input_free(app->text_input);
     text_box_free(app->text_box);
-    radiogeddon_scanner_view_free(app->scanner_view);
+    // The Scanner screen frees its view when it closes.
+    furi_assert(!app->scanner_view);
     radiogeddon_receiver_view_free(app->receiver_view);
 
     scene_manager_free(app->scene_manager);

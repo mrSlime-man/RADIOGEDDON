@@ -1,5 +1,5 @@
 #include "radiogeddon_scanner.h"
-#include "../radiogeddon_edition.h" /* RG_CORE_TEXT */
+#include "../radiogeddon_edition.h" /* RG_LAB_TEXT */
 
 #define TAG "RadioGeddonScanner"
 
@@ -35,7 +35,7 @@ struct RadioGeddonScanner {
 #endif
 };
 
-RG_CORE_TEXT RadioGeddonScanner* radiogeddon_scanner_alloc(RadioGeddonSubGhz* subghz) {
+RG_LAB_TEXT RadioGeddonScanner* radiogeddon_scanner_alloc(RadioGeddonSubGhz* subghz) {
     RadioGeddonScanner* instance = malloc(sizeof(RadioGeddonScanner));
     memset(instance, 0, sizeof(RadioGeddonScanner));
     instance->subghz = subghz;
@@ -48,7 +48,7 @@ RG_CORE_TEXT RadioGeddonScanner* radiogeddon_scanner_alloc(RadioGeddonSubGhz* su
     return instance;
 }
 
-RG_CORE_TEXT void radiogeddon_scanner_free(RadioGeddonScanner* instance) {
+RG_LAB_TEXT void radiogeddon_scanner_free(RadioGeddonScanner* instance) {
     furi_assert(instance);
     radiogeddon_scanner_stop(instance);
 #if RG_FEATURE_ADAPTIVE_SCAN
@@ -60,7 +60,7 @@ RG_CORE_TEXT void radiogeddon_scanner_free(RadioGeddonScanner* instance) {
 
 #if RG_FEATURE_ADAPTIVE_SCAN
 /* (Re)start the schedule for the current list and mode (lock held). */
-static RG_CORE_TEXT void radiogeddon_scanner_adapt_init(RadioGeddonScanner* instance) {
+static RG_LAB_TEXT void radiogeddon_scanner_adapt_init(RadioGeddonScanner* instance) {
     if(instance->mode == RgAdaptStandard) {
         free(instance->adapt);
         instance->adapt = NULL;
@@ -71,7 +71,7 @@ static RG_CORE_TEXT void radiogeddon_scanner_adapt_init(RadioGeddonScanner* inst
         instance->adapt, (RgAdaptMode)instance->mode, instance->count, instance->dwell_ms);
 }
 
-RG_CORE_TEXT void radiogeddon_scanner_set_mode(RadioGeddonScanner* instance, uint8_t mode) {
+RG_LAB_TEXT void radiogeddon_scanner_set_mode(RadioGeddonScanner* instance, uint8_t mode) {
     furi_assert(!instance->thread);
     if(mode >= RgAdaptModeCount) mode = RgAdaptStandard;
     furi_mutex_acquire(instance->mutex, FuriWaitForever);
@@ -82,13 +82,13 @@ RG_CORE_TEXT void radiogeddon_scanner_set_mode(RadioGeddonScanner* instance, uin
     furi_mutex_release(instance->mutex);
 }
 
-RG_CORE_TEXT void radiogeddon_scanner_reset_learning(RadioGeddonScanner* instance) {
+RG_LAB_TEXT void radiogeddon_scanner_reset_learning(RadioGeddonScanner* instance) {
     furi_mutex_acquire(instance->mutex, FuriWaitForever);
     if(instance->adapt) rg_adapt_reset(instance->adapt);
     furi_mutex_release(instance->mutex);
 }
 
-RG_CORE_TEXT void
+RG_LAB_TEXT void
     radiogeddon_scanner_set_priority(RadioGeddonScanner* instance, size_t index, uint8_t prio) {
     furi_mutex_acquire(instance->mutex, FuriWaitForever);
     if(instance->adapt) rg_adapt_set_priority(instance->adapt, index, prio);
@@ -96,7 +96,7 @@ RG_CORE_TEXT void
 }
 #endif
 
-RG_CORE_TEXT void radiogeddon_scanner_set_observer(
+RG_LAB_TEXT void radiogeddon_scanner_set_observer(
     RadioGeddonScanner* instance,
     RadioGeddonScannerObserver observer,
     void* context) {
@@ -105,15 +105,15 @@ RG_CORE_TEXT void radiogeddon_scanner_set_observer(
     instance->observer_ctx = context;
 }
 
-RG_CORE_TEXT void radiogeddon_scanner_lock(RadioGeddonScanner* instance) {
+RG_LAB_TEXT void radiogeddon_scanner_lock(RadioGeddonScanner* instance) {
     furi_mutex_acquire(instance->mutex, FuriWaitForever);
 }
 
-RG_CORE_TEXT void radiogeddon_scanner_unlock(RadioGeddonScanner* instance) {
+RG_LAB_TEXT void radiogeddon_scanner_unlock(RadioGeddonScanner* instance) {
     furi_mutex_release(instance->mutex);
 }
 
-RG_CORE_TEXT void radiogeddon_scanner_configure(
+RG_LAB_TEXT void radiogeddon_scanner_configure(
     RadioGeddonScanner* instance,
     const uint32_t* frequencies,
     size_t count,
@@ -149,7 +149,7 @@ RG_CORE_TEXT void radiogeddon_scanner_configure(
     furi_mutex_release(instance->mutex);
 }
 
-RG_CORE_TEXT void radiogeddon_scanner_set_callback(
+RG_LAB_TEXT void radiogeddon_scanner_set_callback(
     RadioGeddonScanner* instance,
     RadioGeddonScannerHitCallback callback,
     void* context) {
@@ -157,7 +157,7 @@ RG_CORE_TEXT void radiogeddon_scanner_set_callback(
     instance->context = context;
 }
 
-static RG_CORE_TEXT int32_t radiogeddon_scanner_thread(void* context) {
+static RG_LAB_TEXT int32_t radiogeddon_scanner_thread(void* context) {
     RadioGeddonScanner* instance = context;
     radiogeddon_subghz_scan_begin(instance->subghz);
 
@@ -241,7 +241,7 @@ static RG_CORE_TEXT int32_t radiogeddon_scanner_thread(void* context) {
 /* A FuriThread record and the FreeRTOS task control block, generously. */
 #define SCANNER_THREAD_RECORDS 512u
 
-RG_CORE_TEXT size_t radiogeddon_scanner_start_cost(RadioGeddonScanner* instance, uint8_t mode) {
+RG_LAB_TEXT size_t radiogeddon_scanner_start_cost(RadioGeddonScanner* instance, uint8_t mode) {
     size_t cost = SCANNER_THREAD_STACK + SCANNER_THREAD_RECORDS;
     if(!instance) cost += sizeof(RadioGeddonScanner) + 64u; // and its mutex
 #if RG_FEATURE_ADAPTIVE_SCAN
@@ -253,7 +253,7 @@ RG_CORE_TEXT size_t radiogeddon_scanner_start_cost(RadioGeddonScanner* instance,
     return cost;
 }
 
-RG_CORE_TEXT void radiogeddon_scanner_start(RadioGeddonScanner* instance) {
+RG_LAB_TEXT void radiogeddon_scanner_start(RadioGeddonScanner* instance) {
     if(instance->thread) return;
     instance->stop_requested = false;
     instance->thread =
@@ -261,7 +261,7 @@ RG_CORE_TEXT void radiogeddon_scanner_start(RadioGeddonScanner* instance) {
     furi_thread_start(instance->thread);
 }
 
-RG_CORE_TEXT void radiogeddon_scanner_stop(RadioGeddonScanner* instance) {
+RG_LAB_TEXT void radiogeddon_scanner_stop(RadioGeddonScanner* instance) {
     if(!instance->thread) return;
     __atomic_store_n(&instance->stop_requested, true, __ATOMIC_RELEASE);
     furi_thread_join(instance->thread);
@@ -270,7 +270,7 @@ RG_CORE_TEXT void radiogeddon_scanner_stop(RadioGeddonScanner* instance) {
     instance->measuring = -1;
 }
 
-RG_CORE_TEXT void radiogeddon_scanner_toggle_pause(RadioGeddonScanner* instance) {
+RG_LAB_TEXT void radiogeddon_scanner_toggle_pause(RadioGeddonScanner* instance) {
     furi_mutex_acquire(instance->mutex, FuriWaitForever);
     if(!instance->paused && instance->hold_index >= 0) {
         // Holding on a hit: the first press resumes the sweep.
@@ -282,13 +282,13 @@ RG_CORE_TEXT void radiogeddon_scanner_toggle_pause(RadioGeddonScanner* instance)
     furi_mutex_release(instance->mutex);
 }
 
-RG_CORE_TEXT void radiogeddon_scanner_release_hold(RadioGeddonScanner* instance) {
+RG_LAB_TEXT void radiogeddon_scanner_release_hold(RadioGeddonScanner* instance) {
     furi_mutex_acquire(instance->mutex, FuriWaitForever);
     instance->hold_index = -1;
     furi_mutex_release(instance->mutex);
 }
 
-RG_CORE_TEXT void radiogeddon_scanner_reset_peaks(RadioGeddonScanner* instance) {
+RG_LAB_TEXT void radiogeddon_scanner_reset_peaks(RadioGeddonScanner* instance) {
     furi_mutex_acquire(instance->mutex, FuriWaitForever);
     for(size_t i = 0; i < instance->count; i++) {
         rg_scan_channel_reset_peak(&instance->channels[i]);
@@ -296,7 +296,7 @@ RG_CORE_TEXT void radiogeddon_scanner_reset_peaks(RadioGeddonScanner* instance) 
     furi_mutex_release(instance->mutex);
 }
 
-RG_CORE_TEXT void
+RG_LAB_TEXT void
     radiogeddon_scanner_snapshot(RadioGeddonScanner* instance, RadioGeddonScannerSnapshot* out) {
     furi_mutex_acquire(instance->mutex, FuriWaitForever);
     out->count = instance->count;
@@ -322,19 +322,19 @@ RG_CORE_TEXT void
     furi_mutex_release(instance->mutex);
 }
 
-RG_CORE_TEXT size_t radiogeddon_scanner_count(RadioGeddonScanner* instance) {
+RG_LAB_TEXT size_t radiogeddon_scanner_count(RadioGeddonScanner* instance) {
     furi_mutex_acquire(instance->mutex, FuriWaitForever);
     size_t n = instance->count;
     furi_mutex_release(instance->mutex);
     return n;
 }
 
-static RG_CORE_TEXT bool radiogeddon_scanner_write_str(File* file, const char* str) {
+static RG_LAB_TEXT bool radiogeddon_scanner_write_str(File* file, const char* str) {
     size_t len = strlen(str);
     return storage_file_write(file, str, len) == len;
 }
 
-RG_CORE_TEXT bool radiogeddon_scanner_save_csv(
+RG_LAB_TEXT bool radiogeddon_scanner_save_csv(
     RadioGeddonScanner* instance,
     Storage* storage,
     const char* path,
@@ -390,21 +390,21 @@ RG_CORE_TEXT bool radiogeddon_scanner_save_csv(
     return ok;
 }
 
-RG_CORE_TEXT int32_t radiogeddon_scanner_hold_index(RadioGeddonScanner* instance) {
+RG_LAB_TEXT int32_t radiogeddon_scanner_hold_index(RadioGeddonScanner* instance) {
     furi_mutex_acquire(instance->mutex, FuriWaitForever);
     int32_t hold = instance->hold_index;
     furi_mutex_release(instance->mutex);
     return hold;
 }
 
-RG_CORE_TEXT uint32_t radiogeddon_scanner_frequency(RadioGeddonScanner* instance, size_t index) {
+RG_LAB_TEXT uint32_t radiogeddon_scanner_frequency(RadioGeddonScanner* instance, size_t index) {
     furi_mutex_acquire(instance->mutex, FuriWaitForever);
     uint32_t f = (index < instance->count) ? instance->frequencies[index] : 0;
     furi_mutex_release(instance->mutex);
     return f;
 }
 
-RG_CORE_TEXT bool radiogeddon_scanner_is_paused(RadioGeddonScanner* instance) {
+RG_LAB_TEXT bool radiogeddon_scanner_is_paused(RadioGeddonScanner* instance) {
     furi_mutex_acquire(instance->mutex, FuriWaitForever);
     bool paused = instance->paused;
     furi_mutex_release(instance->mutex);

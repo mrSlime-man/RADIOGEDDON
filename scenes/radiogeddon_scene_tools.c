@@ -2,6 +2,10 @@
 
 #if RG_EDITION_FULL
 
+#if RG_FEATURE_DOLPHIN_LAB
+#include "../views/radiogeddon_mascot_draw.h"
+#endif
+
 /*
  * Full edition: the app's side of the tool screens built into modules
  * (radiogeddon_modules.h), and the host table every screen module calls
@@ -91,6 +95,8 @@ static const ToolScene tool_scenes[] = {
     {RadioGeddonSceneMultiResult, RADIOGEDDON_MODULE_ANALYZE, 2, 1, ToolPrepNone},
     {RadioGeddonSceneUnknown, RADIOGEDDON_MODULE_ANALYZE, 3, 1, ToolPrepNone},
     {RadioGeddonSceneDecode, RADIOGEDDON_MODULE_ANALYZE, 4, 1, ToolPrepNone},
+    // The Scanner checks the sweep's memory itself before starting it.
+    {RadioGeddonSceneScanner, RADIOGEDDON_MODULE_SCAN, 0, 1, ToolPrepScanner},
     // The Database list sizes its index to the heap left (radiogeddon_db.h).
     {RadioGeddonSceneSavedList, RADIOGEDDON_MODULE_DB, 0, 4, ToolPrepNone},
     {RadioGeddonSceneDbOptions, RADIOGEDDON_MODULE_DB, 1, 1, ToolPrepNone},
@@ -233,6 +239,23 @@ static RG_UI_TEXT bool host_favorites_save(Storage* storage, const void* favorit
     return radiogeddon_favorites_save(storage, favorites);
 }
 
+static RG_UI_TEXT void host_scanner_snapshot(RadioGeddonScanner* scanner, void* snapshot) {
+    radiogeddon_scanner_snapshot(scanner, snapshot);
+}
+
+static RG_UI_TEXT void
+    host_draw_badge(void* canvas, int32_t x, int32_t y, bool cyber, const void* frame) {
+#if RG_FEATURE_DOLPHIN_LAB
+    rg_draw_badge(canvas, x, y, cyber, frame);
+#else
+    UNUSED(canvas);
+    UNUSED(x);
+    UNUSED(y);
+    UNUSED(cyber);
+    UNUSED(frame);
+#endif
+}
+
 const RadioGeddonHost radiogeddon_host_table = {
     .show_message = radiogeddon_scene_show_message,
     .show_confirm = radiogeddon_scene_show_confirm,
@@ -325,6 +348,20 @@ const RadioGeddonHost radiogeddon_host_table = {
     .sessions_rename_signal = host_sessions_rename_signal,
     .favorites = host_favorites,
     .favorites_save = host_favorites_save,
+    .memdiag_checkpoint = radiogeddon_memdiag_checkpoint,
+    .scanner_start_cost = radiogeddon_scanner_start_cost,
+    .scanner_frequency = radiogeddon_scanner_frequency,
+    .scanner_hold_index = radiogeddon_scanner_hold_index,
+    .scanner_is_paused = radiogeddon_scanner_is_paused,
+    .scanner_toggle_pause = radiogeddon_scanner_toggle_pause,
+#if RG_FEATURE_ADAPTIVE_SCAN
+    .scanner_set_priority = radiogeddon_scanner_set_priority,
+#endif
+    .scanner_snapshot = host_scanner_snapshot,
+    .scanner_save_csv = radiogeddon_scanner_save_csv,
+    .tools_settled = radiogeddon_scene_tools_settled,
+    .tools_tick = radiogeddon_scene_tools_tick,
+    .draw_badge = host_draw_badge,
     .decoders_memory_ok = radiogeddon_scene_decoders_memory_ok,
 };
 
@@ -354,7 +391,10 @@ static RG_UI_TEXT void tools_prepare(RadioGeddonApp* app, const ToolScene* t) {
     size_t largest = memmgr_heap_get_max_free_block();
     if(t->prep == ToolPrepScanner && !app->scanner) {
 #if RG_FEATURE_ADAPTIVE_SCAN
-        uint8_t mode = app->settings.scan_mode;
+        // The Scanner runs the schedule its setup chose; the Logger the
+        // settings' one.
+        uint8_t mode = t->scene == RadioGeddonSceneScanner ? app->scan_mode_run :
+                                                             app->settings.scan_mode;
 #else
         uint8_t mode = 0;
 #endif
@@ -521,6 +561,7 @@ TOOL_SCENE(unknown, Unknown)
 TOOL_SCENE(decode, Decode)
 TOOL_SCENE(hopper, Hopper)
 TOOL_SCENE(hopper_stats, HopperStats)
+TOOL_SCENE(scanner, Scanner)
 TOOL_SCENE(saved_list, SavedList)
 TOOL_SCENE(db_options, DbOptions)
 TOOL_SCENE(file_details, FileDetails)

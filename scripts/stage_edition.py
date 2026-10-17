@@ -124,6 +124,10 @@ FULL_MODULE_ONLY = (
     "scenes/radiogeddon_scene_multi_result.c",
     "scenes/radiogeddon_scene_unknown.c",
     "scenes/radiogeddon_scene_decode.c",
+    # The Frequency Scanner's screen and view (the scan module; the engine,
+    # which the RF Activity Logger shares, stays in the app).
+    "scenes/radiogeddon_scene_scanner.c",
+    "views/radiogeddon_scanner_view.c",
 )
 FULL_MODULES_FAM = "modules/modules.fam"
 

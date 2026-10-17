@@ -203,4 +203,6 @@ size_t radiogeddon_scene_build_list(
 #if RG_EDITION_FULL
 /* In a module build, the helpers above come from the app's table. */
 #include "../helpers/radiogeddon_host_map.h"
+#else
+#define RADIOGEDDON_PRESET_LABEL(index) (radiogeddon_presets[(index)].label)
 #endif

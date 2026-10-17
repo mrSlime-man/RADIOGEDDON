@@ -37,9 +37,6 @@ HELPER_GROUPS = {
         "helpers/rg_ring.c",
         "helpers/rg_raw.c",
         "helpers/rg_rawfmt.c",
-        "helpers/radiogeddon_scanner.c",
-        "helpers/rg_scan.c",
-        "helpers/rg_adapt.c",
         "helpers/radiogeddon_dsp.c",
         "helpers/rg_txpolicy.c",
         "helpers/rg_preset.c",
@@ -48,6 +45,10 @@ HELPER_GROUPS = {
     # serve only modules, and a named section cannot drop unused functions
     # (the linker's gc works per section), so they stay in .text.
     "RG_LAB_TEXT": (
+        # The scanner engine, for balance (the Logger shares it).
+        "helpers/radiogeddon_scanner.c",
+        "helpers/rg_scan.c",
+        "helpers/rg_adapt.c",
         "helpers/radiogeddon_ui.c",
         "helpers/radiogeddon_research.c",
         "helpers/rg_mascot.c",

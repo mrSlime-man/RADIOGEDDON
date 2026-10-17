@@ -161,10 +161,20 @@ static RG_UI_TEXT void radiogeddon_scene_scanner_begin(RadioGeddonApp* app) {
 #endif
 
     radiogeddon_subghz_set_preset(app->subghz, app->preset_index);
+    // The view lives while this screen is shown; the place in the list is
+    // kept in the app, with the results.
+    if(!app->scanner_view) {
+        app->scanner_view = radiogeddon_scanner_view_alloc();
+        view_dispatcher_add_view(
+            app->view_dispatcher,
+            RadioGeddonViewScanner,
+            radiogeddon_scanner_view_get_view(app->scanner_view));
+    }
     radiogeddon_scanner_view_set_callback(app->scanner_view, radiogeddon_scanner_view_cb, app);
     radiogeddon_scanner_view_set_external(
         app->scanner_view, radiogeddon_subghz_get_radio(app->subghz) == RadioGeddonRadioExternal);
     radiogeddon_scanner_view_update(app->scanner_view, app->scanner);
+    radiogeddon_scanner_view_set_place(app->scanner_view, app->scanner_selected, app->scanner_top);
 
     if(count > 0) {
         radiogeddon_scanner_start(app->scanner);
@@ -190,7 +200,7 @@ static RG_UI_TEXT void radiogeddon_scene_scanner_save(RadioGeddonApp* app) {
         app->scanner,
         app->storage,
         furi_string_get_cstr(path),
-        radiogeddon_presets[app->preset_index].label);
+        RADIOGEDDON_PRESET_LABEL(app->preset_index));
     radiogeddon_ui_event(app, ok ? RgMascotEventSaveCompleted : RgMascotEventOperationFailed, 0);
     if(ok) {
         notification_message(app->notifications, &sequence_success);
@@ -285,7 +295,19 @@ RG_UI_TEXT void radiogeddon_scene_scanner_on_exit(void* context) {
     RadioGeddonApp* app = context;
     app->scanner_running = false;
     radiogeddon_ui_set_scanning(app, false);
-    if(app->scanner) radiogeddon_scanner_stop(app->scanner);
+    if(app->scanner) {
+        radiogeddon_scanner_stop(app->scanner);
+        // The hit callback is this screen's code (a module's, in the Full
+        // edition): nothing may call it once the screen is gone.
+        radiogeddon_scanner_set_callback(app->scanner, NULL, NULL);
+    }
+    if(app->scanner_view) {
+        radiogeddon_scanner_view_get_place(
+            app->scanner_view, &app->scanner_selected, &app->scanner_top);
+        view_dispatcher_remove_view(app->view_dispatcher, RadioGeddonViewScanner);
+        radiogeddon_scanner_view_free(app->scanner_view);
+        app->scanner_view = NULL;
+    }
     popup_reset(app->popup);
     radiogeddon_memdiag_checkpoint("Scanner stopped");
 }

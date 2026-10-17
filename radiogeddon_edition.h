@@ -33,8 +33,9 @@
  *   .text    radiogeddon.c and the helpers not listed below
  *   .rgtext  the screens' code (scenes/, RG_UI_TEXT)
  *   .rgview  the custom views (views/, RG_VIEW_TEXT)
- *   .rgcore  the radio, scanner, recorder and decoder helpers (RG_CORE_TEXT)
- *   .rglab   the Dolphin Lab, journal and assistant helpers (RG_LAB_TEXT)
+ *   .rgcore  the radio, recorder, decoder and transmit helpers (RG_CORE_TEXT)
+ *   .rglab   the scanner engine and the Dolphin Lab, journal and assistant
+ *            helpers (RG_LAB_TEXT)
  *   .rgtool  the analysis engines, resident only in the Catalog edition
  *            (RG_TOOL_TEXT; the Full edition has them in modules)
  *
