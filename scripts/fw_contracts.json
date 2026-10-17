@@ -1,0 +1,2557 @@
+{
+ "about": "Firmware functions and the zero-based arguments they furi_check() (scripts/check_fw_contracts.py --derive).",
+ "contracts": {
+  "bit_buffer_alloc": [
+   0
+  ],
+  "bit_buffer_append_bit": [
+   0
+  ],
+  "bit_buffer_append_byte": [
+   0
+  ],
+  "bit_buffer_append_bytes": [
+   0,
+   1
+  ],
+  "bit_buffer_append_right": [
+   0,
+   1
+  ],
+  "bit_buffer_copy": [
+   0,
+   1
+  ],
+  "bit_buffer_copy_bits": [
+   0,
+   1
+  ],
+  "bit_buffer_copy_bytes": [
+   0,
+   1
+  ],
+  "bit_buffer_copy_bytes_with_parity": [
+   0,
+   1
+  ],
+  "bit_buffer_copy_left": [
+   0,
+   1
+  ],
+  "bit_buffer_copy_right": [
+   0,
+   1
+  ],
+  "bit_buffer_free": [
+   0
+  ],
+  "bit_buffer_get_byte": [
+   0
+  ],
+  "bit_buffer_get_byte_from_bit": [
+   0
+  ],
+  "bit_buffer_get_capacity_bytes": [
+   0
+  ],
+  "bit_buffer_get_data": [
+   0
+  ],
+  "bit_buffer_get_parity": [
+   0
+  ],
+  "bit_buffer_get_size": [
+   0
+  ],
+  "bit_buffer_get_size_bytes": [
+   0
+  ],
+  "bit_buffer_has_partial_byte": [
+   0
+  ],
+  "bit_buffer_reset": [
+   0
+  ],
+  "bit_buffer_set_byte": [
+   0
+  ],
+  "bit_buffer_set_byte_with_parity": [
+   0
+  ],
+  "bit_buffer_set_size": [
+   0
+  ],
+  "bit_buffer_set_size_bytes": [
+   0
+  ],
+  "bit_buffer_starts_with_byte": [
+   0
+  ],
+  "bit_buffer_write_bytes": [
+   0,
+   1
+  ],
+  "bit_buffer_write_bytes_mid": [
+   0,
+   1
+  ],
+  "bit_buffer_write_bytes_with_parity": [
+   0,
+   1,
+   3
+  ],
+  "buffered_file_stream_close": [
+   0
+  ],
+  "buffered_file_stream_get_error": [
+   0
+  ],
+  "buffered_file_stream_open": [
+   0
+  ],
+  "buffered_file_stream_sync": [
+   0
+  ],
+  "button_menu_add_item": [
+   0,
+   1
+  ],
+  "button_menu_free": [
+   0
+  ],
+  "button_menu_get_view": [
+   0
+  ],
+  "button_menu_reset": [
+   0
+  ],
+  "button_menu_set_header": [
+   0
+  ],
+  "button_menu_set_selected_item": [
+   0
+  ],
+  "button_panel_add_icon": [
+   0
+  ],
+  "button_panel_add_item": [
+   0
+  ],
+  "button_panel_add_label": [
+   0
+  ],
+  "button_panel_free": [
+   0
+  ],
+  "button_panel_get_view": [
+   0
+  ],
+  "button_panel_reset": [
+   0
+  ],
+  "byte_input_free": [
+   0
+  ],
+  "byte_input_get_view": [
+   0
+  ],
+  "byte_input_set_header_text": [
+   0
+  ],
+  "byte_input_set_result_callback": [
+   0
+  ],
+  "canvas_add_framebuffer_callback": [
+   0
+  ],
+  "canvas_clear": [
+   0
+  ],
+  "canvas_commit": [
+   0
+  ],
+  "canvas_current_font_height": [
+   0
+  ],
+  "canvas_current_font_width": [
+   0
+  ],
+  "canvas_draw_bitmap": [
+   0
+  ],
+  "canvas_draw_box": [
+   0
+  ],
+  "canvas_draw_circle": [
+   0
+  ],
+  "canvas_draw_disc": [
+   0
+  ],
+  "canvas_draw_dot": [
+   0
+  ],
+  "canvas_draw_frame": [
+   0
+  ],
+  "canvas_draw_glyph": [
+   0
+  ],
+  "canvas_draw_icon": [
+   0,
+   3
+  ],
+  "canvas_draw_icon_animation": [
+   0,
+   3
+  ],
+  "canvas_draw_icon_ex": [
+   0,
+   3
+  ],
+  "canvas_draw_line": [
+   0
+  ],
+  "canvas_draw_overlay": [
+   0
+  ],
+  "canvas_draw_rbox": [
+   0
+  ],
+  "canvas_draw_rframe": [
+   0
+  ],
+  "canvas_draw_str": [
+   0
+  ],
+  "canvas_draw_str_aligned": [
+   0
+  ],
+  "canvas_draw_triangle": [
+   0
+  ],
+  "canvas_draw_xbm": [
+   0
+  ],
+  "canvas_draw_xbm_ex": [
+   0
+  ],
+  "canvas_frame_set": [
+   0
+  ],
+  "canvas_free": [
+   0
+  ],
+  "canvas_get_buffer": [
+   0
+  ],
+  "canvas_get_buffer_size": [
+   0
+  ],
+  "canvas_get_font_params": [
+   0
+  ],
+  "canvas_glyph_width": [
+   0
+  ],
+  "canvas_height": [
+   0
+  ],
+  "canvas_remove_framebuffer_callback": [
+   0
+  ],
+  "canvas_reset": [
+   0
+  ],
+  "canvas_set_color": [
+   0
+  ],
+  "canvas_set_custom_u8g2_font": [
+   0
+  ],
+  "canvas_set_font": [
+   0
+  ],
+  "canvas_set_font_direction": [
+   0
+  ],
+  "canvas_set_orientation": [
+   0
+  ],
+  "canvas_string_width": [
+   0
+  ],
+  "canvas_width": [
+   0
+  ],
+  "cli_print_usage": [
+   0,
+   1,
+   2
+  ],
+  "cli_registry_add_command_ex": [
+   0,
+   1,
+   3
+  ],
+  "cli_registry_delete_command": [
+   0
+  ],
+  "cli_registry_reload_external_commands": [
+   0
+  ],
+  "cli_registry_remove_external_commands": [
+   0
+  ],
+  "cli_shell_alloc": [
+   0,
+   2,
+   3
+  ],
+  "cli_shell_free": [
+   0
+  ],
+  "cli_shell_join": [
+   0
+  ],
+  "cli_shell_set_prompt": [
+   0
+  ],
+  "cli_shell_start": [
+   0
+  ],
+  "composite_api_resolver_add": [
+   0,
+   1
+  ],
+  "composite_api_resolver_free": [
+   0
+  ],
+  "composite_api_resolver_get": [
+   0
+  ],
+  "compress_alloc": [
+   1
+  ],
+  "compress_free": [
+   0
+  ],
+  "compress_icon_decode": [
+   0,
+   1,
+   2
+  ],
+  "compress_icon_free": [
+   0
+  ],
+  "compress_stream_decoder_alloc": [
+   1
+  ],
+  "compress_stream_decoder_free": [
+   0
+  ],
+  "compress_stream_decoder_read": [
+   0,
+   1
+  ],
+  "compress_stream_decoder_rewind": [
+   0
+  ],
+  "compress_stream_decoder_seek": [
+   0
+  ],
+  "compress_stream_decoder_tell": [
+   0
+  ],
+  "date_time_input_free": [
+   0
+  ],
+  "date_time_input_get_view": [
+   0
+  ],
+  "date_time_input_set_editable_fields": [
+   0
+  ],
+  "date_time_input_set_result_callback": [
+   0
+  ],
+  "dialog_ex_disable_extended_events": [
+   0
+  ],
+  "dialog_ex_enable_extended_events": [
+   0
+  ],
+  "dialog_ex_free": [
+   0
+  ],
+  "dialog_ex_get_view": [
+   0
+  ],
+  "dialog_ex_reset": [
+   0
+  ],
+  "dialog_ex_set_center_button_text": [
+   0
+  ],
+  "dialog_ex_set_context": [
+   0
+  ],
+  "dialog_ex_set_header": [
+   0
+  ],
+  "dialog_ex_set_icon": [
+   0
+  ],
+  "dialog_ex_set_left_button_text": [
+   0
+  ],
+  "dialog_ex_set_result_callback": [
+   0
+  ],
+  "dialog_ex_set_right_button_text": [
+   0
+  ],
+  "dialog_ex_set_text": [
+   0
+  ],
+  "dialog_file_browser_set_basic_options": [
+   0
+  ],
+  "dialog_message_free": [
+   0
+  ],
+  "dialog_message_set_buttons": [
+   0
+  ],
+  "dialog_message_set_header": [
+   0
+  ],
+  "dialog_message_set_icon": [
+   0
+  ],
+  "dialog_message_set_text": [
+   0
+  ],
+  "dialog_message_show": [
+   0
+  ],
+  "dialog_message_show_storage_error": [
+   0
+  ],
+  "dir_walk_alloc": [
+   0
+  ],
+  "dir_walk_close": [
+   0
+  ],
+  "dir_walk_free": [
+   0
+  ],
+  "dir_walk_get_error": [
+   0
+  ],
+  "dir_walk_open": [
+   0
+  ],
+  "dir_walk_read": [
+   0
+  ],
+  "dir_walk_set_filter_cb": [
+   0
+  ],
+  "dir_walk_set_recursive": [
+   0
+  ],
+  "elements_bold_rounded_frame": [
+   0
+  ],
+  "elements_bubble": [
+   0
+  ],
+  "elements_bubble_str": [
+   0,
+   3
+  ],
+  "elements_button_center": [
+   0
+  ],
+  "elements_button_down": [
+   0
+  ],
+  "elements_button_left": [
+   0
+  ],
+  "elements_button_right": [
+   0
+  ],
+  "elements_button_up": [
+   0
+  ],
+  "elements_frame": [
+   0
+  ],
+  "elements_multiline_text": [
+   0,
+   3
+  ],
+  "elements_multiline_text_aligned": [
+   0,
+   5
+  ],
+  "elements_multiline_text_framed": [
+   0,
+   3
+  ],
+  "elements_progress_bar": [
+   0
+  ],
+  "elements_progress_bar_with_text": [
+   0
+  ],
+  "elements_scrollable_text_line": [
+   0,
+   4
+  ],
+  "elements_scrollable_text_line_centered": [
+   0,
+   4
+  ],
+  "elements_scrollbar": [
+   0
+  ],
+  "elements_scrollbar_horizontal": [
+   0
+  ],
+  "elements_scrollbar_pos": [
+   0
+  ],
+  "elements_slightly_rounded_box": [
+   0
+  ],
+  "elements_slightly_rounded_frame": [
+   0
+  ],
+  "elements_string_fit_width": [
+   0,
+   1
+  ],
+  "elements_text_box": [
+   0
+  ],
+  "empty_screen_free": [
+   0
+  ],
+  "empty_screen_get_view": [
+   0
+  ],
+  "file_browser_alloc": [
+   0
+  ],
+  "file_browser_configure": [
+   0
+  ],
+  "file_browser_free": [
+   0
+  ],
+  "file_browser_get_view": [
+   0
+  ],
+  "file_browser_set_callback": [
+   0
+  ],
+  "file_browser_set_item_callback": [
+   0
+  ],
+  "file_browser_set_select_right": [
+   0
+  ],
+  "file_browser_start": [
+   0
+  ],
+  "file_browser_stop": [
+   0
+  ],
+  "file_browser_worker_folder_enter": [
+   0
+  ],
+  "file_browser_worker_folder_exit": [
+   0
+  ],
+  "file_browser_worker_folder_refresh": [
+   0
+  ],
+  "file_browser_worker_folder_refresh_sel": [
+   0
+  ],
+  "file_browser_worker_free": [
+   0
+  ],
+  "file_browser_worker_get_filter_ext": [
+   0
+  ],
+  "file_browser_worker_get_path_current": [
+   0
+  ],
+  "file_browser_worker_is_in_start_folder": [
+   0
+  ],
+  "file_browser_worker_load": [
+   0
+  ],
+  "file_browser_worker_set_callback_context": [
+   0
+  ],
+  "file_browser_worker_set_config": [
+   0
+  ],
+  "file_browser_worker_set_filter_ext": [
+   0
+  ],
+  "file_browser_worker_set_folder_callback": [
+   0
+  ],
+  "file_browser_worker_set_item_callback": [
+   0
+  ],
+  "file_browser_worker_set_list_callback": [
+   0
+  ],
+  "file_browser_worker_set_long_load_callback": [
+   0
+  ],
+  "file_info_is_dir": [
+   0
+  ],
+  "file_stream_alloc": [
+   0
+  ],
+  "file_stream_close": [
+   0
+  ],
+  "file_stream_get_error": [
+   0
+  ],
+  "file_stream_open": [
+   0
+  ],
+  "flipper_application_alloc_thread": [
+   0
+  ],
+  "flipper_application_free": [
+   0
+  ],
+  "flipper_application_get_manifest": [
+   0
+  ],
+  "flipper_application_is_plugin": [
+   0
+  ],
+  "flipper_application_load_name_and_icon": [
+   0,
+   1,
+   2,
+   3
+  ],
+  "flipper_application_manifest_is_target_compatible": [
+   0
+  ],
+  "flipper_application_manifest_is_too_new": [
+   0,
+   1
+  ],
+  "flipper_application_manifest_is_too_old": [
+   0,
+   1
+  ],
+  "flipper_application_manifest_is_valid": [
+   0
+  ],
+  "flipper_application_map_to_memory": [
+   0
+  ],
+  "flipper_application_set_assets_progress_callback": [
+   0
+  ],
+  "flipper_format_buffered_file_close": [
+   0
+  ],
+  "flipper_format_buffered_file_open_always": [
+   0
+  ],
+  "flipper_format_buffered_file_open_existing": [
+   0
+  ],
+  "flipper_format_delete_key": [
+   0
+  ],
+  "flipper_format_file_close": [
+   0
+  ],
+  "flipper_format_file_open_always": [
+   0
+  ],
+  "flipper_format_file_open_append": [
+   0
+  ],
+  "flipper_format_file_open_existing": [
+   0
+  ],
+  "flipper_format_file_open_new": [
+   0
+  ],
+  "flipper_format_free": [
+   0
+  ],
+  "flipper_format_get_value_count": [
+   0
+  ],
+  "flipper_format_read_header": [
+   0
+  ],
+  "flipper_format_read_hex_uint64": [
+   0
+  ],
+  "flipper_format_read_string": [
+   0
+  ],
+  "flipper_format_read_uint32": [
+   0
+  ],
+  "flipper_format_rewind": [
+   0
+  ],
+  "flipper_format_seek": [
+   0
+  ],
+  "flipper_format_seek_to_end": [
+   0
+  ],
+  "flipper_format_tell": [
+   0
+  ],
+  "flipper_format_update_string": [
+   0
+  ],
+  "flipper_format_update_string_cstr": [
+   0
+  ],
+  "flipper_format_update_uint32": [
+   0
+  ],
+  "flipper_format_write_bool": [
+   0
+  ],
+  "flipper_format_write_comment": [
+   0
+  ],
+  "flipper_format_write_comment_cstr": [
+   0
+  ],
+  "flipper_format_write_empty_line": [
+   0
+  ],
+  "flipper_format_write_float": [
+   0
+  ],
+  "flipper_format_write_header": [
+   0
+  ],
+  "flipper_format_write_header_cstr": [
+   0
+  ],
+  "flipper_format_write_hex": [
+   0
+  ],
+  "flipper_format_write_hex_uint64": [
+   0
+  ],
+  "flipper_format_write_int32": [
+   0
+  ],
+  "flipper_format_write_string": [
+   0
+  ],
+  "flipper_format_write_string_cstr": [
+   0
+  ],
+  "flipper_format_write_uint32": [
+   0
+  ],
+  "furi_event_flag_clear": [
+   0
+  ],
+  "furi_event_flag_get": [
+   0
+  ],
+  "furi_event_flag_set": [
+   0
+  ],
+  "furi_event_flag_wait": [
+   0
+  ],
+  "furi_event_loop_free": [
+   0
+  ],
+  "furi_event_loop_is_subscribed": [
+   0
+  ],
+  "furi_event_loop_pend_callback": [
+   0,
+   1
+  ],
+  "furi_event_loop_run": [
+   0
+  ],
+  "furi_event_loop_stop": [
+   0
+  ],
+  "furi_event_loop_subscribe_thread_flags": [
+   0,
+   1
+  ],
+  "furi_event_loop_tick_set": [
+   0
+  ],
+  "furi_event_loop_timer_alloc": [
+   0,
+   1
+  ],
+  "furi_event_loop_timer_free": [
+   0
+  ],
+  "furi_event_loop_timer_get_interval": [
+   0
+  ],
+  "furi_event_loop_timer_get_remaining_time": [
+   0
+  ],
+  "furi_event_loop_timer_is_running": [
+   0
+  ],
+  "furi_event_loop_timer_restart": [
+   0
+  ],
+  "furi_event_loop_timer_start": [
+   0
+  ],
+  "furi_event_loop_timer_stop": [
+   0
+  ],
+  "furi_event_loop_unsubscribe": [
+   0
+  ],
+  "furi_event_loop_unsubscribe_thread_flags": [
+   0
+  ],
+  "furi_log_puts": [
+   0
+  ],
+  "furi_message_queue_free": [
+   0
+  ],
+  "furi_message_queue_get": [
+   0
+  ],
+  "furi_message_queue_get_capacity": [
+   0
+  ],
+  "furi_message_queue_get_count": [
+   0
+  ],
+  "furi_message_queue_get_message_size": [
+   0
+  ],
+  "furi_message_queue_get_space": [
+   0
+  ],
+  "furi_message_queue_reset": [
+   0
+  ],
+  "furi_mutex_acquire": [
+   0
+  ],
+  "furi_mutex_free": [
+   0
+  ],
+  "furi_mutex_get_owner": [
+   0
+  ],
+  "furi_mutex_release": [
+   0
+  ],
+  "furi_pubsub_publish": [
+   0
+  ],
+  "furi_record_close": [
+   0
+  ],
+  "furi_record_create": [
+   0,
+   1
+  ],
+  "furi_record_destroy": [
+   0
+  ],
+  "furi_record_exists": [
+   0
+  ],
+  "furi_record_open": [
+   0
+  ],
+  "furi_semaphore_acquire": [
+   0
+  ],
+  "furi_semaphore_free": [
+   0
+  ],
+  "furi_semaphore_get_count": [
+   0
+  ],
+  "furi_semaphore_release": [
+   0
+  ],
+  "furi_stream_buffer_bytes_available": [
+   0
+  ],
+  "furi_stream_buffer_free": [
+   0
+  ],
+  "furi_stream_buffer_is_empty": [
+   0
+  ],
+  "furi_stream_buffer_is_full": [
+   0
+  ],
+  "furi_stream_buffer_receive": [
+   0
+  ],
+  "furi_stream_buffer_reset": [
+   0
+  ],
+  "furi_stream_buffer_send": [
+   0
+  ],
+  "furi_stream_buffer_spaces_available": [
+   0
+  ],
+  "furi_stream_get_trigger_level": [
+   0
+  ],
+  "furi_stream_set_trigger_level": [
+   0
+  ],
+  "furi_thread_disable_heap_trace": [
+   0
+  ],
+  "furi_thread_enable_heap_trace": [
+   0
+  ],
+  "furi_thread_enumerate": [
+   0
+  ],
+  "furi_thread_free": [
+   0
+  ],
+  "furi_thread_get_heap_size": [
+   0
+  ],
+  "furi_thread_get_id": [
+   0
+  ],
+  "furi_thread_get_priority": [
+   0
+  ],
+  "furi_thread_get_return_code": [
+   0
+  ],
+  "furi_thread_get_signal_callback": [
+   0
+  ],
+  "furi_thread_get_state": [
+   0
+  ],
+  "furi_thread_get_stdin_callback": [
+   0,
+   1
+  ],
+  "furi_thread_get_stdout_callback": [
+   0,
+   1
+  ],
+  "furi_thread_is_suspended": [
+   0
+  ],
+  "furi_thread_join": [
+   0
+  ],
+  "furi_thread_list_free": [
+   0
+  ],
+  "furi_thread_list_get_at": [
+   0
+  ],
+  "furi_thread_list_get_or_insert": [
+   0
+  ],
+  "furi_thread_list_size": [
+   0
+  ],
+  "furi_thread_resume": [
+   0
+  ],
+  "furi_thread_set_appid": [
+   0
+  ],
+  "furi_thread_set_callback": [
+   0
+  ],
+  "furi_thread_set_context": [
+   0
+  ],
+  "furi_thread_set_name": [
+   0
+  ],
+  "furi_thread_set_priority": [
+   0
+  ],
+  "furi_thread_set_signal_callback": [
+   0
+  ],
+  "furi_thread_set_stack_size": [
+   0,
+   1
+  ],
+  "furi_thread_set_state_callback": [
+   0
+  ],
+  "furi_thread_set_state_context": [
+   0
+  ],
+  "furi_thread_signal": [
+   0
+  ],
+  "furi_thread_start": [
+   0
+  ],
+  "furi_thread_suspend": [
+   0
+  ],
+  "furi_timer_free": [
+   0
+  ],
+  "furi_timer_get_expire_time": [
+   0
+  ],
+  "furi_timer_is_running": [
+   0
+  ],
+  "furi_timer_pending_callback": [
+   0
+  ],
+  "furi_timer_restart": [
+   0
+  ],
+  "furi_timer_start": [
+   0
+  ],
+  "furi_timer_stop": [
+   0
+  ],
+  "gui_add_framebuffer_callback": [
+   0
+  ],
+  "gui_add_view_port": [
+   0,
+   1
+  ],
+  "gui_direct_draw_acquire": [
+   0
+  ],
+  "gui_direct_draw_release": [
+   0
+  ],
+  "gui_get_framebuffer_size": [
+   0
+  ],
+  "gui_is_lockdown": [
+   0
+  ],
+  "gui_remove_framebuffer_callback": [
+   0
+  ],
+  "gui_remove_view_port": [
+   0,
+   1
+  ],
+  "gui_set_lockdown": [
+   0
+  ],
+  "gui_set_lockdown_inhibit": [
+   0
+  ],
+  "gui_view_port_send_to_front": [
+   0,
+   1
+  ],
+  "hex_char_to_hex_nibble": [
+   1
+  ],
+  "hex_char_to_uint8": [
+   2
+  ],
+  "hex_chars_to_uint64": [
+   0,
+   1
+  ],
+  "hex_chars_to_uint8": [
+   0,
+   1
+  ],
+  "icon_animation_alloc": [
+   0
+  ],
+  "icon_animation_free": [
+   0
+  ],
+  "icon_animation_get_height": [
+   0
+  ],
+  "icon_animation_get_width": [
+   0
+  ],
+  "icon_animation_is_last_frame": [
+   0
+  ],
+  "icon_animation_set_update_callback": [
+   0
+  ],
+  "icon_animation_start": [
+   0
+  ],
+  "icon_animation_stop": [
+   0
+  ],
+  "icon_get_data": [
+   0
+  ],
+  "icon_get_height": [
+   0
+  ],
+  "icon_get_width": [
+   0
+  ],
+  "keys_dict_add_key": [
+   0,
+   1
+  ],
+  "keys_dict_alloc": [
+   0
+  ],
+  "keys_dict_check_presence": [
+   0
+  ],
+  "keys_dict_delete_key": [
+   0,
+   1
+  ],
+  "keys_dict_free": [
+   0
+  ],
+  "keys_dict_get_next_key": [
+   0,
+   1
+  ],
+  "keys_dict_get_total_keys": [
+   0
+  ],
+  "keys_dict_is_key_present": [
+   0,
+   1
+  ],
+  "keys_dict_rewind": [
+   0
+  ],
+  "loader_get_menu_style_name": [
+   0
+  ],
+  "loader_get_pubsub": [
+   0
+  ],
+  "loader_set_menu_style": [
+   0
+  ],
+  "loader_show_games_menu": [
+   0
+  ],
+  "loader_show_menu": [
+   0
+  ],
+  "loader_show_settings": [
+   0
+  ],
+  "loader_start_detached_with_gui_error": [
+   0,
+   1
+  ],
+  "loader_start_with_gui_error": [
+   0,
+   1
+  ],
+  "loader_unlock": [
+   0
+  ],
+  "loading_free": [
+   0
+  ],
+  "loading_get_view": [
+   0
+  ],
+  "loading_reset_progress": [
+   0
+  ],
+  "loading_set_progress": [
+   0
+  ],
+  "loading_set_text": [
+   0
+  ],
+  "manchester_encoder_advance": [
+   0,
+   2
+  ],
+  "manchester_encoder_finish": [
+   0
+  ],
+  "manchester_encoder_reset": [
+   0
+  ],
+  "menu_add_item": [
+   0,
+   1
+  ],
+  "menu_free": [
+   0
+  ],
+  "menu_get_selected_item": [
+   0
+  ],
+  "menu_get_view": [
+   0
+  ],
+  "menu_reset": [
+   0
+  ],
+  "menu_set_input_observer": [
+   0
+  ],
+  "menu_set_selected_item": [
+   0
+  ],
+  "menu_set_style": [
+   0
+  ],
+  "name_generator_make_detailed": [
+   0,
+   1,
+   2
+  ],
+  "name_generator_make_detailed_datetime": [
+   0,
+   1
+  ],
+  "name_generator_make_random": [
+   0,
+   1
+  ],
+  "name_generator_make_random_prefixed": [
+   0,
+   1
+  ],
+  "notification_internal_message": [
+   0,
+   1
+  ],
+  "notification_internal_message_block": [
+   0,
+   1
+  ],
+  "notification_message": [
+   0,
+   1
+  ],
+  "notification_message_block": [
+   0,
+   1
+  ],
+  "number_input_free": [
+   0
+  ],
+  "number_input_get_view": [
+   0
+  ],
+  "number_input_set_header_text": [
+   0
+  ],
+  "number_input_set_result_callback": [
+   0
+  ],
+  "path_append": [
+   0,
+   1
+  ],
+  "path_concat": [
+   0,
+   1,
+   2
+  ],
+  "path_extract_basename": [
+   0,
+   1
+  ],
+  "path_extract_dirname": [
+   0,
+   1
+  ],
+  "path_extract_extension": [
+   0,
+   1
+  ],
+  "path_extract_filename": [
+   0,
+   1
+  ],
+  "path_extract_filename_no_ext": [
+   0,
+   1
+  ],
+  "pipe_attach_to_event_loop": [
+   0,
+   1
+  ],
+  "pipe_bytes_available": [
+   0
+  ],
+  "pipe_detach_from_event_loop": [
+   0
+  ],
+  "pipe_free": [
+   0
+  ],
+  "pipe_install_as_stdio": [
+   0
+  ],
+  "pipe_receive": [
+   0
+  ],
+  "pipe_role": [
+   0
+  ],
+  "pipe_send": [
+   0
+  ],
+  "pipe_set_broken_callback": [
+   0
+  ],
+  "pipe_set_callback_context": [
+   0
+  ],
+  "pipe_set_data_arrived_callback": [
+   0
+  ],
+  "pipe_set_space_freed_callback": [
+   0
+  ],
+  "pipe_set_state_check_period": [
+   0
+  ],
+  "pipe_spaces_available": [
+   0
+  ],
+  "pipe_state": [
+   0
+  ],
+  "plugin_manager_free": [
+   0
+  ],
+  "plugin_manager_get": [
+   0
+  ],
+  "plugin_manager_get_count": [
+   0
+  ],
+  "plugin_manager_get_ep": [
+   0
+  ],
+  "plugin_manager_load_all": [
+   0
+  ],
+  "plugin_manager_load_all_prefixed": [
+   0
+  ],
+  "plugin_manager_load_single": [
+   0
+  ],
+  "popup_disable_timeout": [
+   0
+  ],
+  "popup_enable_timeout": [
+   0
+  ],
+  "popup_free": [
+   0
+  ],
+  "popup_get_view": [
+   0
+  ],
+  "popup_reset": [
+   0
+  ],
+  "popup_set_callback": [
+   0
+  ],
+  "popup_set_context": [
+   0
+  ],
+  "popup_set_header": [
+   0
+  ],
+  "popup_set_icon": [
+   0
+  ],
+  "popup_set_text": [
+   0
+  ],
+  "popup_set_timeout": [
+   0
+  ],
+  "pretty_format_bytes_hex_canonical": [
+   3
+  ],
+  "property_value_out": [
+   0
+  ],
+  "protocol_dict_alloc": [
+   0
+  ],
+  "protocol_dict_decoders_feed": [
+   0
+  ],
+  "protocol_dict_decoders_feed_by_feature": [
+   0
+  ],
+  "protocol_dict_decoders_start": [
+   0
+  ],
+  "protocol_dict_free": [
+   0
+  ],
+  "protocol_dict_get_max_data_size": [
+   0
+  ],
+  "protocol_dict_get_protocol_by_name": [
+   0,
+   1
+  ],
+  "saved_struct_get_metadata": [
+   0
+  ],
+  "saved_struct_load": [
+   0,
+   1,
+   2
+  ],
+  "saved_struct_save": [
+   0,
+   1,
+   2
+  ],
+  "scene_manager_alloc": [
+   0
+  ],
+  "scene_manager_free": [
+   0
+  ],
+  "scene_manager_get_current_scene": [
+   0
+  ],
+  "scene_manager_get_scene_state": [
+   0
+  ],
+  "scene_manager_handle_back_event": [
+   0
+  ],
+  "scene_manager_handle_custom_event": [
+   0
+  ],
+  "scene_manager_handle_tick_event": [
+   0
+  ],
+  "scene_manager_has_previous_scene": [
+   0
+  ],
+  "scene_manager_next_scene": [
+   0
+  ],
+  "scene_manager_previous_scene": [
+   0
+  ],
+  "scene_manager_search_and_switch_to_another_scene": [
+   0
+  ],
+  "scene_manager_search_and_switch_to_previous_scene": [
+   0
+  ],
+  "scene_manager_search_and_switch_to_previous_scene_one_of": [
+   0,
+   1
+  ],
+  "scene_manager_set_scene_state": [
+   0
+  ],
+  "scene_manager_stop": [
+   0
+  ],
+  "simple_array_cget": [
+   0
+  ],
+  "simple_array_cget_data": [
+   0
+  ],
+  "simple_array_copy": [
+   0,
+   1
+  ],
+  "simple_array_free": [
+   0
+  ],
+  "simple_array_get": [
+   0
+  ],
+  "simple_array_get_count": [
+   0
+  ],
+  "simple_array_get_data": [
+   0
+  ],
+  "simple_array_init": [
+   0
+  ],
+  "simple_array_is_equal": [
+   0,
+   1
+  ],
+  "simple_array_reset": [
+   0
+  ],
+  "storage_common_copy": [
+   0
+  ],
+  "storage_common_exists": [
+   0
+  ],
+  "storage_common_fs_info": [
+   0
+  ],
+  "storage_common_merge": [
+   0
+  ],
+  "storage_common_migrate": [
+   0
+  ],
+  "storage_common_mkdir": [
+   0
+  ],
+  "storage_common_remove": [
+   0
+  ],
+  "storage_common_rename": [
+   0
+  ],
+  "storage_common_rename_safe": [
+   0
+  ],
+  "storage_common_resolve_path_and_ensure_app_directory": [
+   0
+  ],
+  "storage_common_stat": [
+   0
+  ],
+  "storage_common_timestamp": [
+   0
+  ],
+  "storage_dir_exists": [
+   0
+  ],
+  "storage_dir_open": [
+   0
+  ],
+  "storage_file_alloc": [
+   0
+  ],
+  "storage_file_copy_to_file": [
+   0,
+   1
+  ],
+  "storage_file_exists": [
+   0
+  ],
+  "storage_file_free": [
+   0
+  ],
+  "storage_file_get_error": [
+   0
+  ],
+  "storage_file_get_error_desc": [
+   0
+  ],
+  "storage_file_get_internal_error": [
+   0
+  ],
+  "storage_file_is_dir": [
+   0
+  ],
+  "storage_file_is_open": [
+   0
+  ],
+  "storage_file_open": [
+   0
+  ],
+  "storage_file_write": [
+   0
+  ],
+  "storage_get_next_filename": [
+   0
+  ],
+  "storage_get_pubsub": [
+   0
+  ],
+  "storage_int_backup": [
+   0
+  ],
+  "storage_sd_format": [
+   0
+  ],
+  "storage_sd_info": [
+   0
+  ],
+  "storage_sd_mount": [
+   0
+  ],
+  "storage_sd_status": [
+   0
+  ],
+  "storage_sd_unmount": [
+   0
+  ],
+  "storage_simply_mkdir": [
+   0
+  ],
+  "storage_simply_remove": [
+   0
+  ],
+  "storage_simply_remove_recursive": [
+   0,
+   1
+  ],
+  "storage_virtual_format": [
+   0
+  ],
+  "storage_virtual_init": [
+   0,
+   1
+  ],
+  "storage_virtual_mount": [
+   0
+  ],
+  "storage_virtual_quit": [
+   0
+  ],
+  "storage_virtual_unmount": [
+   0
+  ],
+  "stream_clean": [
+   0
+  ],
+  "stream_copy": [
+   0,
+   1
+  ],
+  "stream_copy_full": [
+   0,
+   1
+  ],
+  "stream_delete": [
+   0
+  ],
+  "stream_delete_and_insert": [
+   0
+  ],
+  "stream_delete_and_insert_char": [
+   0
+  ],
+  "stream_delete_and_insert_cstring": [
+   0
+  ],
+  "stream_delete_and_insert_format": [
+   0
+  ],
+  "stream_delete_and_insert_string": [
+   0
+  ],
+  "stream_delete_and_insert_vaformat": [
+   0
+  ],
+  "stream_dump_data": [
+   0
+  ],
+  "stream_eof": [
+   0
+  ],
+  "stream_free": [
+   0
+  ],
+  "stream_insert": [
+   0
+  ],
+  "stream_insert_char": [
+   0
+  ],
+  "stream_insert_cstring": [
+   0
+  ],
+  "stream_insert_format": [
+   0
+  ],
+  "stream_insert_string": [
+   0
+  ],
+  "stream_insert_vaformat": [
+   0
+  ],
+  "stream_load_from_file": [
+   0,
+   1
+  ],
+  "stream_read": [
+   0
+  ],
+  "stream_read_line": [
+   0,
+   1
+  ],
+  "stream_rewind": [
+   0
+  ],
+  "stream_save_to_file": [
+   0,
+   1
+  ],
+  "stream_seek": [
+   0
+  ],
+  "stream_seek_to_char": [
+   0
+  ],
+  "stream_size": [
+   0
+  ],
+  "stream_split": [
+   0
+  ],
+  "stream_tell": [
+   0
+  ],
+  "stream_write": [
+   0
+  ],
+  "stream_write_char": [
+   0
+  ],
+  "stream_write_cstring": [
+   0
+  ],
+  "stream_write_format": [
+   0
+  ],
+  "stream_write_string": [
+   0
+  ],
+  "stream_write_vaformat": [
+   0
+  ],
+  "subghz_block_generic_deserialize_check_count_bit": [
+   0
+  ],
+  "subghz_block_generic_serialize": [
+   0
+  ],
+  "subghz_devices_begin": [
+   0
+  ],
+  "subghz_devices_check_tx": [
+   0
+  ],
+  "subghz_devices_end": [
+   0
+  ],
+  "subghz_devices_flush_rx": [
+   0
+  ],
+  "subghz_devices_flush_tx": [
+   0
+  ],
+  "subghz_devices_get_data_gpio": [
+   0
+  ],
+  "subghz_devices_get_lqi": [
+   0
+  ],
+  "subghz_devices_get_rssi": [
+   0
+  ],
+  "subghz_devices_idle": [
+   0
+  ],
+  "subghz_devices_is_async_complete_tx": [
+   0
+  ],
+  "subghz_devices_is_connect": [
+   0
+  ],
+  "subghz_devices_is_frequency_valid": [
+   0
+  ],
+  "subghz_devices_is_rx_data_crc_valid": [
+   0
+  ],
+  "subghz_devices_load_preset": [
+   0
+  ],
+  "subghz_devices_read_packet": [
+   0
+  ],
+  "subghz_devices_reset": [
+   0
+  ],
+  "subghz_devices_rx_pipe_not_empty": [
+   0
+  ],
+  "subghz_devices_set_async_mirror_pin": [
+   0
+  ],
+  "subghz_devices_set_frequency": [
+   0
+  ],
+  "subghz_devices_set_rx": [
+   0
+  ],
+  "subghz_devices_set_tx": [
+   0
+  ],
+  "subghz_devices_sleep": [
+   0
+  ],
+  "subghz_devices_start_async_rx": [
+   0
+  ],
+  "subghz_devices_start_async_tx": [
+   0
+  ],
+  "subghz_devices_stop_async_rx": [
+   0
+  ],
+  "subghz_devices_stop_async_tx": [
+   0
+  ],
+  "subghz_devices_write_packet": [
+   0
+  ],
+  "subghz_environment_free": [
+   0
+  ],
+  "subghz_environment_get_keystore": [
+   0
+  ],
+  "subghz_environment_load_keystore": [
+   0
+  ],
+  "subghz_environment_set_alutech_at_4n_rainbow_table_file_name": [
+   0
+  ],
+  "subghz_environment_set_came_atomo_rainbow_table_file_name": [
+   0
+  ],
+  "subghz_environment_set_nice_flor_s_rainbow_table_file_name": [
+   0
+  ],
+  "subghz_environment_set_protocol_registry": [
+   0
+  ],
+  "subghz_protocol_decoder_base_deserialize": [
+   0
+  ],
+  "subghz_protocol_decoder_base_get_hash_data": [
+   0
+  ],
+  "subghz_protocol_decoder_base_get_string": [
+   0,
+   1
+  ],
+  "subghz_protocol_decoder_base_serialize": [
+   0,
+   1
+  ],
+  "subghz_protocol_decoder_base_set_decoder_callback": [
+   0
+  ],
+  "subghz_protocol_decoder_bin_raw_data_input_rssi": [
+   0
+  ],
+  "subghz_protocol_decoder_ditec_gol4_feed": [
+   0
+  ],
+  "subghz_protocol_decoder_raw_feed": [
+   0
+  ],
+  "subghz_protocol_decoder_raw_free": [
+   0
+  ],
+  "subghz_protocol_decoder_raw_get_string": [
+   0
+  ],
+  "subghz_protocol_decoder_raw_reset": [
+   0
+  ],
+  "subghz_protocol_encoder_raw_free": [
+   0
+  ],
+  "subghz_protocol_encoder_raw_stop": [
+   0
+  ],
+  "subghz_protocol_encoder_raw_yield": [
+   0
+  ],
+  "subghz_protocol_keeloq_create_data": [
+   0
+  ],
+  "subghz_protocol_raw_file_encoder_worker_set_callback_end": [
+   0,
+   1
+  ],
+  "subghz_protocol_raw_gen_fff_data": [
+   0
+  ],
+  "subghz_protocol_raw_get_sample_write": [
+   0
+  ],
+  "subghz_protocol_raw_save_to_file_init": [
+   0
+  ],
+  "subghz_protocol_raw_save_to_file_pause": [
+   0
+  ],
+  "subghz_protocol_raw_save_to_file_stop": [
+   0
+  ],
+  "subghz_protocol_registry_count": [
+   0
+  ],
+  "subghz_protocol_registry_get_by_index": [
+   0
+  ],
+  "subghz_protocol_registry_get_by_name": [
+   0
+  ],
+  "subghz_protocol_secplus_v2_create_data": [
+   0
+  ],
+  "subghz_receiver_decode": [
+   0
+  ],
+  "subghz_receiver_free": [
+   0
+  ],
+  "subghz_receiver_reset": [
+   0
+  ],
+  "subghz_receiver_search_decoder_base_by_name": [
+   0
+  ],
+  "subghz_receiver_set_filter": [
+   0
+  ],
+  "subghz_receiver_set_rx_callback": [
+   0
+  ],
+  "subghz_setting_delete_custom_preset": [
+   0,
+   1
+  ],
+  "subghz_setting_free": [
+   0
+  ],
+  "subghz_setting_get_default_frequency": [
+   0
+  ],
+  "subghz_setting_get_frequency": [
+   0
+  ],
+  "subghz_setting_get_frequency_count": [
+   0
+  ],
+  "subghz_setting_get_frequency_default_index": [
+   0
+  ],
+  "subghz_setting_get_hopper_frequency": [
+   0
+  ],
+  "subghz_setting_get_hopper_frequency_count": [
+   0
+  ],
+  "subghz_setting_get_inx_preset_by_name": [
+   0
+  ],
+  "subghz_setting_get_preset_count": [
+   0
+  ],
+  "subghz_setting_get_preset_data": [
+   0
+  ],
+  "subghz_setting_get_preset_data_by_name": [
+   0
+  ],
+  "subghz_setting_get_preset_data_size": [
+   0
+  ],
+  "subghz_setting_get_preset_name": [
+   0
+  ],
+  "subghz_setting_load": [
+   0
+  ],
+  "subghz_setting_load_custom_preset": [
+   0,
+   1
+  ],
+  "subghz_transmitter_free": [
+   0
+  ],
+  "subghz_transmitter_get_protocol_instance": [
+   0
+  ],
+  "subghz_transmitter_stop": [
+   0
+  ],
+  "subghz_tx_rx_worker_available": [
+   0
+  ],
+  "subghz_tx_rx_worker_free": [
+   0
+  ],
+  "subghz_tx_rx_worker_is_running": [
+   0
+  ],
+  "subghz_tx_rx_worker_read": [
+   0
+  ],
+  "subghz_tx_rx_worker_set_callback_have_read": [
+   0,
+   1,
+   2
+  ],
+  "subghz_tx_rx_worker_start": [
+   0
+  ],
+  "subghz_tx_rx_worker_stop": [
+   0
+  ],
+  "subghz_tx_rx_worker_write": [
+   0
+  ],
+  "subghz_worker_free": [
+   0
+  ],
+  "subghz_worker_is_running": [
+   0
+  ],
+  "subghz_worker_set_context": [
+   0
+  ],
+  "subghz_worker_set_filter": [
+   0
+  ],
+  "subghz_worker_set_overrun_callback": [
+   0
+  ],
+  "subghz_worker_set_pair_callback": [
+   0
+  ],
+  "subghz_worker_start": [
+   0
+  ],
+  "subghz_worker_stop": [
+   0
+  ],
+  "submenu_add_item": [
+   0,
+   1
+  ],
+  "submenu_add_item_ex": [
+   0,
+   1
+  ],
+  "submenu_add_lockable_item": [
+   0,
+   1,
+   6
+  ],
+  "submenu_change_item_label": [
+   0,
+   2
+  ],
+  "submenu_free": [
+   0
+  ],
+  "submenu_get_selected_item": [
+   0
+  ],
+  "submenu_get_view": [
+   0
+  ],
+  "submenu_remove_item": [
+   0
+  ],
+  "submenu_reset": [
+   0
+  ],
+  "submenu_set_header": [
+   0
+  ],
+  "submenu_set_orientation": [
+   0
+  ],
+  "submenu_set_selected_item": [
+   0
+  ],
+  "submenu_settings_helpers_app_start": [
+   0
+  ],
+  "submenu_settings_helpers_assign_objects": [
+   0,
+   1,
+   2,
+   3
+  ],
+  "submenu_settings_helpers_scene_enter": [
+   0
+  ],
+  "submenu_settings_helpers_scene_event": [
+   0
+  ],
+  "submenu_settings_helpers_scene_exit": [
+   0
+  ],
+  "tar_archive_add_dir": [
+   0,
+   2
+  ],
+  "tar_archive_add_file": [
+   0
+  ],
+  "tar_archive_alloc": [
+   0
+  ],
+  "tar_archive_dir_add_element": [
+   0
+  ],
+  "tar_archive_file_add_data_block": [
+   0
+  ],
+  "tar_archive_file_add_header": [
+   0
+  ],
+  "tar_archive_file_finalize": [
+   0
+  ],
+  "tar_archive_finalize": [
+   0
+  ],
+  "tar_archive_free": [
+   0
+  ],
+  "tar_archive_get_entries_count": [
+   0
+  ],
+  "tar_archive_get_read_progress": [
+   0
+  ],
+  "tar_archive_open": [
+   0
+  ],
+  "tar_archive_set_file_callback": [
+   0
+  ],
+  "tar_archive_set_read_callback": [
+   0
+  ],
+  "tar_archive_store_data": [
+   0
+  ],
+  "tar_archive_unpack_file": [
+   0,
+   1,
+   2
+  ],
+  "tar_archive_unpack_to": [
+   0
+  ],
+  "text_box_free": [
+   0
+  ],
+  "text_box_get_view": [
+   0
+  ],
+  "text_box_reset": [
+   0
+  ],
+  "text_box_set_focus": [
+   0
+  ],
+  "text_box_set_font": [
+   0
+  ],
+  "text_box_set_text": [
+   0,
+   1
+  ],
+  "text_input_free": [
+   0
+  ],
+  "text_input_get_validator_callback": [
+   0
+  ],
+  "text_input_get_validator_callback_context": [
+   0
+  ],
+  "text_input_get_view": [
+   0
+  ],
+  "text_input_reset": [
+   0
+  ],
+  "text_input_set_header_text": [
+   0
+  ],
+  "text_input_set_minimum_length": [
+   0
+  ],
+  "text_input_set_result_callback": [
+   0
+  ],
+  "text_input_set_validator": [
+   0
+  ],
+  "text_input_show_illegal_symbols": [
+   0
+  ],
+  "uint8_to_hex_chars": [
+   0,
+   1
+  ],
+  "validator_is_file_callback": [
+   2
+  ],
+  "validator_is_file_free": [
+   0
+  ],
+  "variable_item_get_context": [
+   0
+  ],
+  "variable_item_get_current_value_index": [
+   0
+  ],
+  "variable_item_list_add": [
+   0,
+   1
+  ],
+  "variable_item_list_free": [
+   0
+  ],
+  "variable_item_list_get": [
+   0
+  ],
+  "variable_item_list_get_selected_item_index": [
+   0
+  ],
+  "variable_item_list_get_view": [
+   0
+  ],
+  "variable_item_list_reset": [
+   0
+  ],
+  "variable_item_list_set_enter_callback": [
+   1
+  ],
+  "variable_item_list_set_header": [
+   0
+  ],
+  "variable_item_list_set_selected_item": [
+   0
+  ],
+  "variable_item_set_current_value_index": [
+   0
+  ],
+  "variable_item_set_current_value_text": [
+   0
+  ],
+  "variable_item_set_item_label": [
+   0,
+   1
+  ],
+  "variable_item_set_locked": [
+   0
+  ],
+  "variable_item_set_values_count": [
+   0
+  ],
+  "view_allocate_model": [
+   0
+  ],
+  "view_commit_model": [
+   0
+  ],
+  "view_custom": [
+   0
+  ],
+  "view_dispatcher_add_view": [
+   0,
+   2
+  ],
+  "view_dispatcher_attach_to_gui": [
+   0,
+   1
+  ],
+  "view_dispatcher_check_id": [
+   0
+  ],
+  "view_dispatcher_get_event_loop": [
+   0
+  ],
+  "view_dispatcher_remove_view": [
+   0
+  ],
+  "view_dispatcher_run": [
+   0
+  ],
+  "view_dispatcher_send_custom_event": [
+   0
+  ],
+  "view_dispatcher_send_to_back": [
+   0
+  ],
+  "view_dispatcher_send_to_front": [
+   0
+  ],
+  "view_dispatcher_set_current_view": [
+   0
+  ],
+  "view_dispatcher_set_custom_event_callback": [
+   0
+  ],
+  "view_dispatcher_set_event_callback_context": [
+   0
+  ],
+  "view_dispatcher_set_navigation_event_callback": [
+   0
+  ],
+  "view_dispatcher_set_tick_event_callback": [
+   0
+  ],
+  "view_dispatcher_show_loading": [
+   0
+  ],
+  "view_dispatcher_stop": [
+   0
+  ],
+  "view_dispatcher_switch_to_view": [
+   0
+  ],
+  "view_dispatcher_update": [
+   0,
+   1
+  ],
+  "view_draw": [
+   0
+  ],
+  "view_enter": [
+   0
+  ],
+  "view_exit": [
+   0
+  ],
+  "view_free": [
+   0
+  ],
+  "view_free_model": [
+   0
+  ],
+  "view_get_model": [
+   0
+  ],
+  "view_holder_attach_to_gui": [
+   0,
+   1
+  ],
+  "view_holder_free": [
+   0
+  ],
+  "view_holder_send_to_back": [
+   0
+  ],
+  "view_holder_send_to_front": [
+   0
+  ],
+  "view_holder_set_back_callback": [
+   0
+  ],
+  "view_holder_set_free_callback": [
+   0
+  ],
+  "view_holder_set_view": [
+   0
+  ],
+  "view_holder_update": [
+   0,
+   1
+  ],
+  "view_icon_animation_callback": [
+   1
+  ],
+  "view_input": [
+   0
+  ],
+  "view_port_draw": [
+   0,
+   1
+  ],
+  "view_port_draw_callback_set": [
+   0
+  ],
+  "view_port_enabled_set": [
+   0
+  ],
+  "view_port_free": [
+   0
+  ],
+  "view_port_get_height": [
+   0
+  ],
+  "view_port_get_orientation": [
+   0
+  ],
+  "view_port_get_width": [
+   0
+  ],
+  "view_port_gui_set": [
+   0
+  ],
+  "view_port_input": [
+   0,
+   1
+  ],
+  "view_port_input_callback_set": [
+   0
+  ],
+  "view_port_is_enabled": [
+   0
+  ],
+  "view_port_set_height": [
+   0
+  ],
+  "view_port_set_orientation": [
+   0
+  ],
+  "view_port_set_width": [
+   0
+  ],
+  "view_port_update": [
+   0
+  ],
+  "view_previous": [
+   0
+  ],
+  "view_set_context": [
+   0
+  ],
+  "view_set_custom_callback": [
+   0
+  ],
+  "view_set_draw_callback": [
+   0
+  ],
+  "view_set_enter_callback": [
+   0
+  ],
+  "view_set_exit_callback": [
+   0
+  ],
+  "view_set_input_callback": [
+   0
+  ],
+  "view_set_orientation": [
+   0
+  ],
+  "view_set_previous_callback": [
+   0
+  ],
+  "view_set_update_callback": [
+   0
+  ],
+  "view_set_update_callback_context": [
+   0
+  ],
+  "view_tie_icon_animation": [
+   0
+  ],
+  "view_unlock_model": [
+   0
+  ],
+  "widget_add_button_element": [
+   0
+  ],
+  "widget_add_circle_element": [
+   0
+  ],
+  "widget_add_icon_element": [
+   0,
+   3
+  ],
+  "widget_add_line_element": [
+   0
+  ],
+  "widget_add_rect_element": [
+   0
+  ],
+  "widget_add_string_element": [
+   0
+  ],
+  "widget_add_string_multiline_element": [
+   0
+  ],
+  "widget_add_text_box_element": [
+   0
+  ],
+  "widget_add_text_scroll_element": [
+   0
+  ],
+  "widget_free": [
+   0
+  ],
+  "widget_get_view": [
+   0
+  ],
+  "widget_reset": [
+   0
+  ]
+ }
+}
