@@ -53,15 +53,18 @@ side by side (different app ids).
 ## Verification status at a glance
 
 **Every feature below is implemented, compiles for its editions and firmware
-families, and passes CI. None has yet been verified on a physical Flipper
-Zero.** "Unit-tested" means the feature's firmware-independent logic is covered
+families, and passes CI. On a physical Flipper Zero only a few are
+confirmed so far:** the owner's 1.0.0-code session on RogueMaster
+`4f2e06200` (Full edition) covered launch and exit, the Frequency Scanner,
+the Adaptive Scanner and the RF Activity Logger. "Partly" below means that
+session only, not the feature's full checklist. "Unit-tested" means the feature's firmware-independent logic is covered
 by the host test suite (2,528 checks, plus format, decoder, capture, engine
 lifecycle, file and offline UI tests); radio behaviour and the screens' real look
 can only be confirmed on a device ([VERIFICATION.md](VERIFICATION.md)).
 
 | Feature | Implemented | Unit-tested logic | Verified on hardware |
 |---------|:-----------:|:-----------------:|:--------------------:|
-| [Sub-GHz Scanner](#sub-ghz-scanner) | ✅ | ✅ floor, activity, CSV rows; engine start/stop cycles | ⏳ pending |
+| [Sub-GHz Scanner](#sub-ghz-scanner) | ✅ | ✅ floor, activity, CSV rows; engine start/stop cycles | 🟡 partly (works on RogueMaster `4f2e06200`) |
 | [Range Scanner](#range-scanner-full-edition) *(Full)* | ✅ | ✅ band probe, plans across gaps, display maths; engine start/stop cycles | ⏳ pending |
 | [Waterfall](#waterfall-full-edition) *(Full)* | ✅ | ✅ history wraparound, column/pixel mapping, levels, missing cells, render; engine with history on real threads; screen on a host canvas | ⏳ pending |
 | [Bitstream Explorer](#bitstream-explorer-full-edition) *(Full)* | ✅ | ✅ bits, bytes from any offset, diff markers, fields; screen and keys on a host canvas | ⏳ pending |
@@ -69,8 +72,8 @@ can only be confirmed on a device ([VERIFICATION.md](VERIFICATION.md)).
 | [Research Sessions](#research-sessions-full-edition) *(Full)* | ✅ | ✅ file format, a failure at each save step, recovery, grouping; fuzzed | ⏳ pending |
 | [Find Similar Signals](#find-similar-signals-full-edition) *(Full)* | ✅ | ✅ fingerprints of synthetic families, ranking, explanations, evidence caps; index files through the firmware's FlipperFormat; fuzzed | ⏳ pending |
 | [Pulse Studio](#pulse-studio-full-edition) *(Full)* | ✅ | ✅ bit map both ways, preamble, glitches, windows, histogram, diff; every page and frame on a host canvas | ⏳ pending |
-| [Adaptive Scanner](#adaptive-scanner-full-edition) *(Full)* | ✅ | ✅ fairness bound, run limit, dwell bounds, simulated traffic; engine start/stop cycles | ⏳ pending |
-| [RF Activity Logger](#rf-activity-logger-full-edition) *(Full)* | ✅ | ✅ rows, unobserved vs quiet, rotation, card full, summary | ⏳ pending |
+| [Adaptive Scanner](#adaptive-scanner-full-edition) *(Full)* | ✅ | ✅ fairness bound, run limit, dwell bounds, simulated traffic; engine start/stop cycles | 🟡 partly (starts and stops on RogueMaster `4f2e06200`) |
+| [RF Activity Logger](#rf-activity-logger-full-edition) *(Full)* | ✅ | ✅ rows, unobserved vs quiet, rotation, card full, summary | 🟡 partly (loads after the Adaptive Scanner on RogueMaster `4f2e06200`) |
 | [Research Journal, XP, Assistant](#research-journal-xp-and-assistant-full-edition) *(Full)* | ✅ | ✅ counters, caps, achievements, file recovery, tip rules and rate limits; fuzzed | ⏳ pending |
 | [Modules](#modules-full-edition) *(Full)* | ✅ | ✅ size estimate; every module's imports checked against each SDK | ⏳ pending |
 | [Favorites](#favorites-full-edition) and scan profiles *(Full)* | ✅ | ✅ file format, validation, sorting, failed saves | ⏳ pending |
@@ -793,7 +796,7 @@ region check.
 
 | Item | Status |
 |------|--------|
-| On-device verification of all features | Next milestone — [hardware checklist](HARDWARE_CHECKLIST.md) |
+| On-device verification of all features | Ongoing — [hardware checklist](HARDWARE_CHECKLIST.md) |
 | Custom frequency entry, custom modulation entry | Planned — currently a fixed table and four presets |
 | Decoders beyond the firmware's own library | Not planned for now — identification relies on the firmware |
 | Desktop companion application | Deferred; files stay standard `.sub` so one can be built later |
@@ -801,7 +804,7 @@ region check.
 
 ## Known limitations
 
-- **Hardware verification pending** — see above.
+- **Hardware verification partial** — see above.
 - **RAW capture length** — limited by the SD card. A slow card with very noisy
   input can fall behind and lose samples; they are counted and reported, not
   hidden. Analysis and similarity read the whole file.

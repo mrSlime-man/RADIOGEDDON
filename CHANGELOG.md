@@ -2,10 +2,40 @@
 
 All notable changes to RadioGeddon are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project aims
-to follow [Semantic Versioning](https://semver.org/) (pre-1.0.0 releases use
-`-beta.N` suffixes).
+to follow [Semantic Versioning](https://semver.org/) (the releases before
+1.0.0 used `-beta.N` suffixes).
 
 ## [Unreleased]
+
+## [1.0.0] - 2026-10-17
+
+First stable release. The application code is beta 13's, unchanged: no
+feature added or removed, both editions, all 19 Full-edition modules
+(module API 7), all five firmware builds and every transmit restriction
+kept. Notes: [docs/releases/v1.0.0.md](docs/releases/v1.0.0.md).
+
+### Changed
+- Version `1.0.0` (Apps Catalog `fap_version` stays `1.0`); published as
+  an ordinary, latest GitHub Release instead of a pre-release.
+- Documentation brought up to the stable release: README, installation,
+  firmware compatibility, features, FAQ, user guide, roadmap (maintenance
+  phase, no further beta series planned), security policy (1.0.x
+  supported) and the issue templates.
+- Apps Catalog description and changelog (`catalog/`) for the 1.0
+  submission; the description now lists recording recovery and memory
+  diagnostics, which the Catalog edition has.
+
+### Hardware evidence
+- The owner's beta 13 session on RogueMaster `4f2e06200` (API 88.4): four
+  launches and exits without a reboot, the Frequency Scanner, the Adaptive
+  Scanner and the RF Activity Logger after it, the `.rgtext` preload failure
+  not reproduced, about 65.9 KB of sections loaded and about 45 KB free
+  after start, no crash; occasional `ViewPort lockup` warnings during brief
+  screen transitions. Recorded in
+  [VERIFICATION.md](docs/VERIFICATION.md#reported-by-users-on-physical-hardware)
+  and the [hardware checklist](docs/HARDWARE_CHECKLIST.md#memory-and-relaunch-beta-13).
+  Receive, recording, transmission, most modules, the other firmware and
+  the Catalog edition on Official firmware are not yet tested on a device.
 
 ## [1.0.0-beta.13] - 2026-10-17
 
@@ -955,9 +985,18 @@ on physical hardware** — see `docs/VERIFICATION.md`.
 - Settings are not persisted across launches; internal radio only; RAW capture
   capped at 16,384 samples (engine analysis uses the first 4,096).
 
-[Unreleased]: https://github.com/mrSlime-man/RADIOGEDDON/compare/v1.0.0-beta.12...HEAD
+[Unreleased]: https://github.com/mrSlime-man/RADIOGEDDON/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/mrSlime-man/RADIOGEDDON/compare/v1.0.0-beta.13...v1.0.0
+[1.0.0-beta.13]: https://github.com/mrSlime-man/RADIOGEDDON/compare/v1.0.0-beta.12...v1.0.0-beta.13
 [1.0.0-beta.12]: https://github.com/mrSlime-man/RADIOGEDDON/compare/v1.0.0-beta.11...v1.0.0-beta.12
 [1.0.0-beta.11]: https://github.com/mrSlime-man/RADIOGEDDON/compare/v1.0.0-beta.10...v1.0.0-beta.11
 [1.0.0-beta.10]: https://github.com/mrSlime-man/RADIOGEDDON/compare/v1.0.0-beta.9...v1.0.0-beta.10
+[1.0.0-beta.9]: https://github.com/mrSlime-man/RADIOGEDDON/compare/v1.0.0-beta.8...v1.0.0-beta.9
+[1.0.0-beta.8]: https://github.com/mrSlime-man/RADIOGEDDON/compare/v1.0.0-beta.7...v1.0.0-beta.8
+[1.0.0-beta.7]: https://github.com/mrSlime-man/RADIOGEDDON/compare/v1.0.0-beta.6...v1.0.0-beta.7
+[1.0.0-beta.6]: https://github.com/mrSlime-man/RADIOGEDDON/compare/v1.0.0-beta.5...v1.0.0-beta.6
+[1.0.0-beta.5]: https://github.com/mrSlime-man/RADIOGEDDON/compare/v1.0.0-beta.4...v1.0.0-beta.5
+[1.0.0-beta.4]: https://github.com/mrSlime-man/RADIOGEDDON/compare/v1.0.0-beta.3...v1.0.0-beta.4
+[1.0.0-beta.3]: https://github.com/mrSlime-man/RADIOGEDDON/compare/v1.0.0-beta.2...v1.0.0-beta.3
 [1.0.0-beta.2]: https://github.com/mrSlime-man/RADIOGEDDON/compare/v1.0.0-beta.1...v1.0.0-beta.2
 [1.0.0-beta.1]: https://github.com/mrSlime-man/RADIOGEDDON/releases/tag/v1.0.0-beta.1

@@ -1,14 +1,19 @@
 # Verification Status
 
 What has been verified, how, and what has not. Integrity rule: nothing is
-marked hardware-verified without evidence from a physical device. As of
-`1.0.0-beta.12`, the only physical-hardware results are tester reports on
-beta 1 and beta 2 code (see "Reported by users" below); no checklist item is
-independently verified, and the "Not verified" section stands open.
-**Beta 12 is NOT HARDWARE TESTED** (nor was beta 11; the owner's beta 11
-report of the Adaptive Scanner crash is in
-[STABILITY_BETA12.md](STABILITY_BETA12.md)): every figure below comes from builds,
-host tests, a stub SD card or a host model of the firmware's heap.
+marked hardware-verified without evidence from a physical device.
+
+**Status for `1.0.0`** (the same application code as `1.0.0-beta.13`; only
+the version string and documentation changed): the owner has run beta 13 on
+a physical Flipper Zero with RogueMaster `4f2e06200` (API 88.4) — four
+launches and exits without a reboot, the Frequency Scanner, the Adaptive
+Scanner, the RF Activity Logger after it, and no crash (see "Reported by
+users" below). That is real but **limited** hardware evidence. Receiving and
+decoding, RAW recording, transmission, most of the 19 modules, the other
+firmware families and the Catalog edition on Official firmware have **not**
+been tested on a device, and the "Not verified" section stands open for
+them. The figures in the tables below come from builds, host tests, a stub
+SD card or a host model of the firmware's heap.
 
 ## Environment
 
@@ -499,6 +504,36 @@ evidence above and from the checklist's "Verified" bar.
 |------|----------|-------|-----------------|
 | 2026-10-09 | RogueMaster (version not recorded) | `v1.0.0-beta.1` | **Crash on launch**: "Flipper crashed and was rebooted — Out of memory", before the main menu. |
 | 2026-10-09 | RogueMaster (version not recorded) | PR #3 (memory fix, later `v1.0.0-beta.2`) | The app launches to the main menu and works ("it is working"). Individual checklist items were not reported separately. |
+| 2026-10-17 | RogueMaster `4f2e06200`, API 88.4 | `v1.0.0-beta.13`, `radiogeddon-full-roguemaster-4f2e06200-api88.4.fap` (application code identical to `v1.0.0`) | Owner's test, see below. Four launches and exits without rebooting; Frequency Scanner works; Adaptive Scanner starts and stops; RF Activity Logger loads again after it; the `.rgtext` preload failure did not reproduce; no crash. |
+
+**The beta 13 session on RogueMaster `4f2e06200` (owner, 2026-10-17).**
+Observed on the device and its log:
+
+- Four successful launches without rebooting the Flipper, and successful
+  exits (checklist Y1, and Y2 in part: four reopenings, not twenty).
+- The standard Frequency Scanner works.
+- The Adaptive Scanner starts and stops, and the RF Activity Logger loads
+  again after it (Y6 in part: beta 12 refused it with `needs 17088, 13024
+  free`).
+- The intermittent `Error loading section '.rgtext'` of beta 12 did not
+  reproduce in these four launches.
+- Resident loaded sections about 65.9 KB, down from about 84.8 KB in
+  beta 12 (the built-file figure is 66,003 B), and about 45 KB of heap free
+  after the app's initialization.
+- No fatal crash in any session.
+- Occasional `ViewPort lockup` warnings in the log during brief delays in a
+  screen transition, with no lasting malfunction. They are recorded as an
+  open observation, not a fixed or explained issue.
+- In one session the free heap after exit differed by 40 bytes. One reading
+  does not establish a reproducible leak; it is recorded so later reports
+  can confirm or rule it out.
+
+What this session did **not** cover: Receive and decoding against a
+remote (Y4, Y5), RAW recording, Replay or any transmission, the Database,
+analysis and research tools (Y7–Y10 and the earlier checklists), twenty
+fast relaunches, other apps in between (Y3), the other firmware families,
+and the Catalog edition on Official firmware. Four launches are too few to
+say the `.rgtext` failure is gone for good; they say it did not happen.
 
 The crash was caused by allocating about 110 KB of radio state (a 64 KB RAW
 buffer, the protocol decoders and keystore, and the Sub-GHz worker) at app
@@ -508,7 +543,9 @@ report through the hardware-report form to count as verified.
 
 ## NOT verified (requires physical hardware)
 
-Everything about on-device radio behaviour, and the end-to-end workflow. See the
+Everything about on-device radio behaviour, and the end-to-end workflow,
+beyond the beta 13 session above (launch, exit, Frequency Scanner, Adaptive
+Scanner and Logger on RogueMaster `4f2e06200`). See the
 [hardware checklist](HARDWARE_CHECKLIST.md). In particular:
 
 - Everything new in beta 10 (checklist U1–U12): that the Full edition now starts on the devices where beta 9 ran out of memory, each new module (Range Scanner, Settings, Hopper, Bitstream Explorer, About, recovery) loading through the firmware's plugin manager, recovery after a real power
@@ -584,7 +621,8 @@ Everything about on-device radio behaviour, and the end-to-end workflow. See the
 - Memory headroom of the larger Full edition on a device (checklist M1–M5):
   its binary footprint is 84,313 B in beta 10 (beta 9: 119,132 B; beta 8:
   119,428 B), and each module needs its own size and work free while in
-  use. Runtime RAM on a device has not been measured.
+  use. Runtime RAM on a device has been read only in the beta 13 session
+  above (about 45 KB free after start); module by module it is unmeasured.
 - The beta 7 research tools on a device (checklist B1–B9): the Waterfall's
   real sweep rate and readability, module loading by each firmware's plugin
   manager, the Bitstream Explorer and Multi-Capture Compare on captures from a

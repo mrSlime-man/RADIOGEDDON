@@ -38,7 +38,7 @@ body:
     attributes:
       label: RadioGeddon version
       description: Shown at the top of RadioGeddon → About.
-      placeholder: e.g. 1.0.0-beta.1
+      placeholder: e.g. 1.0.0
     validations:
       required: true
   - type: dropdown

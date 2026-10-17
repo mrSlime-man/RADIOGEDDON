@@ -1,3 +1,3 @@
 v1.0:
-- First Apps Catalog release (Catalog edition).
-- Scanner, Frequency Hopper, receive and RAW recording, firmware decoding of saved captures, signal analysis, pulse timeline, signal database, comparison and region-checked replay.
+- First Apps Catalog release: RadioGeddon 1.0.0, Catalog edition for the Official firmware.
+- Scanner, Frequency Hopper, receive and protocol identification, streaming RAW recording, Decode with Firmware, signal analysis, pulse timeline, comparison, signal database, recording recovery, memory diagnostics and region-checked replay.

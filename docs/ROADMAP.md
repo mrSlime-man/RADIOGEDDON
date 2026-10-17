@@ -4,9 +4,23 @@ Where RadioGeddon is headed. This is a plan, not a promise — priorities shift
 with what hardware testing finds and what contributors pick up. Dates are
 deliberately omitted.
 
-## Now — `1.0.0-beta.10`
+## Now — `1.0.0` (stable, maintenance)
 
-`1.0.0-beta.10` is an optimization release. The Full edition's resident code
+`1.0.0` is the first stable release. Its application code is beta 13's:
+the memory release (resident code 84,812 → 66,003 B on the RogueMaster
+`4f2e06200` build, five code sections, about 10 KB less per Receive
+session), on top of beta 12's crash fixes and every feature of betas 1–11:
+both editions, all 19 Full-edition modules and all five firmware builds.
+The owner has run it on RogueMaster `4f2e06200` (launch, exit, Frequency
+Scanner, Adaptive Scanner, RF Activity Logger, no crash); the rest of the
+hardware checklist is still open — see [VERIFICATION.md](VERIFICATION.md).
+
+The project is now in **maintenance**: fixing bugs that reports show,
+keeping the builds current with new firmware releases, and optional feature
+updates when they are worth it. No further beta series is planned. The
+Catalog edition is being submitted to the official Flipper Apps Catalog.
+
+`1.0.0-beta.10` was an optimization release. The Full edition's resident code
 drops from 119,132 B to 84,313 B (the Range Scanner, Settings, the Hopper,
 the Bitstream Explorer, About and recording recovery became modules), so it
 starts again where beta 9 ran out of memory; the Bitstream Explorer needs
@@ -16,7 +30,8 @@ duplicates in O(n log n); Find Similar lists the folder far less often,
 indexes beyond 500 recordings and searches within a time window or the
 active research session; an RF Activity Heatmap, a diagnostics report and a
 battery saver; data races in the engines' stop paths fixed, with
-ThreadSanitizer in CI. **Not hardware tested**: checks U1–U12 pending.
+ThreadSanitizer in CI. Betas 11–13 followed with memory and stability work
+(see the [changelog](../CHANGELOG.md)).
 
 ## Earlier betas
 
@@ -72,12 +87,17 @@ RogueMaster with a verified release pipeline. None of it is verified on
 hardware yet. `1.0.0-beta.2` fixed the out-of-memory crash on launch that
 made `1.0.0-beta.1` unusable on RogueMaster.
 
-## Next: hardware verification (the gating milestone)
+## Ongoing: hardware verification
 
-Nothing advances to a stable `1.0.0` until the app is exercised on real
-hardware. The goal is to work through [the checklist](HARDWARE_CHECKLIST.md) on
+`1.0.0` shipped with limited hardware evidence (launch, exit, the Frequency
+Scanner, the Adaptive Scanner and the Logger on RogueMaster `4f2e06200`).
+The goal remains to work through [the checklist](HARDWARE_CHECKLIST.md) on
 all four firmware families and both editions and record evidence in
 [VERIFICATION.md](VERIFICATION.md).
+
+- [x] Launch, exit and relaunch without a reboot on RogueMaster
+      `4f2e06200` (Y1, Y2 in part), Frequency Scanner, Adaptive Scanner and
+      the Logger after it (Y6 in part).
 
 - [ ] End-to-end workflow (W1–W10) confirmed on at least one firmware.
 - [ ] Each per-firmware build confirmed to load on its firmware (L1–L4),
@@ -233,9 +253,10 @@ still needs.
 - [x] **RF Activity Heatmap**, **Diagnostics report**, **Battery saver**
       (U7–U9 pending).
 
-## Toward a stable 1.0.0
+## Toward a stable 1.0.0 (released)
 
-- [ ] Fix whatever hardware testing surfaces.
+- [x] Fix what hardware testing surfaced (the beta 11 and beta 12 device
+      logs; beta 12 and beta 13). Later reports are maintenance.
 - [x] Persist Settings (frequency, modulation, scanner options) across launches.
 - [x] Save analysis reports to the SD card as text.
 - [x] Rename recordings from the Database screen.
