@@ -1,5 +1,5 @@
 #include "radiogeddon_lab_view.h"
-#include "../radiogeddon_edition.h" /* RG_UI_TEXT */
+#include "../radiogeddon_edition.h" /* RG_VIEW_TEXT */
 
 #if RG_FEATURE_DOLPHIN_LAB
 #include "radiogeddon_mascot_draw.h"
@@ -64,7 +64,7 @@ typedef struct {
 
 /* ---- text ------------------------------------------------------------------ */
 
-static RG_UI_TEXT uint16_t lab_width(void* context, const char* text, size_t len) {
+static RG_VIEW_TEXT uint16_t lab_width(void* context, const char* text, size_t len) {
     Canvas* canvas = context;
     char buf[64];
     if(len >= sizeof(buf)) len = sizeof(buf) - 1;
@@ -73,7 +73,7 @@ static RG_UI_TEXT uint16_t lab_width(void* context, const char* text, size_t len
     return canvas_string_width(canvas, buf);
 }
 
-static RG_UI_TEXT void lab_draw_line(
+static RG_VIEW_TEXT void lab_draw_line(
     Canvas* canvas,
     int32_t x,
     int32_t y,
@@ -89,7 +89,7 @@ static RG_UI_TEXT void lab_draw_line(
 
 /* Draw @p text wrapped into the box from @p x, @p w wide, lines from
  * baseline @p y; centred on @p cx when @p center. Returns the lines needed. */
-static RG_UI_TEXT size_t lab_draw_text(
+static RG_VIEW_TEXT size_t lab_draw_text(
     Canvas* canvas,
     const char* text,
     int32_t x,
@@ -113,14 +113,14 @@ static RG_UI_TEXT size_t lab_draw_text(
 }
 
 /* Lines @p text needs at width @p w. */
-static RG_UI_TEXT size_t lab_text_lines(Canvas* canvas, const char* text, uint16_t w) {
+static RG_VIEW_TEXT size_t lab_text_lines(Canvas* canvas, const char* text, uint16_t w) {
     RgUiLine lines[CARD_MAX_LINES];
     return rg_ui_wrap(text, w, lab_width, canvas, lines, CARD_MAX_LINES);
 }
 
 /* ---- home: Dolphin Lab ----------------------------------------------------- */
 
-static RG_UI_TEXT void
+static RG_VIEW_TEXT void
     lab_draw_desk(Canvas* canvas, int32_t x, int32_t y, int32_t w, int32_t bottom) {
     // A white desk in front of the dolphin: its top and a drawer.
     canvas_set_color(canvas, ColorWhite);
@@ -134,7 +134,7 @@ static RG_UI_TEXT void
 }
 
 /* Draw @p text from (x, baseline y) cut to @p max_w pixels ("..." when cut). */
-static RG_UI_TEXT void lab_draw_fit(
+static RG_VIEW_TEXT void lab_draw_fit(
     Canvas* canvas,
     int32_t x,
     int32_t y,
@@ -158,7 +158,7 @@ static RG_UI_TEXT void lab_draw_fit(
     canvas_draw_str_aligned(canvas, x, y, align, AlignBottom, buf);
 }
 
-static RG_UI_TEXT void lab_draw_status(Canvas* canvas, LabModel* m, int32_t y) {
+static RG_VIEW_TEXT void lab_draw_status(Canvas* canvas, LabModel* m, int32_t y) {
     canvas_set_color(canvas, ColorBlack);
     canvas_draw_line(canvas, 0, y, 127, y);
     canvas_set_font(canvas, FontSecondary);
@@ -178,7 +178,7 @@ static RG_UI_TEXT void lab_draw_status(Canvas* canvas, LabModel* m, int32_t y) {
     lab_draw_fit(canvas, 1, 63, m->status_left, (uint16_t)(122 - rw), AlignLeft);
 }
 
-static RG_UI_TEXT void lab_draw_home_menu(
+static RG_VIEW_TEXT void lab_draw_home_menu(
     Canvas* canvas,
     LabModel* m,
     int32_t x,
@@ -221,7 +221,7 @@ static RG_UI_TEXT void lab_draw_home_menu(
     }
 }
 
-static RG_UI_TEXT void lab_draw_home_dolphin(Canvas* canvas, LabModel* m) {
+static RG_VIEW_TEXT void lab_draw_home_dolphin(Canvas* canvas, LabModel* m) {
     const RgMascotFrame* f = &m->frame;
     // Lab: a shelf with a lamp on the wall, the dolphin behind its desk.
     canvas_draw_line(canvas, 0, 2, 9, 2);
@@ -242,7 +242,7 @@ static RG_UI_TEXT void lab_draw_home_dolphin(Canvas* canvas, LabModel* m) {
 
 /* ---- home: Cyber Lab ------------------------------------------------------- */
 
-static RG_UI_TEXT void
+static RG_VIEW_TEXT void
     lab_draw_corners(Canvas* canvas, int32_t x, int32_t y, int32_t w, int32_t h) {
     int32_t r = x + w - 1, b = y + h - 1;
     canvas_draw_line(canvas, x, y, x + 3, y);
@@ -255,7 +255,7 @@ static RG_UI_TEXT void
     canvas_draw_line(canvas, r - 3, b, r, b);
 }
 
-static RG_UI_TEXT void lab_draw_home_cyber(Canvas* canvas, LabModel* m) {
+static RG_VIEW_TEXT void lab_draw_home_cyber(Canvas* canvas, LabModel* m) {
     // Title tab.
     canvas_draw_box(canvas, 0, 0, 128, 10);
     canvas_set_color(canvas, ColorWhite);
@@ -278,7 +278,7 @@ static RG_UI_TEXT void lab_draw_home_cyber(Canvas* canvas, LabModel* m) {
 
 /* ---- cards ----------------------------------------------------------------- */
 
-static RG_UI_TEXT void lab_draw_card_progress(Canvas* canvas, LabModel* m) {
+static RG_VIEW_TEXT void lab_draw_card_progress(Canvas* canvas, LabModel* m) {
     canvas_set_font(canvas, FontPrimary);
     canvas_draw_str_aligned(canvas, 64, 1, AlignCenter, AlignTop, m->title);
     bool cyber = m->style == RgUiStyleCyberLab;
@@ -307,7 +307,7 @@ static RG_UI_TEXT void lab_draw_card_progress(Canvas* canvas, LabModel* m) {
     }
 }
 
-static RG_UI_TEXT void lab_draw_card_text(Canvas* canvas, LabModel* m) {
+static RG_VIEW_TEXT void lab_draw_card_text(Canvas* canvas, LabModel* m) {
     bool cyber = m->style == RgUiStyleCyberLab;
     canvas_set_font(canvas, FontSecondary);
     // With the dolphin when the text fits beside it, else across the screen.
@@ -340,7 +340,7 @@ static RG_UI_TEXT void lab_draw_card_text(Canvas* canvas, LabModel* m) {
     }
 }
 
-static RG_UI_TEXT void lab_draw_card(Canvas* canvas, LabModel* m) {
+static RG_VIEW_TEXT void lab_draw_card(Canvas* canvas, LabModel* m) {
     switch(m->card) {
     case RadioGeddonLabCardBusy:
     case RadioGeddonLabCardProgress:
@@ -354,7 +354,7 @@ static RG_UI_TEXT void lab_draw_card(Canvas* canvas, LabModel* m) {
 
 /* ---- transitions ----------------------------------------------------------- */
 
-static RG_UI_TEXT void lab_draw_transition(Canvas* canvas, LabModel* m) {
+static RG_VIEW_TEXT void lab_draw_transition(Canvas* canvas, LabModel* m) {
     uint8_t level = m->level;
     if(level == RG_TRANSITION_DONE) return;
     switch(m->transition.kind) {
@@ -387,7 +387,7 @@ static RG_UI_TEXT void lab_draw_transition(Canvas* canvas, LabModel* m) {
 
 /* ---- view ------------------------------------------------------------------ */
 
-static RG_UI_TEXT void lab_draw(Canvas* canvas, void* model) {
+static RG_VIEW_TEXT void lab_draw(Canvas* canvas, void* model) {
     LabModel* m = model;
     canvas_clear(canvas);
     canvas_set_color(canvas, ColorBlack);
@@ -403,12 +403,12 @@ static RG_UI_TEXT void lab_draw(Canvas* canvas, void* model) {
     lab_draw_transition(canvas, m);
 }
 
-static RG_UI_TEXT void
+static RG_VIEW_TEXT void
     lab_send(RadioGeddonLabView* instance, RadioGeddonLabEvent event, uint32_t index) {
     if(instance->callback) instance->callback(event, index, instance->context);
 }
 
-static RG_UI_TEXT bool lab_input(InputEvent* event, void* context) {
+static RG_VIEW_TEXT bool lab_input(InputEvent* event, void* context) {
     RadioGeddonLabView* instance = context;
     if(event->type != InputTypeShort && event->type != InputTypeLong &&
        event->type != InputTypeRepeat)
@@ -472,17 +472,17 @@ static RG_UI_TEXT bool lab_input(InputEvent* event, void* context) {
     return event->key != InputKeyBack;
 }
 
-static RG_UI_TEXT void lab_enter(void* context) {
+static RG_VIEW_TEXT void lab_enter(void* context) {
     RadioGeddonLabView* instance = context;
     instance->visible = true;
 }
 
-static RG_UI_TEXT void lab_exit(void* context) {
+static RG_VIEW_TEXT void lab_exit(void* context) {
     RadioGeddonLabView* instance = context;
     instance->visible = false;
 }
 
-RG_UI_TEXT RadioGeddonLabView* radiogeddon_lab_view_alloc(void) {
+RG_VIEW_TEXT RadioGeddonLabView* radiogeddon_lab_view_alloc(void) {
     RadioGeddonLabView* instance = malloc(sizeof(RadioGeddonLabView));
     instance->view = view_alloc();
     instance->callback = NULL;
@@ -507,17 +507,17 @@ RG_UI_TEXT RadioGeddonLabView* radiogeddon_lab_view_alloc(void) {
     return instance;
 }
 
-RG_UI_TEXT void radiogeddon_lab_view_free(RadioGeddonLabView* instance) {
+RG_VIEW_TEXT void radiogeddon_lab_view_free(RadioGeddonLabView* instance) {
     furi_assert(instance);
     view_free(instance->view);
     free(instance);
 }
 
-RG_UI_TEXT View* radiogeddon_lab_view_get_view(RadioGeddonLabView* instance) {
+RG_VIEW_TEXT View* radiogeddon_lab_view_get_view(RadioGeddonLabView* instance) {
     return instance->view;
 }
 
-RG_UI_TEXT void radiogeddon_lab_view_set_callback(
+RG_VIEW_TEXT void radiogeddon_lab_view_set_callback(
     RadioGeddonLabView* instance,
     RadioGeddonLabCallback callback,
     void* context) {
@@ -525,15 +525,15 @@ RG_UI_TEXT void radiogeddon_lab_view_set_callback(
     instance->context = context;
 }
 
-RG_UI_TEXT bool radiogeddon_lab_view_is_visible(RadioGeddonLabView* instance) {
+RG_VIEW_TEXT bool radiogeddon_lab_view_is_visible(RadioGeddonLabView* instance) {
     return instance->visible;
 }
 
-RG_UI_TEXT void radiogeddon_lab_view_set_style(RadioGeddonLabView* instance, RgUiStyle style) {
+RG_VIEW_TEXT void radiogeddon_lab_view_set_style(RadioGeddonLabView* instance, RgUiStyle style) {
     with_view_model(instance->view, LabModel * m, { m->style = (uint8_t)style; }, true);
 }
 
-RG_UI_TEXT void radiogeddon_lab_view_show_home(
+RG_VIEW_TEXT void radiogeddon_lab_view_show_home(
     RadioGeddonLabView* instance,
     const RadioGeddonLabItem* items,
     uint8_t count,
@@ -553,18 +553,18 @@ RG_UI_TEXT void radiogeddon_lab_view_show_home(
         true);
 }
 
-RG_UI_TEXT uint8_t radiogeddon_lab_view_get_selected(RadioGeddonLabView* instance) {
+RG_VIEW_TEXT uint8_t radiogeddon_lab_view_get_selected(RadioGeddonLabView* instance) {
     uint8_t sel = 0;
     with_view_model(instance->view, LabModel * m, { sel = m->selected; }, false);
     return sel;
 }
 
-RG_UI_TEXT void
+RG_VIEW_TEXT void
     radiogeddon_lab_view_set_decoration(RadioGeddonLabView* instance, uint8_t decoration) {
     with_view_model(instance->view, LabModel * m, { m->decoration = decoration; }, false);
 }
 
-RG_UI_TEXT void radiogeddon_lab_view_set_status(
+RG_VIEW_TEXT void radiogeddon_lab_view_set_status(
     RadioGeddonLabView* instance,
     const char* left,
     const char* right,
@@ -580,7 +580,8 @@ RG_UI_TEXT void radiogeddon_lab_view_set_status(
         true);
 }
 
-RG_UI_TEXT void radiogeddon_lab_view_set_readout(RadioGeddonLabView* instance, const char* text) {
+RG_VIEW_TEXT void
+    radiogeddon_lab_view_set_readout(RadioGeddonLabView* instance, const char* text) {
     with_view_model(
         instance->view,
         LabModel * m,
@@ -588,7 +589,7 @@ RG_UI_TEXT void radiogeddon_lab_view_set_readout(RadioGeddonLabView* instance, c
         true);
 }
 
-RG_UI_TEXT void radiogeddon_lab_view_show_card(
+RG_VIEW_TEXT void radiogeddon_lab_view_show_card(
     RadioGeddonLabView* instance,
     RadioGeddonLabCard card,
     const char* title,
@@ -608,7 +609,8 @@ RG_UI_TEXT void radiogeddon_lab_view_show_card(
         true);
 }
 
-RG_UI_TEXT void radiogeddon_lab_view_set_progress(RadioGeddonLabView* instance, uint8_t percent) {
+RG_VIEW_TEXT void
+    radiogeddon_lab_view_set_progress(RadioGeddonLabView* instance, uint8_t percent) {
     with_view_model(
         instance->view,
         LabModel * m,
@@ -619,7 +621,7 @@ RG_UI_TEXT void radiogeddon_lab_view_set_progress(RadioGeddonLabView* instance, 
         true);
 }
 
-RG_UI_TEXT void radiogeddon_lab_view_transition(
+RG_VIEW_TEXT void radiogeddon_lab_view_transition(
     RadioGeddonLabView* instance,
     RgTransitionKind kind,
     uint16_t duration_ms,
@@ -634,14 +636,14 @@ RG_UI_TEXT void radiogeddon_lab_view_transition(
         true);
 }
 
-RG_UI_TEXT bool radiogeddon_lab_view_transition_active(RadioGeddonLabView* instance) {
+RG_VIEW_TEXT bool radiogeddon_lab_view_transition_active(RadioGeddonLabView* instance) {
     bool active = false;
     with_view_model(
         instance->view, LabModel * m, { active = m->level != RG_TRANSITION_DONE; }, false);
     return active;
 }
 
-RG_UI_TEXT void radiogeddon_lab_view_update(
+RG_VIEW_TEXT void radiogeddon_lab_view_update(
     RadioGeddonLabView* instance,
     const RgMascotFrame* frame,
     uint32_t now) {

@@ -1,5 +1,5 @@
 #include "radiogeddon_scanner_view.h"
-#include "../radiogeddon_edition.h" /* RG_UI_TEXT */
+#include "../radiogeddon_edition.h" /* RG_VIEW_TEXT */
 #include <gui/elements.h>
 #include <furi.h>
 #if RG_FEATURE_DOLPHIN_LAB
@@ -32,14 +32,14 @@ typedef struct {
 #endif
 } RadioGeddonScannerModel;
 
-static RG_UI_TEXT int32_t radiogeddon_scanner_bar_pos(float dbm) {
+static RG_VIEW_TEXT int32_t radiogeddon_scanner_bar_pos(float dbm) {
     float norm = (dbm - RSSI_FLOOR) / (RSSI_CEIL - RSSI_FLOOR);
     if(norm < 0) norm = 0;
     if(norm > 1) norm = 1;
     return (int32_t)(norm * (BAR_W - 2));
 }
 
-static RG_UI_TEXT void
+static RG_VIEW_TEXT void
     radiogeddon_scanner_view_draw_header(Canvas* canvas, RadioGeddonScannerModel* m) {
     const RadioGeddonScannerSnapshot* s = &m->snap;
     canvas_set_font(canvas, FontSecondary);
@@ -93,7 +93,7 @@ static RG_UI_TEXT void
 #endif
 }
 
-static RG_UI_TEXT void radiogeddon_scanner_view_draw_row(
+static RG_VIEW_TEXT void radiogeddon_scanner_view_draw_row(
     Canvas* canvas,
     const RadioGeddonScannerSnapshot* s,
     size_t idx,
@@ -155,7 +155,7 @@ static RG_UI_TEXT void radiogeddon_scanner_view_draw_row(
     if(sel) canvas_set_color(canvas, ColorBlack);
 }
 
-static RG_UI_TEXT void radiogeddon_scanner_view_draw(Canvas* canvas, void* model) {
+static RG_VIEW_TEXT void radiogeddon_scanner_view_draw(Canvas* canvas, void* model) {
     RadioGeddonScannerModel* m = model;
     canvas_clear(canvas);
     radiogeddon_scanner_view_draw_header(canvas, m);
@@ -178,12 +178,12 @@ static RG_UI_TEXT void radiogeddon_scanner_view_draw(Canvas* canvas, void* model
     }
 }
 
-static RG_UI_TEXT void
+static RG_VIEW_TEXT void
     radiogeddon_scanner_view_send(RadioGeddonScannerView* instance, RadioGeddonScannerEvent e) {
     if(instance->callback) instance->callback(e, instance->context);
 }
 
-static RG_UI_TEXT bool radiogeddon_scanner_view_input(InputEvent* event, void* context) {
+static RG_VIEW_TEXT bool radiogeddon_scanner_view_input(InputEvent* event, void* context) {
     RadioGeddonScannerView* instance = context;
     bool consumed = false;
 
@@ -227,7 +227,7 @@ static RG_UI_TEXT bool radiogeddon_scanner_view_input(InputEvent* event, void* c
     return consumed;
 }
 
-RG_UI_TEXT RadioGeddonScannerView* radiogeddon_scanner_view_alloc(void) {
+RG_VIEW_TEXT RadioGeddonScannerView* radiogeddon_scanner_view_alloc(void) {
     RadioGeddonScannerView* instance = malloc(sizeof(RadioGeddonScannerView));
     instance->view = view_alloc();
     instance->callback = NULL;
@@ -251,17 +251,17 @@ RG_UI_TEXT RadioGeddonScannerView* radiogeddon_scanner_view_alloc(void) {
     return instance;
 }
 
-RG_UI_TEXT void radiogeddon_scanner_view_free(RadioGeddonScannerView* instance) {
+RG_VIEW_TEXT void radiogeddon_scanner_view_free(RadioGeddonScannerView* instance) {
     furi_assert(instance);
     view_free(instance->view);
     free(instance);
 }
 
-RG_UI_TEXT View* radiogeddon_scanner_view_get_view(RadioGeddonScannerView* instance) {
+RG_VIEW_TEXT View* radiogeddon_scanner_view_get_view(RadioGeddonScannerView* instance) {
     return instance->view;
 }
 
-RG_UI_TEXT void radiogeddon_scanner_view_set_callback(
+RG_VIEW_TEXT void radiogeddon_scanner_view_set_callback(
     RadioGeddonScannerView* instance,
     RadioGeddonScannerCallback callback,
     void* context) {
@@ -269,7 +269,7 @@ RG_UI_TEXT void radiogeddon_scanner_view_set_callback(
     instance->context = context;
 }
 
-RG_UI_TEXT void
+RG_VIEW_TEXT void
     radiogeddon_scanner_view_update(RadioGeddonScannerView* instance, RadioGeddonScanner* scanner) {
     with_view_model(
         instance->view,
@@ -278,13 +278,13 @@ RG_UI_TEXT void
         true);
 }
 
-RG_UI_TEXT void
+RG_VIEW_TEXT void
     radiogeddon_scanner_view_set_external(RadioGeddonScannerView* instance, bool external) {
     with_view_model(
         instance->view, RadioGeddonScannerModel * m, { m->external = external; }, true);
 }
 
-RG_UI_TEXT void
+RG_VIEW_TEXT void
     radiogeddon_scanner_view_set_selected(RadioGeddonScannerView* instance, size_t index) {
     with_view_model(
         instance->view,
@@ -295,14 +295,14 @@ RG_UI_TEXT void
         true);
 }
 
-RG_UI_TEXT size_t radiogeddon_scanner_view_get_selected(RadioGeddonScannerView* instance) {
+RG_VIEW_TEXT size_t radiogeddon_scanner_view_get_selected(RadioGeddonScannerView* instance) {
     size_t sel = 0;
     with_view_model(instance->view, RadioGeddonScannerModel * m, { sel = m->selected; }, false);
     return sel;
 }
 
 #if RG_FEATURE_DOLPHIN_LAB
-RG_UI_TEXT void radiogeddon_scanner_view_set_badge(
+RG_VIEW_TEXT void radiogeddon_scanner_view_set_badge(
     RadioGeddonScannerView* instance,
     const RgMascotFrame* frame,
     bool cyber) {

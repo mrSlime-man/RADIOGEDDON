@@ -73,15 +73,15 @@ static RG_UI_TEXT void radiogeddon_sessions_exit(void* context, RadioGeddonSessi
         ((const RadioGeddonSessionsModule*)app->sessions_api)->on_exit[scene](context);
 }
 
-#define RADIOGEDDON_SESSIONS_FORWARD(name, scene)                                      \
-    void radiogeddon_scene_##name##_on_enter(void* context) {                          \
-        radiogeddon_sessions_enter(context, scene);                                    \
-    }                                                                                  \
-    bool radiogeddon_scene_##name##_on_event(void* context, SceneManagerEvent event) { \
-        return radiogeddon_sessions_event(context, event, scene);                      \
-    }                                                                                  \
-    void radiogeddon_scene_##name##_on_exit(void* context) {                           \
-        radiogeddon_sessions_exit(context, scene);                                     \
+#define RADIOGEDDON_SESSIONS_FORWARD(name, scene)                                                 \
+    RG_UI_TEXT void radiogeddon_scene_##name##_on_enter(void* context) {                          \
+        radiogeddon_sessions_enter(context, scene);                                               \
+    }                                                                                             \
+    RG_UI_TEXT bool radiogeddon_scene_##name##_on_event(void* context, SceneManagerEvent event) { \
+        return radiogeddon_sessions_event(context, event, scene);                                 \
+    }                                                                                             \
+    RG_UI_TEXT void radiogeddon_scene_##name##_on_exit(void* context) {                           \
+        radiogeddon_sessions_exit(context, scene);                                                \
     }
 
 RADIOGEDDON_SESSIONS_FORWARD(sessions, RadioGeddonSessionsSceneList)

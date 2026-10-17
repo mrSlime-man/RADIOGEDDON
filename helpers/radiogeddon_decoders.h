@@ -53,7 +53,9 @@ size_t radiogeddon_decoders_select(
  * Whether @p all has a BinRAW protocol a receiver filtered to @p filter never
  * feeds: a receiver of the full registry then allocated its buffers.
  */
-bool radiogeddon_decoders_skips_binraw(const SubGhzProtocolRegistry* all, SubGhzProtocolFlag filter);
+bool radiogeddon_decoders_skips_binraw(
+    const SubGhzProtocolRegistry* all,
+    SubGhzProtocolFlag filter);
 
 /**
  * A receiver of @p environment (whose registry is @p all) with only the

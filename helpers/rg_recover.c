@@ -1,4 +1,5 @@
 #include "rg_recover.h"
+#include "../radiogeddon_edition.h" /* RG_TOOL_TEXT */
 
 #include <stdio.h>
 #include <string.h>
@@ -13,18 +14,18 @@ enum {
 static const char rg_recover_note[] = "# Recovered: recording interrupted (reboot or power loss); "
                                       "anything after this point is missing\n";
 
-void rg_recover_init(RgRecoverScan* s) {
+RG_TOOL_TEXT void rg_recover_init(RgRecoverScan* s) {
     memset(s, 0, sizeof(*s));
     s->mode = ModeLineStart;
     s->cut_at_line_end = true;
 }
 
-static bool rg_recover_printable(uint8_t c) {
+static RG_TOOL_TEXT bool rg_recover_printable(uint8_t c) {
     return c >= 0x20 && c < 0x7F;
 }
 
 /* The key and the start of the value of the line just ended. */
-static void rg_recover_header(RgRecoverScan* s) {
+static RG_TOOL_TEXT void rg_recover_header(RgRecoverScan* s) {
     const char* k = s->key;
     const char* colon = strchr(k, ':');
     if(!colon) return;
@@ -47,7 +48,7 @@ static void rg_recover_header(RgRecoverScan* s) {
     }
 }
 
-static void rg_recover_key_add(RgRecoverScan* s, uint8_t c) {
+static RG_TOOL_TEXT void rg_recover_key_add(RgRecoverScan* s, uint8_t c) {
     if(s->key_len + 1u < sizeof(s->key)) {
         s->key[s->key_len++] = (char)c;
         s->key[s->key_len] = '\0';
@@ -55,7 +56,7 @@ static void rg_recover_key_add(RgRecoverScan* s, uint8_t c) {
 }
 
 /* The value being read is complete (a separator follows it). */
-static bool rg_recover_value_end(RgRecoverScan* s) {
+static RG_TOOL_TEXT bool rg_recover_value_end(RgRecoverScan* s) {
     if(s->digits == 0) return !s->negative; // "-" alone is not a value
     if(s->magnitude != 0) {
         s->samples++;
@@ -67,7 +68,7 @@ static bool rg_recover_value_end(RgRecoverScan* s) {
     return true;
 }
 
-static void rg_recover_byte(RgRecoverScan* s, uint8_t c) {
+static RG_TOOL_TEXT void rg_recover_byte(RgRecoverScan* s, uint8_t c) {
     uint32_t at = s->offset; // offset of this byte
     switch(s->mode) {
     case ModeLineStart:
@@ -155,14 +156,14 @@ static void rg_recover_byte(RgRecoverScan* s, uint8_t c) {
     }
 }
 
-void rg_recover_feed(RgRecoverScan* s, const uint8_t* data, size_t len) {
+RG_TOOL_TEXT void rg_recover_feed(RgRecoverScan* s, const uint8_t* data, size_t len) {
     for(size_t i = 0; i < len && !s->stopped; i++) {
         rg_recover_byte(s, data[i]);
         if(!s->stopped) s->offset++;
     }
 }
 
-RgRecoverVerdict rg_recover_finish(RgRecoverScan* s) {
+RG_TOOL_TEXT RgRecoverVerdict rg_recover_finish(RgRecoverScan* s) {
     // A value without a separator after it may be cut short: not counted
     // (rg_recover_value_end never ran for it), and `cut` is before it.
     if(!s->header_raw || !s->protocol_raw) return RgRecoverNothing;
@@ -171,7 +172,7 @@ RgRecoverVerdict rg_recover_finish(RgRecoverScan* s) {
     return RgRecoverPartial;
 }
 
-size_t rg_recover_tail(const RgRecoverScan* s, char* out, size_t cap) {
+RG_TOOL_TEXT size_t rg_recover_tail(const RgRecoverScan* s, char* out, size_t cap) {
     size_t n = s->cut_at_line_end ? 0 : 1;
     size_t need = n + sizeof(rg_recover_note) - 1;
     if(need + 1 > cap) return 0;

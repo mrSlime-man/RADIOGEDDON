@@ -1,13 +1,15 @@
 #include "radiogeddon_decoders.h"
+#include "../radiogeddon_edition.h" /* RG_CORE_TEXT */
 
 #include <string.h>
 
-bool radiogeddon_decoders_fed(const SubGhzProtocol* protocol, SubGhzProtocolFlag filter) {
+RG_CORE_TEXT bool
+    radiogeddon_decoders_fed(const SubGhzProtocol* protocol, SubGhzProtocolFlag filter) {
     return protocol && protocol->decoder && protocol->decoder->alloc &&
            (protocol->flag & filter) != 0;
 }
 
-size_t radiogeddon_decoders_select(
+RG_CORE_TEXT size_t radiogeddon_decoders_select(
     const SubGhzProtocolRegistry* all,
     SubGhzProtocolFlag filter,
     const SubGhzProtocol** out,
@@ -23,7 +25,9 @@ size_t radiogeddon_decoders_select(
     return n;
 }
 
-bool radiogeddon_decoders_skips_binraw(const SubGhzProtocolRegistry* all, SubGhzProtocolFlag filter) {
+RG_CORE_TEXT bool radiogeddon_decoders_skips_binraw(
+    const SubGhzProtocolRegistry* all,
+    SubGhzProtocolFlag filter) {
     size_t count = subghz_protocol_registry_count(all);
     for(size_t i = 0; i < count; i++) {
         const SubGhzProtocol* p = subghz_protocol_registry_get_by_index(all, i);
@@ -34,7 +38,7 @@ bool radiogeddon_decoders_skips_binraw(const SubGhzProtocolRegistry* all, SubGhz
     return false;
 }
 
-SubGhzReceiver* radiogeddon_decoders_receiver_alloc(
+RG_CORE_TEXT SubGhzReceiver* radiogeddon_decoders_receiver_alloc(
     SubGhzEnvironment* environment,
     const SubGhzProtocolRegistry* all,
     SubGhzProtocolFlag filter) {

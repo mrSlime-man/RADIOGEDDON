@@ -1,4 +1,5 @@
 #include "radiogeddon_analysis.h"
+#include "../radiogeddon_edition.h" /* RG_CORE_TEXT */
 #include "rg_decode.h"
 #include "rg_div.h"
 
@@ -16,19 +17,19 @@
  * before this runs (radiogeddon_scene_radio_memory_ok). */
 #define RG_DECODE_HEAP_SPARE (4u * 1024u)
 
-static void radiogeddon_analysis_decode_progress(void* context, uint32_t offset) {
+static RG_CORE_TEXT void radiogeddon_analysis_decode_progress(void* context, uint32_t offset) {
     RadioGeddonRawFile* file = context;
     uint32_t size = (uint32_t)stream_size(file->stream);
     radiogeddon_analysis_report_progress(offset / 1024u, size / 1024u);
 }
 
-static void radiogeddon_analysis_cat_seconds(FuriString* out, uint64_t us) {
+static RG_CORE_TEXT void radiogeddon_analysis_cat_seconds(FuriString* out, uint64_t us) {
     uint32_t ms = rg_div_u64_u32(us, 1000u); // saturates past 49 days
     furi_string_cat_printf(
         out, "%lu.%03lu s", (unsigned long)(ms / 1000u), (unsigned long)(ms % 1000u));
 }
 
-void radiogeddon_analysis_decode(
+RG_CORE_TEXT void radiogeddon_analysis_decode(
     Storage* storage,
     RadioGeddonSubGhz* subghz,
     const char* path,

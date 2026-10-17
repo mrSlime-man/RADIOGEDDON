@@ -257,12 +257,14 @@ benchmodules: $(BUILD)/bench_modules
 	$(BUILD)/bench_modules $(FAL_DIR)
 
 # The app's own launch replayed on fragmented heaps (bench_launch.c): the
-# loader's per-section blocks for two builds of the .fap on the same heaps.
+# loader's per-section blocks for several builds of the .fap on the same heaps.
 $(BUILD)/bench_launch: bench_launch.c stubs/heap4.c stubs/heap4.h | $(BUILD)
 	$(CC) $(CFLAGS) -o $@ bench_launch.c stubs/heap4.c
 
+# FAPS: up to eight [LABEL=]file.fap, all on the same heaps; or FAP_A/FAP_B.
+FAPS ?= $(FAP_A) $(FAP_B)
 benchlaunch: $(BUILD)/bench_launch
-	$(BUILD)/bench_launch $(FAP_A) $(FAP_B)
+	$(BUILD)/bench_launch $(FAPS)
 
 # The load-cost model on built modules (scripts/module_cost.py --check).
 $(BUILD)/elf_cost: elf_cost.c ../helpers/rg_elf.c ../helpers/rg_elf.h | $(BUILD)

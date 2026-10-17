@@ -119,7 +119,6 @@ uint32_t radiogeddon_subghz_session_cost(RadioGeddonSubGhz* instance);
  */
 uint32_t radiogeddon_subghz_model0_extra(void);
 
-
 /**
  * Retune an already-running RX session to a new frequency without powering the
  * radio down (used by the Frequency Hopper). The decode callback stays active.

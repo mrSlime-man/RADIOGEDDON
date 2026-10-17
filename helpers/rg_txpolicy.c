@@ -1,8 +1,9 @@
 #include "rg_txpolicy.h"
+#include "../radiogeddon_edition.h" /* RG_CORE_TEXT */
 
 #include <stdio.h>
 
-RgTxVerdict rg_txpolicy_check(const RgTxFacts* facts, bool region_gate) {
+RG_CORE_TEXT RgTxVerdict rg_txpolicy_check(const RgTxFacts* facts, bool region_gate) {
     if(!facts->device_valid) return RgTxDeniedDevice;
     if(!region_gate) return RgTxAllowed;
     if(!facts->hardware_valid) return RgTxDeniedHardware;
@@ -11,7 +12,7 @@ RgTxVerdict rg_txpolicy_check(const RgTxFacts* facts, bool region_gate) {
     return RgTxAllowed;
 }
 
-const char* rg_txpolicy_short(RgTxVerdict verdict) {
+RG_CORE_TEXT const char* rg_txpolicy_short(RgTxVerdict verdict) {
     switch(verdict) {
     case RgTxAllowed:
         return "";
@@ -27,7 +28,7 @@ const char* rg_txpolicy_short(RgTxVerdict verdict) {
     return "TX refused";
 }
 
-void rg_txpolicy_explain(
+RG_CORE_TEXT void rg_txpolicy_explain(
     RgTxVerdict verdict,
     const char* region,
     const char* freq_text,

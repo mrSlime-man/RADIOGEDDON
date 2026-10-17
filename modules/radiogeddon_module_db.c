@@ -1,0 +1,45 @@
+/* Full edition module: tool screens (see helpers/radiogeddon_modules.h). */
+#include "../scenes/radiogeddon_scene.h"
+
+#include <flipper_application/flipper_application.h>
+
+const RadioGeddonHost* radiogeddon_host;
+
+static void radiogeddon_db_set_host(const RadioGeddonHost* host) {
+    radiogeddon_host = host;
+}
+
+static const RadioGeddonToolModule radiogeddon_db_module = {
+    .set_host = radiogeddon_db_set_host,
+    .on_enter =
+        {
+            radiogeddon_scene_saved_list_on_enter,
+            radiogeddon_scene_db_options_on_enter,
+            radiogeddon_scene_file_details_on_enter,
+            radiogeddon_scene_rename_on_enter,
+        },
+    .on_event =
+        {
+            radiogeddon_scene_saved_list_on_event,
+            radiogeddon_scene_db_options_on_event,
+            radiogeddon_scene_file_details_on_event,
+            radiogeddon_scene_rename_on_event,
+        },
+    .on_exit =
+        {
+            radiogeddon_scene_saved_list_on_exit,
+            radiogeddon_scene_db_options_on_exit,
+            radiogeddon_scene_file_details_on_exit,
+            radiogeddon_scene_rename_on_exit,
+        },
+};
+
+static const FlipperAppPluginDescriptor radiogeddon_db_descriptor = {
+    .appid = RADIOGEDDON_MODULE_APPID,
+    .ep_api_version = RADIOGEDDON_MODULE_API,
+    .entry_point = &radiogeddon_db_module,
+};
+
+const FlipperAppPluginDescriptor* radiogeddon_db_module_ep(void) {
+    return &radiogeddon_db_descriptor;
+}

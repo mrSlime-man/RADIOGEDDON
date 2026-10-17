@@ -80,6 +80,22 @@ static const ToolScene tool_scenes[] = {
 #endif
     {RadioGeddonSceneConfig, RADIOGEDDON_MODULE_SETTINGS, 0, 1, ToolPrepNone},
     {RadioGeddonSceneBands, RADIOGEDDON_MODULE_SETTINGS, 1, 1, ToolPrepNone},
+    {RadioGeddonSceneFavorites, RADIOGEDDON_MODULE_SETTINGS, 2, 1, ToolPrepNone},
+    {RadioGeddonSceneFavoriteOptions, RADIOGEDDON_MODULE_SETTINGS, 3, 1, ToolPrepNone},
+    {RadioGeddonSceneFrequency, RADIOGEDDON_MODULE_SETTINGS, 4, 1, ToolPrepNone},
+    // The analysis menu: Multi-Compare loads its engine and Smart Protocol
+    // Discovery its module (app->module) with their own memory checks, and
+    // Decode checks the decoders' memory before running them.
+    {RadioGeddonSceneAnalyzeMenu, RADIOGEDDON_MODULE_ANALYZE, 0, 1, ToolPrepNone},
+    {RadioGeddonSceneMulti, RADIOGEDDON_MODULE_ANALYZE, 1, 1, ToolPrepNone},
+    {RadioGeddonSceneMultiResult, RADIOGEDDON_MODULE_ANALYZE, 2, 1, ToolPrepNone},
+    {RadioGeddonSceneUnknown, RADIOGEDDON_MODULE_ANALYZE, 3, 1, ToolPrepNone},
+    {RadioGeddonSceneDecode, RADIOGEDDON_MODULE_ANALYZE, 4, 1, ToolPrepNone},
+    // The Database list sizes its index to the heap left (radiogeddon_db.h).
+    {RadioGeddonSceneSavedList, RADIOGEDDON_MODULE_DB, 0, 4, ToolPrepNone},
+    {RadioGeddonSceneDbOptions, RADIOGEDDON_MODULE_DB, 1, 1, ToolPrepNone},
+    {RadioGeddonSceneFileDetails, RADIOGEDDON_MODULE_DB, 2, 1, ToolPrepNone},
+    {RadioGeddonSceneRename, RADIOGEDDON_MODULE_DB, 3, 1, ToolPrepNone},
     // The Hopper checks the receive session's memory itself.
     {RadioGeddonSceneHopper, RADIOGEDDON_MODULE_HOPPER, 0, 1, ToolPrepHopper},
     {RadioGeddonSceneHopperStats, RADIOGEDDON_MODULE_HOPPER, 1, 1, ToolPrepNone},
@@ -198,6 +214,25 @@ static RG_UI_TEXT void host_session_active(Storage* storage, char* out, size_t s
 #endif
 }
 
+static RG_UI_TEXT void
+    host_sessions_rename_signal(Storage* storage, const char* from, const char* to) {
+#if RG_FEATURE_SESSIONS
+    radiogeddon_sessions_rename_signal(storage, from, to);
+#else
+    UNUSED(storage);
+    UNUSED(from);
+    UNUSED(to);
+#endif
+}
+
+static RG_UI_TEXT void* host_favorites(RadioGeddonApp* app) {
+    return radiogeddon_scene_favorites(app);
+}
+
+static RG_UI_TEXT bool host_favorites_save(Storage* storage, const void* favorites) {
+    return radiogeddon_favorites_save(storage, favorites);
+}
+
 const RadioGeddonHost radiogeddon_host_table = {
     .show_message = radiogeddon_scene_show_message,
     .show_confirm = radiogeddon_scene_show_confirm,
@@ -286,6 +321,11 @@ const RadioGeddonHost radiogeddon_host_table = {
     .subghz_session_cost = radiogeddon_subghz_session_cost,
     .radio_cost = radiogeddon_scene_radio_cost,
     .var_list_release = radiogeddon_scene_var_list_release,
+    .db_release = radiogeddon_scene_db_release,
+    .sessions_rename_signal = host_sessions_rename_signal,
+    .favorites = host_favorites,
+    .favorites_save = host_favorites_save,
+    .decoders_memory_ok = radiogeddon_scene_decoders_memory_ok,
 };
 
 /* ---- slots ----------------------------------------------------------------- */
@@ -425,15 +465,15 @@ static RG_UI_TEXT void tools_exit(void* context, uint32_t scene) {
         if(app->tool[i].file == t->file) app->tool[i].shown = false;
 }
 
-#define TOOL_SCENE(name, id)                                                           \
-    void radiogeddon_scene_##name##_on_enter(void* context) {                          \
-        tools_enter(context, RadioGeddonScene##id);                                    \
-    }                                                                                  \
-    bool radiogeddon_scene_##name##_on_event(void* context, SceneManagerEvent event) { \
-        return tools_event(context, RadioGeddonScene##id, event);                      \
-    }                                                                                  \
-    void radiogeddon_scene_##name##_on_exit(void* context) {                           \
-        tools_exit(context, RadioGeddonScene##id);                                     \
+#define TOOL_SCENE(name, id)                                                                      \
+    RG_UI_TEXT void radiogeddon_scene_##name##_on_enter(void* context) {                          \
+        tools_enter(context, RadioGeddonScene##id);                                               \
+    }                                                                                             \
+    RG_UI_TEXT bool radiogeddon_scene_##name##_on_event(void* context, SceneManagerEvent event) { \
+        return tools_event(context, RadioGeddonScene##id, event);                                 \
+    }                                                                                             \
+    RG_UI_TEXT void radiogeddon_scene_##name##_on_exit(void* context) {                           \
+        tools_exit(context, RadioGeddonScene##id);                                                \
     }
 
 #if RG_FEATURE_FINGERPRINT
@@ -471,8 +511,20 @@ TOOL_SCENE(profile_name, ProfileName)
 #endif
 TOOL_SCENE(config, Config)
 TOOL_SCENE(bands, Bands)
+TOOL_SCENE(favorites, Favorites)
+TOOL_SCENE(favorite_options, FavoriteOptions)
+TOOL_SCENE(frequency, Frequency)
+TOOL_SCENE(analyze_menu, AnalyzeMenu)
+TOOL_SCENE(multi, Multi)
+TOOL_SCENE(multi_result, MultiResult)
+TOOL_SCENE(unknown, Unknown)
+TOOL_SCENE(decode, Decode)
 TOOL_SCENE(hopper, Hopper)
 TOOL_SCENE(hopper_stats, HopperStats)
+TOOL_SCENE(saved_list, SavedList)
+TOOL_SCENE(db_options, DbOptions)
+TOOL_SCENE(file_details, FileDetails)
+TOOL_SCENE(rename, Rename)
 #if RG_FEATURE_BITSTREAM
 TOOL_SCENE(bitstream, Bitstream)
 #endif

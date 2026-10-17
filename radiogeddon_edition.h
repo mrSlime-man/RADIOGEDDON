@@ -20,19 +20,51 @@
  */
 
 /*
- * RG_UI_TEXT: the code of the screens (scenes/ and views/) goes into a code
- * section of its own, ".rgtext". The firmware's ELF loader gives every
- * allocatable section its own heap block (lib/flipper_application/elf), so
- * the app then needs two code blocks of about half the size instead of one
- * of ~71 KB. A launch fails when no free block is large enough, and after
- * another app (or this one) ran the heap is fragmented: halving the largest
- * block the loader asks for is what lets the app start again right after it
- * closed. Only on the device (ARM); host builds keep the default section.
+ * Code sections. The firmware's ELF loader gives every allocatable section a
+ * heap block of its own (lib/flipper_application/elf/elf_file.c), and a
+ * launch fails when the largest free block is smaller than a section plus
+ * 1 KB. After another app (or this one) ran, the heap is in pieces, so the
+ * largest block a launch asks for decides whether the app starts again.
+ *
+ * The app itself (RG_SECTIONED, set in application.fam) is cut into code
+ * sections of 6-16 KB, each a group of whole source files, so a call inside
+ * a file stays a direct branch:
+ *
+ *   .text    radiogeddon.c and the helpers not listed below
+ *   .rgtext  the screens' code (scenes/, RG_UI_TEXT)
+ *   .rgview  the custom views (views/, RG_VIEW_TEXT)
+ *   .rgcore  the radio, scanner, recorder and decoder helpers (RG_CORE_TEXT)
+ *   .rglab   the Dolphin Lab, journal and assistant helpers (RG_LAB_TEXT)
+ *   .rgtool  the analysis engines, resident only in the Catalog edition
+ *            (RG_TOOL_TEXT; the Full edition has them in modules)
+ *
+ * A named section keeps all of a file's functions (the linker drops unused
+ * code per section), so only files the app uses whole are grouped
+ * (scripts/text_sections.py lists them and checks every function).
+ * Section names must not start with ".text" (the SDK's linker script merges
+ * those). A module (RG_SECTIONED not set) keeps beta 12's two sections: the
+ * screens and views in .rgtext, the rest in .text. Only on the device (ARM);
+ * host builds keep the default section.
  */
 #if defined(__arm__) && !defined(RG_NO_UI_SECTION)
 #define RG_UI_TEXT __attribute__((section(".rgtext")))
+#if defined(RG_SECTIONED)
+#define RG_VIEW_TEXT __attribute__((section(".rgview")))
+#define RG_CORE_TEXT __attribute__((section(".rgcore")))
+#define RG_LAB_TEXT  __attribute__((section(".rglab")))
+#define RG_TOOL_TEXT __attribute__((section(".rgtool")))
+#else
+#define RG_VIEW_TEXT RG_UI_TEXT
+#define RG_CORE_TEXT
+#define RG_LAB_TEXT
+#define RG_TOOL_TEXT
+#endif
 #else
 #define RG_UI_TEXT
+#define RG_VIEW_TEXT
+#define RG_CORE_TEXT
+#define RG_LAB_TEXT
+#define RG_TOOL_TEXT
 #endif
 
 #if defined(RADIOGEDDON_EDITION_FULL) && defined(RADIOGEDDON_EDITION_CATALOG)

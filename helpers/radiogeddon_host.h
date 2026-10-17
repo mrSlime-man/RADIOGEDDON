@@ -158,6 +158,14 @@ typedef struct {
     uint32_t (*radio_cost)(RadioGeddonApp* app);
     /* The shared VariableItemList, emptied with a resident enter callback. */
     void (*var_list_release)(RadioGeddonApp* app);
+    /* The Database (the database module). */
+    void (*db_release)(RadioGeddonApp* app);
+    void (*sessions_rename_signal)(Storage* storage, const char* from, const char* to);
+    /* Favorites (the settings module) and the analysis menu (the analyze
+     * module). The favorites are radiogeddon_profiles.h's RadioGeddonFavorites. */
+    void* (*favorites)(RadioGeddonApp* app);
+    bool (*favorites_save)(Storage* storage, const void* favorites);
+    bool (*decoders_memory_ok)(RadioGeddonApp* app);
 } RadioGeddonHost;
 
 /** The table (scenes/radiogeddon_scene_tools.c). */

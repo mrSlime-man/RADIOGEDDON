@@ -391,9 +391,9 @@ static bool same_settings(const RadioGeddonSettings* a, const RadioGeddonSetting
            a->hop_auto_record == b->hop_auto_record && a->db_sort == b->db_sort &&
            a->radio_external == b->radio_external && a->ext_power == b->ext_power &&
            a->radio_heap == b->radio_heap && a->radio_heap_fw == b->radio_heap_fw &&
-           a->radio_heap_model == b->radio_heap_model &&
-           a->range_start_hz == b->range_start_hz && a->range_end_hz == b->range_end_hz &&
-           a->range_step_hz == b->range_step_hz && a->range_dwell_ms == b->range_dwell_ms &&
+           a->radio_heap_model == b->radio_heap_model && a->range_start_hz == b->range_start_hz &&
+           a->range_end_hz == b->range_end_hz && a->range_step_hz == b->range_step_hz &&
+           a->range_dwell_ms == b->range_dwell_ms &&
            a->range_hold_on_hit == b->range_hold_on_hit && a->scan_source == b->scan_source &&
            a->hop_source == b->hop_source && a->freq_step_hz == b->freq_step_hz &&
            a->ui_style == b->ui_style && a->ui_feedback == b->ui_feedback &&

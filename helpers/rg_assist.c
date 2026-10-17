@@ -5,17 +5,17 @@
 
 #include <string.h>
 
-void rg_assist_init(RgAssist* a, bool enabled) {
+RG_LAB_TEXT void rg_assist_init(RgAssist* a, bool enabled) {
     memset(a, 0, sizeof(*a));
     a->enabled = enabled;
 }
 
-void rg_assist_new_context(RgAssist* a) {
+RG_LAB_TEXT void rg_assist_new_context(RgAssist* a) {
     a->context++;
     a->dismissed = 0;
 }
 
-RgTip rg_assist_rule(const RgAssistFacts* f) {
+RG_LAB_TEXT RgTip rg_assist_rule(const RgAssistFacts* f) {
     if(f->recording) return RgTipNone;
     if(f->low_memory && !f->classic) return RgTipTryClassic;
     if(f->have_ctx) {
@@ -31,7 +31,7 @@ RgTip rg_assist_rule(const RgAssistFacts* f) {
     return RgTipNone;
 }
 
-RgTip rg_assist_update(RgAssist* a, const RgAssistFacts* f, uint32_t now_ms) {
+RG_LAB_TEXT RgTip rg_assist_update(RgAssist* a, const RgAssistFacts* f, uint32_t now_ms) {
     if(!a->enabled) {
         a->current = RgTipNone;
         return RgTipNone;
@@ -59,7 +59,7 @@ RgTip rg_assist_update(RgAssist* a, const RgAssistFacts* f, uint32_t now_ms) {
     return tip;
 }
 
-void rg_assist_dismiss(RgAssist* a) {
+RG_LAB_TEXT void rg_assist_dismiss(RgAssist* a) {
     if(a->current != RgTipNone) a->dismissed |= 1u << a->current;
     a->current = RgTipNone;
 }
@@ -88,7 +88,7 @@ static const char* const rg_tip_shorts[RgTipCount] = {
     "Export?",
 };
 
-const char* rg_tip_short(RgTip tip) {
+RG_LAB_TEXT const char* rg_tip_short(RgTip tip) {
     return (unsigned)tip < RgTipCount ? rg_tip_shorts[tip] : "";
 }
 
@@ -104,11 +104,11 @@ static const uint8_t rg_tip_actions[RgTipCount] = {
     RgTipActionSessionReport,
 };
 
-const char* rg_tip_text(RgTip tip) {
+RG_LAB_TEXT const char* rg_tip_text(RgTip tip) {
     return (unsigned)tip < RgTipCount ? rg_tip_texts[tip] : "";
 }
 
-RgTipAction rg_tip_action(RgTip tip) {
+RG_LAB_TEXT RgTipAction rg_tip_action(RgTip tip) {
     return (unsigned)tip < RgTipCount ? (RgTipAction)rg_tip_actions[tip] : RgTipActionNone;
 }
 

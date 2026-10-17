@@ -1,4 +1,5 @@
 #include "rg_raw.h"
+#include "../radiogeddon_edition.h" /* RG_CORE_TEXT */
 
 #include <string.h>
 
@@ -8,7 +9,7 @@ static const char rg_raw_lost_key[] = "# Lost:";
 #define RG_RAW_LOST_KEY_LEN (sizeof(rg_raw_lost_key) - 1)
 #define RG_RAW_MAX_MAG      0x7FFFFFFFu
 
-static void rg_raw_lexer_reset(RgRawReader* r, RgRawLexState state) {
+static RG_CORE_TEXT void rg_raw_lexer_reset(RgRawReader* r, RgRawLexState state) {
     r->state = state;
     r->key_pos = 0;
     r->in_number = false;
@@ -16,7 +17,7 @@ static void rg_raw_lexer_reset(RgRawReader* r, RgRawLexState state) {
     r->magnitude = 0;
 }
 
-void rg_raw_reader_init(RgRawReader* r, RgRawSource src) {
+RG_CORE_TEXT void rg_raw_reader_init(RgRawReader* r, RgRawSource src) {
     memset(r, 0, sizeof(*r));
     r->src = src;
     r->cp_stride = RG_RAW_CP_STRIDE;
@@ -24,7 +25,7 @@ void rg_raw_reader_init(RgRawReader* r, RgRawSource src) {
     rg_raw_lexer_reset(r, RgRawLexLineStart);
 }
 
-static bool rg_raw_reposition(RgRawReader* r, const RgRawCheckpoint* cp) {
+static RG_CORE_TEXT bool rg_raw_reposition(RgRawReader* r, const RgRawCheckpoint* cp) {
     if(!r->src.seek(r->src.ctx, cp->offset)) return false;
     r->buf_len = 0;
     r->buf_pos = 0;
@@ -36,13 +37,13 @@ static bool rg_raw_reposition(RgRawReader* r, const RgRawCheckpoint* cp) {
     return true;
 }
 
-bool rg_raw_reader_rewind(RgRawReader* r) {
+RG_CORE_TEXT bool rg_raw_reader_rewind(RgRawReader* r) {
     RgRawCheckpoint start = {0, 0, 0, RgRawLexLineStart};
     return rg_raw_reposition(r, &start);
 }
 
 /* Record a resume point at a clean token boundary, thinning when full. */
-static void rg_raw_checkpoint(RgRawReader* r) {
+static RG_CORE_TEXT void rg_raw_checkpoint(RgRawReader* r) {
     if(r->index < r->cp_next) return;
     if(r->cp_count > 0 && r->cp[r->cp_count - 1].index >= r->index) return;
     if(r->cp_count == RG_RAW_CHECKPOINTS) {
@@ -61,7 +62,7 @@ static void rg_raw_checkpoint(RgRawReader* r) {
 }
 
 /* Finish a pending number; returns true and writes it when non-zero. */
-static bool rg_raw_take(RgRawReader* r, int32_t* out) {
+static RG_CORE_TEXT bool rg_raw_take(RgRawReader* r, int32_t* out) {
     if(!r->in_number) return false;
     r->in_number = false;
     uint32_t mag = r->magnitude;
@@ -73,12 +74,12 @@ static bool rg_raw_take(RgRawReader* r, int32_t* out) {
     return true;
 }
 
-static void rg_raw_count(RgRawReader* r, int32_t v) {
+static RG_CORE_TEXT void rg_raw_count(RgRawReader* r, int32_t v) {
     r->index++;
     r->time_us += (uint32_t)(v < 0 ? -(int64_t)v : v);
 }
 
-size_t rg_raw_reader_read(RgRawReader* r, int32_t* out, size_t max) {
+RG_CORE_TEXT size_t rg_raw_reader_read(RgRawReader* r, int32_t* out, size_t max) {
     size_t n = 0;
     while(n < max) {
         if(r->buf_pos == r->buf_len) {
@@ -177,7 +178,7 @@ size_t rg_raw_reader_read(RgRawReader* r, int32_t* out, size_t max) {
     return n;
 }
 
-bool rg_raw_reader_seek_time(RgRawReader* r, uint64_t time_us) {
+RG_CORE_TEXT bool rg_raw_reader_seek_time(RgRawReader* r, uint64_t time_us) {
     const RgRawCheckpoint* best = NULL;
     for(size_t i = 0; i < r->cp_count; i++) {
         if(r->cp[i].time_us <= time_us) best = &r->cp[i];

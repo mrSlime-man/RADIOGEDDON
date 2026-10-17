@@ -1,5 +1,5 @@
 #include "radiogeddon_room_view.h"
-#include "../radiogeddon_edition.h" /* RG_UI_TEXT */
+#include "../radiogeddon_edition.h" /* RG_VIEW_TEXT */
 
 #if RG_FEATURE_DOLPHIN_LAB
 
@@ -53,7 +53,7 @@ static const char* const rack_names[RadioGeddonRackCount] = {
 };
 
 /* A line centred in the station's area, cut to fit it. */
-static RG_UI_TEXT void room_line(Canvas* canvas, int32_t y, const char* text) {
+static RG_VIEW_TEXT void room_line(Canvas* canvas, int32_t y, const char* text) {
     char buf[32];
     strlcpy(buf, text, sizeof(buf));
     size_t len = strlen(buf);
@@ -62,13 +62,13 @@ static RG_UI_TEXT void room_line(Canvas* canvas, int32_t y, const char* text) {
     canvas_draw_str_aligned(canvas, 86, y, AlignCenter, AlignBottom, buf);
 }
 
-static RG_UI_TEXT void room_hint(Canvas* canvas, const char* line1, const char* line2) {
+static RG_VIEW_TEXT void room_hint(Canvas* canvas, const char* line1, const char* line2) {
     canvas_set_font(canvas, FontSecondary);
     if(line1) room_line(canvas, 52, line1);
     if(line2) room_line(canvas, 61, line2);
 }
 
-static RG_UI_TEXT void room_draw_scope(Canvas* canvas, RoomModel* m) {
+static RG_VIEW_TEXT void room_draw_scope(Canvas* canvas, RoomModel* m) {
     int32_t x0 = SCOPE_X;
     canvas_draw_rframe(canvas, x0, SCOPE_Y, RADIOGEDDON_ROOM_SCOPE_W + 4, SCOPE_H, 2);
     for(int32_t gx = 4; gx < RADIOGEDDON_ROOM_SCOPE_W; gx += 10)
@@ -100,7 +100,7 @@ static RG_UI_TEXT void room_draw_scope(Canvas* canvas, RoomModel* m) {
 
 /* While a new station comes in, the part not yet reached is blank and an
  * oscilloscope line marks the edge. Nothing is drawn off the screen. */
-static RG_UI_TEXT void room_draw_wipe(Canvas* canvas, RoomModel* m, int32_t left) {
+static RG_VIEW_TEXT void room_draw_wipe(Canvas* canvas, RoomModel* m, int32_t left) {
     if(m->level == RG_TRANSITION_DONE) return;
     int32_t w = 128 - left;
     int32_t edge = (int32_t)m->level * w / 255;
@@ -129,7 +129,7 @@ static RG_UI_TEXT void room_draw_wipe(Canvas* canvas, RoomModel* m, int32_t left
     }
 }
 
-static RG_UI_TEXT void room_draw(Canvas* canvas, void* model) {
+static RG_VIEW_TEXT void room_draw(Canvas* canvas, void* model) {
     RoomModel* m = model;
     canvas_clear(canvas);
     canvas_set_color(canvas, ColorBlack);
@@ -228,7 +228,7 @@ static RG_UI_TEXT void room_draw(Canvas* canvas, void* model) {
     room_draw_wipe(canvas, m, 44);
 }
 
-static RG_UI_TEXT bool room_input(InputEvent* event, void* context) {
+static RG_VIEW_TEXT bool room_input(InputEvent* event, void* context) {
     RadioGeddonRoomView* instance = context;
     if(event->key == InputKeyBack) return false;
     if(event->type != InputTypeShort && event->type != InputTypeRepeat) return true;
@@ -280,7 +280,7 @@ static RG_UI_TEXT bool room_input(InputEvent* event, void* context) {
     return true;
 }
 
-RG_UI_TEXT RadioGeddonRoomView* radiogeddon_room_view_alloc(void) {
+RG_VIEW_TEXT RadioGeddonRoomView* radiogeddon_room_view_alloc(void) {
     RadioGeddonRoomView* instance = malloc(sizeof(RadioGeddonRoomView));
     instance->view = view_alloc();
     instance->callback = NULL;
@@ -302,17 +302,17 @@ RG_UI_TEXT RadioGeddonRoomView* radiogeddon_room_view_alloc(void) {
     return instance;
 }
 
-RG_UI_TEXT void radiogeddon_room_view_free(RadioGeddonRoomView* instance) {
+RG_VIEW_TEXT void radiogeddon_room_view_free(RadioGeddonRoomView* instance) {
     furi_assert(instance);
     view_free(instance->view);
     free(instance);
 }
 
-RG_UI_TEXT View* radiogeddon_room_view_get_view(RadioGeddonRoomView* instance) {
+RG_VIEW_TEXT View* radiogeddon_room_view_get_view(RadioGeddonRoomView* instance) {
     return instance->view;
 }
 
-RG_UI_TEXT void radiogeddon_room_view_set_callback(
+RG_VIEW_TEXT void radiogeddon_room_view_set_callback(
     RadioGeddonRoomView* instance,
     RadioGeddonRoomCallback callback,
     void* context) {
@@ -320,7 +320,7 @@ RG_UI_TEXT void radiogeddon_room_view_set_callback(
     instance->context = context;
 }
 
-RG_UI_TEXT void radiogeddon_room_view_set_terminal(
+RG_VIEW_TEXT void radiogeddon_room_view_set_terminal(
     RadioGeddonRoomView* instance,
     const char lines[RADIOGEDDON_ROOM_LINES][RADIOGEDDON_ROOM_LINE_LEN],
     uint32_t recordings) {
@@ -336,7 +336,7 @@ RG_UI_TEXT void radiogeddon_room_view_set_terminal(
         true);
 }
 
-RG_UI_TEXT void radiogeddon_room_view_set_scope(
+RG_VIEW_TEXT void radiogeddon_room_view_set_scope(
     RadioGeddonRoomView* instance,
     const RadioGeddonRoomTrace* scope) {
     with_view_model(
@@ -349,13 +349,13 @@ RG_UI_TEXT void radiogeddon_room_view_set_scope(
         true);
 }
 
-RG_UI_TEXT uint8_t radiogeddon_room_view_get_station(RadioGeddonRoomView* instance) {
+RG_VIEW_TEXT uint8_t radiogeddon_room_view_get_station(RadioGeddonRoomView* instance) {
     uint8_t s = 0;
     with_view_model(instance->view, RoomModel * m, { s = m->station; }, false);
     return s;
 }
 
-RG_UI_TEXT void radiogeddon_room_view_set_workbench(
+RG_VIEW_TEXT void radiogeddon_room_view_set_workbench(
     RadioGeddonRoomView* instance,
     const char* recording,
     const char* session) {
@@ -369,24 +369,24 @@ RG_UI_TEXT void radiogeddon_room_view_set_workbench(
         true);
 }
 
-RG_UI_TEXT void
+RG_VIEW_TEXT void
     radiogeddon_room_view_set_decoration(RadioGeddonRoomView* instance, uint8_t decoration) {
     with_view_model(instance->view, RoomModel * m, { m->decoration = decoration; }, true);
 }
 
-RG_UI_TEXT uint8_t radiogeddon_room_view_get_rack(RadioGeddonRoomView* instance) {
+RG_VIEW_TEXT uint8_t radiogeddon_room_view_get_rack(RadioGeddonRoomView* instance) {
     uint8_t r = 0;
     with_view_model(instance->view, RoomModel * m, { r = m->rack; }, false);
     return r;
 }
 
-RG_UI_TEXT uint8_t radiogeddon_room_view_get_gallery(RadioGeddonRoomView* instance) {
+RG_VIEW_TEXT uint8_t radiogeddon_room_view_get_gallery(RadioGeddonRoomView* instance) {
     uint8_t g = 0;
     with_view_model(instance->view, RoomModel * m, { g = m->gallery; }, false);
     return g;
 }
 
-RG_UI_TEXT void radiogeddon_room_view_update(
+RG_VIEW_TEXT void radiogeddon_room_view_update(
     RadioGeddonRoomView* instance,
     const RgMascotFrame* frame,
     uint32_t now) {

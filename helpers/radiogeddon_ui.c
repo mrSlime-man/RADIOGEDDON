@@ -1,4 +1,5 @@
 #include "radiogeddon_ui.h"
+#include "../radiogeddon_edition.h" /* RG_LAB_TEXT */
 
 #if RG_FEATURE_DOLPHIN_LAB
 
@@ -58,24 +59,24 @@ static const NotificationSequence* const ui_cues[RgUiCueCount] = {
 };
 
 /* Milliseconds (the Flipper's kernel tick is 1 ms). */
-static uint32_t ui_now(void) {
+static RG_LAB_TEXT uint32_t ui_now(void) {
     return furi_get_tick();
 }
 
-static void ui_play(RadioGeddonApp* app, RgUiFbEvent event) {
+static RG_LAB_TEXT void ui_play(RadioGeddonApp* app, RgUiFbEvent event) {
     RgUiCue cue = rg_ui_feedback(
         &app->ui.feedback, (RgUiFeedbackLevel)app->settings.ui_feedback, event, ui_now());
     if(cue != RgUiCueNone && cue < RgUiCueCount && ui_cues[cue])
         notification_message(app->notifications, ui_cues[cue]);
 }
 
-static void ui_reveal_finish(RadioGeddonApp* app) {
+static RG_LAB_TEXT void ui_reveal_finish(RadioGeddonApp* app) {
     if(!app->ui.reveal) return;
     app->ui.reveal = false;
     view_dispatcher_switch_to_view(app->view_dispatcher, app->ui.reveal_view);
 }
 
-static void ui_lab_cb(RadioGeddonLabEvent event, uint32_t index, void* context) {
+static RG_LAB_TEXT void ui_lab_cb(RadioGeddonLabEvent event, uint32_t index, void* context) {
     RadioGeddonApp* app = context;
     RadioGeddonUi* ui = &app->ui;
     switch(event) {
@@ -107,14 +108,14 @@ static void ui_lab_cb(RadioGeddonLabEvent event, uint32_t index, void* context) 
 
 /* The look and animation level from the settings; with memory short the
  * animation stops (a still pose costs no redraws). */
-static void ui_apply_look(RadioGeddonApp* app, bool low) {
+static RG_LAB_TEXT void ui_apply_look(RadioGeddonApp* app, bool low) {
     RgMascotLook look;
     memcpy(&look, app->settings.look, sizeof(look));
     rg_mascot_set_look(
         &app->ui.mascot, &look, low ? (uint8_t)RgAnimOff : app->settings.ui_animation);
 }
 
-static void ui_lab_alloc(RadioGeddonApp* app) {
+static RG_LAB_TEXT void ui_lab_alloc(RadioGeddonApp* app) {
     if(app->ui.lab) return;
     app->ui.lab = radiogeddon_lab_view_alloc();
     radiogeddon_lab_view_set_callback(app->ui.lab, ui_lab_cb, app);
@@ -123,14 +124,14 @@ static void ui_lab_alloc(RadioGeddonApp* app) {
         app->view_dispatcher, RadioGeddonViewLab, radiogeddon_lab_view_get_view(app->ui.lab));
 }
 
-static void ui_lab_free(RadioGeddonApp* app) {
+static RG_LAB_TEXT void ui_lab_free(RadioGeddonApp* app) {
     if(!app->ui.lab) return;
     view_dispatcher_remove_view(app->view_dispatcher, RadioGeddonViewLab);
     radiogeddon_lab_view_free(app->ui.lab);
     app->ui.lab = NULL;
 }
 
-void radiogeddon_ui_alloc(RadioGeddonApp* app) {
+RG_LAB_TEXT void radiogeddon_ui_alloc(RadioGeddonApp* app) {
     RadioGeddonUi* ui = &app->ui;
     memset(ui, 0, sizeof(*ui));
     uint32_t now = ui_now();
@@ -142,11 +143,11 @@ void radiogeddon_ui_alloc(RadioGeddonApp* app) {
     if(ui->style != RgUiStyleClassic) ui_lab_alloc(app);
 }
 
-void radiogeddon_ui_free(RadioGeddonApp* app) {
+RG_LAB_TEXT void radiogeddon_ui_free(RadioGeddonApp* app) {
     ui_lab_free(app);
 }
 
-void radiogeddon_ui_apply_style(RadioGeddonApp* app) {
+RG_LAB_TEXT void radiogeddon_ui_apply_style(RadioGeddonApp* app) {
     RadioGeddonUi* ui = &app->ui;
     ui->style = (uint8_t)rg_ui_style_effective(app->settings.ui_style, radiogeddon_memdiag_free());
     ui->reveal = false;
@@ -160,11 +161,11 @@ void radiogeddon_ui_apply_style(RadioGeddonApp* app) {
     }
 }
 
-bool radiogeddon_ui_active(RadioGeddonApp* app) {
+RG_LAB_TEXT bool radiogeddon_ui_active(RadioGeddonApp* app) {
     return app->ui.lab != NULL;
 }
 
-void radiogeddon_ui_event(RadioGeddonApp* app, RgMascotEvent event, uint32_t arg) {
+RG_LAB_TEXT void radiogeddon_ui_event(RadioGeddonApp* app, RgMascotEvent event, uint32_t arg) {
     rg_mascot_event(&app->ui.mascot, event, arg, ui_now());
     switch(event) {
     case RgMascotEventSignalActivity:
@@ -184,11 +185,11 @@ void radiogeddon_ui_event(RadioGeddonApp* app, RgMascotEvent event, uint32_t arg
     }
 }
 
-void radiogeddon_ui_set_scanning(RadioGeddonApp* app, bool scanning) {
+RG_LAB_TEXT void radiogeddon_ui_set_scanning(RadioGeddonApp* app, bool scanning) {
     app->ui.scanning = scanning;
 }
 
-void radiogeddon_ui_tick(RadioGeddonApp* app) {
+RG_LAB_TEXT void radiogeddon_ui_tick(RadioGeddonApp* app) {
     RadioGeddonUi* ui = &app->ui;
     uint32_t now = ui_now();
     // The real state, read: the radio's session, the recorder, the heap.
@@ -223,14 +224,14 @@ void radiogeddon_ui_tick(RadioGeddonApp* app) {
     }
 }
 
-bool radiogeddon_ui_badge(RadioGeddonApp* app, RgMascotFrame* frame, bool* cyber) {
+RG_LAB_TEXT bool radiogeddon_ui_badge(RadioGeddonApp* app, RgMascotFrame* frame, bool* cyber) {
     if(!app->ui.lab) return false;
     rg_mascot_frame(&app->ui.mascot, ui_now(), frame);
     *cyber = app->ui.style == RgUiStyleCyberLab;
     return true;
 }
 
-static void ui_show_lab(RadioGeddonApp* app) {
+static RG_LAB_TEXT void ui_show_lab(RadioGeddonApp* app) {
     uint32_t now = ui_now();
     RgMascotFrame f;
     rg_mascot_frame(&app->ui.mascot, now, &f);
@@ -238,7 +239,7 @@ static void ui_show_lab(RadioGeddonApp* app) {
     view_dispatcher_switch_to_view(app->view_dispatcher, RadioGeddonViewLab);
 }
 
-bool radiogeddon_ui_card(
+RG_LAB_TEXT bool radiogeddon_ui_card(
     RadioGeddonApp* app,
     RadioGeddonLabCard card,
     const char* title,
@@ -258,7 +259,7 @@ bool radiogeddon_ui_card(
     return true;
 }
 
-void radiogeddon_ui_card_progress(RadioGeddonApp* app, uint8_t percent) {
+RG_LAB_TEXT void radiogeddon_ui_card_progress(RadioGeddonApp* app, uint8_t percent) {
     if(!app->ui.lab) return;
     // The app thread is busy with the work: the frame advances here.
     uint32_t now = ui_now();
@@ -269,7 +270,8 @@ void radiogeddon_ui_card_progress(RadioGeddonApp* app, uint8_t percent) {
     radiogeddon_lab_view_set_progress(app->ui.lab, percent);
 }
 
-void radiogeddon_ui_reveal(RadioGeddonApp* app, const char* title, const char* text, uint32_t view) {
+RG_LAB_TEXT void
+    radiogeddon_ui_reveal(RadioGeddonApp* app, const char* title, const char* text, uint32_t view) {
     RadioGeddonUi* ui = &app->ui;
     radiogeddon_ui_event(app, RgMascotEventAnalysisCompleted, 0);
     if(!ui->lab || !app->settings.ui_transitions) {
@@ -287,13 +289,13 @@ void radiogeddon_ui_reveal(RadioGeddonApp* app, const char* title, const char* t
     ui_show_lab(app);
 }
 
-void radiogeddon_ui_cancel(RadioGeddonApp* app) {
+RG_LAB_TEXT void radiogeddon_ui_cancel(RadioGeddonApp* app) {
     app->ui.reveal = false;
     app->ui.card_timed = false;
     app->ui.card_dismiss = false;
 }
 
-void radiogeddon_ui_show_home(
+RG_LAB_TEXT void radiogeddon_ui_show_home(
     RadioGeddonApp* app,
     const RadioGeddonLabItem* items,
     uint8_t count,

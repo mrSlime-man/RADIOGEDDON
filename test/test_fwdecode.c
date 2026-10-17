@@ -973,10 +973,10 @@ static void test_decode_only_receiver(void) {
             printf("  differs: %s\n", name);
         }
     }
-    printf(
-        "  %zu captures: %zu decode the same, %u decodes each way\n", files, same, to.decodes);
+    printf("  %zu captures: %zu decode the same, %u decodes each way\n", files, same, to.decodes);
     CHECK(files == PAIR_COUNT + 1, "every capture was fed");
-    CHECK(same == files && tf.decodes == to.decodes && tf.digest == to.digest, "identical decodes");
+    CHECK(
+        same == files && tf.decodes == to.decodes && tf.digest == to.digest, "identical decodes");
     CHECK(to.decodes > PAIR_COUNT, "the captures decoded");
 
     furi_string_free(tf.text);

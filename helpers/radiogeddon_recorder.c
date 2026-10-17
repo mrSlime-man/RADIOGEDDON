@@ -1,4 +1,5 @@
 #include "radiogeddon_recorder.h"
+#include "../radiogeddon_edition.h" /* RG_CORE_TEXT */
 #include "rg_div.h"
 #include "rg_ring.h"
 #include "rg_rawfmt.h"
@@ -45,11 +46,11 @@ struct RadioGeddonRecorder {
     uint32_t stop_tick;
 };
 
-static uint32_t radiogeddon_recorder_ms(uint32_t ticks) {
+static RG_CORE_TEXT uint32_t radiogeddon_recorder_ms(uint32_t ticks) {
     return rg_muldiv_u32(ticks, 1000u, furi_kernel_get_tick_frequency());
 }
 
-RadioGeddonRecorder* radiogeddon_recorder_alloc(void) {
+RG_CORE_TEXT RadioGeddonRecorder* radiogeddon_recorder_alloc(void) {
     size_t avail = memmgr_heap_get_max_free_block();
     size_t fixed =
         sizeof(RadioGeddonRecorder) + RECORDER_WBUF + RECORDER_STACK + RECORDER_HEAP_SPARE;
@@ -67,7 +68,7 @@ RadioGeddonRecorder* radiogeddon_recorder_alloc(void) {
     return rec;
 }
 
-static bool radiogeddon_recorder_flush(RadioGeddonRecorder* rec) {
+static RG_CORE_TEXT bool radiogeddon_recorder_flush(RadioGeddonRecorder* rec) {
     if(rec->wlen == 0) return true;
     bool ok = !__atomic_load_n(&rec->failed, __ATOMIC_ACQUIRE) &&
               storage_file_write(rec->file, rec->wbuf, rec->wlen) == rec->wlen;
@@ -78,13 +79,13 @@ static bool radiogeddon_recorder_flush(RadioGeddonRecorder* rec) {
 }
 
 /* Writer thread, after a write: sync if the last one is old enough. */
-static void radiogeddon_recorder_sync(RadioGeddonRecorder* rec, uint32_t now) {
+static RG_CORE_TEXT void radiogeddon_recorder_sync(RadioGeddonRecorder* rec, uint32_t now) {
     if(now - rec->last_sync < furi_ms_to_ticks(RECORDER_SYNC_MS)) return;
     rec->last_sync = now;
     if(!__atomic_load_n(&rec->failed, __ATOMIC_ACQUIRE)) storage_file_sync(rec->file);
 }
 
-static int32_t radiogeddon_recorder_writer(void* context) {
+static RG_CORE_TEXT int32_t radiogeddon_recorder_writer(void* context) {
     RadioGeddonRecorder* rec = context;
     uint32_t last_write = furi_get_tick();
     rec->last_sync = last_write;
@@ -121,7 +122,7 @@ static int32_t radiogeddon_recorder_writer(void* context) {
     return 0;
 }
 
-RadioGeddonRecordError radiogeddon_recorder_open(
+RG_CORE_TEXT RadioGeddonRecordError radiogeddon_recorder_open(
     RadioGeddonRecorder* rec,
     Storage* storage,
     const char* path,
@@ -142,20 +143,22 @@ RadioGeddonRecordError radiogeddon_recorder_open(
     return RadioGeddonRecordOk;
 }
 
-void radiogeddon_recorder_push(RadioGeddonRecorder* rec, bool level, uint32_t duration) {
+RG_CORE_TEXT void
+    radiogeddon_recorder_push(RadioGeddonRecorder* rec, bool level, uint32_t duration) {
     if(duration == 0) return; // carries no time; the file format skips it too
     rg_ring_push(&rec->ring, rg_ring_sample(level, duration));
 }
 
-void radiogeddon_recorder_note_overrun(RadioGeddonRecorder* rec) {
+RG_CORE_TEXT void radiogeddon_recorder_note_overrun(RadioGeddonRecorder* rec) {
     __atomic_store_n(&rec->radio_overruns, rec->radio_overruns + 1, __ATOMIC_RELAXED);
 }
 
-bool radiogeddon_recorder_failed(RadioGeddonRecorder* rec) {
+RG_CORE_TEXT bool radiogeddon_recorder_failed(RadioGeddonRecorder* rec) {
     return __atomic_load_n(&rec->failed, __ATOMIC_ACQUIRE);
 }
 
-void radiogeddon_recorder_stats(RadioGeddonRecorder* rec, RadioGeddonRecordStats* out) {
+RG_CORE_TEXT void
+    radiogeddon_recorder_stats(RadioGeddonRecorder* rec, RadioGeddonRecordStats* out) {
     RgRingStats rs;
     rg_ring_stats(&rec->ring, &rs);
     uint32_t cap = rg_ring_capacity(&rec->ring);
@@ -174,7 +177,8 @@ void radiogeddon_recorder_stats(RadioGeddonRecorder* rec, RadioGeddonRecordStats
                                                     RadioGeddonRecordOk;
 }
 
-void radiogeddon_recorder_finish(RadioGeddonRecorder* rec, RadioGeddonRecordStats* out) {
+RG_CORE_TEXT void
+    radiogeddon_recorder_finish(RadioGeddonRecorder* rec, RadioGeddonRecordStats* out) {
     rec->stop_tick = furi_get_tick();
     if(rec->thread) {
         __atomic_store_n(&rec->stop, true, __ATOMIC_RELEASE);
@@ -211,7 +215,7 @@ void radiogeddon_recorder_finish(RadioGeddonRecorder* rec, RadioGeddonRecordStat
     free(rec);
 }
 
-const char* radiogeddon_recorder_error_text(RadioGeddonRecordError error) {
+RG_CORE_TEXT const char* radiogeddon_recorder_error_text(RadioGeddonRecordError error) {
     switch(error) {
     case RadioGeddonRecordOk:
         return "OK";

@@ -15,16 +15,25 @@ static const RadioGeddonToolModule radiogeddon_settings_module = {
         {
             radiogeddon_scene_config_on_enter,
             radiogeddon_scene_bands_on_enter,
+            radiogeddon_scene_favorites_on_enter,
+            radiogeddon_scene_favorite_options_on_enter,
+            radiogeddon_scene_frequency_on_enter,
         },
     .on_event =
         {
             radiogeddon_scene_config_on_event,
             radiogeddon_scene_bands_on_event,
+            radiogeddon_scene_favorites_on_event,
+            radiogeddon_scene_favorite_options_on_event,
+            radiogeddon_scene_frequency_on_event,
         },
     .on_exit =
         {
             radiogeddon_scene_config_on_exit,
             radiogeddon_scene_bands_on_exit,
+            radiogeddon_scene_favorites_on_exit,
+            radiogeddon_scene_favorite_options_on_exit,
+            radiogeddon_scene_frequency_on_exit,
         },
 };
 

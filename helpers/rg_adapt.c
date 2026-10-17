@@ -6,7 +6,7 @@
 
 #include <string.h>
 
-void rg_adapt_init(RgAdapt* a, RgAdaptMode mode, size_t count, uint16_t dwell_ms) {
+RG_CORE_TEXT void rg_adapt_init(RgAdapt* a, RgAdaptMode mode, size_t count, uint16_t dwell_ms) {
     memset(a, 0, sizeof(*a));
     if(count > RG_ADAPT_MAX_CHANNELS) count = RG_ADAPT_MAX_CHANNELS;
     if(mode >= RgAdaptModeCount) mode = RgAdaptStandard;
@@ -25,7 +25,7 @@ void rg_adapt_init(RgAdapt* a, RgAdaptMode mode, size_t count, uint16_t dwell_ms
     rg_adapt_reset(a);
 }
 
-void rg_adapt_reset(RgAdapt* a) {
+RG_CORE_TEXT void rg_adapt_reset(RgAdapt* a) {
     for(size_t i = 0; i < RG_ADAPT_MAX_CHANNELS; i++) {
         uint8_t prio = a->ch[i].priority;
         memset(&a->ch[i], 0, sizeof(a->ch[i]));
@@ -38,17 +38,17 @@ void rg_adapt_reset(RgAdapt* a) {
     a->last = 0xFF;
 }
 
-void rg_adapt_set_priority(RgAdapt* a, size_t index, uint8_t priority) {
+RG_CORE_TEXT void rg_adapt_set_priority(RgAdapt* a, size_t index, uint8_t priority) {
     if(index < a->count) a->ch[index].priority = priority > 3 ? 3 : priority;
 }
 
-bool rg_adapt_noisy(const RgAdaptChannel* ch) {
+RG_CORE_TEXT bool rg_adapt_noisy(const RgAdaptChannel* ch) {
     return ch->visits >= RG_ADAPT_NOISY_VISITS && ch->active_visits * 5u > ch->visits * 4u;
 }
 
 /* How strongly a frequency is favoured: 16 for no activity, up to five
  * times that (Balanced) or thirteen times (Focused) for steady activity. */
-static uint32_t rg_adapt_weight(const RgAdapt* a, size_t i) {
+static RG_CORE_TEXT uint32_t rg_adapt_weight(const RgAdapt* a, size_t i) {
     const RgAdaptChannel* c = &a->ch[i];
     uint32_t act = c->score;
     if(rg_adapt_noisy(c) && act > RG_ADAPT_NOISY_CAP) act = RG_ADAPT_NOISY_CAP;
@@ -59,12 +59,12 @@ static uint32_t rg_adapt_weight(const RgAdapt* a, size_t i) {
 }
 
 /* Picks since channel @p i was last visited (never: as if from the start). */
-static uint32_t rg_adapt_wait(const RgAdapt* a, size_t i) {
+static RG_CORE_TEXT uint32_t rg_adapt_wait(const RgAdapt* a, size_t i) {
     const RgAdaptChannel* c = &a->ch[i];
     return c->visited ? a->picks - c->last_pick : a->picks + a->max_revisit;
 }
 
-size_t rg_adapt_next(RgAdapt* a) {
+RG_CORE_TEXT size_t rg_adapt_next(RgAdapt* a) {
     if(a->count == 0) return 0;
     size_t pick = 0;
     if(a->mode == RgAdaptStandard) {
@@ -119,7 +119,7 @@ size_t rg_adapt_next(RgAdapt* a) {
     return pick;
 }
 
-uint16_t rg_adapt_dwell(const RgAdapt* a, size_t index) {
+RG_CORE_TEXT uint16_t rg_adapt_dwell(const RgAdapt* a, size_t index) {
     if(a->mode == RgAdaptStandard || index >= a->count) return a->base_dwell_ms;
     const RgAdaptChannel* c = &a->ch[index];
     if(rg_adapt_noisy(c)) return a->min_dwell_ms;
@@ -129,7 +129,7 @@ uint16_t rg_adapt_dwell(const RgAdapt* a, size_t index) {
     return (uint16_t)(d > a->max_dwell_ms ? a->max_dwell_ms : d);
 }
 
-void rg_adapt_observe(
+RG_CORE_TEXT void rg_adapt_observe(
     RgAdapt* a,
     size_t index,
     bool active,
@@ -162,7 +162,7 @@ void rg_adapt_observe(
     c->score = (uint16_t)(score > RG_ADAPT_SCORE_MAX ? RG_ADAPT_SCORE_MAX : score);
 }
 
-uint8_t rg_adapt_share(const RgAdapt* a, size_t index) {
+RG_CORE_TEXT uint8_t rg_adapt_share(const RgAdapt* a, size_t index) {
     if(index >= a->count) return 0;
     uint64_t total = 0;
     for(size_t i = 0; i < a->count; i++)
@@ -170,7 +170,7 @@ uint8_t rg_adapt_share(const RgAdapt* a, size_t index) {
     return total ? (uint8_t)rg_div_u64((uint64_t)a->ch[index].visits * 100u, total) : 0;
 }
 
-uint32_t rg_adapt_worst_gap(const RgAdapt* a, uint32_t now_ms) {
+RG_CORE_TEXT uint32_t rg_adapt_worst_gap(const RgAdapt* a, uint32_t now_ms) {
     uint32_t worst = 0;
     for(size_t i = 0; i < a->count; i++) {
         const RgAdaptChannel* c = &a->ch[i];
@@ -182,7 +182,7 @@ uint32_t rg_adapt_worst_gap(const RgAdapt* a, uint32_t now_ms) {
     return worst;
 }
 
-const char* rg_adapt_mode_name(RgAdaptMode mode) {
+RG_CORE_TEXT const char* rg_adapt_mode_name(RgAdaptMode mode) {
     switch(mode) {
     case RgAdaptStandard:
         return "Standard";

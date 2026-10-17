@@ -1,4 +1,5 @@
 #include "radiogeddon_recovery.h"
+#include "../radiogeddon_edition.h" /* RG_TOOL_TEXT */
 #include "radiogeddon_storage.h"
 #include "rg_div.h"
 
@@ -11,7 +12,7 @@
 /* Read size for the scan (a few MB take a few hundred calls). */
 #define RECOVERY_CHUNK 1024u
 
-bool radiogeddon_recovery_scan(Storage* storage, RadioGeddonRecovery* out) {
+RG_TOOL_TEXT bool radiogeddon_recovery_scan(Storage* storage, RadioGeddonRecovery* out) {
     memset(out, 0, sizeof(*out));
     rg_recover_init(&out->scan);
     FileInfo info;
@@ -40,7 +41,7 @@ bool radiogeddon_recovery_scan(Storage* storage, RadioGeddonRecovery* out) {
     return true;
 }
 
-bool radiogeddon_recovery_repair(Storage* storage, const RadioGeddonRecovery* rec) {
+RG_TOOL_TEXT bool radiogeddon_recovery_repair(Storage* storage, const RadioGeddonRecovery* rec) {
     if(rec->verdict == RgRecoverComplete) return true;
     if(rec->verdict != RgRecoverPartial) return false;
     char tail[128];
@@ -56,7 +57,8 @@ bool radiogeddon_recovery_repair(Storage* storage, const RadioGeddonRecovery* re
     return ok;
 }
 
-bool radiogeddon_recovery_keep(Storage* storage, const RadioGeddonRecovery* rec, FuriString* path) {
+RG_TOOL_TEXT bool
+    radiogeddon_recovery_keep(Storage* storage, const RadioGeddonRecovery* rec, FuriString* path) {
     DateTime dt;
     if(rec->timestamp) {
         datetime_timestamp_to_datetime(rec->timestamp, &dt);
@@ -80,12 +82,12 @@ bool radiogeddon_recovery_keep(Storage* storage, const RadioGeddonRecovery* rec,
            FSE_OK;
 }
 
-void radiogeddon_recovery_discard(Storage* storage) {
+RG_TOOL_TEXT void radiogeddon_recovery_discard(Storage* storage) {
     storage_common_remove(storage, RADIOGEDDON_RECORD_TEMP);
 }
 
 /* Repaired, then offered back: Back keeps it; only Delete removes it. */
-void radiogeddon_recovery_offer(Storage* storage, DialogsApp* dialogs) {
+RG_TOOL_TEXT void radiogeddon_recovery_offer(Storage* storage, DialogsApp* dialogs) {
     RadioGeddonRecovery* rec = malloc(sizeof(RadioGeddonRecovery));
     if(!radiogeddon_recovery_scan(storage, rec)) {
         free(rec);

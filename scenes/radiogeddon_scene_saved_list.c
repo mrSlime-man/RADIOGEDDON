@@ -2,7 +2,10 @@
 
 // Signal Database list. The index is built when the list opens and kept while
 // a file or the options opened from it are shown; it is rebuilt after files
-// change (db_dirty) and freed on returning to the main menu.
+// change (db_dirty) and freed on returning to the main menu. The list's view
+// exists only while the list is shown (in the Full edition its code is in the
+// Database module, unloaded once none of its screens is shown); its place is
+// kept in the index meanwhile.
 
 /* Show "Opening..." for RAW files larger than this. */
 #define SAVED_LIST_BUSY_BYTES (32u * 1024u)
@@ -45,7 +48,7 @@ static RG_UI_TEXT bool radiogeddon_scene_saved_list_load(RadioGeddonApp* app) {
     FuriString* keep = furi_string_alloc();
     if(app->db) {
         query = app->db->query;
-        selected = radiogeddon_db_view_get_selected(app->db_view);
+        selected = app->db->place_selected;
         const RgDbEntry* e = radiogeddon_db_at(app->db, selected);
         if(e) furi_string_set(keep, rg_db_name(&app->db->db, e));
     }
@@ -91,9 +94,14 @@ RG_UI_TEXT void radiogeddon_scene_saved_list_on_enter(void* context) {
             return;
         }
     } else {
-        // Back from a file or the options: re-run the query, keep the place.
-        radiogeddon_db_view_lock(app->db_view);
-        radiogeddon_db_view_unlock(app->db_view, false);
+        // Back from a file or the options: re-run the query, keep the place
+        // (the top of the list if the query no longer reaches it).
+        radiogeddon_db_apply(app->db);
+        radiogeddon_db_view_set_db(app->db_view, app->db);
+        if(app->db->place_selected < app->db->view_count) {
+            radiogeddon_db_view_set_place(
+                app->db_view, app->db->place_selected, app->db->place_top);
+        }
     }
     view_dispatcher_switch_to_view(app->view_dispatcher, RadioGeddonViewDb);
 }
@@ -164,6 +172,16 @@ RG_UI_TEXT bool radiogeddon_scene_saved_list_on_event(void* context, SceneManage
 RG_UI_TEXT void radiogeddon_scene_saved_list_on_exit(void* context) {
     RadioGeddonApp* app = context;
     popup_reset(app->popup);
+    // The view goes with the screen; the index keeps its place.
+    if(app->db_view) {
+        if(app->db) {
+            radiogeddon_db_view_get_place(
+                app->db_view, &app->db->place_selected, &app->db->place_top);
+        }
+        view_dispatcher_remove_view(app->view_dispatcher, RadioGeddonViewDb);
+        radiogeddon_db_view_free(app->db_view);
+        app->db_view = NULL;
+    }
     if(app->db_keep) return;
     // Leaving the Database: keep its sort order for next time.
     if(app->db && app->db->query.sort != app->settings.db_sort) {

@@ -29,7 +29,7 @@
 
 /* The plugin manager's application id and API version for every module. */
 #define RADIOGEDDON_MODULE_APPID "radiogeddon_full"
-#define RADIOGEDDON_MODULE_API   6u
+#define RADIOGEDDON_MODULE_API   7u
 
 /* File names in the app's assets folder (APP_ASSETS_PATH("plugins/...")). */
 #define RADIOGEDDON_MODULE_BITS      "radiogeddon_bits.fal"
@@ -48,6 +48,8 @@
 #define RADIOGEDDON_MODULE_RANGE     "radiogeddon_range.fal"
 #define RADIOGEDDON_MODULE_SETTINGS  "radiogeddon_settings.fal"
 #define RADIOGEDDON_MODULE_HOPPER    "radiogeddon_hopper.fal"
+#define RADIOGEDDON_MODULE_DB        "radiogeddon_db.fal"
+#define RADIOGEDDON_MODULE_ANALYZE   "radiogeddon_analyze.fal"
 
 #include <dialogs/dialogs.h>
 /* Recording recovery at startup (radiogeddon_recovery.h), only when a
@@ -149,9 +151,15 @@ typedef struct {
  *                           2 Dolphin customization, 3 Dolphin Assistant tip
  *   radiogeddon_range.fal   0 Range Scanner setup, 1 Range scan, 2 Scan
  *                           profiles, 3 Profile name, 4 Waterfall
- *   radiogeddon_settings.fal 0 Settings, 1 Radio bands
+ *   radiogeddon_settings.fal 0 Settings, 1 Radio bands, 2 Favorites,
+ *                           3 Favorite options, 4 Frequency keyboard
  *   radiogeddon_hopper.fal  0 Frequency Hopper, 1 Hopper statistics
  *   radiogeddon_bits.fal    0 Bitstream Explorer
+ *   radiogeddon_db.fal      0 Signal Database list, 1 Database options,
+ *                           2 File details, 3 Rename
+ *   radiogeddon_analyze.fal 0 Analyze menu, 1 Multi-Capture Compare list,
+ *                           2 its result, 3 Smart Protocol Discovery,
+ *                           4 Decode with Firmware
  */
 #define RADIOGEDDON_TOOL_SCENES 5u
 typedef struct {

@@ -1,7 +1,9 @@
 #include "radiogeddon_scene.h"
 
 // Database options: sort order, which files to show, name search and reload.
-// Scene state 1 while the search keyboard is shown.
+// Scene state 1 while the search keyboard is shown. The list is not on screen
+// here (its view exists only while it is shown): a changed query is applied
+// to the index and the list opens at its top again, as before.
 
 #define DB_OPTIONS_PROTOCOLS 16u
 
@@ -39,12 +41,19 @@ static RG_UI_TEXT size_t
     return rg_db_protocols(&app->db->db, out, DB_OPTIONS_PROTOCOLS);
 }
 
+/* The query changed: select again, and the list opens at its top. */
+static RG_UI_TEXT void radiogeddon_scene_db_options_applied(RadioGeddonDb* db) {
+    radiogeddon_db_apply(db);
+    db->place_selected = 0;
+    db->place_top = 0;
+}
+
 static RG_UI_TEXT void radiogeddon_scene_db_options_sort_changed(VariableItem* item) {
     RadioGeddonApp* app = variable_item_get_context(item);
     RgDbSort sort = (RgDbSort)variable_item_get_current_value_index(item);
-    RadioGeddonDb* db = radiogeddon_db_view_lock(app->db_view);
+    RadioGeddonDb* db = app->db;
     db->query.sort = sort;
-    radiogeddon_db_view_unlock(app->db_view, true);
+    radiogeddon_scene_db_options_applied(db);
     variable_item_set_current_value_text(item, rg_db_sort_name(sort));
 }
 
@@ -54,7 +63,7 @@ static RG_UI_TEXT void radiogeddon_scene_db_options_show_changed(VariableItem* i
     const char* protocols[DB_OPTIONS_PROTOCOLS];
     size_t count = radiogeddon_scene_db_options_protocols(app, protocols);
 
-    RadioGeddonDb* db = radiogeddon_db_view_lock(app->db_view);
+    RadioGeddonDb* db = app->db;
     if(index < DB_OPTIONS_FILTERS) {
         db->query.show = db_options_filters[index];
         db->query.protocol[0] = '\0';
@@ -65,7 +74,7 @@ static RG_UI_TEXT void radiogeddon_scene_db_options_show_changed(VariableItem* i
             db->query.protocol, protocols[index - DB_OPTIONS_FILTERS], sizeof(db->query.protocol));
         variable_item_set_current_value_text(item, db->query.protocol);
     }
-    radiogeddon_db_view_unlock(app->db_view, true);
+    radiogeddon_scene_db_options_applied(db);
 }
 
 static RG_UI_TEXT void radiogeddon_scene_db_options_enter(void* context, uint32_t index) {
@@ -112,10 +121,9 @@ static RG_UI_TEXT void
     }
     if(!show_text) {
         // The filtered protocol is gone after a reload: show everything.
-        RadioGeddonDb* locked = radiogeddon_db_view_lock(app->db_view);
-        locked->query.show = RgDbShowAll;
-        locked->query.protocol[0] = '\0';
-        radiogeddon_db_view_unlock(app->db_view, true);
+        app->db->query.show = RgDbShowAll;
+        app->db->query.protocol[0] = '\0';
+        radiogeddon_scene_db_options_applied(app->db);
         show_text = rg_db_show_name(RgDbShowAll);
     }
     variable_item_set_current_value_index(item, show);
@@ -173,7 +181,7 @@ static RG_UI_TEXT void radiogeddon_scene_db_options_back_to_list(RadioGeddonApp*
 RG_UI_TEXT void radiogeddon_scene_db_options_on_enter(void* context) {
     RadioGeddonApp* app = context;
     // Opened from the Database list, which keeps the index for this screen.
-    furi_check(app->db && app->db_view);
+    furi_check(app->db);
     scene_manager_set_scene_state(
         app->scene_manager, RadioGeddonSceneDbOptions, DbOptionsStateList);
     radiogeddon_scene_db_options_show_list(app, DbOptionsRowSort);
@@ -190,9 +198,9 @@ RG_UI_TEXT bool radiogeddon_scene_db_options_on_event(void* context, SceneManage
             consumed = true;
             break;
         case DbOptionsEventSearchDone: {
-            RadioGeddonDb* db = radiogeddon_db_view_lock(app->db_view);
+            RadioGeddonDb* db = app->db;
             strlcpy(db->query.search, app->text_store, sizeof(db->query.search));
-            radiogeddon_db_view_unlock(app->db_view, true);
+            radiogeddon_scene_db_options_applied(db);
             radiogeddon_scene_db_options_back_to_list(app);
             consumed = true;
             break;

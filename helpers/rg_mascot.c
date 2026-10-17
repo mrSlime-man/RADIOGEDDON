@@ -6,11 +6,11 @@
 #include <string.h>
 
 /* True once @p deadline is reached (wrap-around safe). */
-static bool rg_mascot_reached(uint32_t now, uint32_t deadline) {
+static RG_LAB_TEXT bool rg_mascot_reached(uint32_t now, uint32_t deadline) {
     return (int32_t)(now - deadline) >= 0;
 }
 
-static uint32_t rg_mascot_hash(uint32_t x) {
+static RG_LAB_TEXT uint32_t rg_mascot_hash(uint32_t x) {
     x ^= x >> 16;
     x *= 0x7feb352dU;
     x ^= x >> 15;
@@ -19,7 +19,7 @@ static uint32_t rg_mascot_hash(uint32_t x) {
     return x;
 }
 
-void rg_mascot_init(RgMascot* m, uint32_t now, uint32_t seed) {
+RG_LAB_TEXT void rg_mascot_init(RgMascot* m, uint32_t now, uint32_t seed) {
     memset(m, 0, sizeof(*m));
     m->now = now;
     m->quiet_since = now;
@@ -31,13 +31,13 @@ void rg_mascot_init(RgMascot* m, uint32_t now, uint32_t seed) {
     rg_mascot_look_default(&m->look);
 }
 
-void rg_mascot_set_look(RgMascot* m, const RgMascotLook* look, uint8_t anim) {
+RG_LAB_TEXT void rg_mascot_set_look(RgMascot* m, const RgMascotLook* look, uint8_t anim) {
     m->look = *look;
     rg_mascot_look_sanitize(&m->look);
     m->anim = anim < RgAnimCount ? anim : RgAnimNormal;
 }
 
-void rg_mascot_event(RgMascot* m, RgMascotEvent event, uint32_t arg, uint32_t now) {
+RG_LAB_TEXT void rg_mascot_event(RgMascot* m, RgMascotEvent event, uint32_t arg, uint32_t now) {
     m->now = now;
     switch(event) {
     case RgMascotEventScanStarted:
@@ -108,7 +108,7 @@ void rg_mascot_event(RgMascot* m, RgMascotEvent event, uint32_t arg, uint32_t no
     m->quiet_since = now;
 }
 
-void rg_mascot_sync(
+RG_LAB_TEXT void rg_mascot_sync(
     RgMascot* m,
     bool scanning,
     bool receiving,
@@ -129,7 +129,7 @@ void rg_mascot_sync(
     m->now = now;
 }
 
-RgMascotState rg_mascot_state(RgMascot* m, uint32_t now) {
+RG_LAB_TEXT RgMascotState rg_mascot_state(RgMascot* m, uint32_t now) {
     if(m->detect_live && rg_mascot_reached(now, m->detect_until)) m->detect_live = 0;
     if(m->saved_live && rg_mascot_reached(now, m->saved_until)) m->saved_live = 0;
     if(m->error_live && rg_mascot_reached(now, m->error_until)) m->error_live = 0;
@@ -173,7 +173,7 @@ RgMascotState rg_mascot_state(RgMascot* m, uint32_t now) {
     return s;
 }
 
-static void rg_mascot_pose_idle(uint32_t t, uint32_t seed, RgMascotFrame* f) {
+static RG_LAB_TEXT void rg_mascot_pose_idle(uint32_t t, uint32_t seed, RgMascotFrame* f) {
     f->body_dy = (uint8_t)((t / 1200u) & 1u);
     f->goggles = 1;
     uint32_t slot = t / 4000u;
@@ -209,7 +209,7 @@ static void rg_mascot_pose_idle(uint32_t t, uint32_t seed, RgMascotFrame* f) {
     if(action != 3 && within >= 3300u && within < 3500u) f->eyes = RgMascotEyesBlink;
 }
 
-void rg_mascot_pose(
+RG_LAB_TEXT void rg_mascot_pose(
     RgMascotState state,
     uint32_t t,
     uint32_t seed,
@@ -360,7 +360,8 @@ void rg_mascot_pose(
     }
 }
 
-void rg_mascot_style(RgMascotFrame* f, const RgMascotLook* look, uint8_t anim, uint32_t t) {
+RG_LAB_TEXT void
+    rg_mascot_style(RgMascotFrame* f, const RgMascotLook* look, uint8_t anim, uint32_t t) {
     f->phones = look->phones ? 1 : 0;
     f->goggles_mode = look->goggles < RgLookGogglesCount ? look->goggles : 0;
     f->antenna_kind = look->antenna < RgLookAntennaCount ? look->antenna : 0;
@@ -430,12 +431,12 @@ void rg_mascot_style(RgMascotFrame* f, const RgMascotLook* look, uint8_t anim, u
     }
 }
 
-const char* rg_anim_level_name(RgAnimLevel level) {
+RG_LAB_TEXT const char* rg_anim_level_name(RgAnimLevel level) {
     static const char* const names[RgAnimCount] = {"Off", "Minimal", "Normal", "Full"};
     return (unsigned)level < RgAnimCount ? names[level] : "?";
 }
 
-void rg_mascot_frame(RgMascot* m, uint32_t now, RgMascotFrame* out) {
+RG_LAB_TEXT void rg_mascot_frame(RgMascot* m, uint32_t now, RgMascotFrame* out) {
     RgMascotState s = rg_mascot_state(m, now);
     bool flash = m->detect_live && (s == RgMascotStateReceiving || s == RgMascotStateRecording);
     uint32_t t = now - m->state_since;
@@ -443,11 +444,11 @@ void rg_mascot_frame(RgMascot* m, uint32_t now, RgMascotFrame* out) {
     rg_mascot_style(out, &m->look, m->anim, t);
 }
 
-bool rg_mascot_frame_changed(const RgMascotFrame* a, const RgMascotFrame* b) {
+RG_LAB_TEXT bool rg_mascot_frame_changed(const RgMascotFrame* a, const RgMascotFrame* b) {
     return memcmp(a, b, sizeof(*a)) != 0;
 }
 
-const char* rg_mascot_state_name(RgMascotState state) {
+RG_LAB_TEXT const char* rg_mascot_state_name(RgMascotState state) {
     static const char* const names[RgMascotStateCount] = {
         "Idle",
         "Bored",
