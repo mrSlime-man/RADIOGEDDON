@@ -16,6 +16,11 @@
 #define RECORDER_POLL_MS    20u
 #define RECORDER_IDLE_FLUSH 250u
 #define RECORDER_FLAG_WAKE  (1u << 0)
+/* Make what was written durable this often. FAT keeps a file's size in its
+ * directory entry, written only on sync or close: without a sync, a reboot
+ * leaves recording.tmp with almost nothing readable however much reached the
+ * card. With it, at most this much of a capture is lost (rg_recover.h). */
+#define RECORDER_SYNC_MS    2000u
 /* The tail is formatted on the finishing thread: header-sized scratch. */
 #define RECORDER_TEXT_MAX   192u
 
@@ -33,6 +38,8 @@ struct RadioGeddonRecorder {
     bool failed; /* a write failed; set by the writer, read anywhere */
 
     uint32_t radio_overruns;
+    uint32_t written; /* bytes on the card (writer thread; read atomically) */
+    uint32_t last_sync;
     uint32_t start_tick;
     uint32_t stop_tick;
 };
@@ -63,14 +70,23 @@ static bool radiogeddon_recorder_flush(RadioGeddonRecorder* rec) {
     if(rec->wlen == 0) return true;
     bool ok = !__atomic_load_n(&rec->failed, __ATOMIC_ACQUIRE) &&
               storage_file_write(rec->file, rec->wbuf, rec->wlen) == rec->wlen;
+    if(ok) __atomic_fetch_add(&rec->written, (uint32_t)rec->wlen, __ATOMIC_RELAXED);
     rec->wlen = 0;
     if(!ok) __atomic_store_n(&rec->failed, true, __ATOMIC_RELEASE);
     return ok;
 }
 
+/* Writer thread, after a write: sync if the last one is old enough. */
+static void radiogeddon_recorder_sync(RadioGeddonRecorder* rec, uint32_t now) {
+    if(now - rec->last_sync < furi_ms_to_ticks(RECORDER_SYNC_MS)) return;
+    rec->last_sync = now;
+    if(!__atomic_load_n(&rec->failed, __ATOMIC_ACQUIRE)) storage_file_sync(rec->file);
+}
+
 static int32_t radiogeddon_recorder_writer(void* context) {
     RadioGeddonRecorder* rec = context;
     uint32_t last_write = furi_get_tick();
+    rec->last_sync = last_write;
     while(true) {
         // Read the stop flag before popping: once it is set no push is
         // pending, so an empty pop after it means everything is drained.
@@ -85,6 +101,7 @@ static int32_t radiogeddon_recorder_writer(void* context) {
                 if(RECORDER_WBUF - rec->wlen < RG_RAWFMT_VALUE_MAX) {
                     radiogeddon_recorder_flush(rec);
                     last_write = furi_get_tick();
+                    radiogeddon_recorder_sync(rec, last_write);
                 }
             }
             continue;
@@ -96,6 +113,7 @@ static int32_t radiogeddon_recorder_writer(void* context) {
            furi_get_tick() - last_write >= furi_ms_to_ticks(RECORDER_IDLE_FLUSH)) {
             radiogeddon_recorder_flush(rec);
             last_write = furi_get_tick();
+            radiogeddon_recorder_sync(rec, last_write);
         }
         furi_thread_flags_wait(RECORDER_FLAG_WAKE, FuriFlagWaitAny, RECORDER_POLL_MS);
     }
@@ -147,6 +165,7 @@ void radiogeddon_recorder_stats(RadioGeddonRecorder* rec, RadioGeddonRecordStats
     out->radio_overruns = __atomic_load_n(&rec->radio_overruns, __ATOMIC_RELAXED);
     uint32_t end = rec->stop_tick ? rec->stop_tick : furi_get_tick();
     out->elapsed_ms = radiogeddon_recorder_ms(end - rec->start_tick);
+    out->bytes = __atomic_load_n(&rec->written, __ATOMIC_RELAXED);
     out->buffer = cap;
     out->fill_pct = (uint8_t)((uint64_t)rs.used * 100u / cap);
     out->peak_pct = (uint8_t)((uint64_t)rs.peak * 100u / cap);

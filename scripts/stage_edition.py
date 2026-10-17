@@ -78,6 +78,32 @@ FULL_MODULE_ONLY = (
     "helpers/rg_fp.c",
     "helpers/radiogeddon_actlog.c",
     "helpers/rg_actlog.c",
+    "helpers/rg_heatmap.c",
+    "helpers/radiogeddon_heatmap.c",
+    "views/radiogeddon_heatmap_view.c",
+    "scenes/radiogeddon_scene_heatmap.c",
+    # About and the diagnostics text (only the counters stay resident).
+    "scenes/radiogeddon_scene_about.c",
+    "helpers/radiogeddon_memdiag_text.c",
+    # The analyzer and its runner: every Full tool that analyses is a module.
+    "helpers/radiogeddon_analysis_run.c",
+    "helpers/rg_analyzer.c",
+    # Recording recovery runs once at startup, only after a cut-off capture.
+    "helpers/radiogeddon_recovery.c",
+    "helpers/rg_recover.c",
+    "scenes/radiogeddon_scene_range_setup.c",
+    "scenes/radiogeddon_scene_range_scan.c",
+    "scenes/radiogeddon_scene_profiles.c",
+    "scenes/radiogeddon_scene_profile_name.c",
+    "scenes/radiogeddon_scene_waterfall.c",
+    "helpers/radiogeddon_rangescan.c",
+    "views/radiogeddon_spectrum_view.c",
+    "helpers/rg_waterfall.c",
+    "scenes/radiogeddon_scene_config.c",
+    "scenes/radiogeddon_scene_bands.c",
+    "scenes/radiogeddon_scene_hopper.c",
+    "scenes/radiogeddon_scene_hopper_stats.c",
+    "scenes/radiogeddon_scene_bitstream.c",
 )
 FULL_MODULES_FAM = "modules/modules.fam"
 

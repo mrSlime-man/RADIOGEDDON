@@ -1,6 +1,11 @@
 #include "radiogeddon_rangescan.h"
 
 #if RG_FEATURE_RANGE_SCAN
+/* Built into the Range Scanner module: the radio through the app's table. */
+#include "radiogeddon_host_map.h"
+#endif
+
+#if RG_FEATURE_RANGE_SCAN
 
 #define TAG "RadioGeddonRange"
 
@@ -12,7 +17,7 @@ struct RadioGeddonRangeScan {
     RadioGeddonSubGhz* subghz;
     FuriMutex* mutex;
     FuriThread* thread;
-    volatile bool stop_requested;
+    bool stop_requested; /* set by the app thread, polled by the engine (atomics) */
 
     // Guarded by mutex (the range and dwell never change after alloc).
     RgRange range;
@@ -88,7 +93,7 @@ static int32_t radiogeddon_rangescan_thread(void* context) {
     uint32_t next = 0;
     uint32_t sweep_start = furi_get_tick();
 
-    while(!instance->stop_requested) {
+    while(!__atomic_load_n(&instance->stop_requested, __ATOMIC_ACQUIRE)) {
         furi_mutex_acquire(instance->mutex, FuriWaitForever);
         bool paused = instance->paused;
         int32_t hold = instance->hold_index;
@@ -152,7 +157,7 @@ void radiogeddon_rangescan_start(RadioGeddonRangeScan* instance) {
 
 void radiogeddon_rangescan_stop(RadioGeddonRangeScan* instance) {
     if(!instance->thread) return;
-    instance->stop_requested = true;
+    __atomic_store_n(&instance->stop_requested, true, __ATOMIC_RELEASE);
     furi_thread_join(instance->thread);
     furi_thread_free(instance->thread);
     instance->thread = NULL;

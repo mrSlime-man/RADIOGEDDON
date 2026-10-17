@@ -554,6 +554,20 @@ size_t rg_analyzer_repeat_period(const char* bits, size_t n) {
     return 0;
 }
 
+size_t rg_analyzer_strip_filler(char* bits, size_t n) {
+    size_t lead = 0, trail = 0;
+    while(lead < n && bits[lead] == bits[0])
+        lead++;
+    while(trail < n && bits[n - 1 - trail] == bits[n - 1])
+        trail++;
+    if(lead >= n) return n; // all one symbol: not a frame with filler
+    if(lead < RG_ANALYZER_FILLER_BITS) lead = 0;
+    if(trail < RG_ANALYZER_FILLER_BITS) trail = 0;
+    if(n - lead - trail < RG_ANALYZER_MIN_REPEAT_BITS) return n;
+    if(lead) memmove(bits, bits + lead, n - lead);
+    return n - lead - trail;
+}
+
 /* Count a frame of @p nb bits that fits reading @p e (pass 2). */
 static void rg_hyp_tally(RgAnalyzer* a, int e, size_t nb) {
     if(a->hyp_frames[e] < UINT16_MAX) a->hyp_frames[e]++;
@@ -644,7 +658,8 @@ static void rg_frame_end(RgAnalyzer* a) {
         size_t period = 0;
         if(fit >= RG_ANALYZER_GOOD_FIT && (nb >= RG_ANALYZER_MAX_BITS || cut_off)) {
             period = rg_analyzer_repeat_period(bits, nb);
-            if(period) nb = period;
+            // One repeat, without the preamble or sync filler between repeats.
+            if(period) nb = rg_analyzer_strip_filler(bits, period);
         }
         if(r->frames_kept < RG_ANALYZER_MAX_FRAMES) {
             RgFrame* f = &r->frames[r->frames_kept++];

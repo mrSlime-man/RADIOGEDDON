@@ -130,6 +130,14 @@ void radiogeddon_scene_progress_end(RadioGeddonApp* app) {
     radiogeddon_ui_event(app, RgMascotEventAnalysisCompleted, 0);
 }
 
+bool radiogeddon_scene_redraw_due(RadioGeddonApp* app) {
+    if(!app->settings.battery_saver) return true;
+    uint32_t now = furi_get_tick();
+    if(now - app->redraw_tick < furi_ms_to_ticks(RADIOGEDDON_SAVER_REDRAW_MS)) return false;
+    app->redraw_tick = now;
+    return true;
+}
+
 void radiogeddon_scene_receiver_badge(RadioGeddonApp* app) {
 #if RG_FEATURE_DOLPHIN_LAB
     RgMascotFrame f;
@@ -218,6 +226,7 @@ void radiogeddon_scene_radio_memory_learn(RadioGeddonApp* app) {
 }
 
 void radiogeddon_scene_show_message(RadioGeddonApp* app, const char* header, const char* text) {
+    radiogeddon_memdiag_message(header);
     app->message_header = header;
     app->message_text = text;
     scene_manager_next_scene(app->scene_manager, RadioGeddonSceneMessage);

@@ -6,6 +6,7 @@
 #include <flipper_application/plugins/plugin_manager.h>
 #include <loader/firmware_api/firmware_api.h>
 #include "rg_elf.h"
+#include "radiogeddon_memdiag.h"
 
 #define TAG "RadioGeddonModule"
 
@@ -38,7 +39,27 @@ static size_t radiogeddon_module_sections(Storage* storage, const char* path) {
     return total;
 }
 
+static RadioGeddonModule* radiogeddon_module_load_timed(
+    Storage* storage,
+    const char* file,
+    size_t extra_heap,
+    const void** ep,
+    RadioGeddonModuleStatus* status);
+
 RadioGeddonModule* radiogeddon_module_load(
+    Storage* storage,
+    const char* file,
+    size_t extra_heap,
+    const void** ep,
+    RadioGeddonModuleStatus* status) {
+    uint32_t start = furi_get_tick();
+    RadioGeddonModule* module =
+        radiogeddon_module_load_timed(storage, file, extra_heap, ep, status);
+    radiogeddon_memdiag_module(file, (int)*status, furi_get_tick() - start);
+    return module;
+}
+
+static RadioGeddonModule* radiogeddon_module_load_timed(
     Storage* storage,
     const char* file,
     size_t extra_heap,

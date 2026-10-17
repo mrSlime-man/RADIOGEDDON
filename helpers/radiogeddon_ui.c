@@ -210,7 +210,12 @@ void radiogeddon_ui_tick(RadioGeddonApp* app) {
         view_dispatcher_send_custom_event(app->view_dispatcher, ui->card_event);
     }
     if(ui->reveal && (int32_t)(now - ui->reveal_until) >= 0) ui_reveal_finish(app);
-    // Nothing is computed for a view that is not on screen.
+    // Nothing is computed for a view that is not on screen; with the battery
+    // saver the animation steps at most once a second.
+    if(app->settings.battery_saver) {
+        if(now - ui->saver_frame < 1000u) return;
+        ui->saver_frame = now;
+    }
     if(radiogeddon_lab_view_is_visible(ui->lab)) {
         RgMascotFrame f;
         rg_mascot_frame(&ui->mascot, now, &f);

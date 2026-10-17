@@ -170,10 +170,13 @@ bool radiogeddon_scene_scanner_on_event(void* context, SceneManagerEvent event) 
 
     if(event.type == SceneManagerEventTypeTick) {
         if(app->scanner_running) {
-            radiogeddon_scanner_view_update(app->scanner_view, app->scanner);
             // Collecting data only while the sweep runs, not when paused.
             radiogeddon_ui_set_scanning(app, !radiogeddon_scanner_is_paused(app->scanner));
-            radiogeddon_scene_scanner_badge(app);
+            // The sweep thread keeps every reading; only the copy shown waits.
+            if(radiogeddon_scene_redraw_due(app)) {
+                radiogeddon_scanner_view_update(app->scanner_view, app->scanner);
+                radiogeddon_scene_scanner_badge(app);
+            }
         }
         consumed = true;
     } else if(event.type == SceneManagerEventTypeCustom) {

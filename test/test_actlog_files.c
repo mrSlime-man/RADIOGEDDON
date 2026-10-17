@@ -9,6 +9,7 @@
 #include "furi.h"
 #include "storage/storage.h"
 #include "../helpers/radiogeddon_actlog.h"
+#include "../helpers/radiogeddon_heatmap.h"
 
 #include <sys/stat.h>
 #include <unistd.h>
@@ -152,11 +153,71 @@ static void test_card_failure(void) {
     stub_open_fails = false;
 }
 
+/* A log of several parts, read back as a heatmap from any of its parts. */
+static void test_heatmap_of_parts(void) {
+    printf("test_heatmap_of_parts\n");
+    reset_card();
+    RadioGeddonActlogConfig cfg = {10, 0, 4096, "heatmap"};
+    RadioGeddonActlog* l = radiogeddon_actlog_start(CARD, g_freqs, 3, &cfg, 0);
+    bool stopped = false;
+    uint32_t t = run(l, 0, 1800000, &stopped); // 30 min
+    RadioGeddonActlogStatus st;
+    radiogeddon_actlog_status(l, t, &st);
+    uint32_t events = st.events;
+    char base[40];
+    snprintf(base, sizeof(base), "%s", st.file);
+    radiogeddon_actlog_finish(l, "duration reached", t, g_summary, sizeof(g_summary));
+    size_t parts = count_files(".csv");
+    CHECK(!stopped && parts >= 3, "a log of several parts");
+    // The rows on the card, all parts.
+    char cmd[256];
+    snprintf(cmd, sizeof(cmd), "cat %s/*.csv | grep -c '^[0-9]'", RADIOGEDDON_ACTLOG_FOLDER);
+    FILE* p = popen(cmd, "r");
+    unsigned rows = 0;
+    if(p) {
+        if(fscanf(p, "%u", &rows) != 1) rows = 0;
+        pclose(p);
+    }
+    // Open it from its last part (what the status named).
+    char path[128];
+    snprintf(path, sizeof(path), "%s/%s", RADIOGEDDON_ACTLOG_FOLDER, base);
+    static RgHeatmap map;
+    RgHeatCell* cells = NULL;
+    size_t before = stub_live_bytes;
+    CHECK(
+        radiogeddon_actlog_heatmap(CARD, path, &map, &cells, 1024) == RadioGeddonHeatmapOk,
+        "read from any part");
+    CHECK(map.channels == 3 && map.rows == rows && map.skipped == 0, "every row of every part");
+    CHECK(map.ended, "the footer of the last part read");
+    uint32_t bursts = 0;
+    for(size_t c = 0; c < RG_HEATMAP_COLS; c++)
+        bursts += rg_heatmap_cell(&map, 1, c)->events;
+    CHECK(bursts == events, "every burst in the 433.92 row");
+    CHECK(map.end_s >= 1790 && map.cols_used <= RG_HEATMAP_COLS, "30 minutes across");
+    free(cells);
+    CHECK(stub_live_bytes == before, "nothing kept but the grid");
+    // Too little heap: refused, nothing allocated.
+    size_t heap = stub_heap_free;
+    stub_heap_free = 512;
+    CHECK(
+        radiogeddon_actlog_heatmap(CARD, path, &map, &cells, 1024) == RadioGeddonHeatmapNoMemory &&
+            cells == NULL,
+        "refused without the memory for its grid");
+    stub_heap_free = heap;
+    CHECK(stub_live_bytes == before, "and nothing leaked");
+    snprintf(path, sizeof(path), "%s/none.csv", RADIOGEDDON_ACTLOG_FOLDER);
+    CHECK(
+        radiogeddon_actlog_heatmap(CARD, path, &map, &cells, 1024) == RadioGeddonHeatmapNoFile,
+        "a missing file");
+    CHECK(stub_files_open == 0, "files closed");
+}
+
 int main(void) {
     stub_write_fail_after = -1;
     test_log_and_summary();
     test_rotation_and_limit();
     test_card_failure();
+    test_heatmap_of_parts();
     printf("\n%d checks, %d failures\n", g_checks, g_failures);
     return g_failures ? 1 : 0;
 }

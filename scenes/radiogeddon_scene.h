@@ -74,6 +74,15 @@ void radiogeddon_scene_unknown_end(void* context);
  */
 void radiogeddon_scene_show_report(RadioGeddonApp* app, const char* title, const char* text);
 
+/**
+ * Whether a live screen should refresh its view on this tick. Always true
+ * unless the battery saver is on, then at most every
+ * RADIOGEDDON_SAVER_REDRAW_MS. Only drawing is held back: callers keep
+ * running their logic (error checks, timers) on every tick.
+ */
+bool radiogeddon_scene_redraw_due(RadioGeddonApp* app);
+#define RADIOGEDDON_SAVER_REDRAW_MS 500u
+
 /** Dolphin Lab: refresh the receiver view's header badge (none in Classic). */
 void radiogeddon_scene_receiver_badge(RadioGeddonApp* app);
 
@@ -153,6 +162,7 @@ void radiogeddon_scene_tools_release(RadioGeddonApp* app);
 
 #if RG_FEATURE_WATERFALL
 /** Range Scanner setup's "Start waterfall" row (its scene state selects it). */
+#define RADIOGEDDON_RANGE_ITEM_WATERFALL 9u
 uint32_t radiogeddon_scene_range_setup_waterfall_item(void);
 /** Smallest Waterfall history for @p points points (one screen of rows). */
 size_t radiogeddon_scene_waterfall_min_bytes(uint32_t points);

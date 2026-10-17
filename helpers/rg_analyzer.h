@@ -375,6 +375,18 @@ size_t rg_analyzer_align(
  */
 size_t rg_analyzer_repeat_period(const char* bits, size_t n);
 
+/* A run of this many identical symbols at an end of a repeated unit is the
+ * preamble or sync filler between repeats, not data (data this long and this
+ * uniform is rare; filler between transmissions is usually exactly that). */
+#define RG_ANALYZER_FILLER_BITS 16
+
+/**
+ * Strip such filler from both ends of the repeated unit @p bits (length
+ * @p n), keeping at least RG_ANALYZER_MIN_REPEAT_BITS. Moves the bits to the
+ * front; returns the new length (n when nothing is filler).
+ */
+size_t rg_analyzer_strip_filler(char* bits, size_t n);
+
 /* Frames further apart than this are separate presses, not repeats. */
 #define RG_ANALYZER_REPEAT_MAX_US 2000000u
 

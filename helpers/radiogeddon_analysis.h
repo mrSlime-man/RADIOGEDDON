@@ -71,6 +71,9 @@ RgAnalyzer*
  */
 void radiogeddon_analysis_set_progress(RadioGeddonProgressCallback callback, void* context);
 
+/** True while a progress callback is set (the work can skip measuring). */
+bool radiogeddon_analysis_progress_wanted(void);
+
 /** Report progress to the callback set above, if any. */
 void radiogeddon_analysis_report_progress(uint32_t done, uint32_t total);
 

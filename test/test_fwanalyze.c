@@ -52,9 +52,11 @@ static int g_checks = 0;
 
 /* Totals the engine reached on these 50 captures when they were set. Raise
  * them when the engine improves; a drop is a regression. */
-#define MIN_TE_OK     50
-#define MIN_FAMILY_OK 48
-#define MIN_BITS_OK   42
+#define MIN_TE_OK      50
+#define MIN_FAMILY_OK  48
+#define MIN_BITS_OK    43
+/* Against the lengths the decoders decode from the captures (fw_decoded_bits.h). */
+#define MIN_DECODED_OK 44
 
 typedef struct {
     const char* capture; /* as subghz_test.c names it */
@@ -248,6 +250,9 @@ static bool analyse(const char* path, RgAnalyzer* a, int32_t** samples, size_t* 
     return ok;
 }
 
+#include "fw_decoded_bits.h"
+#define COUNT_OF_DECODED (sizeof(fw_decoded_bits) / sizeof(fw_decoded_bits[0]))
+
 static unsigned diff(unsigned a, unsigned b) {
     return a > b ? a - b : b - a;
 }
@@ -256,7 +261,7 @@ int main(void) {
     printf("test_fwanalyze: rg_analyzer on the firmware's %zu paired RAW captures\n", PAIR_COUNT);
     RgAnalyzer* a = malloc(sizeof(RgAnalyzer));
     RgAnalysis* mem = malloc(sizeof(RgAnalysis));
-    unsigned te_ok = 0, family_ok = 0, bits_ok = 0, unknown = 0, analysed = 0;
+    unsigned te_ok = 0, family_ok = 0, bits_ok = 0, unknown = 0, analysed = 0, decoded_ok = 0;
     unsigned hyp_family = 0, hyp_bits = 0, conf_right = 0, conf_wrong = 0, n_right = 0,
              n_wrong = 0;
 
@@ -310,6 +315,18 @@ int main(void) {
         bool family = r->encoding != RgEncodingUnknown &&
                       (r->encoding == RgEncodingManchester) == t.manchester;
         bool bits = r->bit_count && diff((unsigned)r->bit_count, t.min_bits) <= 1;
+        /* And against what the decoder decoded from this capture (its
+         * minimum when it decodes no readable key). */
+        bool decoded = bits;
+        for(size_t d = 0; d < COUNT_OF_DECODED; d++) {
+            if(strcmp(fw_decoded_bits[d].file, p->capture) != 0) continue;
+            decoded = false;
+            for(int k = 0; k < 2; k++) {
+                unsigned want = fw_decoded_bits[d].bits[k];
+                if(want && r->bit_count && diff((unsigned)r->bit_count, want) <= 1) decoded = true;
+            }
+        }
+        decoded_ok += decoded;
         /* Hypotheses: is the decoder's family, and its length, among them? */
         bool in_hyp = false, len_in_hyp = false;
         for(size_t h = 0; h < r->hypothesis_count; h++) {
@@ -362,6 +379,9 @@ int main(void) {
         unknown,
         bits_ok);
     printf(
+        "Frame length within one bit of what the decoder decoded from the capture: %u\n",
+        decoded_ok);
+    printf(
         "Hypotheses: the decoder's family is among them for %u, with its frame length for %u\n"
         "Confidence: mean %u when the family is right (%u), %u when wrong (%u)\n",
         hyp_family,
@@ -378,6 +398,7 @@ int main(void) {
     CHECK(te_ok >= MIN_TE_OK, "Te score did not drop");
     CHECK(family_ok >= MIN_FAMILY_OK, "encoding family score did not drop");
     CHECK(bits_ok >= MIN_BITS_OK, "frame length score did not drop");
+    CHECK(decoded_ok >= MIN_DECODED_OK, "frame length score (decoded lengths) did not drop");
 
     free(mem);
     free(a);

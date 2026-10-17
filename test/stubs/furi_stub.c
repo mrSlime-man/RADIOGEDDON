@@ -513,7 +513,10 @@ static bool stub_exists(const char* path) {
     return stat(path, &st) == 0;
 }
 
+StubIo stub_io;
+
 bool storage_file_open(File* file, const char* path, FS_AccessMode access, FS_OpenMode mode) {
+    stub_io.file_opens++;
     if(stub_open_fails) return false;
     bool exists = stub_exists(path);
     const char* how = NULL;
@@ -571,8 +574,14 @@ uint64_t storage_file_size(File* file) {
     return fstat(fileno(file->fp), &st) == 0 ? (uint64_t)st.st_size : 0;
 }
 
+unsigned stub_sync_calls = 0;
+uint64_t stub_synced_size = 0;
 bool storage_file_sync(File* file) {
-    return file->fp && fflush(file->fp) == 0;
+    stub_sync_calls++;
+    bool ok = file->fp && fflush(file->fp) == 0;
+    // What a reboot now would leave readable on FAT (the size on disk).
+    if(ok) stub_synced_size = (uint64_t)ftello(file->fp);
+    return ok;
 }
 
 bool storage_file_eof(File* file) {
@@ -635,6 +644,7 @@ void furi_hal_rtc_get_datetime(DateTime* datetime) {
 }
 
 size_t storage_file_read(File* file, void* buf, size_t size) {
+    stub_io.reads++;
     if(!file->fp) return 0;
     size_t n = fread(buf, 1, size, file->fp);
     if(ferror(file->fp)) file->error = true;
@@ -646,6 +656,7 @@ FS_Error storage_file_get_error(File* file) {
 }
 
 size_t storage_file_write(File* file, const void* buf, size_t size) {
+    stub_io.writes++;
     stub_write_calls++;
     if(stub_write_delay_us) {
         struct timespec ts = {0, (long)stub_write_delay_us * 1000L};
@@ -670,6 +681,7 @@ bool storage_file_close(File* file) {
 }
 
 bool storage_dir_open(File* file, const char* path) {
+    stub_io.dir_opens++;
     if(stub_open_fails) return false;
     file->dir = opendir(path);
     if(!file->dir) return false;
@@ -679,6 +691,7 @@ bool storage_dir_open(File* file, const char* path) {
 }
 
 bool storage_dir_read(File* file, FileInfo* info, char* name, uint16_t name_length) {
+    stub_io.dir_reads++;
     if(!file->dir) return false;
     struct dirent* d;
     while((d = readdir((DIR*)file->dir)) != NULL) {
@@ -709,6 +722,7 @@ bool file_info_is_dir(const FileInfo* info) {
 
 FS_Error storage_common_timestamp(Storage* storage, const char* path, uint32_t* timestamp) {
     (void)storage;
+    stub_io.stats++;
     struct stat st;
     if(stat(path, &st) != 0) return FSE_NOT_EXIST;
     *timestamp = (uint32_t)st.st_mtime;
@@ -717,6 +731,7 @@ FS_Error storage_common_timestamp(Storage* storage, const char* path, uint32_t* 
 
 FS_Error storage_common_stat(Storage* storage, const char* path, FileInfo* fileinfo) {
     (void)storage;
+    stub_io.stats++;
     struct stat st;
     if(stat(path, &st) != 0) return FSE_NOT_EXIST;
     if(fileinfo) {
@@ -731,4 +746,62 @@ void storage_file_free(File* file) {
     if(file->fp) storage_file_close(file);
     if(file->dir) storage_dir_close(file);
     free(file);
+}
+
+/* ---- Dialogs (scripted answers) ------------------------------------------ */
+
+#include "dialogs/dialogs.h"
+
+struct DialogMessage {
+    char text[160];
+};
+
+DialogMessageButton stub_dialog_answers[4];
+unsigned stub_dialog_shown = 0;
+char stub_dialog_text[160];
+
+DialogMessage* dialog_message_alloc(void) {
+    DialogMessage* m = malloc(sizeof(DialogMessage));
+    memset(m, 0, sizeof(*m));
+    return m;
+}
+
+void dialog_message_free(DialogMessage* message) {
+    free(message);
+}
+
+void dialog_message_set_header(
+    DialogMessage* message,
+    const char* text,
+    uint8_t x,
+    uint8_t y,
+    Align horizontal,
+    Align vertical) {
+    (void)message, (void)text, (void)x, (void)y, (void)horizontal, (void)vertical;
+}
+
+void dialog_message_set_text(
+    DialogMessage* message,
+    const char* text,
+    uint8_t x,
+    uint8_t y,
+    Align horizontal,
+    Align vertical) {
+    (void)x, (void)y, (void)horizontal, (void)vertical;
+    snprintf(message->text, sizeof(message->text), "%s", text);
+}
+
+void dialog_message_set_buttons(
+    DialogMessage* message,
+    const char* left,
+    const char* center,
+    const char* right) {
+    (void)message, (void)left, (void)center, (void)right;
+}
+
+DialogMessageButton dialog_message_show(DialogsApp* context, const DialogMessage* message) {
+    (void)context;
+    snprintf(stub_dialog_text, sizeof(stub_dialog_text), "%s", message->text);
+    unsigned i = stub_dialog_shown++;
+    return i < 4 ? stub_dialog_answers[i] : DialogMessageButtonBack;
 }

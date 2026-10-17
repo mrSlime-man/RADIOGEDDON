@@ -1,13 +1,28 @@
-/* Full edition module: the Bitstream Explorer's screen (see helpers/radiogeddon_modules.h). */
-#include "../helpers/radiogeddon_modules.h"
+/* Full edition module: tool screens (see helpers/radiogeddon_modules.h). */
+#include "../scenes/radiogeddon_scene.h"
 
 #include <flipper_application/flipper_application.h>
 
-static const RadioGeddonBitsModule radiogeddon_bits_module = {
-    .alloc = radiogeddon_bits_view_alloc,
-    .free = radiogeddon_bits_view_free,
-    .get_view = radiogeddon_bits_view_get_view,
-    .set_analysis = radiogeddon_bits_view_set_analysis,
+const RadioGeddonHost* radiogeddon_host;
+
+static void radiogeddon_bits_set_host(const RadioGeddonHost* host) {
+    radiogeddon_host = host;
+}
+
+static const RadioGeddonToolModule radiogeddon_bits_module = {
+    .set_host = radiogeddon_bits_set_host,
+    .on_enter =
+        {
+            radiogeddon_scene_bitstream_on_enter,
+        },
+    .on_event =
+        {
+            radiogeddon_scene_bitstream_on_event,
+        },
+    .on_exit =
+        {
+            radiogeddon_scene_bitstream_on_exit,
+        },
 };
 
 static const FlipperAppPluginDescriptor radiogeddon_bits_descriptor = {

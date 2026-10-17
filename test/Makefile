@@ -33,12 +33,15 @@ FP_SRC := test_fp.c ../helpers/rg_fp.c ../helpers/rg_analyzer.c ../helpers/rg_cr
 ADAPT_SRC := test_adapt.c ../helpers/rg_adapt.c
 ACTLOG_SRC := test_actlog.c ../helpers/rg_actlog.c
 STUDIO_SRC := test_studio.c ../helpers/rg_studio.c ../helpers/rg_analyzer.c
+RECOVER_SRC := test_recover.c ../helpers/rg_recover.c ../helpers/rg_rawfmt.c ../helpers/rg_raw.c
+HEATMAP_SRC := test_heatmap.c ../helpers/rg_heatmap.c ../helpers/rg_actlog.c
+SAFEFILE_SRC := test_safefile.c ../helpers/rg_safefile.c
 JOURNAL_SRC := test_journal.c ../helpers/rg_journal.c ../helpers/rg_assist.c ../helpers/rg_crc.c
 DBLOAD_SRC := test_dbload.c stubs/furi_stub.c ../helpers/radiogeddon_db.c ../helpers/rg_db.c
 STUB_HDRS := stubs/furi.h stubs/storage/storage.h stubs/datetime/datetime.h \
 		stubs/lib/toolbox/stream/stream.h stubs/core/check.h stubs/core/common_defines.h \
 		stubs/furi_hal_rtc.h stubs/lib/subghz/devices/preset.h
-RECORDER_SRC := test_recorder.c stubs/furi_stub.c ../helpers/radiogeddon_recorder.c \
+RECORDER_SRC := test_recorder.c stubs/furi_stub.c ../helpers/radiogeddon_recorder.c ../helpers/rg_recover.c \
 		../helpers/rg_ring.c ../helpers/rg_rawfmt.c ../helpers/rg_raw.c
 
 # Format tests: the firmware's own FlipperFormat and stream code and its
@@ -50,15 +53,15 @@ FW_SRC := $(FW)/lib/flipper_format/flipper_format.c $(FW)/lib/flipper_format/fli
 		$(FW)/lib/toolbox/stream/file_stream.c $(FW)/lib/toolbox/stream/buffered_file_stream.c \
 		$(FW)/lib/toolbox/stream/stream_cache.c $(FW)/lib/toolbox/hex.c $(FW)/lib/toolbox/strint.c
 FW_OBJ := $(patsubst $(FW)/%.c,$(BUILD)/fwobj/%.o,$(FW_SRC))
-FORMATS_SRC := test_formats.c stubs/furi_stub.c ../helpers/radiogeddon_storage.c \
+FORMATS_SRC := test_formats.c stubs/furi_stub.c ../helpers/radiogeddon_storage.c ../helpers/radiogeddon_recovery.c ../helpers/rg_recover.c ../helpers/radiogeddon_safefile.c ../helpers/rg_safefile.c \
 		../helpers/radiogeddon_settings.c ../helpers/radiogeddon_bands.c ../helpers/rg_freq.c \
 		../helpers/radiogeddon_dsp.c ../helpers/rg_range.c ../helpers/radiogeddon_profiles.c \
 		../helpers/rg_db.c ../helpers/rg_raw.c ../helpers/rg_analyzer.c ../helpers/rg_ui.c
 
 # Fingerprint index tests: Find Similar Signals over real files through the
 # stub Storage, the recordings parsed by the firmware's FlipperFormat code.
-FPINDEX_SRC := test_fpindex.c stubs/furi_stub.c ../helpers/radiogeddon_fp.c ../helpers/rg_fp.c \
-		../helpers/rg_crc.c ../helpers/radiogeddon_analysis_run.c ../helpers/radiogeddon_storage.c \
+FPINDEX_SRC := test_fpindex.c stubs/furi_stub.c ../helpers/radiogeddon_fp.c ../helpers/radiogeddon_safefile.c ../helpers/rg_safefile.c ../helpers/rg_fp.c ../helpers/rg_session.c \
+		../helpers/rg_crc.c ../helpers/radiogeddon_analysis_run.c ../helpers/radiogeddon_analysis_status.c ../helpers/radiogeddon_storage.c \
 		../helpers/rg_raw.c ../helpers/rg_analyzer.c ../helpers/radiogeddon_dsp.c
 
 # Decoder tests: the firmware's own Sub-GHz receiver and protocol decoders
@@ -91,7 +94,9 @@ FUZZ_SESSION_SRC := fuzz/fuzz_session.c ../helpers/rg_session.c ../helpers/rg_el
 FUZZ_UI_SRC := fuzz/fuzz_ui.c ../helpers/rg_mascot.c ../helpers/rg_ui.c
 FUZZ_FP_SRC := fuzz/fuzz_fp.c ../helpers/rg_fp.c ../helpers/rg_journal.c ../helpers/rg_crc.c \
 		../helpers/rg_analyzer.c
-FUZZ_TARGETS := fuzz_raw fuzz_db fuzz_samples fuzz_session fuzz_ui fuzz_fp
+FUZZ_RECOVER_SRC := fuzz/fuzz_recover.c ../helpers/rg_recover.c ../helpers/rg_raw.c
+FUZZ_HEATMAP_SRC := fuzz/fuzz_heatmap.c ../helpers/rg_heatmap.c
+FUZZ_TARGETS := fuzz_raw fuzz_db fuzz_samples fuzz_session fuzz_ui fuzz_fp fuzz_recover fuzz_heatmap
 FUZZ_CC ?= clang
 FUZZ_TIME ?= 60
 
@@ -120,11 +125,11 @@ UI_SRC := test_ui.c ui/canvas_host.c ../views/radiogeddon_waterfall_view.c \
 UI_HDRS := ui/canvas_host.h ui/stubs/gui/view.h ui/stubs/gui/canvas.h ui/stubs/gui/elements.h \
 		../views/radiogeddon_waterfall_view.h ../views/radiogeddon_bits_view.h synth.h
 
-.PHONY: check clean tsan fuzz formats decoders captures lifecycle ui fpindex actlogfiles
+.PHONY: bench benchfp check clean tsan fuzz formats decoders captures lifecycle ui fpindex actlogfiles
 check: $(BUILD)/test_dsp $(BUILD)/test_analyzer $(BUILD)/test_scan $(BUILD)/test_hop $(BUILD)/test_raw \
 		$(BUILD)/test_timeline $(BUILD)/test_ring $(BUILD)/test_rawfmt $(BUILD)/test_recorder \
 		$(BUILD)/test_db $(BUILD)/test_memstat $(BUILD)/test_dbload $(BUILD)/test_decode $(BUILD)/test_freq $(BUILD)/test_preset $(BUILD)/test_range \
-		$(BUILD)/test_txpolicy $(BUILD)/test_spectrum $(BUILD)/test_checksum $(BUILD)/test_waterfall $(BUILD)/test_bits $(BUILD)/test_multi $(BUILD)/test_session $(BUILD)/test_elf $(BUILD)/test_mascot $(BUILD)/test_fp $(BUILD)/test_adapt $(BUILD)/test_actlog $(BUILD)/test_journal $(BUILD)/test_studio $(BUILD)/sprites.ok $(BUILD)/test_edition_full $(BUILD)/test_edition_catalog \
+		$(BUILD)/test_txpolicy $(BUILD)/test_spectrum $(BUILD)/test_checksum $(BUILD)/test_waterfall $(BUILD)/test_bits $(BUILD)/test_multi $(BUILD)/test_session $(BUILD)/test_elf $(BUILD)/test_mascot $(BUILD)/test_fp $(BUILD)/test_adapt $(BUILD)/test_actlog $(BUILD)/test_journal $(BUILD)/test_studio $(BUILD)/test_safefile $(BUILD)/test_recover $(BUILD)/test_heatmap $(BUILD)/bench_db $(BUILD)/sprites.ok $(BUILD)/test_edition_full $(BUILD)/test_edition_catalog \
 		$(BUILD)/test_edition_default $(BUILD)/edition_conflict.ok \
 		$(addprefix $(BUILD)/replay_,$(FUZZ_TARGETS))
 	$(BUILD)/test_dsp
@@ -157,6 +162,10 @@ check: $(BUILD)/test_dsp $(BUILD)/test_analyzer $(BUILD)/test_scan $(BUILD)/test
 	$(BUILD)/test_actlog
 	$(BUILD)/test_journal
 	$(BUILD)/test_studio
+	$(BUILD)/test_safefile
+	$(BUILD)/test_recover
+	$(BUILD)/test_heatmap
+	$(BUILD)/bench_db 1
 	$(BUILD)/test_edition_full
 	$(BUILD)/test_edition_catalog
 	$(BUILD)/test_edition_default
@@ -237,6 +246,32 @@ $(BUILD)/test_adapt: $(ADAPT_SRC) ../helpers/rg_adapt.h | $(BUILD)
 $(BUILD)/test_actlog: $(ACTLOG_SRC) ../helpers/rg_actlog.h | $(BUILD)
 	$(CC) $(CFLAGS) $(SAN) -DRADIOGEDDON_EDITION_FULL -o $@ $(ACTLOG_SRC)
 
+# Benchmarks (host CPU, relative cost only). `check` runs each once for its
+# result checksums; `make bench` repeats them for timings.
+$(BUILD)/bench_db: bench_db.c ../helpers/rg_db.c ../helpers/rg_db.h | $(BUILD)
+	$(CC) $(CFLAGS) -o $@ bench_db.c ../helpers/rg_db.c
+
+bench: $(BUILD)/bench_db
+	$(BUILD)/bench_db 7
+
+# Find Similar over libraries of 10 to 1,000 recordings, every card call counted.
+BENCHFP_SRC := bench_fpindex.c $(filter-out test_fpindex.c,$(FPINDEX_SRC))
+$(BUILD)/bench_fpindex: $(BENCHFP_SRC) $(STUB_HDRS) $(FW_OBJ) ../helpers/radiogeddon_fp.h | $(BUILD)
+	$(CC) $(CFLAGS) $(SAN) -D_GNU_SOURCE -I$(FW) -I$(FW)/lib -I$(FW)/lib/mlib -Istubs \
+		-DSTUB_TRACK_ALLOC -DRADIOGEDDON_EDITION_FULL -pthread -o $@ $(BENCHFP_SRC) $(FW_OBJ)
+
+benchfp: $(BUILD)/bench_fpindex
+	$(BUILD)/bench_fpindex
+
+$(BUILD)/test_heatmap: $(HEATMAP_SRC) ../helpers/rg_heatmap.h ../helpers/rg_actlog.h | $(BUILD)
+	$(CC) $(CFLAGS) $(SAN) -DRADIOGEDDON_EDITION_FULL -o $@ $(HEATMAP_SRC)
+
+$(BUILD)/test_recover: $(RECOVER_SRC) ../helpers/rg_recover.h ../helpers/rg_rawfmt.h ../helpers/rg_raw.h | $(BUILD)
+	$(CC) $(CFLAGS) $(SAN) -o $@ $(RECOVER_SRC)
+
+$(BUILD)/test_safefile: $(SAFEFILE_SRC) ../helpers/rg_safefile.h | $(BUILD)
+	$(CC) $(CFLAGS) $(SAN) -o $@ $(SAFEFILE_SRC)
+
 $(BUILD)/test_studio: $(STUDIO_SRC) ../helpers/rg_studio.h ../helpers/rg_analyzer.h | $(BUILD)
 	$(CC) $(CFLAGS) $(SAN) -DRADIOGEDDON_EDITION_FULL -o $@ $(STUDIO_SRC)
 
@@ -304,10 +339,11 @@ UI_LAB_SRC := test_ui_lab.c ui/canvas_host.c ../views/radiogeddon_lab_view.c \
 		../helpers/rg_mascot.c ../helpers/rg_ui.c ../helpers/rg_sprites.c ../helpers/rg_freq.c \
 		../helpers/rg_spectrum.c ../helpers/rg_scan.c ../helpers/rg_adapt.c ../helpers/rg_range.c \
 		../views/radiogeddon_studio_view.c ../helpers/rg_studio.c ../helpers/rg_analyzer.c \
-		../helpers/rg_raw.c stubs/furi_stub.c
+		../helpers/rg_raw.c ../views/radiogeddon_heatmap_view.c ../helpers/rg_heatmap.c stubs/furi_stub.c
 UI_LAB_HDRS := $(UI_HDRS) ../views/radiogeddon_lab_view.h ../views/radiogeddon_mascot_draw.h \
 		../views/radiogeddon_room_view.h ../helpers/rg_mascot.h ../helpers/rg_ui.h ../helpers/rg_sprites.h \
-		../views/radiogeddon_studio_view.h ../helpers/rg_studio.h
+		../views/radiogeddon_studio_view.h ../helpers/rg_studio.h ../views/radiogeddon_heatmap_view.h \
+		../helpers/rg_heatmap.h
 
 $(UI_MESSAGES): ui/messages.py $(wildcard ../scenes/*.c) $(wildcard ../helpers/*.c) | $(BUILD)
 	mkdir -p $(dir $@)
@@ -345,7 +381,7 @@ $(BUILD)/test_formats: $(FORMATS_SRC) $(STUB_HDRS) $(FW_OBJ) | $(BUILD)
 	$(CC) $(CFLAGS) $(SAN) -D_GNU_SOURCE -I$(FW) -I$(FW)/lib -Istubs -DSTUB_TRACK_ALLOC -DRADIOGEDDON_EDITION_FULL -pthread \
 		-o $@ $(FORMATS_SRC) $(FW_OBJ)
 
-ACTLOGFILES_SRC := test_actlog_files.c stubs/furi_stub.c ../helpers/radiogeddon_actlog.c \
+ACTLOGFILES_SRC := test_actlog_files.c stubs/furi_stub.c ../helpers/radiogeddon_actlog.c ../helpers/radiogeddon_heatmap.c ../helpers/rg_heatmap.c \
 		../helpers/rg_actlog.c
 
 actlogfiles: $(BUILD)/test_actlog_files
@@ -425,6 +461,13 @@ $(BUILD)/replay_fuzz_fp: fuzz/replay.c $(FUZZ_FP_SRC) ../helpers/rg_fp.h ../help
 		| $(BUILD)
 	$(CC) $(CFLAGS) $(SAN) -DRADIOGEDDON_EDITION_FULL -o $@ fuzz/replay.c $(FUZZ_FP_SRC)
 
+$(BUILD)/replay_fuzz_recover: fuzz/replay.c $(FUZZ_RECOVER_SRC) ../helpers/rg_recover.h \
+		../helpers/rg_raw.h | $(BUILD)
+	$(CC) $(CFLAGS) $(SAN) -o $@ fuzz/replay.c $(FUZZ_RECOVER_SRC)
+
+$(BUILD)/replay_fuzz_heatmap: fuzz/replay.c $(FUZZ_HEATMAP_SRC) ../helpers/rg_heatmap.h | $(BUILD)
+	$(CC) $(CFLAGS) $(SAN) -o $@ fuzz/replay.c $(FUZZ_HEATMAP_SRC)
+
 # libFuzzer builds. New inputs go to build/corpus/<target>; the committed
 # corpus is only read. A failing input is saved as build/<target>-crash-*.
 $(BUILD)/fuzz_raw: $(FUZZ_RAW_SRC) | $(BUILD)
@@ -447,6 +490,14 @@ $(BUILD)/fuzz_fp: $(FUZZ_FP_SRC) | $(BUILD)
 	$(FUZZ_CC) $(CFLAGS) -g -DRADIOGEDDON_EDITION_FULL -fsanitize=fuzzer,address,undefined \
 		-fno-sanitize-recover=all -o $@ $(FUZZ_FP_SRC)
 
+$(BUILD)/fuzz_recover: $(FUZZ_RECOVER_SRC) | $(BUILD)
+	$(FUZZ_CC) $(CFLAGS) -g -fsanitize=fuzzer,address,undefined -fno-sanitize-recover=all \
+		-o $@ $(FUZZ_RECOVER_SRC)
+
+$(BUILD)/fuzz_heatmap: $(FUZZ_HEATMAP_SRC) | $(BUILD)
+	$(FUZZ_CC) $(CFLAGS) -g -fsanitize=fuzzer,address,undefined -fno-sanitize-recover=all \
+		-o $@ $(FUZZ_HEATMAP_SRC)
+
 $(BUILD)/fuzz_samples: $(FUZZ_SAMPLES_SRC) | $(BUILD)
 	$(FUZZ_CC) $(CFLAGS) -g -fsanitize=fuzzer,address,undefined -fno-sanitize-recover=all \
 		-o $@ $(FUZZ_SAMPLES_SRC)
@@ -459,12 +510,19 @@ fuzz: $(addprefix $(BUILD)/,$(FUZZ_TARGETS))
 	done
 
 # Optional: the ring under ThreadSanitizer (not part of check; needs TSan).
-tsan: | $(BUILD)
+# ThreadSanitizer: the ring and recorder (radio thread, writer thread) and
+# the Scanner, Range Scanner and Hopper engines started and stopped on real
+# threads (the lifecycle tests, on the firmware's Sub-GHz headers).
+tsan: $(FW)/.fetched | $(BUILD)
 	$(CC) $(CFLAGS) -fsanitize=thread -pthread -o $(BUILD)/test_ring_tsan $(RING_SRC)
 	$(CC) $(CFLAGS) -fsanitize=thread -Istubs -DSTUB_TRACK_ALLOC -pthread \
 		-o $(BUILD)/test_recorder_tsan $(RECORDER_SRC)
-	$(BUILD)/test_ring_tsan
-	$(BUILD)/test_recorder_tsan
+	$(CC) $(CFLAGS) -fsanitize=thread -D_GNU_SOURCE -I$(FW) -I$(FW)/lib -I$(FW)/lib/mlib -Istubs \
+		-DSTUB_TRACK_ALLOC -DRADIOGEDDON_EDITION_FULL -pthread -o $(BUILD)/test_lifecycle_tsan \
+		$(LIFECYCLE_SRC)
+	TSAN_OPTIONS=halt_on_error=1 $(BUILD)/test_ring_tsan
+	TSAN_OPTIONS=halt_on_error=1 $(BUILD)/test_recorder_tsan
+	TSAN_OPTIONS=halt_on_error=1 $(BUILD)/test_lifecycle_tsan
 
 $(BUILD):
 	mkdir -p $(BUILD)

@@ -21,6 +21,7 @@
 #include "../views/radiogeddon_spectrum_view.h"
 #include "../views/radiogeddon_waterfall_view.h"
 #include "../views/radiogeddon_studio_view.h"
+#include "../views/radiogeddon_heatmap_view.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -953,6 +954,100 @@ static void test_studio_view(void) {
     free(reader);
 }
 
+/* The RF Activity Heatmap of synthetic logs: 6 and 24 frequencies, every
+ * state; the cursor everywhere; the legend. */
+static void heatmap_log(RgHeatmap* h, RgHeatCell** cells, size_t nf, size_t intervals) {
+    static char csv[200000];
+    size_t len = (size_t)snprintf(csv, sizeof(csv), "# RadioGeddon RF Activity Log, part 1\n");
+    for(size_t k = 0; k < intervals; k++) {
+        for(size_t f = 0; f < nf; f++) {
+            unsigned long t = (unsigned long)((k + 1) * 30), hz = 300000000ul + f * 25000000ul;
+            if((f + k) % 5 == 0) // not listened to
+                len += (size_t)snprintf(csv + len, sizeof(csv) - len, "%lu,%lu,0,0,,,,\n", t, hz);
+            else {
+                unsigned ev = (f % 3 == 0 && k % 4 == 0) ? (unsigned)(1 + (k + f) % 9) : 0;
+                len += (size_t)snprintf(
+                    csv + len,
+                    sizeof(csv) - len,
+                    "%lu,%lu,40,800,%u,%u,%d,-96\n",
+                    t,
+                    hz,
+                    ev ? 3u : 0u,
+                    ev,
+                    ev ? -40 - (int)(k % 30) : -94);
+            }
+        }
+    }
+    rg_heatmap_probe_begin(h);
+    rg_heatmap_feed(h, csv, len);
+    rg_heatmap_end(h);
+    *cells = malloc(rg_heatmap_cells_bytes(h));
+    rg_heatmap_begin(h, *cells);
+    rg_heatmap_feed(h, csv, len);
+    rg_heatmap_end(h);
+}
+
+static void test_heatmap_view(void) {
+    printf("test_heatmap_view\n");
+    static RgHeatmap h6, h24, empty;
+    RgHeatCell *c6, *c24;
+    heatmap_log(&h6, &c6, 6, 90);
+    heatmap_log(&h24, &c24, 24, 200);
+    CHECK(h6.channels == 6 && h24.channels == 24, "heatmap: logs read");
+    RadioGeddonHeatmapView* hv = radiogeddon_heatmap_view_alloc();
+    View* view = radiogeddon_heatmap_view_get_view(hv);
+    radiogeddon_heatmap_view_set_map(hv, &h6);
+    render(view, "heatmap_6_bursts");
+    view_host_input(view, InputKeyOk, InputTypeShort);
+    render(view, "heatmap_6_strength");
+    view_host_input(view, InputKeyOk, InputTypeShort);
+    render(view, "heatmap_legend");
+    view_host_input(view, InputKeyOk, InputTypeShort);
+    // Every cell under the cursor, its footer inside the screen.
+    bool inside = true;
+    for(int r = 0; r < 8; r++) {
+        for(int c = 0; c < 70; c++) {
+            view_host_input(view, InputKeyLeft, InputTypeRepeat);
+            if(!render(view, NULL)) inside = false;
+        }
+        view_host_input(view, InputKeyDown, InputTypeShort);
+    }
+    CHECK(inside, "heatmap (6): every cursor position inside the screen");
+    radiogeddon_heatmap_view_set_map(hv, &h24);
+    render(view, "heatmap_24_bursts");
+    inside = true;
+    for(int r = 0; r < 26; r++) {
+        view_host_input(view, InputKeyDown, InputTypeShort);
+        for(int c = 0; c < 64; c += 7) {
+            view_host_input(view, InputKeyLeft, InputTypeShort);
+            if(!render(view, NULL)) inside = false;
+        }
+    }
+    render(view, "heatmap_24_scrolled");
+    CHECK(inside, "heatmap (24): scrolled, every row inside the screen");
+    // The widest footer: a high frequency, many bursts, full coverage.
+    static const char* worst =
+        "10,928000000,40,10000,40,250,-20,-96\n20,928000000,40,10000,40,250,-20,-96\n";
+    static RgHeatmap hw;
+    rg_heatmap_probe_begin(&hw);
+    rg_heatmap_feed(&hw, worst, strlen(worst));
+    rg_heatmap_end(&hw);
+    RgHeatCell* cw = malloc(rg_heatmap_cells_bytes(&hw));
+    rg_heatmap_begin(&hw, cw);
+    rg_heatmap_feed(&hw, worst, strlen(worst));
+    rg_heatmap_end(&hw);
+    radiogeddon_heatmap_view_set_map(hv, &hw);
+    CHECK(render(view, "heatmap_widest_footer"), "heatmap: the widest footer fits");
+    free(cw);
+    memset(&empty, 0, sizeof(empty));
+    radiogeddon_heatmap_view_set_map(hv, &empty);
+    render(view, "heatmap_empty");
+    CHECK(!view_host_input(view, InputKeyBack, InputTypeShort), "heatmap: Back leaves");
+    radiogeddon_heatmap_view_free(hv);
+    free(c6);
+    free(c24);
+}
+
 int main(void) {
     test_home();
     test_home_cyber();
@@ -963,6 +1058,7 @@ int main(void) {
     test_radio_screens();
     test_room();
     test_studio_view();
+    test_heatmap_view();
     printf("\n%d checks, %d failures, %d synthetic previews\n", g_checks, g_failures, g_previews);
     return g_failures ? 1 : 0;
 }

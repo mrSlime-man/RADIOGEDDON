@@ -14,6 +14,7 @@
 #include "storage/storage.h"
 #include "../helpers/radiogeddon_recorder.h"
 #include "../helpers/rg_raw.h"
+#include "../helpers/rg_recover.h"
 
 #include <time.h>
 
@@ -311,6 +312,57 @@ static void test_cycles(void) {
     CHECK(stub_peak_bytes == base, "refusal allocates nothing");
 }
 
+/* The Flipper reboots in the middle of a recording: only what the writer
+ * synced is readable afterwards. That must be at most ~2 s behind, and
+ * rg_recover must turn it into a valid recording of the samples it holds. */
+static void test_crash_mid_recording(void) {
+    printf("test_crash_mid_recording\n");
+    reset_stubs();
+    stub_sync_calls = 0;
+    stub_synced_size = 0;
+    RadioGeddonRecorder* rec = start();
+    if(!rec) return;
+    uint32_t pushed = 0;
+    for(int t = 0; t < 26; t++) { // 2.6 s, 400 samples every 100 ms
+        for(int i = 0; i < 400; i++, pushed++)
+            radiogeddon_recorder_push(rec, (pushed & 1) == 0, pushed + 1);
+        sleep_us(100000);
+    }
+    CHECK(stub_sync_calls >= 1, "the writer synced while recording");
+    // The card as a reboot now would leave it.
+    static uint8_t image[1 << 17];
+    size_t len = 0;
+    FILE* fp = fopen(REC_PATH, "rb");
+    if(fp) {
+        len = fread(image, 1, sizeof(image), fp);
+        fclose(fp);
+    }
+    if(len > stub_synced_size) len = (size_t)stub_synced_size;
+    RgRecoverScan scan;
+    rg_recover_init(&scan);
+    rg_recover_feed(&scan, image, len);
+    RgRecoverVerdict v = rg_recover_finish(&scan);
+    CHECK(v == RgRecoverPartial, "a cut-off recording is recoverable");
+    CHECK(scan.frequency == 433920000, "its frequency is read");
+    CHECK(scan.samples > 0 && scan.samples <= pushed, "samples from the synced part only");
+    // Durable within the sync period: at least the samples of 1 s ago.
+    CHECK(scan.samples >= pushed - 400u * 16u, "at most ~2 s lost");
+    // The samples kept are the first ones pushed, in order, none altered.
+    bool ordered = true;
+    uint64_t expect_us = 0;
+    for(uint32_t i = 0; i < scan.samples; i++)
+        expect_us += i + 1;
+    if(scan.duration_us != expect_us) ordered = false;
+    CHECK(ordered, "exactly the first samples, in order");
+    printf(
+        "  %lu of %lu samples readable after the cut\n",
+        (unsigned long)scan.samples,
+        (unsigned long)pushed);
+    RadioGeddonRecordStats st;
+    radiogeddon_recorder_finish(rec, &st);
+    CHECK(st.samples == pushed && st.lost == 0, "the recording itself goes on unharmed");
+}
+
 int main(void) {
     test_stream();
     test_slow_card();
@@ -318,6 +370,7 @@ int main(void) {
     test_idle_flush();
     test_failures();
     test_cycles();
+    test_crash_mid_recording();
     remove(REC_PATH);
 
     printf("\n%d checks, %d failures\n", g_checks, g_failures);

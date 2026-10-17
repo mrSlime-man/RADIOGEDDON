@@ -13,6 +13,7 @@
 
 #define RADIOGEDDON_SETTINGS_PATH EXT_PATH("apps_data/radiogeddon/settings.txt")
 #define RADIOGEDDON_SETTINGS_TEMP EXT_PATH("apps_data/radiogeddon/settings.tmp")
+#define RADIOGEDDON_SETTINGS_MARK EXT_PATH("apps_data/radiogeddon/settings.cmt")
 
 typedef struct {
     uint32_t frequency; // Hz, receiver / default frequency
@@ -54,6 +55,7 @@ typedef struct {
     uint16_t log_minutes; // RF Activity Logger: observation length, 0 = until stopped
     uint16_t log_max_kb; // RF Activity Logger: size of one log part
     bool research_xp; // Research XP, levels and achievements shown
+    bool battery_saver; // fewer screen updates; radio timing unchanged
 } RadioGeddonSettings;
 
 /** Where the Scanner and the Hopper take their frequencies from. */

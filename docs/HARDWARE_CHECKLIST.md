@@ -193,6 +193,23 @@ the card, and for battery items the start and end charge.
 | RL19 | Settings → Animation: `Off`, `Minimal`, `Normal`, `Full`; watch the dashboard 30 s each. | Off: a still dolphin; Minimal: only blinks and state changes; Full: more movement. Keys respond equally fast in every level. Optional: 30 min battery drop in Off vs Full. |
 | RL20 | Memory: About after a fresh start; then open and close Find Similar, Pulse Studio, Activity Logger, the journal and the room five times each; About again. | `At app start` is close to beta 8's; `Free now` returns close to `At app start` (modules unloaded); no crash. |
 
+## Reliability, recovery and efficiency (beta 10)
+
+| ID | Check | Pass when |
+|----|-------|-----------|
+| U1 | Start a RAW recording on any signal, wait 10 s, then hold Back+Left to reboot the Flipper (or pull the battery). Start the app again. | `Unsaved recording` asks Keep / Delete with a sample count; Keep saves `Recovered_<time>.sub`, it opens, Decode with Firmware / analysis read it, and at most about 2 s before the reboot is missing. |
+| U2 | Repeat U1 and answer Delete; repeat and answer Back. | Delete removes it; Back keeps it (saved as in U1). The next start asks nothing. |
+| U3 | Change a setting, and reboot while Settings is being left (several tries, as close to the save as possible). Start the app. | Settings are either the new or the old values, never the defaults. Same for favorites (Full) and a scan profile. |
+| U4 | Full edition: Find Similar on a card with 600+ recordings (copies are fine), then again. | The first search indexes them all (no `first 500`); the second recomputes nothing and is fast. Time both and note them. |
+| U5 | Full edition: Find Similar, then the Scope row (1 hour, 1 day, and with a research session active, the session). | Only recordings saved within the window (or named by the session) are ranked; `out of scope` counts the others. With no active session the row skips the session scope. |
+| U6 | Database with 300+ files: change the sort four times and type a search. | Each change is visibly quick (note any delay over half a second). |
+| U7 | Full edition: Scan → Activity Heatmap on a log of an hour or more with frequencies the schedule skipped. | Skipped intervals are blank, quiet ones dotted, activity denser; the footer's coverage matches; OK cycles bursts / strength / legend; Back leaves. |
+| U8 | Settings → Battery saver on; open the Scanner, Receive and the Hopper, and run the Activity Logger for 30 min. | The screens update about twice a second; the log has the same rows as without it. With a meter or the battery percentage over hours, note the drain with and without (no saving is claimed until measured). |
+| U9 | About → Save report, after a few recordings and opening several tools. | `diagnostics/RG_DIAG_<time>.txt` holds the version, firmware, memory, responsiveness, module and recording figures, and no file names or frequencies. |
+| U10 | Full edition: open the Bitstream Explorer on a long RAW recording; open About. | Opens as before (the analysis now runs in its module); About shows the module loads and the slowest. |
+| U11 | Full edition, on the firmware where beta 9 did not start: launch the app, then open in turn the Range Scanner (start a scan, open the Waterfall), Settings and Radio bands, the Frequency Hopper and its statistics, and the Bitstream Explorer; return to the main menu after each. | The app starts. Each screen opens (its module loads from the SD card first, a short pause), works as in beta 9, and Back returns. About's lowest free heap after the round is close to the one before it (no leak across module loads). |
+| U12 | Full edition: start the Frequency Hopper, open its statistics, go back, then leave to the main menu; repeat five times. Start a Range Scanner scan, open the Waterfall and go back. | No crash or freeze; the Hopper resumes hopping when its screen is shown again; nothing keeps receiving after the main menu. |
+
 ## Catalog edition transmit check (Official)
 
 | ID | Check | Pass when |

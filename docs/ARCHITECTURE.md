@@ -126,6 +126,11 @@ helpers/
   radiogeddon_actlog.*      Activity log files: parts, footer, summary [Full, module]
   radiogeddon_research.*    Journal persistence, current recording, steps, tips [Full]
   radiogeddon_analysis_decode.c  Firmware decode report (resident; the other reports are a module)
+  radiogeddon_analysis_status.c  Progress hook and status texts of the analyses (resident)
+  rg_safefile.*, radiogeddon_safefile.*  Crash-safe replacement of app files (commit marker)
+  rg_recover.*, radiogeddon_recovery.*   Recording recovery: check, repair, offer [Full: module]
+  rg_heatmap.*, radiogeddon_heatmap.*    RF Activity Heatmap from logger files [Full, module]
+  radiogeddon_memdiag_text.c  The memory and diagnostics text (About, saved report) [Full: module]
 radiogeddon_edition.h       The edition (Full / Catalog) and its RG_FEATURE_* switches
 catalog/                    Apps Catalog description, changelog, manifest template, screenshots
 assets/                     10x10 launcher icon (compiled into the .fap)
@@ -187,21 +192,27 @@ listed in `stage_edition.py`'s `FULL_MODULE_ONLY` and left out of the app
 itself; small shared helpers (`rg_analyzer`, `rg_raw`, `rg_freq`, …) are
 compiled into each module that needs them as well.
 
-| Module | Contents | Beta 8 | Beta 9 |
-|--------|----------|-------:|-------:|
-| `radiogeddon_wf.fal` | Waterfall view (with the Dolphin Lab badge and entry reveal) | 4,312 B | 4,496 B |
-| `radiogeddon_bits.fal` | Bitstream Explorer view, `rg_bits`, glyphs | 6,488 B | 6,720 B |
-| `radiogeddon_unknown.fal` | Smart Protocol Discovery report, hypotheses, checksum hypotheses | 15,608 B | 18,612 B |
-| `radiogeddon_multi.fal` | `rg_multi`, comparison over files | 15,960 B | 16,987 B |
-| `radiogeddon_sessions.fal` | Sessions scenes, `rg_session`, the Database list code they use | 16,380 B | 16,422 B |
-| `radiogeddon_lab.fal` | Room 2.0, Research Journal, Assistant and customization scenes | 8,835 B | 18,297 B |
-| `radiogeddon_fp.fal` | Find Similar scene, `rg_fp`, index update | — | 20,370 B |
-| `radiogeddon_studio.fal` | Pulse Studio and Pulse Timeline scenes and views, `rg_studio`, `rg_timeline` | — | 21,904 B |
-| `radiogeddon_log.fal` | Activity Logger and Adaptive setup scenes, log files | — | 9,158 B |
-| `radiogeddon_reports.fal` | Analysis, crypto, comparison and report scenes, report writer | — | 18,198 B |
+| Module | Contents | Beta 8 | Beta 9 | Beta 10 |
+|--------|----------|-------:|-------:|-------:|
+| `radiogeddon_wf.fal` | Waterfall view (with the Dolphin Lab badge and entry reveal) | 4,312 B | 4,496 B | 4,497 B |
+| `radiogeddon_bits.fal` | Bitstream Explorer; since beta 10 its scene and the analyzer it runs | 6,488 B | 6,720 B | 16,593 B |
+| `radiogeddon_unknown.fal` | Smart Protocol Discovery report, hypotheses, checksum hypotheses | 15,608 B | 18,612 B | 18,784 B |
+| `radiogeddon_multi.fal` | `rg_multi`, comparison over files | 15,960 B | 16,987 B | 17,159 B |
+| `radiogeddon_sessions.fal` | Sessions scenes, `rg_session`, the Database list code they use | 16,380 B | 16,422 B | 16,871 B |
+| `radiogeddon_lab.fal` | Room 2.0, Research Journal, Assistant and customization scenes | 8,835 B | 18,297 B | 18,508 B |
+| `radiogeddon_fp.fal` | Find Similar scene, `rg_fp`, index update; since beta 10 the session reader for its session scope | — | 20,370 B | 23,620 B |
+| `radiogeddon_studio.fal` | Pulse Studio and Pulse Timeline scenes and views, `rg_studio`, `rg_timeline` | — | 21,904 B | 22,108 B |
+| `radiogeddon_log.fal` | Activity Logger and Adaptive setup scenes, log files | — | 9,158 B | 9,176 B |
+| `radiogeddon_reports.fal` | Analysis, crypto, comparison and report scenes, report writer | — | 18,198 B | 18,384 B |
+| `radiogeddon_range.fal` | Range Scanner setup and scan, Waterfall scene, scan profiles, the range engine and spectrum view | — | — | 21,740 B |
+| `radiogeddon_settings.fal` | Settings and Radio bands scenes | — | — | 7,296 B |
+| `radiogeddon_hopper.fal` | Frequency Hopper and its statistics, the hopper engine | — | — | 7,264 B |
+| `radiogeddon_heatmap.fal` | RF Activity Heatmap scene and view, `rg_heatmap` | — | — | 5,955 B |
+| `radiogeddon_about.fal` | About, the memory and diagnostics text, the saved report | — | — | 4,168 B |
+| `radiogeddon_recover.fal` | Recording recovery at startup (`rg_recover`), only when a capture was cut off | — | — | 3,554 B |
 
 Sizes are the bytes the loader places in RAM (`scripts/fap_size.py`),
-from the Momentum builds.
+from the Momentum builds (Unleashed and RogueMaster within a few bytes).
 
 **Tool forwarders (beta 9).** The newer module screens are ordinary scenes
 whose handlers live in a module. `scenes/radiogeddon_scene_tools.c` (resident)
@@ -226,6 +237,41 @@ Catalog edition is 80,553 B (beta 8: 77,782 B), the growth being the
 analyzer's bit map and PWM fixes. The largest module is Pulse Studio
 (21,904 B); with its screen model (about 4 KB) and a frame buffer it
 checks the free heap before opening.
+
+**Beta 10 memory.** Beta 9's resident Full edition (119,132 B) did not fit
+the free heap of some devices, so the app did not start. Beta 10 moves the
+Range Scanner (with the Waterfall scene and scan profiles), Settings (with
+Radio bands), the Frequency Hopper (with its statistics), the whole
+Bitstream Explorer (scene, screen and the analyzer), About (with the
+diagnostics text) and recording recovery into modules, without changing
+what any screen does: the resident Full edition is 84,313 B (Momentum;
+−34,819 B, −29 %) although it gained crash-safe saves, the diagnostics
+counters, the battery saver and the new tools' entry points. The Hopper's
+state outlives its screen (until the main menu), so the app keeps its own
+copy of `radiogeddon_hopper_free()` (the linker keeps only that and the stop
+it calls); the Range Scanner's and Hopper's engines reach the radio through
+the host table (`RADIOGEDDON_MODULE_API` 5). The Catalog edition, which has
+no modules, is 86,513 B (beta 9: 80,553 B, +5,960 B): recovery (+2.4 KB),
+the diagnostics and battery saver (+2.1 KB), crash-safe saves (+0.6 KB) and
+the faster Database engine (+0.6 KB) are resident there.
+
+The Bitstream Explorer keeps the analyzer it ran for as long as it is open
+and points at the analyzer's result (its first member) instead of copying
+the result out: 8,672 B held, where beta 9 held a 4,072 B copy but needed
+both, 12,744 B, at once, and left a hole where the analyzer had been.
+
+*Binary footprint is not runtime RAM.* The figures above are code and
+static data, from the built files (`scripts/fap_size.py`); the loader puts
+exactly that in the heap. At run time the heap also holds the app state
+(`RadioGeddonApp` 2,240 B Full, 616 B Catalog), the GUI views, the 4 KB app
+stack, the radio session while a radio screen is open (the About screen
+shows its measured cost), the open tool's module and its work: for example
+the Bitstream Explorer adds its module (16,593 B) and the analyzer
+(8,672 B), Find Similar its module (23,620 B) and one analyzer while
+fingerprinting. Every tool checks the free heap for its module and work
+before allocating anything. None of the runtime figures has been measured on
+a device yet; `scripts/struct_sizes.py` gives the heap objects' sizes as the
+device compiler lays them out.
 
 Built into the app (as measured just before the move), the tools made the
 resident Full edition 128,309 B, 33,633 B more than beta 6; as modules it is
@@ -288,9 +334,10 @@ flowchart LR
   free at start. The room is a module (`radiogeddon_lab.fal`) loaded only
   while it is open and refused, as any module, when it would not fit; it is
   unloaded before any tool it opens starts. Cards replace popups without new
-  allocations. Resident cost: Full 119,428 B (beta 7: 104,388 B); the
-  Catalog edition compiles all of this out (77,782 B, +610 B for the
-  Scanner's sweep cursor and the shared settings fields).
+  allocations. Resident cost when it came (beta 8): Full 119,428 B (beta 7:
+  104,388 B); the Catalog edition compiles all of this out (77,782 B, +610 B
+  for the Scanner's sweep cursor and the shared settings fields). Beta 10's
+  figures are under [Modules](#modules-full-edition).
 
 ## Research lab (Full edition, beta 9)
 
@@ -335,12 +382,19 @@ flowchart LR
 - **Fingerprints** are built by a fourth analyzer pass over the same stream
   (no second read of the file) and stored as fixed 64-byte records with the
   file's size and timestamp, so a changed recording is fingerprinted again.
-  The index is rewritten to `fingerprints.tmp` and renamed; a record with a
-  bad CRC is dropped and recomputed.
+  The index is rewritten to `fingerprints.tmp` and committed crash-safely
+  (see *Crash-safe saves*); a record with a bad CRC is dropped and
+  recomputed. One folder listing counts the recordings; the old index is
+  streamed and each record kept if its file is unchanged; the folder is
+  listed again only when recordings are missing, in batches sized to what is
+  missing and to the free heap (12–64 names). Names already handled are
+  64-bit FNV-1a hashes in a sorted array sized to the folder (bisection),
+  up to `RG_FP_INDEX_MAX` (2,000) or what the heap can track, whichever is
+  less; beyond that the first ones are indexed and the list says so.
 - **Journal.** Events go through `radiogeddon_research_record` (resident,
   reached by modules through the host table). The journal is kept in RAM
   (624 bytes) and written three seconds after a change, never while the
-  recorder runs, to `journal.tmp` then renamed; XP and achievements are
+  recorder runs, to `journal.tmp` then committed crash-safely; XP and achievements are
   derived from the counters, so they cannot disagree with them.
 - **Assistant.** `rg_assist_rule` is a pure function of facts the app
   already holds (the current recording's steps, the session, the recorder,
@@ -473,8 +527,16 @@ flowchart LR
   loss note are written, and the file is closed.
 - **Saving.** The capture lives in `recording.tmp` until it is saved: Save
   renames it to a name that does not exist yet; Back, a failed save, an empty
-  capture or a write error deletes it. A `recording.tmp` left by a reboot
-  during recording is deleted when the app starts. Saving a decode while
+  capture or a write error deletes it. The writer syncs the file at most
+  every 2 s (FAT writes a file's size only on sync or close), so a reboot
+  loses at most about 2 s of a capture. A `recording.tmp` left by a reboot
+  is checked at the next start (`rg_recover`: the last offset where the text
+  is still the recorder's layout; an unterminated last value is dropped, not
+  kept shortened), repaired in place (truncated, line closed, a
+  `# Recovered:` note added) and offered back: Keep saves it as
+  `signals/Recovered_<time>.sub`, Delete removes it, Back keeps it. A file
+  with no RAW header or no sample is removed. In the Full edition this code
+  is a module loaded only when such a file exists. Saving a decode while
   recording stops and names the recording first, because leaving the receiver
   stops the radio session the recorder is attached to.
 - Ring, formatter and loss accounting are host-tested, the ring with a real
@@ -503,8 +565,25 @@ radio session before the receiver can start.
 **Settings.** `helpers/radiogeddon_settings.c` stores frequency, modulation and
 the scan options in a small Flipper Format file. Every field is validated on
 load and falls back to its default independently. A save writes
-`settings.tmp` and renames it over `settings.txt` only when every field was
-written, so a card error keeps the previous file.
+`settings.tmp` and commits it over `settings.txt` only when every field was
+written (see *Crash-safe saves*), so neither a card error nor a reboot during
+the swap loses both versions.
+
+**Crash-safe saves.** The firmware's `storage_common_rename` is not atomic
+(Official 1.4.3: remove the destination, copy the source over, delete the
+source), so "write `X.tmp`, rename over `X`" had a window where `X` was gone
+or cut off and only the `.tmp` was complete — and no loader read the
+`.tmp`. Settings, the journal, favorites, scan profiles and the fingerprint
+index now go through `rg_safefile` (pure) and `radiogeddon_safefile` (the
+Storage adapter): once the `.tmp` is written and closed an empty marker
+`X.cmt` is created, then the rename, then the marker removed. Recovery runs
+before every load and save: a marker means the `.tmp` is complete, so the
+rename is done again; a `.tmp` without one was never finished and is
+removed (`X` was not touched). No backup copy is made, which on Official
+would be a second full copy per save. `test_safefile` cuts power at every
+step of a save (writes and the rename's copy in 16-byte steps) with copying,
+atomic and non-replacing renames; the old protocol lost both versions at 10
+of 23 cut points, the new one at none.
 
 **Frequency Hopper.** The scene starts the receive session, then a hopper
 thread (`helpers/radiogeddon_hopper.c`, 3 KB stack) drives it: every 10 ms it
@@ -537,6 +616,23 @@ decoded static protocols are re-encoded by the matching firmware encoder.
 | Scanner | RSSI sweep | results under a mutex; the scene reads them on the tick |
 | Hopper | RSSI sampling, retuning, auto-recording | state under a mutex; events posted to the scene |
 | File encoder worker | RAW replay streaming | signals completion with a custom event |
+
+The Scanner, Range Scanner and Hopper are stopped through an atomic
+`stop_requested` flag (release on the app thread, acquire in the engine
+loop); `make -C test tsan` runs their lifecycle tests, the ring and the
+recorder under ThreadSanitizer in CI.
+
+**Diagnostics and battery saver.** `radiogeddon_memdiag` also counts, on the
+app thread, the gaps between UI ticks (the slowest and the stalls over
+250 ms: the UI thread busy), module loads (refused, failed, slowest) and
+shown messages; recordings add their samples, losses, errors and SD write
+throughput atomically (they can end on the Hopper's thread). Only counts are
+kept, never capture data. About shows them with a fragmentation indicator
+(the share of the free heap outside its largest block) and can save them as
+a report. With the battery saver on, live screens refresh their view at
+most every 500 ms (`radiogeddon_scene_redraw_due`) and the lab animation at
+most once a second; every tick's logic (the recorder's error check, the
+logger's intervals) still runs, and no radio thread is slowed.
 
 Memory diagnostics are sampled only on the GUI / event-loop thread (ticks,
 scenes and the work they run); the hopper's automatic recordings show up in
@@ -572,11 +668,17 @@ at most one file open:
 4. With the folder closed, read each file's first 512 bytes; `rg_db` parses
    `Filetype`, `Frequency`, `Protocol`, `Bit` and `Key` (hashed with FNV-1a)
    and classifies the file as decoded, RAW, another `.sub` kind or damaged.
-5. Read whole RAW files only where two have the same size, to hash their
+5. Read whole RAW files only where two have the same size (found in one
+   sorted pass, `rg_db_hash_candidates`), to hash their
    contents; then mark duplicates.
 
 Sorting, filtering and searching (`rg_db_select`) produce a list of entry
-numbers without touching the card. The list view (`radiogeddon_db_view`)
+numbers without touching the card: an in-place heap sort whose last
+tie-break is the entry number, which gives exactly the order of the earlier
+stable insertion sort in O(n log n). Duplicates are grouped by sorting on
+what makes two entries the same signal, using the view array as work space
+before it is filled. `test/bench_db.c` checks the results against the beta 9
+engine's checksums on every `make check`. The list view (`radiogeddon_db_view`)
 draws from the index; the query is changed only between
 `radiogeddon_db_view_lock` and `_unlock`, so the view never draws while it
 changes. The index and view are freed on returning to the main menu, and

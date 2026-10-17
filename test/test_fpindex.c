@@ -18,6 +18,7 @@
 #include "../helpers/radiogeddon_storage.h"
 
 #include <sys/stat.h>
+#include <sys/time.h>
 #include <unistd.h>
 
 static int g_failures = 0;
@@ -37,6 +38,8 @@ extern size_t stub_heap_free;
 static int g_card;
 static Storage* const CARD = (Storage*)&g_card; // never dereferenced by the stub
 static RadioGeddonFpResult g_res;
+static uint32_t g_window = 0; // the search's time window (0: all)
+static const RgSession* g_session = NULL; // the search's session (NULL: all)
 
 static void path_of(const char* name, char* out, size_t size) {
     snprintf(out, size, "%s/%s", RADIOGEDDON_SIGNALS_FOLDER, name);
@@ -119,7 +122,7 @@ static int hit_index(const char* name) {
 static bool search(const char* target) {
     char path[256];
     path_of(target, path, sizeof(path));
-    return radiogeddon_fp_find_similar(CARD, path, &g_res, NULL, NULL);
+    return radiogeddon_fp_find_similar(CARD, path, g_window, g_session, &g_res, NULL, NULL);
 }
 
 static const char* KEY_A = "101100111000101011110001";
@@ -268,6 +271,139 @@ static void test_large_collection(void) {
     CHECK(stub_files_open == 0, "files closed");
 }
 
+/* A decoded key file: cheap to fingerprint, so a big library stays quick. */
+static void write_key(const char* name, unsigned key) {
+    char path[256];
+    path_of(name, path, sizeof(path));
+    FILE* fp = fopen(path, "wb");
+    fprintf(
+        fp,
+        "Filetype: Flipper SubGhz Key File\nVersion: 1\nFrequency: 433920000\n"
+        "Preset: FuriHalSubGhzPresetOok650Async\nProtocol: Princeton\nBit: 24\n"
+        "Key: 00 00 00 00 00 %02X %02X %02X\nTE: 400\n",
+        (key >> 16) & 0xFF,
+        (key >> 8) & 0xFF,
+        key & 0xFF);
+    fclose(fp);
+}
+
+/* Beyond beta 9's 500-record index, and with too little heap for all. */
+static void test_beyond_500(void) {
+    printf("test_beyond_500\n");
+    reset_card();
+    char name[32];
+    for(int i = 0; i < 700; i++) {
+        snprintf(name, sizeof(name), "k_%04d.sub", i);
+        write_key(name, (unsigned)i * 2654435761u);
+    }
+    CHECK(search("k_0001.sub"), "search over 700");
+    CHECK(g_res.indexed == 700 && !g_res.truncated, "all 700 indexed (beta 9: the first 500)");
+    CHECK(g_res.compared == 699, "every other recording ranked");
+    // Nothing new: one listing, nothing recomputed.
+    memset(&stub_io, 0, sizeof(stub_io));
+    CHECK(search("k_0001.sub") && g_res.computed == 0, "second search reuses the index");
+    CHECK(stub_io.dir_opens == 1, "one folder listing when nothing is new");
+    // A new recording is found with one more listing, never a full rebuild.
+    write_key("k_new.sub", 12345);
+    memset(&stub_io, 0, sizeof(stub_io));
+    CHECK(search("k_0001.sub") && g_res.computed == 1 && g_res.indexed == 701, "one added");
+    CHECK(stub_io.dir_opens == 2, "two listings for one new recording");
+    // A short heap: the index is limited to what fits, never refused.
+    size_t heap = stub_heap_free;
+    stub_heap_free = radiogeddon_fp_memory() + 2048 + 300 * 8;
+    CHECK(search("k_0001.sub"), "search with a short heap");
+#ifdef RG_FP_HAS_LIMIT
+    CHECK(g_res.truncated && g_res.limit < 701 && g_res.indexed == g_res.limit, "the first ones");
+    CHECK(g_res.limit >= 250, "as many as fit");
+#else
+    CHECK(false, "a short heap limits the index (beta 9: refused)");
+#endif
+    stub_heap_free = heap;
+    CHECK(search("k_0001.sub") && g_res.indexed == 701 && !g_res.truncated, "all again");
+    CHECK(stub_files_open == 0, "files closed");
+}
+
+/* Two names whose 32-bit FNV-1a hashes are equal (beta 9 kept the second
+ * out of the index): both are fingerprinted now. */
+static void test_hash_collision(void) {
+    printf("test_hash_collision\n");
+    reset_card();
+    // Found by a search over random names (FNV-1a 32 of both: 0x0a29967e).
+    const char* a = "rc967e6bc.sub";
+    const char* b = "r01a3505d.sub";
+    uint32_t ha = 2166136261u, hb = 2166136261u;
+    for(const char* p = a; *p; p++)
+        ha = (ha ^ (uint8_t)*p) * 16777619u;
+    for(const char* p = b; *p; p++)
+        hb = (hb ^ (uint8_t)*p) * 16777619u;
+    CHECK(ha == hb, "the pair collides in 32 bits");
+    write_key(a, 0x123456);
+    write_key(b, 0x654321);
+    CHECK(search(a), "search");
+    CHECK(g_res.indexed == 2 && g_res.compared == 1, "both names indexed");
+    // The next search keeps both records (beta 9 dropped the second as a
+    // duplicate of the first, then never added it back).
+    CHECK(search(a), "search again");
+    CHECK(g_res.indexed == 2 && g_res.compared == 1 && g_res.computed == 0, "both kept");
+    printf("  %s and %s share a 32-bit hash\n", a, b);
+}
+
+/* Find Similar within a time window of the target's recording time. */
+static void test_time_window(void) {
+    printf("test_time_window\n");
+    reset_card();
+    char name[32], path[256];
+    // Six copies of one remote, saved 0, 10 min, 50 min, 2 h, 20 h, 3 days apart.
+    static const long offs[] = {0, 600, 3000, 7200, 72000, 259200};
+    for(int i = 0; i < 6; i++) {
+        snprintf(name, sizeof(name), "w_%d.sub", i);
+        write_raw(name, KEY_A, 350, 5, 433920000);
+        path_of(name, path, sizeof(path));
+        struct timeval tv[2] = {{1760000000 + offs[i], 0}, {1760000000 + offs[i], 0}};
+        CHECK(utimes(path, tv) == 0, "time set");
+    }
+    g_window = 0;
+    CHECK(search("w_0.sub") && g_res.compared == 5 && g_res.out_of_scope == 0, "all: 5 ranked");
+    g_window = 3600;
+    memset(&stub_io, 0, sizeof(stub_io));
+    CHECK(search("w_0.sub") && g_res.computed == 0, "the index is reused");
+    CHECK(g_res.compared == 2 && g_res.out_of_scope == 3, "within an hour: 2 (10 and 50 min)");
+    for(size_t i = 0; i < g_res.count; i++)
+        CHECK(
+            strcmp(g_res.hit[i].name, "w_1.sub") == 0 || strcmp(g_res.hit[i].name, "w_2.sub") == 0,
+            "only those in the window");
+    g_window = 86400;
+    CHECK(search("w_0.sub") && g_res.compared == 4 && g_res.out_of_scope == 1, "within a day: 4");
+    g_window = 0;
+}
+
+/* Find Similar within a research session: only the recordings it names. */
+static void test_session_scope(void) {
+    printf("test_session_scope\n");
+    reset_card();
+    char name[32];
+    for(int i = 0; i < 5; i++) {
+        snprintf(name, sizeof(name), "s_%d.sub", i);
+        write_raw(name, KEY_A, 350, 5, 433920000);
+    }
+    static RgSession session;
+    rg_session_init(&session, "Garage", "");
+    CHECK(rg_session_add(&session, "s_0.sub") == RgSessionAddOk, "target added");
+    CHECK(rg_session_add(&session, "s_3.sub") == RgSessionAddOk, "s_3 added");
+    CHECK(rg_session_add(&session, "gone.sub") == RgSessionAddOk, "a missing one added");
+    CHECK(search("s_0.sub") && g_res.compared == 4, "all: 4 ranked");
+    g_session = &session;
+    memset(&stub_io, 0, sizeof(stub_io));
+    CHECK(search("s_0.sub") && g_res.computed == 0, "the index is reused");
+    CHECK(g_res.compared == 1 && g_res.out_of_scope == 3, "session: only s_3 ranked");
+    CHECK(g_res.count == 1 && strcmp(g_res.hit[0].name, "s_3.sub") == 0, "s_3 is the match");
+    // A session with no other recording ranks nothing, and says so.
+    rg_session_init(&session, "Empty", "");
+    CHECK(search("s_0.sub") && g_res.compared == 0 && g_res.count == 0, "empty session");
+    CHECK(g_res.out_of_scope == 4, "all four out of scope");
+    g_session = NULL;
+}
+
 int main(void) {
     stub_write_fail_after = -1;
     test_ranking();
@@ -275,6 +411,10 @@ int main(void) {
     test_damage();
     test_write_failure_and_memory();
     test_large_collection();
+    test_beyond_500();
+    test_hash_collision();
+    test_time_window();
+    test_session_scope();
     printf("\n%d checks, %d failures\n", g_checks, g_failures);
     return g_failures ? 1 : 0;
 }

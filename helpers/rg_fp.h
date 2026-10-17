@@ -200,7 +200,10 @@ bool rg_fp_decode(const uint8_t in[RG_FP_BYTES], RgFingerprint* fp);
 #define RG_FP_NAME_MAX      64 /* name bytes in a record, NUL padded */
 #define RG_FP_RECORD_BYTES  (RG_FP_NAME_MAX + 4 + 4 + RG_FP_BYTES + 4)
 /* Records an index holds at most (the Database's own cap). */
-#define RG_FP_INDEX_MAX     500u
+/* Records an index may hold. The search also stops at what the free heap
+ * can track (8 bytes a recording); beta 9 and earlier read at most 500 and
+ * rebuild a larger index. */
+#define RG_FP_INDEX_MAX     2000u
 
 typedef struct {
     char name[RG_FP_NAME_MAX]; /* file name in the signals folder, NUL-terminated */

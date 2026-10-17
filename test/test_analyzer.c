@@ -374,6 +374,58 @@ static void test_repeat_period(void) {
     CHECK(rg_analyzer_repeat_period(bits, 256) == 0, "random bits do not repeat");
 }
 
+/* Repeats sent back to back with a preamble of one repeated symbol between
+ * them and no gap (as Nero Sketch does): one repeat, without the filler. */
+static void test_filler(void) {
+    printf("test_filler\n");
+    char bits[RG_ANALYZER_MAX_BITS + 1];
+    const char* key = "0111101011101110111011000111101011101111";
+    // The repeated unit as the period cut leaves it: data, then filler.
+    snprintf(bits, sizeof(bits), "%s%s", key, "0000000000000000000000000000000000000000000000000");
+    size_t n = rg_analyzer_strip_filler(bits, strlen(bits));
+    CHECK(n == 40 && strncmp(bits, key, 40) == 0, "trailing filler stripped");
+    // A last data bit equal to the filler cannot be told from it: one short.
+    snprintf(
+        bits, sizeof(bits), "%.39s0%s", key, "0000000000000000000000000000000000000000000000000");
+    CHECK(rg_analyzer_strip_filler(bits, strlen(bits)) == 39, "the ambiguous last bit goes");
+    // Filler first, then the data: the data moves to the front.
+    snprintf(bits, sizeof(bits), "%s%s", "11111111111111111111", key);
+    n = rg_analyzer_strip_filler(bits, strlen(bits));
+    CHECK(n == 40 && strncmp(bits, key, 40) == 0, "leading filler stripped");
+    // A run shorter than RG_ANALYZER_FILLER_BITS is data.
+    snprintf(bits, sizeof(bits), "%s%s", key, "000000000000000");
+    CHECK(rg_analyzer_strip_filler(bits, 55) == 55, "15 zeros at the end are kept");
+    // Nothing is left of a unit that is all filler, or nearly.
+    memset(bits, '0', 64);
+    CHECK(rg_analyzer_strip_filler(bits, 64) == 64, "all one symbol: kept as it is");
+    snprintf(bits, sizeof(bits), "%s", "0000000000000000000010110000000000000000000000");
+    CHECK(
+        rg_analyzer_strip_filler(bits, strlen(bits)) == strlen(bits),
+        "too little data left: kept");
+
+    // End to end: PWM repeats with a 20-symbol preamble, no gap between.
+    static int32_t buf[8192];
+    size_t pos = 0;
+    const char* code = "10110011100010101101001110100101";
+    buf[pos++] = -40 * TE;
+    for(int r = 0; r < 12; r++) {
+        for(int k = 0; k < 20; k++) {
+            buf[pos++] = TE;
+            buf[pos++] = -2 * TE;
+        }
+        for(const char* b = code; *b; b++) {
+            buf[pos++] = (*b == '1') ? 2 * TE : TE;
+            buf[pos++] = (*b == '1') ? -TE : -2 * TE;
+        }
+    }
+    buf[pos++] = TE;
+    buf[pos++] = -40 * TE;
+    rg_analyzer_run(buf, pos, &g_a);
+    CHECK(g_a.encoding == RgEncodingPWM, "filler: PWM");
+    CHECK(g_a.bit_count == 32, "filler: the frame is the 32 data bits");
+    CHECK(strcmp(g_a.bits, code) == 0, "filler: and they are the code");
+}
+
 /* Repeats separated by a long carrier pulse instead of a gap (as Hormann
  * sends them). */
 static void test_high_separator(void) {
@@ -858,6 +910,7 @@ static void test_hypotheses(void) {
 }
 
 int main(void) {
+    test_filler();
     test_bit_map();
     test_hypotheses();
     test_long_data_gap();

@@ -1,6 +1,7 @@
 #include "radiogeddon_subghz.h"
 #include "radiogeddon_storage.h"
 #include "rg_memstat.h"
+#include "radiogeddon_memdiag.h"
 #include "radiogeddon_decode_text.h"
 #include "rg_preset.h"
 #include "../radiogeddon_edition.h"
@@ -572,6 +573,14 @@ void radiogeddon_subghz_record_stop(RadioGeddonSubGhz* instance) {
     if(!rec) return;
     RadioGeddonRecordStats st;
     radiogeddon_recorder_finish(rec, &st);
+    radiogeddon_memdiag_recording(
+        st.samples,
+        st.lost,
+        st.gaps,
+        st.radio_overruns,
+        st.error != RadioGeddonRecordOk,
+        st.bytes,
+        st.elapsed_ms);
     // An empty or broken file is not offered for saving.
     bool keep = st.samples > 0 && st.error == RadioGeddonRecordOk;
     furi_mutex_acquire(instance->rec_mutex, FuriWaitForever);

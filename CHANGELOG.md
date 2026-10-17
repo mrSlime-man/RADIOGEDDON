@@ -7,6 +7,77 @@ to follow [Semantic Versioning](https://semver.org/) (pre-1.0.0 releases use
 
 ## [Unreleased]
 
+## [1.0.0-beta.10] - 2026-10-17
+
+Optimization release: the Full edition's resident code drops from 119,132 B
+to 84,313 B (−29 %), so it starts again on devices where beta 9 ran out of
+memory; files survive a reboot; the Database and Find Similar do far less
+work; and a few new on-device tools. Nothing new transmits. **Not tested on
+hardware** (checklist U1–U12).
+
+### Added
+- **Recording recovery** (both editions): the RAW writer syncs at most every
+  2 s, and a capture cut off by a reboot or a flat battery is checked,
+  repaired (complete values only, a `# Recovered:` note) and offered at the
+  next start: Keep (`signals/Recovered_<time>.sub`), Delete, Back keeps.
+  Before, the leftover file was deleted. Full edition: a module loaded only
+  then.
+- **RF Activity Heatmap** (Full; Scan → Activity Heatmap): a saved activity
+  log as frequency × time; not observed, observed-quiet and active cells
+  told apart; bursts or strength; coverage per cell.
+- **Find Similar scope**: all recordings, within 1 hour, within 1 day, or
+  (while a research session is active) only that session's recordings.
+- **Diagnostics** (both editions; About): UI responsiveness (slowest tick
+  gap, stalls over 250 ms), module loads, recordings (losses, overruns,
+  write errors, SD write speed), heap fragmentation, messages; **Save
+  report** writes them to `diagnostics/` (counts only, no capture data).
+- **Battery saver** (Settings, both editions, off by default): live screens
+  redraw at most twice a second, the logger's status every 5 s, the
+  animation once a second; radio work unchanged. Battery effect not measured.
+
+### Changed
+- **Resident code, Full edition: 119,132 → 84,313 B** (Momentum build;
+  measured from the built file with `scripts/fap_size.py`, not on a device).
+  The Range Scanner (with the Waterfall scene and scan profiles), Settings
+  (with Radio bands), the Frequency Hopper (with its statistics), the
+  Bitstream Explorer (with the analyzer it runs), About (with the
+  diagnostics text) and recording recovery are now modules loaded only while
+  their screen is open, like the beta 9 tools: 16 modules, nothing they do
+  changed. Opening one reads it from the SD card first; when it does not fit
+  the free heap the screen says `Not enough memory`.
+- **Bitstream Explorer peak heap −4 KB**: it keeps the analyzer for its
+  result instead of copying the result out, so the 8,672 B analyzer and a
+  4,072 B copy no longer exist at once (and no hole is left in the heap).
+  Computed peak while it opens, code included: about 25 KB beyond the
+  resident app (beta 9: about 19 KB, but on a resident app 35 KB larger).
+- **Catalog edition: 80,553 → 86,513 B** resident (it has no modules):
+  recording recovery (+2.4 KB), diagnostics and the battery saver
+  (+2.1 KB), crash-safe saves (+0.6 KB) and the faster Database (+0.6 KB).
+- Module interface version 5 (the host table gained the radio, recording,
+  Range Scanner and redraw entries the new modules call).
+- **Crash-safe saves** for settings, journal, favorites, scan profiles and
+  the fingerprint index: a commit marker makes every interrupted save
+  recoverable to the old or the new version (the firmware's rename copies;
+  a reboot during it used to lose both).
+- **Database**: sorting, searching and duplicate marking in O(n log n),
+  identical results (7–18× less work at 500–1,000 files on the host).
+- **Fingerprint index**: one folder listing when nothing is new, batches
+  sized to the heap, 64-bit name hashes in a sorted array; up to 2,000
+  recordings (was 500), or what the heap allows, never refused for a short
+  heap. 500 recordings, first search: 43 → 9 folder listings.
+- **Protocol discovery**: preamble filler between back-to-back repeats is no
+  longer counted as data (Nero Sketch 89 → 39 bits); the capture tests also
+  score against the lengths the decoders actually decode (43 → 44 of 50).
+
+### Fixed
+- **Full edition did not start on some devices (out of memory)** with beta 9's
+  119 KB of resident code; see *Changed*.
+- Data races on the Scanner, Range Scanner and Hopper stop flags (found by
+  ThreadSanitizer, now a CI job).
+- Two names with equal 32-bit hashes kept one recording out of the
+  fingerprint index.
+
+
 ## [1.0.0-beta.9] - 2026-10-11
 
 Standalone Research Lab (Full edition): signal fingerprints and Find Similar
@@ -693,6 +764,7 @@ on physical hardware** — see `docs/VERIFICATION.md`.
 - Settings are not persisted across launches; internal radio only; RAW capture
   capped at 16,384 samples (engine analysis uses the first 4,096).
 
-[Unreleased]: https://github.com/mrSlime-man/RADIOGEDDON/compare/v1.0.0-beta.2...HEAD
+[Unreleased]: https://github.com/mrSlime-man/RADIOGEDDON/compare/v1.0.0-beta.10...HEAD
+[1.0.0-beta.10]: https://github.com/mrSlime-man/RADIOGEDDON/compare/v1.0.0-beta.9...v1.0.0-beta.10
 [1.0.0-beta.2]: https://github.com/mrSlime-man/RADIOGEDDON/compare/v1.0.0-beta.1...v1.0.0-beta.2
 [1.0.0-beta.1]: https://github.com/mrSlime-man/RADIOGEDDON/releases/tag/v1.0.0-beta.1

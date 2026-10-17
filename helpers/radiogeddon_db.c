@@ -139,16 +139,18 @@ RadioGeddonDb* radiogeddon_db_load(
         if(progress) progress(context, i + 1, db->db.count);
     }
 
-    // Confirm RAW duplicates by content, only where sizes collide.
-    for(size_t i = 0; i < db->db.count; i++) {
-        if(!rg_db_needs_content_hash(&db->db, i)) continue;
-        RgDbEntry* e = &db->db.entries[i];
+    // Confirm RAW duplicates by content, only where sizes collide. The list's
+    // view array is free until radiogeddon_db_apply fills it: it holds the
+    // candidates, then lends the duplicate grouping its work space.
+    size_t candidates = cap ? rg_db_hash_candidates(&db->db, db->view) : 0;
+    for(size_t i = 0; i < candidates; i++) {
+        RgDbEntry* e = &db->db.entries[db->view[i]];
         radiogeddon_db_path(db, e, path);
         bool ok;
         uint32_t h = radiogeddon_db_hash_file(storage, furi_string_get_cstr(path), buf, &ok);
         if(ok) rg_db_set_content_hash(e, h);
     }
-    rg_db_mark_duplicates(&db->db);
+    if(cap) rg_db_mark_duplicates(&db->db, db->view);
     radiogeddon_db_apply(db);
 
     FURI_LOG_I(

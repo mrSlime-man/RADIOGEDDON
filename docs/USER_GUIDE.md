@@ -628,6 +628,13 @@ puts them in a [multi-capture comparison](#comparing-several-recordings-full-edi
 A score is evidence, not identity: a recording with no frame structure never
 scores above 30, RAW against a decoded file never above 60.
 
+The `Scope` row under the list narrows the search and ranks again (the
+fingerprints are reused): `all recordings`, `within 1 hour` or `within 1
+day` of the one searched for (by the files' times), and, while a
+[research session](#research-sessions-full-edition) is active, the session's
+name: only the recordings in that session. The line above it then says how
+many were left `out of scope`.
+
 ### Pulse Timeline
 
 Shows a RAW capture as a waveform: carrier-on pulses on the upper line,

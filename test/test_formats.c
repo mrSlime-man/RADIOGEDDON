@@ -34,6 +34,7 @@
 #include "../helpers/radiogeddon_bands.h"
 #include "../helpers/rg_db.h"
 #include "../helpers/rg_raw.h"
+#include "../helpers/radiogeddon_recovery.h"
 #include "../helpers/rg_analyzer.h"
 
 #include <dirent.h>
@@ -965,6 +966,183 @@ static void test_repeated(void) {
     printf("  peak while saving and loading: %u bytes\n", (unsigned)(stub_peak_bytes - live));
 }
 
+/* ---- Interrupted saves (rg_safefile through the firmware's FlipperFormat) - */
+
+static long host_read(const char* path, char* buf, size_t max) {
+    FILE* fp = fopen(path, "rb");
+    if(!fp) return -1;
+    long n = (long)fread(buf, 1, max, fp);
+    fclose(fp);
+    return n;
+}
+
+static void host_write(const char* path, const char* buf, size_t len) {
+    FILE* fp = fopen(path, "wb");
+    if(!fp) exit(2);
+    if(len) fwrite(buf, 1, len, fp);
+    fclose(fp);
+}
+
+static void test_settings_interrupted(void) {
+    printf("test_settings_interrupted\n");
+    RadioGeddonSettings old_s, new_s, got;
+    radiogeddon_settings_default(&old_s);
+    old_s.frequency = 315000000;
+    new_s = custom_settings();
+    char old_text[1024], new_text[1024];
+    reset_card();
+    CHECK(radiogeddon_settings_save(CARD, &new_s), "new version saved");
+    long new_len = host_read(RADIOGEDDON_SETTINGS_PATH, new_text, sizeof(new_text));
+    CHECK(radiogeddon_settings_save(CARD, &old_s), "old version saved");
+    long old_len = host_read(RADIOGEDDON_SETTINGS_PATH, old_text, sizeof(old_text));
+    CHECK(new_len > 64 && old_len > 64, "both versions read");
+
+    /* Cut off during the rename's copy: the file is half the new version,
+     * the .tmp and the marker are complete. The new version is finished. */
+    host_write(RADIOGEDDON_SETTINGS_TEMP, new_text, (size_t)new_len);
+    host_write(RADIOGEDDON_SETTINGS_MARK, "", 0);
+    host_write(RADIOGEDDON_SETTINGS_PATH, new_text, (size_t)new_len / 2);
+    radiogeddon_settings_load(CARD, &got);
+    CHECK(same_settings(&got, &new_s), "cut-off copy: the new version, not defaults");
+    CHECK(!storage_common_exists(CARD, RADIOGEDDON_SETTINGS_TEMP), "tmp gone");
+    CHECK(!storage_common_exists(CARD, RADIOGEDDON_SETTINGS_MARK), "marker gone");
+
+    /* Cut off after the old file was removed: only the .tmp and marker. */
+    host_write(RADIOGEDDON_SETTINGS_TEMP, old_text, (size_t)old_len);
+    host_write(RADIOGEDDON_SETTINGS_MARK, "", 0);
+    remove(RADIOGEDDON_SETTINGS_PATH);
+    radiogeddon_settings_load(CARD, &got);
+    CHECK(same_settings(&got, &old_s), "file missing: restored from the complete tmp");
+
+    /* Cut off while the .tmp was written (no marker): the file is kept. */
+    host_write(RADIOGEDDON_SETTINGS_TEMP, new_text, 40);
+    radiogeddon_settings_load(CARD, &got);
+    CHECK(same_settings(&got, &old_s), "half-written tmp: the old version");
+    CHECK(!storage_common_exists(CARD, RADIOGEDDON_SETTINGS_TEMP), "half tmp dropped");
+
+    /* A save after a cut-off one finishes it first, then saves. */
+    host_write(RADIOGEDDON_SETTINGS_TEMP, new_text, (size_t)new_len);
+    host_write(RADIOGEDDON_SETTINGS_MARK, "", 0);
+    host_write(RADIOGEDDON_SETTINGS_PATH, old_text, 10);
+    old_s.frequency = 433920000;
+    CHECK(radiogeddon_settings_save(CARD, &old_s), "save over an interrupted one");
+    radiogeddon_settings_load(CARD, &got);
+    CHECK(same_settings(&got, &old_s), "the latest save wins");
+
+    /* The same on firmware whose rename refuses an existing target. */
+    stub_rename_keeps_target = true;
+    host_write(RADIOGEDDON_SETTINGS_TEMP, new_text, (size_t)new_len);
+    host_write(RADIOGEDDON_SETTINGS_MARK, "", 0);
+    host_write(RADIOGEDDON_SETTINGS_PATH, new_text, 7);
+    radiogeddon_settings_load(CARD, &got);
+    CHECK(same_settings(&got, &new_s), "non-replacing rename: finished too");
+    CHECK(radiogeddon_settings_save(CARD, &old_s), "and saves normally");
+    radiogeddon_settings_load(CARD, &got);
+    CHECK(same_settings(&got, &old_s), "read back");
+    stub_rename_keeps_target = false;
+
+    /* Favorites go through the same path. */
+    RadioGeddonFavorites fav = {0}, fav_got;
+    radiogeddon_favorites_add(&fav, 433920000);
+    radiogeddon_favorites_add(&fav, 868350000);
+    CHECK(radiogeddon_favorites_save(CARD, &fav), "favorites saved");
+    long fl = host_read(RADIOGEDDON_FAVORITES_PATH, new_text, sizeof(new_text));
+    host_write(RADIOGEDDON_FAVORITES_TEMP, new_text, (size_t)fl);
+    host_write(RADIOGEDDON_FAVORITES_MARK, "", 0);
+    remove(RADIOGEDDON_FAVORITES_PATH);
+    radiogeddon_favorites_load(CARD, &fav_got);
+    CHECK(fav_got.count == 2, "favorites restored from the complete tmp");
+}
+
+/* ---- Recording recovery (radiogeddon_recovery on the stub card) --------- */
+
+static size_t count_raw(const char* path) {
+    RadioGeddonRawFile* raw = radiogeddon_storage_raw_open(CARD, path);
+    if(!raw) return 0;
+    int32_t buf[64];
+    size_t n, total = 0;
+    while((n = rg_raw_reader_read(&raw->reader, buf, 64)) > 0)
+        total += n;
+    bool corrupt = raw->reader.corrupt;
+    radiogeddon_storage_raw_close(raw);
+    return corrupt ? 0 : total;
+}
+
+static void test_recovery(void) {
+    printf("test_recovery\n");
+    reset_card();
+    RadioGeddonRecovery rec;
+    CHECK(!radiogeddon_recovery_scan(CARD, &rec), "nothing left over: nothing to do");
+
+    /* Cut inside a value of the third line, as a reboot leaves it. */
+    const char* cut =
+        "Filetype: Flipper SubGhz RAW File\nVersion: 1\nFrequency: 433920000\n"
+        "Preset: FuriHalSubGhzPresetOok650Async\nProtocol: RAW\n"
+        "RAW_Data: 400 -1200 400 -1200\nRAW_Data: 1200 -400 1200 -400\nRAW_Data: 400 -12";
+    host_write(RADIOGEDDON_RECORD_TEMP, cut, strlen(cut));
+    CHECK(radiogeddon_recovery_scan(CARD, &rec), "leftover found");
+    CHECK(rec.verdict == RgRecoverPartial && rec.scan.samples == 9, "9 complete samples");
+    CHECK(rec.scan.frequency == 433920000, "frequency read");
+    CHECK(radiogeddon_recovery_repair(CARD, &rec), "repaired in place");
+    RadioGeddonRecovery again;
+    CHECK(radiogeddon_recovery_scan(CARD, &again), "rescanned");
+    CHECK(again.verdict == RgRecoverComplete && again.scan.samples == 9, "repair is complete");
+    FuriString* path = furi_string_alloc();
+    CHECK(radiogeddon_recovery_keep(CARD, &again, path), "kept");
+    CHECK(strstr(furi_string_get_cstr(path), "/signals/Recovered_") != NULL, "named Recovered_");
+    CHECK(!storage_common_exists(CARD, RADIOGEDDON_RECORD_TEMP), "temporary file moved");
+    RadioGeddonLoadedSignal sig;
+    radiogeddon_loaded_signal_init(&sig);
+    CHECK(
+        radiogeddon_storage_load(CARD, furi_string_get_cstr(path), &sig) &&
+            sig.kind == RadioGeddonSignalKindRaw && sig.frequency == 433920000,
+        "an ordinary RAW .sub through FlipperFormat");
+    radiogeddon_loaded_signal_reset(&sig);
+    CHECK(count_raw(furi_string_get_cstr(path)) == 9, "its 9 samples stream back");
+
+    /* A second leftover with the same time gets its own name. */
+    host_write(RADIOGEDDON_RECORD_TEMP, cut, strlen(cut));
+    CHECK(radiogeddon_recovery_scan(CARD, &rec), "second leftover");
+    rec.timestamp = again.timestamp;
+    radiogeddon_recovery_repair(CARD, &rec);
+    FuriString* path2 = furi_string_alloc();
+    CHECK(radiogeddon_recovery_keep(CARD, &rec, path2), "kept too");
+    CHECK(!furi_string_equal(path, path2), "never over the first");
+    furi_string_free(path2);
+    furi_string_free(path);
+
+    /* Header only: nothing to give back. */
+    const char* header = "Filetype: Flipper SubGhz RAW File\nVersion: 1\nFreq";
+    host_write(RADIOGEDDON_RECORD_TEMP, header, strlen(header));
+    CHECK(radiogeddon_recovery_scan(CARD, &rec) && rec.verdict == RgRecoverNothing, "no capture");
+    radiogeddon_recovery_discard(CARD);
+    CHECK(!storage_common_exists(CARD, RADIOGEDDON_RECORD_TEMP), "removed");
+
+    /* The startup flow, as the app runs it. */
+    reset_card();
+    host_write(RADIOGEDDON_RECORD_TEMP, cut, strlen(cut));
+    stub_dialog_shown = 0;
+    stub_dialog_answers[0] = DialogMessageButtonLeft; // Delete
+    radiogeddon_recovery_offer(CARD, NULL);
+    CHECK(stub_dialog_shown == 1, "asked once");
+    CHECK(!storage_common_exists(CARD, RADIOGEDDON_RECORD_TEMP), "Delete removes it");
+
+    host_write(RADIOGEDDON_RECORD_TEMP, cut, strlen(cut));
+    stub_dialog_shown = 0;
+    stub_dialog_answers[0] = DialogMessageButtonBack; // Back keeps
+    stub_dialog_answers[1] = DialogMessageButtonCenter;
+    radiogeddon_recovery_offer(CARD, NULL);
+    CHECK(stub_dialog_shown == 2, "asked, then told where it went");
+    CHECK(strstr(stub_dialog_text, "Recovered_") != NULL, "the new name is shown");
+    CHECK(!storage_common_exists(CARD, RADIOGEDDON_RECORD_TEMP), "moved out of the way");
+
+    host_write(RADIOGEDDON_RECORD_TEMP, header, strlen(header));
+    stub_dialog_shown = 0;
+    radiogeddon_recovery_offer(CARD, NULL);
+    CHECK(stub_dialog_shown == 0, "nothing of a capture: not asked");
+    CHECK(!storage_common_exists(CARD, RADIOGEDDON_RECORD_TEMP), "and removed");
+}
+
 int main(int argc, char** argv) {
     bool verbose = argc > 1 && strcmp(argv[1], "-v") == 0;
     test_firmware_files(verbose);
@@ -976,6 +1154,8 @@ int main(int argc, char** argv) {
     test_profiles();
     test_settings_malformed();
     test_settings_failed_save();
+    test_settings_interrupted();
+    test_recovery();
     test_write_signal();
     test_repeated();
     if(system("rm -rf build/ext") != 0) return 2;

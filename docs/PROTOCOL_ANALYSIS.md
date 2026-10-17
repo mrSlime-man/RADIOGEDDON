@@ -227,6 +227,18 @@ The report opens with what the labels mean, then has three parts.
    one repeat and marked `rep` in the frame list. Frames that end on their
    own are never cut: applying the rule to them halved a legitimate 17-bit
    frame in the capture tests.
+   A run of 16 or more identical symbols at either end of the repeated unit
+   is preamble or sync filler sent between the repeats, not data, and is
+   dropped (never leaving fewer than 8 bits). A last data bit equal to the
+   filler symbol cannot be told from it and goes too (Nero Sketch: 39 bits
+   for its 40). Only frames cut to a repeat are affected; on the firmware's
+   50 captures this changed one result, Nero Sketch from 89 to 39 bits.
+   The capture tests score the length both against each decoder's minimum
+   (`min_count_bit_for_found`) and against the lengths the firmware's
+   decoders actually decode from each capture (`test/fw_decoded_bits.h`,
+   checked against the decoders on every run): a minimum is not always what
+   was sent (Nice FLO accepts 12 to 24 bits; this capture decodes to 24,
+   which the engine reports).
 5. **Patterns.** Identical frames are grouped (A, B, … largest first, up to 6
    patterns) and shown in binary and hex. A frame that matches a pattern after
    shifting up to 4 bits (for example the first frame of a recording that

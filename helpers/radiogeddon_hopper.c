@@ -1,6 +1,9 @@
 #include "radiogeddon_hopper.h"
 #include "radiogeddon_storage.h"
 #include "rg_freq.h"
+/* Built into the Hopper's module (Full edition): the radio through the
+ * app's table. The app keeps its own copy of radiogeddon_hopper_free(). */
+#include "radiogeddon_host_map.h"
 
 #include <datetime/datetime.h>
 #include <furi_hal_rtc.h>
@@ -17,7 +20,7 @@ struct RadioGeddonHopper {
     RadioGeddonSubGhz* subghz;
     FuriMutex* mutex;
     FuriThread* thread;
-    volatile bool stop_requested;
+    bool stop_requested; /* set by the app thread, polled by the engine (atomics) */
 
     // Guarded by mutex.
     RgHop hop;
@@ -173,7 +176,7 @@ static void radiogeddon_hopper_retune(RadioGeddonHopper* instance, size_t channe
 static int32_t radiogeddon_hopper_thread(void* context) {
     RadioGeddonHopper* instance = context;
 
-    while(!instance->stop_requested) {
+    while(!__atomic_load_n(&instance->stop_requested, __ATOMIC_ACQUIRE)) {
         // Commands from the GUI.
         furi_mutex_acquire(instance->mutex, FuriWaitForever);
         bool do_next = instance->cmd_next;
@@ -229,7 +232,7 @@ void radiogeddon_hopper_start(RadioGeddonHopper* instance) {
 
 void radiogeddon_hopper_stop(RadioGeddonHopper* instance) {
     if(!instance->thread) return;
-    instance->stop_requested = true;
+    __atomic_store_n(&instance->stop_requested, true, __ATOMIC_RELEASE);
     furi_thread_join(instance->thread);
     furi_thread_free(instance->thread);
     instance->thread = NULL;

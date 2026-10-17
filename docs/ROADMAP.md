@@ -4,7 +4,21 @@ Where RadioGeddon is headed. This is a plan, not a promise — priorities shift
 with what hardware testing finds and what contributors pick up. Dates are
 deliberately omitted.
 
-## Now — `1.0.0-beta.9`
+## Now — `1.0.0-beta.10`
+
+`1.0.0-beta.10` is an optimization release. The Full edition's resident code
+drops from 119,132 B to 84,313 B (the Range Scanner, Settings, the Hopper,
+the Bitstream Explorer, About and recording recovery became modules), so it
+starts again where beta 9 ran out of memory; the Bitstream Explorer needs
+4 KB less at its peak; saves survive a reboot mid-save; a recording cut off
+by a reboot is repaired and offered back; the Database sorts and finds
+duplicates in O(n log n); Find Similar lists the folder far less often,
+indexes beyond 500 recordings and searches within a time window or the
+active research session; an RF Activity Heatmap, a diagnostics report and a
+battery saver; data races in the engines' stop paths fixed, with
+ThreadSanitizer in CI. **Not hardware tested**: checks U1–U12 pending.
+
+## Earlier betas
 
 `1.0.0-beta.9` makes the Full edition a standalone research lab: signal
 fingerprints and **Find Similar Signals**, **Pulse Studio**, **Smart Protocol
@@ -75,6 +89,8 @@ all four firmware families and both editions and record evidence in
 - [ ] Full edition: the Dolphin Lab interface (D1–D14).
 - [ ] Full edition: the beta 9 research lab (RL1–RL20), including a
       multi-hour activity log on battery and Find Similar on a large card.
+- [ ] Beta 10: the Full edition starting where beta 9 did not, its new
+      modules, recovery, crash-safe saves and the battery saver (U1–U12).
 - [ ] Catalog edition: region refusal on a device (C1–C3), then qFlipper
       screenshots and the Apps Catalog submission.
 - [ ] Receive/decode, RAW capture fidelity, and authorized replay confirmed
@@ -203,6 +219,20 @@ still needs.
       pending).
 - [x] Resident Full edition no larger than beta 8 (RL20 pending on device).
 
+## Beta 10: optimization
+
+- [x] **Resident Full edition 119,132 → 84,313 B**: Range Scanner, Settings,
+      Hopper, Bitstream Explorer, About and recovery as modules (U10–U12
+      pending).
+- [x] **Bitstream Explorer peak heap −4 KB** (no result copy).
+- [x] **Crash-safe saves** and **recording recovery** (U1–U3 pending).
+- [x] **Database and fingerprint index** in O(n log n), beyond 500
+      recordings (U4, U6 pending).
+- [x] **Find Similar scope**: time windows and the active session (U5
+      pending).
+- [x] **RF Activity Heatmap**, **Diagnostics report**, **Battery saver**
+      (U7–U9 pending).
+
 ## Toward a stable 1.0.0
 
 - [ ] Fix whatever hardware testing surfaces.
@@ -220,8 +250,8 @@ still needs.
       Multi-Capture Compare, beta 7).
 - [ ] Richer analysis: more encodings; frame lengths for protocols with an
       in-frame preamble (the remaining 8 misses).
-- [ ] Find Similar across a session or a time window, and similarity
-      thresholds learned from your own labelled recordings.
+- [x] Find Similar across a session or a time window (beta 10).
+- [ ] Similarity thresholds learned from your own labelled recordings.
 - [x] A waterfall of past sweeps (beta 7).
 - [ ] Range Scanner zoom.
 - [ ] A larger library of reference captures for regression testing.

@@ -202,8 +202,10 @@ run on the new firmware.
 
 ## `Tool missing` or `Tool not loaded` (Full edition)
 
-The Waterfall, Bitstream Explorer, comparisons, Unknown Protocol Analysis and
-Sessions are modules packed inside the Full edition's `.fap`, unpacked by the
+The Range Scanner and Waterfall, Settings, the Frequency Hopper, the
+Bitstream Explorer, comparisons, Unknown Protocol Analysis, Sessions, the
+research tools, About and recording recovery are modules (16 in beta 10)
+packed inside the Full edition's `.fap`, unpacked by the
 firmware to `apps_assets/radiogeddon_full/plugins/` when the app starts.
 `Tool missing` means that folder is incomplete; `Tool not loaded` that a
 module does not match this version or firmware (for example, left over from
@@ -211,7 +213,7 @@ another build). Delete `apps_assets/radiogeddon_full` with qFlipper, then
 reinstall the `.fap` for your firmware and start it again. If it persists,
 please report it with your firmware version and a [device log](#collecting-a-device-log).
 
-## `Not enough memory` in the Waterfall, Sessions or another Full tool
+## `Not enough memory` in the Range Scanner, Settings, Sessions or another Full tool
 
 Each optional tool checks, before allocating anything, that its module and
 its work fit the free heap. Restart the Flipper (closing whatever ran before)

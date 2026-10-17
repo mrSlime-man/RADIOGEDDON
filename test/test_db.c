@@ -9,6 +9,7 @@
 #include <string.h>
 
 static int g_failures = 0;
+static uint16_t g_scratch[64];
 static int g_checks = 0;
 
 #define CHECK(cond, msg)                                             \
@@ -163,12 +164,12 @@ static void test_duplicates(void) {
     CHECK(!rg_db_needs_content_hash(&db, 6), "unique size: no hash needed");
     CHECK(!rg_db_needs_content_hash(&db, 0), "decoded files never need one");
 
-    rg_db_mark_duplicates(&db);
+    rg_db_mark_duplicates(&db, g_scratch);
     CHECK(!(db.entries[4].flags & RG_DB_FLAG_DUPLICATE), "same size alone is not a duplicate");
 
     rg_db_set_content_hash(&db.entries[4], 0x1234);
     rg_db_set_content_hash(&db.entries[5], 0x1234);
-    rg_db_mark_duplicates(&db);
+    rg_db_mark_duplicates(&db, g_scratch);
     CHECK(
         (db.entries[0].flags & RG_DB_FLAG_DUPLICATE) &&
             (db.entries[1].flags & RG_DB_FLAG_DUPLICATE),
@@ -185,7 +186,7 @@ static void test_duplicates(void) {
     CHECK(!(db.entries[7].flags & RG_DB_FLAG_DUPLICATE), "damaged files are never duplicates");
 
     rg_db_set_content_hash(&db.entries[5], 0x9999);
-    rg_db_mark_duplicates(&db);
+    rg_db_mark_duplicates(&db, g_scratch);
     CHECK(
         !(db.entries[4].flags & RG_DB_FLAG_DUPLICATE) && db.entries[4].dup_count == 0,
         "re-marking clears stale flags");
@@ -203,7 +204,7 @@ static void test_select(void) {
     build(&db);
     rg_db_set_content_hash(&db.entries[4], 7);
     rg_db_set_content_hash(&db.entries[5], 7);
-    rg_db_mark_duplicates(&db);
+    rg_db_mark_duplicates(&db, g_scratch);
     uint16_t idx[16];
     RgDbQuery q;
     memset(&q, 0, sizeof(q));

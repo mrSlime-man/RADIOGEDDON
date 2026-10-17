@@ -1,6 +1,7 @@
 #include "radiogeddon.h"
 #include "scenes/radiogeddon_scene.h"
 #include "helpers/rg_memstat.h"
+#include "helpers/radiogeddon_recovery.h"
 
 #include <toolbox/version.h>
 
@@ -19,6 +20,7 @@ static bool radiogeddon_back_event_callback(void* context) {
 static void radiogeddon_tick_event_callback(void* context) {
     furi_assert(context);
     RadioGeddonApp* app = context;
+    radiogeddon_memdiag_tick();
     radiogeddon_memdiag_sample(NULL);
 #if RG_FEATURE_DOLPHIN_LAB
     radiogeddon_ui_tick(app);
@@ -30,6 +32,28 @@ static void radiogeddon_tick_event_callback(void* context) {
 #if RG_EDITION_FULL
     // After the scene's tick: unload tool modules whose screens closed.
     radiogeddon_scene_tools_tick(app);
+#endif
+}
+
+/* A capture left by a restart during recording (radiogeddon_recovery.h):
+ * repaired and offered back before any screen. In the Full edition the code
+ * is a module, loaded only when there is such a file. */
+static void radiogeddon_app_recover(RadioGeddonApp* app) {
+    if(!storage_common_exists(app->storage, RADIOGEDDON_RECORD_TEMP)) return;
+#if RG_EDITION_FULL
+    const RadioGeddonRecoverModule* api = NULL;
+    RadioGeddonModuleStatus status;
+    RadioGeddonModule* module = radiogeddon_module_load(
+        app->storage, RADIOGEDDON_MODULE_RECOVER, 2048u, (const void**)&api, &status);
+    if(module) {
+        api->offer(app->storage, app->dialogs);
+        radiogeddon_module_unload(module);
+    } else {
+        // Left in place: offered again at the next start.
+        FURI_LOG_E(RADIOGEDDON_TAG, "recovery module: %d", (int)status);
+    }
+#else
+    radiogeddon_recovery_offer(app->storage, app->dialogs);
 #endif
 }
 
@@ -49,9 +73,6 @@ RadioGeddonApp* radiogeddon_app_alloc(void) {
     app->storage = furi_record_open(RECORD_STORAGE);
 
     radiogeddon_storage_ensure_paths(app->storage);
-    // A capture cut off by a reboot or flat battery left its temporary file
-    // behind; nothing can name it any more.
-    storage_common_remove(app->storage, RADIOGEDDON_RECORD_TEMP);
 
     app->file_path = furi_string_alloc();
     app->file_path_b = furi_string_alloc();
@@ -183,8 +204,9 @@ void radiogeddon_app_free(RadioGeddonApp* app) {
     if(app->scanner) radiogeddon_scanner_free(app->scanner);
     if(app->hopper) radiogeddon_hopper_free(app->hopper);
 #if RG_FEATURE_RANGE_SCAN
-    // Normally freed when the Range Scanner screen closes.
-    if(app->rangescan) radiogeddon_rangescan_free(app->rangescan);
+    // The engine lives in the Range Scanner's module and is always freed
+    // when its screen closes, before the app can exit.
+    furi_assert(!app->rangescan);
 #endif
 #if RG_FEATURE_WATERFALL
     free(app->wf_buf); // normally freed when the Waterfall closes
@@ -222,6 +244,8 @@ int32_t radiogeddon_app(void* p) {
     radiogeddon_memdiag_start();
     RadioGeddonApp* app = radiogeddon_app_alloc();
     radiogeddon_memdiag_sample("app start");
+    // Before any screen: a capture cut off by a restart is offered back.
+    radiogeddon_app_recover(app);
 
     scene_manager_next_scene(app->scene_manager, RadioGeddonSceneStart);
     view_dispatcher_run(app->view_dispatcher);

@@ -51,6 +51,26 @@ RAW_CASES = {
 for i, (name, text) in enumerate(sorted(RAW_CASES.items())):
     write("fuzz_raw", name, bytes([(7 * i + 1) % 256, 13 * i % 64]) + text)
 
+# fuzz_recover: [chunk size] then what a reboot left of recording.tmp.
+for i, (name, text) in enumerate(sorted(RAW_CASES.items())):
+    write("fuzz_recover", name, bytes([(11 * i + 3) % 256]) + text)
+write("fuzz_recover", "zero_tail", bytes([17]) + RAW + b"RAW_Data: 400 -12" + bytes(64))
+write("fuzz_recover", "header_cut", bytes([5]) + RAW_HEAD[:40])
+
+# fuzz_heatmap: [chunk size] then an activity log (as rg_actlog writes it).
+ACTLOG_HEAD = (
+    b"# RadioGeddon RF Activity Log, part 1\n# Started: 2026-10-16 10:00\n"
+    b"t_s,freq_hz,visits,observed_ms,active_visits,events,peak_dbm,floor_dbm\n"
+)
+rows = b""
+for k in range(1, 40):
+    rows += b"%d,433920000,12,240,%d,%d,%d,-96\n" % (k * 10, k % 3, k % 2, -50 - k)
+    rows += b"%d,315000000,0,0,,,,\n" % (k * 10)
+    rows += b"%d,868350000,12,240,0,0,-94,-96\n" % (k * 10)
+write("fuzz_heatmap", "log", bytes([9]) + ACTLOG_HEAD + rows + b"# End: 390 s observed, 39 intervals, stopped\n")
+write("fuzz_heatmap", "crlf", bytes([3]) + (ACTLOG_HEAD + rows[:400]).replace(b"\n", b"\r\n"))
+write("fuzz_heatmap", "junk", bytes([1]) + b"10,1,2\n,,,,,,,\n20,433920000,1,1,1,1,-200,9999\n")
+
 
 def record(name, header, whole, mtime):
     head1 = min(len(header) // 4, 0x7F) | (0x80 if whole else 0)
