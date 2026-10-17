@@ -126,7 +126,7 @@ UI_SRC := test_ui.c ui/canvas_host.c ../views/radiogeddon_waterfall_view.c \
 UI_HDRS := ui/canvas_host.h ui/stubs/gui/view.h ui/stubs/gui/canvas.h ui/stubs/gui/elements.h \
 		../views/radiogeddon_waterfall_view.h ../views/radiogeddon_bits_view.h synth.h
 
-.PHONY: bench benchfp benchmodules benchmem memstress check clean tsan fuzz formats decoders captures lifecycle ui fpindex actlogfiles
+.PHONY: bench benchfp benchlaunch benchmodules benchmem memstress check clean tsan fuzz formats decoders captures lifecycle ui fpindex actlogfiles
 check: $(BUILD)/test_dsp $(BUILD)/test_div $(BUILD)/test_heap4 $(BUILD)/test_analyzer $(BUILD)/test_scan $(BUILD)/test_hop $(BUILD)/test_raw \
 		$(BUILD)/test_timeline $(BUILD)/test_ring $(BUILD)/test_rawfmt $(BUILD)/test_recorder \
 		$(BUILD)/test_db $(BUILD)/test_memstat $(BUILD)/test_dbload $(BUILD)/test_decode $(BUILD)/test_freq $(BUILD)/test_preset $(BUILD)/test_range \
@@ -254,6 +254,14 @@ $(BUILD)/bench_modules: bench_modules.c stubs/heap4.c stubs/heap4.h ../helpers/r
 
 benchmodules: $(BUILD)/bench_modules
 	$(BUILD)/bench_modules $(FAL_DIR)
+
+# The app's own launch replayed on fragmented heaps (bench_launch.c): the
+# loader's per-section blocks for two builds of the .fap on the same heaps.
+$(BUILD)/bench_launch: bench_launch.c stubs/heap4.c stubs/heap4.h | $(BUILD)
+	$(CC) $(CFLAGS) -o $@ bench_launch.c stubs/heap4.c
+
+benchlaunch: $(BUILD)/bench_launch
+	$(BUILD)/bench_launch $(FAP_A) $(FAP_B)
 
 # The load-cost model on built modules (scripts/module_cost.py --check).
 $(BUILD)/elf_cost: elf_cost.c ../helpers/rg_elf.c ../helpers/rg_elf.h | $(BUILD)
