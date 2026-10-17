@@ -452,7 +452,8 @@ static RadioGeddonDb* db_make(size_t count, size_t name_len) {
     RgDbEntry* entries = calloc(cap, sizeof(RgDbEntry));
     char* names = calloc(cap, 72);
     db->view = calloc(cap, sizeof(uint16_t));
-    rg_db_init(&db->db, entries, cap, names, cap * 72);
+    char* protos = calloc(1, 64);
+    rg_db_init(&db->db, entries, cap, names, cap * 72, protos, 64);
     char name[72];
     for(size_t i = 0; i < count; i++) {
         size_t n = 0;
@@ -469,8 +470,7 @@ static RadioGeddonDb* db_make(size_t count, size_t name_len) {
         e->frequency = 433920000u + (uint32_t)i * 10000u;
         e->mtime = 1760000000u + (uint32_t)i * 60u;
         e->bits = 24;
-        snprintf(
-            e->protocol, sizeof(e->protocol), "%s", e->kind == RgDbKindRaw ? "RAW" : "Princeton");
+        rg_db_set_protocol(&db->db, e, e->kind == RgDbKindRaw ? "RAW" : "Princeton");
     }
     db->total_files = count;
     db->query.sort = RgDbSortDate;
@@ -482,6 +482,7 @@ static RadioGeddonDb* db_make(size_t count, size_t name_len) {
 static void db_free_test(RadioGeddonDb* db) {
     free(db->db.entries);
     free(db->db.names);
+    free(db->db.protos);
     free(db->view);
     free(db);
 }

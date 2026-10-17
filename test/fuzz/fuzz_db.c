@@ -116,8 +116,10 @@ int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
     In in = {data, size};
     static RgDbEntry entries[MAX_ENTRIES];
     static char pool[POOL];
+    // Small enough that a few distinct protocol names fill it.
+    static char protos[96];
     RgDb db;
-    rg_db_init(&db, entries, MAX_ENTRIES, pool, POOL);
+    rg_db_init(&db, entries, MAX_ENTRIES, pool, POOL, protos, sizeof(protos));
 
     if(size < 1) return 0;
     const uint8_t* b;
@@ -137,9 +139,16 @@ int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
         REQUIRE(strcmp(rg_db_name(&db, e), name) == 0);
 
         size_t len = take(&in, (size_t)(head[1] & 0x7fu) * 4u, &b);
-        rg_db_parse_header(e, (const char*)b, len, (head[1] & 0x80u) != 0);
+        char proto[RG_DB_PROTO_MAX];
+        rg_db_parse_header(e, (const char*)b, len, (head[1] & 0x80u) != 0, proto);
         REQUIRE(e->kind <= RgDbKindProtocol);
-        REQUIRE(memchr(e->protocol, '\0', RG_DB_PROTO_MAX) != NULL);
+        REQUIRE(memchr(proto, '\0', RG_DB_PROTO_MAX) != NULL);
+        if(!rg_db_set_protocol(&db, e, proto)) {
+            // The table is full: the loader indexes the files before this one.
+            db.count--;
+            break;
+        }
+        REQUIRE(strcmp(rg_db_protocol(&db, e), proto) == 0);
         e->mtime = take_u32(&in);
         e->size = (uint32_t)len;
         size_t index = (size_t)(e - entries);

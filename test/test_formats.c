@@ -204,7 +204,8 @@ static void check_sub_file(const char* path, const char* name, Tally* t, bool ve
     if(fp) fclose(fp);
     RgDbEntry entry;
     memset(&entry, 0, sizeof(entry));
-    rg_db_parse_header(&entry, head, len, whole);
+    char entry_proto[RG_DB_PROTO_MAX];
+    rg_db_parse_header(&entry, head, len, whole, entry_proto);
     RgDbKind dkind = !e.has_protocol ? RgDbKindUnknown : is_raw ? RgDbKindRaw : RgDbKindProtocol;
     char proto[RG_DB_PROTO_MAX]; /* the index keeps the first 15 characters */
     size_t plen = strnlen(e.protocol, sizeof(proto) - 1);
@@ -214,7 +215,7 @@ static void check_sub_file(const char* path, const char* name, Tally* t, bool ve
     CHECK(
         entry.kind == dkind && entry.frequency == e.frequency &&
             (dkind != RgDbKindProtocol ||
-             (strcmp(entry.protocol, proto) == 0 && entry.bits == e.bits)),
+             (strcmp(entry_proto, proto) == 0 && entry.bits == e.bits)),
         what);
 
     if(!is_raw) return;

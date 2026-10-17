@@ -3,8 +3,9 @@
  * @brief Signal database index: per-file metadata, sorting, filtering, search
  *        and duplicate detection for the recordings on the SD card.
  *
- * One small fixed-size entry per .sub file (about 40 bytes) plus its name in
- * a shared pool, both supplied by the caller, so the index of a few hundred
+ * One small fixed-size entry per .sub file (28 bytes on the device) plus its
+ * name in a shared pool, and each distinct protocol name once in a small
+ * table, all supplied by the caller, so the index of a few hundred
  * recordings fits in a few kilobytes. Metadata comes from the first block of
  * each file (rg_db_parse_header); nothing else is read for the list.
  *
@@ -38,17 +39,23 @@ typedef enum {
 #define RG_DB_FLAG_HASHED    0x02u /* hash covers the whole content (RAW) */
 #define RG_DB_FLAG_HAS_KEY   0x04u /* hash covers a Key line (decoded) */
 
+/* RgDbEntry.proto_off when the file names no protocol. */
+#define RG_DB_NO_PROTO 0xFFFFu
+
 typedef struct {
-    uint16_t name_off; /* NUL-terminated file name in the pool */
-    uint8_t kind; /* RgDbKind */
-    uint8_t flags;
-    uint16_t bits; /* decoded: Bit line, 0 if absent */
-    uint16_t dup_count; /* other files holding the same signal */
-    char protocol[RG_DB_PROTO_MAX];
     uint32_t frequency; /* Hz, 0 if absent */
     uint32_t mtime; /* seconds since 1970 (UTC), 0 if unknown */
     uint32_t size; /* bytes */
     uint32_t hash; /* key (decoded) or content (RAW) identity */
+    uint16_t name_off; /* NUL-terminated file name in the pool */
+    /* Protocol name (up to RG_DB_PROTO_MAX - 1 bytes) in the protocol
+     * table, shared by every entry naming it; RG_DB_NO_PROTO if none.
+     * Beta 10 kept 16 bytes of it in every entry. */
+    uint16_t proto_off;
+    uint16_t bits; /* decoded: Bit line, 0 if absent */
+    uint16_t dup_count; /* other files holding the same signal */
+    uint8_t kind; /* RgDbKind */
+    uint8_t flags;
 } RgDbEntry;
 
 typedef struct {
@@ -58,6 +65,10 @@ typedef struct {
     char* names;
     size_t names_len;
     size_t names_cap;
+    /* Distinct protocol names, NUL-terminated one after another. */
+    char* protos;
+    size_t protos_len;
+    size_t protos_cap;
 } RgDb;
 
 typedef enum {
@@ -85,8 +96,24 @@ typedef struct {
     char search[RG_DB_SEARCH_MAX]; /* case-insensitive part of the name; "" = any */
 } RgDbQuery;
 
-/** Use caller-owned storage for up to @p cap entries and @p names_cap name bytes. */
-void rg_db_init(RgDb* db, RgDbEntry* entries, size_t cap, char* names, size_t names_cap);
+/**
+ * Use caller-owned storage for up to @p cap entries, @p names_cap name bytes
+ * and @p protos_cap bytes of distinct protocol names.
+ */
+void rg_db_init(
+    RgDb* db,
+    RgDbEntry* entries,
+    size_t cap,
+    char* names,
+    size_t names_cap,
+    char* protos,
+    size_t protos_cap);
+
+/* Protocol table bytes that hold every distinct name of @p cap entries
+ * (RG_DB_PROTO_MAX each), capped at RG_DB_PROTOS_MAX: at least 128 distinct
+ * protocol names, more than the firmware families have decoders. */
+#define RG_DB_PROTOS_MAX 2048u
+size_t rg_db_protos_bytes(size_t cap);
 
 /**
  * Append an entry for file @p name (copied into the pool), zeroed except for
@@ -97,11 +124,27 @@ RgDbEntry* rg_db_add(RgDb* db, const char* name);
 const char* rg_db_name(const RgDb* db, const RgDbEntry* e);
 
 /**
- * Fill kind, protocol, frequency, bits and (decoded) key hash from the first
- * @p len bytes of a file. A last line without a newline is only used when
- * @p whole_file says the block is the entire file (otherwise it may be cut).
+ * Fill kind, frequency, bits and (decoded) key hash from the first @p len
+ * bytes of a file, and its protocol name into @p protocol ("" if none, cut to
+ * RG_DB_PROTO_MAX - 1 bytes). A last line without a newline is only used
+ * when @p whole_file says the block is the entire file (otherwise it may be
+ * cut). The entry's protocol is set with rg_db_set_protocol.
  */
-void rg_db_parse_header(RgDbEntry* e, const char* text, size_t len, bool whole_file);
+void rg_db_parse_header(
+    RgDbEntry* e,
+    const char* text,
+    size_t len,
+    bool whole_file,
+    char protocol[RG_DB_PROTO_MAX]);
+
+/**
+ * Point @p e at @p protocol in the table, adding it when it is new. False
+ * (the entry's protocol left unset) only when the table is full.
+ */
+bool rg_db_set_protocol(RgDb* db, RgDbEntry* e, const char* protocol);
+
+/** The entry's protocol name, "" if none. */
+const char* rg_db_protocol(const RgDb* db, const RgDbEntry* e);
 
 /** FNV-1a, continued from @p hash (start with RG_DB_HASH_INIT). */
 #define RG_DB_HASH_INIT 2166136261u
@@ -144,7 +187,7 @@ size_t rg_db_select(const RgDb* db, const RgDbQuery* q, uint16_t* out, size_t ma
 
 /**
  * Distinct protocol names of decoded entries, sorted, as pointers into the
- * entries. Returns how many (at most @p max).
+ * protocol table. Returns how many (at most @p max).
  */
 size_t rg_db_protocols(const RgDb* db, const char** out, size_t max);
 
