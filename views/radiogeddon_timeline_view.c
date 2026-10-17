@@ -1,4 +1,5 @@
 #include "radiogeddon_timeline_view.h"
+#include "../helpers/rg_div.h"
 #include "../helpers/rg_timeline.h"
 
 #include <gui/elements.h>
@@ -50,12 +51,9 @@ static bool tl_need_reload(const RadioGeddonTimelineModel* m) {
 }
 
 static void tl_cat_time(char* buf, size_t len, uint64_t us) {
+    uint32_t t = rg_div_u64_u32(us, 100u); // 0.1 ms units; saturates past 119 hours
     snprintf(
-        buf,
-        len,
-        "%lu.%04lus",
-        (unsigned long)(us / 1000000u),
-        (unsigned long)((us % 1000000u) / 100u));
+        buf, len, "%lu.%04lus", (unsigned long)(t / 10000u), (unsigned long)(t % 10000u));
 }
 
 /* Sample index (in the file) of the first sample visible at the left edge. */
@@ -107,7 +105,7 @@ static void radiogeddon_timeline_view_draw(Canvas* canvas, void* model) {
 
         // Recording end, dotted.
         if(m->at_end && m->total_us >= m->left_us && m->total_us < m->left_us + span) {
-            int32_t x = (int32_t)((m->total_us - m->left_us) / upp);
+            int32_t x = (int32_t)rg_div_u64(m->total_us - m->left_us, upp);
             for(int32_t y = TL_HIGH_Y; y <= TL_LOW_Y; y += 3)
                 canvas_draw_dot(canvas, x, y);
         }
@@ -141,7 +139,7 @@ static void radiogeddon_timeline_view_draw(Canvas* canvas, void* model) {
     // Frame starts: small triangles above the waveform.
     for(size_t i = 0; i < m->frame_count; i++) {
         if(m->frames[i] < m->left_us || m->frames[i] >= m->left_us + span) continue;
-        int32_t x = (int32_t)((m->frames[i] - m->left_us) / upp);
+        int32_t x = (int32_t)rg_div_u64(m->frames[i] - m->left_us, upp);
         canvas_draw_line(canvas, x - 2, 10, x + 2, 10);
         canvas_draw_line(canvas, x - 1, 11, x + 1, 11);
         canvas_draw_dot(canvas, x, 12);
@@ -150,8 +148,8 @@ static void radiogeddon_timeline_view_draw(Canvas* canvas, void* model) {
     // Overview: where the screen sits in the whole recording.
     canvas_draw_line(canvas, 0, TL_BAR_Y + 1, 127, TL_BAR_Y + 1);
     if(m->total_us > 0) {
-        uint32_t bx = (uint32_t)((m->left_us * TL_WIDTH) / m->total_us);
-        uint32_t bw = (uint32_t)((span * TL_WIDTH) / m->total_us);
+        uint32_t bx = (uint32_t)rg_div_u64(m->left_us * TL_WIDTH, m->total_us);
+        uint32_t bw = (uint32_t)rg_div_u64(span * TL_WIDTH, m->total_us);
         if(bw < 2) bw = 2;
         if(bx > TL_WIDTH - 2) bx = TL_WIDTH - 2;
         if(bx + bw > TL_WIDTH) bw = TL_WIDTH - bx;

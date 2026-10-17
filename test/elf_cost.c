@@ -1,5 +1,5 @@
 /* Host tool: rg_elf_load_cost on built module files, one line each
- * ("name sections resident temporary largest"), for scripts/module_cost.py
+ * ("name sections resident temporary"), for scripts/module_cost.py
  * --check to compare with its own reading of the same files. */
 #include "../helpers/rg_elf.h"
 #include <stdio.h>
@@ -21,12 +21,11 @@ int main(int argc, char** argv) {
         } else {
             const char* base = strrchr(argv[i], '/');
             printf(
-                "%s %u %u %u %u\n",
+                "%s %u %u %u\n",
                 base ? base + 1 : argv[i],
                 (unsigned)c.sections,
                 (unsigned)c.resident,
-                (unsigned)c.temporary,
-                (unsigned)c.largest);
+                (unsigned)c.temporary);
         }
         if(f) fclose(f);
     }

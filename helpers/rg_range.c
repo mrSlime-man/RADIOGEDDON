@@ -1,4 +1,5 @@
 #include "rg_range.h"
+#include "rg_div.h"
 #include "../radiogeddon_edition.h"
 
 #if RG_EDITION_FULL
@@ -12,8 +13,8 @@ const RgBand rg_range_cc1101_bands[3] = {
 #define RG_RANGE_ANCHORS 16u
 
 static uint32_t rg_range_khz_up(uint32_t hz) {
-    uint64_t v = ((uint64_t)hz + 999u) / 1000u * 1000u;
-    return v > UINT32_MAX ? hz : (uint32_t)v;
+    uint32_t k = hz / 1000u + (hz % 1000u != 0u); // rounded up, in 32 bits
+    return k > UINT32_MAX / 1000u ? hz : k * 1000u;
 }
 
 static uint32_t rg_range_khz_down(uint32_t hz) {
@@ -59,14 +60,14 @@ void rg_range_probe_bands(
         // A point the radio accepts: the middle first, then evenly spaced ones.
         uint32_t anchor = 0;
         bool found = false;
-        uint64_t span = (uint64_t)hi - lo;
-        uint32_t mid = lo + (uint32_t)(span / 2u);
+        uint32_t span = hi - lo;
+        uint32_t mid = lo + span / 2u;
         if(valid(mid, context)) {
             anchor = mid;
             found = true;
         }
         for(uint32_t i = 0; !found && i < RG_RANGE_ANCHORS; i++) {
-            uint32_t f = lo + (uint32_t)(span * i / (RG_RANGE_ANCHORS - 1u));
+            uint32_t f = lo + rg_muldiv_u32(span, i, RG_RANGE_ANCHORS - 1u);
             if(f != mid && valid(f, context)) {
                 anchor = f;
                 found = true;
@@ -155,7 +156,10 @@ RgRangeResult rg_range_plan(
         uint32_t a = bands->band[i].lo_hz > start_hz ? bands->band[i].lo_hz : start_hz;
         uint32_t b = bands->band[i].hi_hz < end_hz ? bands->band[i].hi_hz : end_hz;
         if(a > b) continue;
-        uint32_t k_first = (uint32_t)(((uint64_t)a - start_hz + step_hz - 1u) / step_hz);
+        // First grid point at or above a (a >= start_hz): a rounded-up
+        // quotient, in 32 bits.
+        uint32_t off = a - start_hz;
+        uint32_t k_first = off / step_hz + (off % step_hz != 0u);
         uint32_t k_last = (b - start_hz) / step_hz;
         if(k_first > k_last) continue; // the band is narrower than one step here
         RgRangeSegment* seg = &range->segment[range->segments++];
@@ -189,8 +193,8 @@ uint32_t rg_range_nearest_index(const RgRange* range, uint32_t hz) {
         const RgRangeSegment* seg = &range->segment[i];
         uint32_t k = seg->first_k;
         if(hz > range->start_hz) {
-            uint32_t want = (uint32_t)(((uint64_t)hz - range->start_hz + range->step_hz / 2u) /
-                                       range->step_hz);
+            uint32_t want = (uint32_t)rg_div_u64(
+                (uint64_t)hz - range->start_hz + range->step_hz / 2u, range->step_hz);
             if(want > k) k = want;
         }
         if(k > seg->first_k + seg->count - 1u) k = seg->first_k + seg->count - 1u;

@@ -6,35 +6,36 @@ CFLAGS ?= -std=c11 -Wall -Wextra -Werror -O2 -I..
 SAN ?= -fsanitize=address,undefined -fno-sanitize-recover=all
 
 BUILD := build
-DSP_SRC := test_dsp.c ../helpers/radiogeddon_dsp.c
-ANALYZER_SRC := test_analyzer.c ../helpers/rg_analyzer.c
+DSP_SRC := test_dsp.c ../helpers/radiogeddon_dsp.c ../helpers/rg_div.c
+DIV_SRC := test_div.c ../helpers/rg_div.c
+ANALYZER_SRC := test_analyzer.c ../helpers/rg_analyzer.c ../helpers/rg_div.c
 SCAN_SRC := test_scan.c ../helpers/rg_scan.c
 HOP_SRC := test_hop.c ../helpers/rg_hop.c ../helpers/rg_scan.c
-RAW_SRC := test_raw.c ../helpers/rg_raw.c ../helpers/rg_analyzer.c
-TIMELINE_SRC := test_timeline.c ../helpers/rg_timeline.c
+RAW_SRC := test_raw.c ../helpers/rg_raw.c ../helpers/rg_analyzer.c ../helpers/rg_div.c
+TIMELINE_SRC := test_timeline.c ../helpers/rg_timeline.c ../helpers/rg_div.c
 RING_SRC := test_ring.c ../helpers/rg_ring.c
 RAWFMT_SRC := test_rawfmt.c ../helpers/rg_rawfmt.c ../helpers/rg_raw.c
 DB_SRC := test_db.c ../helpers/rg_db.c
 FREQ_SRC := test_freq.c ../helpers/rg_freq.c
 PRESET_SRC := test_preset.c ../helpers/rg_preset.c
-RANGE_SRC := test_range.c ../helpers/rg_range.c
+RANGE_SRC := test_range.c ../helpers/rg_range.c ../helpers/rg_div.c
 TXPOLICY_SRC := test_txpolicy.c ../helpers/rg_txpolicy.c
 SPECTRUM_SRC := test_spectrum.c ../helpers/rg_spectrum.c ../helpers/rg_scan.c
 CHECKSUM_SRC := test_checksum.c ../helpers/rg_checksum.c
-BITS_SRC := test_bits.c ../helpers/rg_bits.c ../helpers/rg_analyzer.c
-MULTI_SRC := test_multi.c ../helpers/rg_multi.c ../helpers/rg_analyzer.c
+BITS_SRC := test_bits.c ../helpers/rg_bits.c ../helpers/rg_analyzer.c ../helpers/rg_div.c
+MULTI_SRC := test_multi.c ../helpers/rg_multi.c ../helpers/rg_analyzer.c ../helpers/rg_div.c
 SESSION_SRC := test_session.c ../helpers/rg_session.c
 ELF_SRC := test_elf.c ../helpers/rg_elf.c
-MASCOT_SRC := test_mascot.c ../helpers/rg_mascot.c ../helpers/rg_ui.c ../helpers/rg_sprites.c
-WATERFALL_SRC := test_waterfall.c ../helpers/rg_waterfall.c ../helpers/rg_range.c
-MEMSTAT_SRC := test_memstat.c ../helpers/rg_memstat.c
+MASCOT_SRC := test_mascot.c ../helpers/rg_mascot.c ../helpers/rg_ui.c ../helpers/rg_sprites.c ../helpers/rg_div.c
+WATERFALL_SRC := test_waterfall.c ../helpers/rg_waterfall.c ../helpers/rg_range.c ../helpers/rg_div.c
+MEMSTAT_SRC := test_memstat.c ../helpers/rg_memstat.c ../helpers/rg_div.c
 DECODE_SRC := test_decode.c ../helpers/rg_decode.c ../helpers/rg_raw.c
-FP_SRC := test_fp.c ../helpers/rg_fp.c ../helpers/rg_analyzer.c ../helpers/rg_crc.c
-ADAPT_SRC := test_adapt.c ../helpers/rg_adapt.c
-ACTLOG_SRC := test_actlog.c ../helpers/rg_actlog.c
-STUDIO_SRC := test_studio.c ../helpers/rg_studio.c ../helpers/rg_analyzer.c
+FP_SRC := test_fp.c ../helpers/rg_fp.c ../helpers/rg_analyzer.c ../helpers/rg_crc.c ../helpers/rg_div.c
+ADAPT_SRC := test_adapt.c ../helpers/rg_adapt.c ../helpers/rg_div.c
+ACTLOG_SRC := test_actlog.c ../helpers/rg_actlog.c ../helpers/rg_div.c
+STUDIO_SRC := test_studio.c ../helpers/rg_studio.c ../helpers/rg_analyzer.c ../helpers/rg_div.c
 RECOVER_SRC := test_recover.c ../helpers/rg_recover.c ../helpers/rg_rawfmt.c ../helpers/rg_raw.c
-HEATMAP_SRC := test_heatmap.c ../helpers/rg_heatmap.c ../helpers/rg_actlog.c
+HEATMAP_SRC := test_heatmap.c ../helpers/rg_heatmap.c ../helpers/rg_actlog.c ../helpers/rg_div.c
 SAFEFILE_SRC := test_safefile.c ../helpers/rg_safefile.c
 JOURNAL_SRC := test_journal.c ../helpers/rg_journal.c ../helpers/rg_assist.c ../helpers/rg_crc.c
 DBLOAD_SRC := test_dbload.c stubs/furi_stub.c ../helpers/radiogeddon_db.c ../helpers/rg_db.c
@@ -42,7 +43,7 @@ STUB_HDRS := stubs/furi.h stubs/storage/storage.h stubs/datetime/datetime.h \
 		stubs/lib/toolbox/stream/stream.h stubs/core/check.h stubs/core/common_defines.h \
 		stubs/furi_hal_rtc.h stubs/lib/subghz/devices/preset.h
 RECORDER_SRC := test_recorder.c stubs/furi_stub.c ../helpers/radiogeddon_recorder.c ../helpers/rg_recover.c \
-		../helpers/rg_ring.c ../helpers/rg_rawfmt.c ../helpers/rg_raw.c
+		../helpers/rg_ring.c ../helpers/rg_rawfmt.c ../helpers/rg_raw.c ../helpers/rg_div.c
 
 # Format tests: the firmware's own FlipperFormat and stream code and its
 # Sub-GHz test files, downloaded at the pinned release by firmware/fetch.sh
@@ -56,13 +57,13 @@ FW_OBJ := $(patsubst $(FW)/%.c,$(BUILD)/fwobj/%.o,$(FW_SRC))
 FORMATS_SRC := test_formats.c stubs/furi_stub.c ../helpers/radiogeddon_storage.c ../helpers/radiogeddon_recovery.c ../helpers/rg_recover.c ../helpers/radiogeddon_safefile.c ../helpers/rg_safefile.c \
 		../helpers/radiogeddon_settings.c ../helpers/radiogeddon_bands.c ../helpers/rg_freq.c \
 		../helpers/radiogeddon_dsp.c ../helpers/rg_range.c ../helpers/radiogeddon_profiles.c \
-		../helpers/rg_db.c ../helpers/rg_raw.c ../helpers/rg_analyzer.c ../helpers/rg_ui.c
+		../helpers/rg_db.c ../helpers/rg_raw.c ../helpers/rg_analyzer.c ../helpers/rg_ui.c ../helpers/rg_div.c
 
 # Fingerprint index tests: Find Similar Signals over real files through the
 # stub Storage, the recordings parsed by the firmware's FlipperFormat code.
 FPINDEX_SRC := test_fpindex.c stubs/furi_stub.c ../helpers/radiogeddon_fp.c ../helpers/radiogeddon_safefile.c ../helpers/rg_safefile.c ../helpers/rg_fp.c ../helpers/rg_session.c \
 		../helpers/rg_crc.c ../helpers/radiogeddon_analysis_run.c ../helpers/radiogeddon_analysis_status.c ../helpers/radiogeddon_storage.c \
-		../helpers/rg_raw.c ../helpers/rg_analyzer.c ../helpers/radiogeddon_dsp.c
+		../helpers/rg_raw.c ../helpers/rg_analyzer.c ../helpers/radiogeddon_dsp.c ../helpers/rg_div.c
 
 # Decoder tests: the firmware's own Sub-GHz receiver and protocol decoders
 # (lib/subghz, every protocol it registers) run over its own RAW test captures
@@ -83,19 +84,19 @@ FWDECODE_SRC := test_fwdecode.c stubs/furi_stub.c stubs/subghz_stub.c ../helpers
 # captures, scored against each protocol's timing in its decoder source
 # (both fetched like the decoder tests; pure C, nothing of the firmware is
 # compiled). `make captures`.
-FWANALYZE_SRC := test_fwanalyze.c ../helpers/rg_analyzer.c ../helpers/rg_raw.c
+FWANALYZE_SRC := test_fwanalyze.c ../helpers/rg_analyzer.c ../helpers/rg_raw.c ../helpers/rg_div.c
 
 # Fuzz targets (test/fuzz/). `check` replays their committed corpus with the
 # host compiler; `make fuzz` runs them under libFuzzer (needs clang).
-FUZZ_RAW_SRC := fuzz/fuzz_raw.c ../helpers/rg_raw.c ../helpers/rg_analyzer.c
-FUZZ_DB_SRC := fuzz/fuzz_db.c ../helpers/rg_db.c ../helpers/radiogeddon_dsp.c
-FUZZ_SAMPLES_SRC := fuzz/fuzz_samples.c ../helpers/rg_analyzer.c ../helpers/rg_timeline.c
+FUZZ_RAW_SRC := fuzz/fuzz_raw.c ../helpers/rg_raw.c ../helpers/rg_analyzer.c ../helpers/rg_div.c
+FUZZ_DB_SRC := fuzz/fuzz_db.c ../helpers/rg_db.c ../helpers/radiogeddon_dsp.c ../helpers/rg_div.c
+FUZZ_SAMPLES_SRC := fuzz/fuzz_samples.c ../helpers/rg_analyzer.c ../helpers/rg_timeline.c ../helpers/rg_div.c
 FUZZ_SESSION_SRC := fuzz/fuzz_session.c ../helpers/rg_session.c ../helpers/rg_elf.c
-FUZZ_UI_SRC := fuzz/fuzz_ui.c ../helpers/rg_mascot.c ../helpers/rg_ui.c
+FUZZ_UI_SRC := fuzz/fuzz_ui.c ../helpers/rg_mascot.c ../helpers/rg_ui.c ../helpers/rg_div.c
 FUZZ_FP_SRC := fuzz/fuzz_fp.c ../helpers/rg_fp.c ../helpers/rg_journal.c ../helpers/rg_crc.c \
-		../helpers/rg_analyzer.c
+		../helpers/rg_analyzer.c ../helpers/rg_div.c
 FUZZ_RECOVER_SRC := fuzz/fuzz_recover.c ../helpers/rg_recover.c ../helpers/rg_raw.c
-FUZZ_HEATMAP_SRC := fuzz/fuzz_heatmap.c ../helpers/rg_heatmap.c
+FUZZ_HEATMAP_SRC := fuzz/fuzz_heatmap.c ../helpers/rg_heatmap.c ../helpers/rg_div.c
 FUZZ_TARGETS := fuzz_raw fuzz_db fuzz_samples fuzz_session fuzz_ui fuzz_fp fuzz_recover fuzz_heatmap
 FUZZ_CC ?= clang
 FUZZ_TIME ?= 60
@@ -109,7 +110,7 @@ LIFECYCLE_SRC := test_lifecycle.c stubs/furi_stub.c stubs/radio_fake.c \
 		../helpers/radiogeddon_scanner.c ../helpers/radiogeddon_rangescan.c \
 		../helpers/radiogeddon_hopper.c ../helpers/rg_scan.c ../helpers/rg_hop.c \
 		../helpers/rg_range.c ../helpers/rg_spectrum.c ../helpers/rg_freq.c ../helpers/rg_waterfall.c \
-		../helpers/rg_adapt.c
+		../helpers/rg_adapt.c ../helpers/rg_div.c
 
 # Offline UI tests: the Waterfall and Bitstream Explorer screens drawn into
 # a host 128x64 canvas with the firmware's own u8g2 fonts (ui/fetch_fonts.sh,
@@ -121,18 +122,20 @@ UI_SRC := test_ui.c ui/canvas_host.c ../views/radiogeddon_waterfall_view.c \
 		../views/radiogeddon_mascot_draw.c ../helpers/rg_sprites.c \
 		../views/radiogeddon_bits_view.c ../helpers/rg_waterfall.c ../helpers/rg_bits.c \
 		../helpers/rg_glyph.c ../helpers/rg_analyzer.c ../helpers/rg_range.c ../helpers/rg_freq.c \
-		../views/radiogeddon_db_view.c ../helpers/radiogeddon_db.c ../helpers/rg_db.c stubs/furi_stub.c
+		../views/radiogeddon_db_view.c ../helpers/radiogeddon_db.c ../helpers/rg_db.c stubs/furi_stub.c ../helpers/rg_div.c
 UI_HDRS := ui/canvas_host.h ui/stubs/gui/view.h ui/stubs/gui/canvas.h ui/stubs/gui/elements.h \
 		../views/radiogeddon_waterfall_view.h ../views/radiogeddon_bits_view.h synth.h
 
 .PHONY: bench benchfp benchmodules check clean tsan fuzz formats decoders captures lifecycle ui fpindex actlogfiles
-check: $(BUILD)/test_dsp $(BUILD)/test_analyzer $(BUILD)/test_scan $(BUILD)/test_hop $(BUILD)/test_raw \
+check: $(BUILD)/test_dsp $(BUILD)/test_div $(BUILD)/test_heap4 $(BUILD)/test_analyzer $(BUILD)/test_scan $(BUILD)/test_hop $(BUILD)/test_raw \
 		$(BUILD)/test_timeline $(BUILD)/test_ring $(BUILD)/test_rawfmt $(BUILD)/test_recorder \
 		$(BUILD)/test_db $(BUILD)/test_memstat $(BUILD)/test_dbload $(BUILD)/test_decode $(BUILD)/test_freq $(BUILD)/test_preset $(BUILD)/test_range \
 		$(BUILD)/test_txpolicy $(BUILD)/test_spectrum $(BUILD)/test_checksum $(BUILD)/test_waterfall $(BUILD)/test_bits $(BUILD)/test_multi $(BUILD)/test_session $(BUILD)/test_elf $(BUILD)/test_mascot $(BUILD)/test_fp $(BUILD)/test_adapt $(BUILD)/test_actlog $(BUILD)/test_journal $(BUILD)/test_studio $(BUILD)/test_safefile $(BUILD)/test_recover $(BUILD)/test_heatmap $(BUILD)/bench_db $(BUILD)/sprites.ok $(BUILD)/test_edition_full $(BUILD)/test_edition_catalog \
 		$(BUILD)/test_edition_default $(BUILD)/edition_conflict.ok \
 		$(addprefix $(BUILD)/replay_,$(FUZZ_TARGETS))
 	$(BUILD)/test_dsp
+	$(BUILD)/test_div
+	$(BUILD)/test_heap4
 	$(BUILD)/test_analyzer
 	$(BUILD)/test_scan
 	$(BUILD)/test_hop
@@ -173,6 +176,13 @@ check: $(BUILD)/test_dsp $(BUILD)/test_analyzer $(BUILD)/test_scan $(BUILD)/test
 
 $(BUILD)/test_dsp: $(DSP_SRC) ../helpers/radiogeddon_dsp.h | $(BUILD)
 	$(CC) $(CFLAGS) $(SAN) -o $@ $(DSP_SRC)
+
+$(BUILD)/test_div: $(DIV_SRC) ../helpers/rg_div.h | $(BUILD)
+	$(CC) $(CFLAGS) $(SAN) -o $@ $(DIV_SRC)
+
+# The host model of the firmware's heap (stubs/heap4.h) against heap_4's rules.
+$(BUILD)/test_heap4: test_heap4.c stubs/heap4.c stubs/heap4.h | $(BUILD)
+	$(CC) $(CFLAGS) $(SAN) -D_GNU_SOURCE -pthread -o $@ test_heap4.c stubs/heap4.c
 
 $(BUILD)/test_analyzer: $(ANALYZER_SRC) ../helpers/rg_analyzer.h | $(BUILD)
 	$(CC) $(CFLAGS) $(SAN) -o $@ $(ANALYZER_SRC)
@@ -354,7 +364,7 @@ UI_LAB_SRC := test_ui_lab.c ui/canvas_host.c ../views/radiogeddon_lab_view.c \
 		../helpers/rg_mascot.c ../helpers/rg_ui.c ../helpers/rg_sprites.c ../helpers/rg_freq.c \
 		../helpers/rg_spectrum.c ../helpers/rg_scan.c ../helpers/rg_adapt.c ../helpers/rg_range.c \
 		../views/radiogeddon_studio_view.c ../helpers/rg_studio.c ../helpers/rg_analyzer.c \
-		../helpers/rg_raw.c ../views/radiogeddon_heatmap_view.c ../helpers/rg_heatmap.c stubs/furi_stub.c
+		../helpers/rg_raw.c ../views/radiogeddon_heatmap_view.c ../helpers/rg_heatmap.c stubs/furi_stub.c ../helpers/rg_div.c
 UI_LAB_HDRS := $(UI_HDRS) ../views/radiogeddon_lab_view.h ../views/radiogeddon_mascot_draw.h \
 		../views/radiogeddon_room_view.h ../helpers/rg_mascot.h ../helpers/rg_ui.h ../helpers/rg_sprites.h \
 		../views/radiogeddon_studio_view.h ../helpers/rg_studio.h ../views/radiogeddon_heatmap_view.h \
@@ -397,7 +407,7 @@ $(BUILD)/test_formats: $(FORMATS_SRC) $(STUB_HDRS) $(FW_OBJ) | $(BUILD)
 		-o $@ $(FORMATS_SRC) $(FW_OBJ)
 
 ACTLOGFILES_SRC := test_actlog_files.c stubs/furi_stub.c ../helpers/radiogeddon_actlog.c ../helpers/radiogeddon_heatmap.c ../helpers/rg_heatmap.c \
-		../helpers/rg_actlog.c
+		../helpers/rg_actlog.c ../helpers/rg_div.c
 
 actlogfiles: $(BUILD)/test_actlog_files
 	$(BUILD)/test_actlog_files

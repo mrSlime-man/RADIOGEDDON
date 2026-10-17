@@ -1,4 +1,5 @@
 #include "radiogeddon_studio_view.h"
+#include "../helpers/rg_div.h"
 
 #if RG_FEATURE_PULSE_STUDIO
 
@@ -96,7 +97,7 @@ static void studio_header(Canvas* canvas, StudioModel* m) {
 static int32_t studio_x(StudioModel* m, uint64_t t) {
     uint32_t per = rg_studio_zoom_us(m->zoom);
     if(t < m->view_us) return -1;
-    uint64_t x = (t - m->view_us) / per;
+    uint64_t x = rg_div_u64(t - m->view_us, per);
     return x > 1000 ? 1000 : (int32_t)x;
 }
 
@@ -207,12 +208,13 @@ static void studio_draw_wave(Canvas* canvas, StudioModel* m) {
         uint64_t a = rg_studio_time_at(f, (uint16_t)m->marker);
         uint64_t b = rg_studio_time_at(f, m->cursor);
         uint64_t dt = a > b ? a - b : b - a;
+        uint64_t dt_ms = rg_div_u64(dt, 1000u);
         snprintf(
             line,
             sizeof(line),
             "A:%lu.%lums",
-            (unsigned long)(dt / 1000u),
-            (unsigned long)(dt % 1000u / 100u));
+            (unsigned long)dt_ms,
+            (unsigned long)((uint32_t)(dt - dt_ms * 1000u) / 100u));
         canvas_draw_str_aligned(canvas, 127, 63, AlignRight, AlignBottom, line);
     }
 }
@@ -267,8 +269,8 @@ static void studio_draw_frame(Canvas* canvas, StudioModel* m) {
         "[HYPOTHESIS] reading",
         (unsigned)(m->frame + 1),
         (unsigned)m->frames,
-        (unsigned long)(fi->start_us / 1000u),
-        (unsigned long)(fi->start_us % 1000u / 100u),
+        (unsigned long)rg_div_u64(fi->start_us, 1000u),
+        (unsigned long)((uint32_t)(fi->start_us - rg_div_u64(fi->start_us, 1000u) * 1000u) / 100u),
         (unsigned long)fi->duration_us,
         (unsigned)fi->samples,
         (unsigned)fi->bit_count,

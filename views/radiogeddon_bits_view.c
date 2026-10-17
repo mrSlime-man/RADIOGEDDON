@@ -1,4 +1,5 @@
 #include "radiogeddon_bits_view.h"
+#include "../helpers/rg_div.h"
 
 #if RG_FEATURE_BITSTREAM
 
@@ -156,7 +157,7 @@ static void radiogeddon_bits_draw_frames(Canvas* canvas, const RadioGeddonBitsMo
         if(i >= r->frames_kept) break;
         const RgFrame* f = &r->frames[i];
         int32_t y = 17 + line * 9; // footer descenders end on the last row
-        uint32_t ms = (uint32_t)(f->start_us / 1000u);
+        uint32_t ms = rg_div_u64_u32(f->start_us, 1000u);
         if(!rg_bits_usable(f)) {
             snprintf(
                 text,

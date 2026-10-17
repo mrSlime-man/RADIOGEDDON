@@ -60,25 +60,21 @@ def cost(path):
     entsize, num, strndx = struct.unpack_from("<HHH", d, 46)
     hdrs = [struct.unpack_from("<IIIIIIIIII", d, shoff + i * entsize) for i in range(num)]
     names = hdrs[strndx][4]
-    sections = resident = temporary = largest = 0
+    sections = resident = temporary = 0
     for h in hdrs[1:]:
         name = d[names + h[0] : d.index(b"\0", names + h[0])].decode()
         flags, size, align = h[2], h[5], h[8]
         if name.startswith((".ARM.", ".rel.ARM.", ".fast.rel.ARM.")):
             continue
-        b = 0
+        b = aligned(size, align) if size else 0
         if flags & SHF_ALLOC:
-            b = aligned(size, align) if size else 0
             sections += size
             resident += b + BOOK
         elif name.startswith(".fast.rel"):
-            b = aligned(size, align) if size else 0
             temporary += block(24) + b
         elif name == ".gnu_debuglink":
-            b = block(size)
-            resident += b
-        largest = max(largest, b)
-    return sections, resident, temporary, largest
+            resident += block(size)
+    return sections, resident, temporary
 
 
 def files(args):
@@ -111,7 +107,7 @@ def main():
         f" {'need b10':>9s} {'need b11':>9s} {'diff':>6s}"
     )
     for f in fals:
-        s, r, t, _ = cost(f)
+        s, r, t = cost(f)
         name = os.path.basename(f)
         work = WORK_KB.get(name, 0) * 1024
         b10 = s + LOADER_B10 + work + MARGIN

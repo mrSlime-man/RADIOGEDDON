@@ -1,4 +1,5 @@
 #include "radiogeddon_scene.h"
+#include "../helpers/rg_div.h"
 #include "../helpers/rg_memstat.h"
 
 #define TAG "RadioGeddonScene"
@@ -103,7 +104,7 @@ void radiogeddon_scene_progress(void* context, uint32_t done, uint32_t total) {
     RadioGeddonApp* app = context;
     radiogeddon_memdiag_sample(NULL); // the work in progress is at its largest now
     if(total == 0) return;
-    uint32_t pct = (uint32_t)((uint64_t)done * 100u / total);
+    uint32_t pct = rg_muldiv_u32(done, 100u, total);
     if(pct > 100) pct = 100;
     uint32_t now = furi_get_tick();
     if(pct == app->progress_pct) return;

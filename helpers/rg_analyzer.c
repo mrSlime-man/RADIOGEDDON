@@ -1,4 +1,5 @@
 #include "rg_analyzer.h"
+#include "rg_div.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -13,7 +14,10 @@ static uint32_t rg_abs32(int32_t v) {
 static bool rg_near(uint32_t value, uint32_t center, uint32_t pct) {
     if(center == 0) return false;
     uint32_t diff = value > center ? value - center : center - value;
-    return diff <= (uint32_t)(((uint64_t)center * pct) / 100u) + 10u;
+    // floor(center * pct / 100) in 32 bits, exactly: with pct <= 100 (the
+    // callers use 25 and 30), center / 100 * pct stays below 2^32.
+    uint32_t tol = center / 100u * pct + center % 100u * pct / 100u;
+    return diff <= tol + 10u;
 }
 
 static void rg_pack_bits(const char* bits, size_t n, uint8_t* out) {
@@ -141,13 +145,13 @@ static size_t rg_find_peaks(const RgHistogram* h, RgPeakWork* out, size_t max) {
             continue;
 
         RgPeakWork* w = &out[n++];
-        w->peak.center_us = (uint32_t)(sum / count);
+        w->peak.center_us = rg_div_u64_u32(sum, count);
         w->peak.count = count;
         w->peak.width_bins = (uint8_t)width;
         w->deviation = 0;
         for(size_t i = lo; i <= hi; i++) {
             if(h->count[i] == 0) continue;
-            uint32_t mean = (uint32_t)(h->sum[i] / h->count[i]);
+            uint32_t mean = rg_div_u64_u32(h->sum[i], h->count[i]);
             uint32_t d = mean > w->peak.center_us ? mean - w->peak.center_us :
                                                     w->peak.center_us - mean;
             w->deviation += (uint64_t)d * h->count[i];
@@ -761,8 +765,8 @@ static void rg_finish_timing(RgAnalyzer* a) {
     r->low_peak_count = nl;
 
     uint32_t total = a->hist_high.total + a->hist_low.total;
-    r->noise_pct = total ? (uint8_t)(((uint64_t)(total - in_peaks) * 100u) / total) : 0;
-    r->jitter_pct = weight ? (uint8_t)((dev * 100u) / weight) : 0;
+    r->noise_pct = total ? (uint8_t)rg_muldiv_u32(total - in_peaks, 100u, total) : 0;
+    r->jitter_pct = weight ? (uint8_t)rg_div_u64(dev * 100u, weight) : 0;
 
     /* Te: the shortest well-populated high and low peaks. Receivers widen
      * highs and shorten lows by about the same amount, so averaging the two
@@ -876,7 +880,7 @@ static void rg_finish_encoding(RgAnalyzer* a) {
     int score[RgEncodingCount] = {0};
     int best = RgEncodingUnknown, second = RgEncodingUnknown;
     for(int e = RgEncodingPWM; e < RgEncodingCount; e++) {
-        score[e] = (int)(a->enc_fit_sum[e] / a->candidates);
+        score[e] = (int)rg_div_u64(a->enc_fit_sum[e], a->candidates);
         r->encoding_fit[e] = (uint8_t)(score[e] > 100 ? 100 : score[e]);
         if(best == RgEncodingUnknown || score[e] > score[best]) {
             second = best;

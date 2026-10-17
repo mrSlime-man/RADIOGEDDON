@@ -1,6 +1,7 @@
 #include "radiogeddon_analysis.h"
 #include "rg_analyzer.h"
 #include "rg_checksum.h"
+#include "rg_div.h"
 #include "../radiogeddon_edition.h"
 
 /*
@@ -11,11 +12,9 @@
  */
 
 static void radiogeddon_cat_time(FuriString* out, uint64_t us) {
+    uint32_t ms = rg_div_u64_u32(us, 1000u); // saturates past 49 days
     furi_string_cat_printf(
-        out,
-        "%lu.%03lus",
-        (unsigned long)(us / 1000000u),
-        (unsigned long)((us % 1000000u) / 1000u));
+        out, "%lu.%03lus", (unsigned long)(ms / 1000u), (unsigned long)(ms % 1000u));
 }
 
 /* Hex of a '0'/'1' string, zero-padded at the front to whole nibbles. */

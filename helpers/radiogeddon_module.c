@@ -42,7 +42,10 @@ static bool radiogeddon_module_cost(Storage* storage, const char* path, RgElfCos
     return ok;
 }
 
-size_t radiogeddon_module_need(const RgElfCost* cost, size_t extra_heap) {
+/* Contiguous free heap a module of load cost @p cost needs with @p extra_heap
+ * for its work: what the loader keeps, its fixed structures, the larger of
+ * the relocation tables and the work, and a margin. */
+static size_t radiogeddon_module_need(const RgElfCost* cost, size_t extra_heap) {
     // The relocation tables are freed before the module's code runs, so its
     // work never coexists with them: the larger of the two. They are the
     // last blocks the loader takes (after every section), so freeing them

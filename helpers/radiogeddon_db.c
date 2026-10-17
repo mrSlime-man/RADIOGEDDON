@@ -124,16 +124,13 @@ RadioGeddonDb* radiogeddon_db_load(
     if(budget > DB_INDEX_MAX_BYTES) budget = DB_INDEX_MAX_BYTES;
     size_t avg_name = files ? name_bytes / files + 1 : 1;
     size_t per_file = sizeof(RgDbEntry) + sizeof(uint16_t) + avg_name + 1u;
-    size_t fixed = db_align(sizeof(RadioGeddonDb)) + 64u;
     size_t cap = files < DB_MAX_FILES ? files : DB_MAX_FILES;
+    // The protocol table for that many first (it only shrinks with cap),
+    // then as many entries as fit beside it.
+    size_t fixed = db_align(sizeof(RadioGeddonDb)) + 64u + rg_db_protos_bytes(cap);
     size_t fit = budget > fixed ? (budget - fixed) / per_file : 0;
     if(cap > fit) cap = fit;
-    // Every distinct protocol name once (bounded), from what is left.
     size_t protos = rg_db_protos_bytes(cap);
-    while(cap > 0 && fixed + cap * per_file + protos > budget) {
-        cap--;
-        protos = rg_db_protos_bytes(cap);
-    }
     if(files > 0 && cap == 0) {
         *status = RadioGeddonDbNoMemory;
         return NULL;

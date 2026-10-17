@@ -116,7 +116,6 @@ int main(void) {
                         block(396 + 3 + 4) + 4 * RG_ELF_SECTION_BOOK + block(28);
     CHECK(c.resident == resident, "each section in its own aligned block, plus bookkeeping");
     CHECK(c.temporary == 2 * block(24) + block(900 + 4) + block(88 + 4), "relocation tables");
-    CHECK(c.largest == block(5604 + 3 + 4), "largest block: the code");
     CHECK(rg_elf_heap_block(1) == 16 && rg_elf_heap_block(8) == 16 && rg_elf_heap_block(9) == 24,
           "heap blocks: 8-byte header, 8-byte rounding");
     // Larger header entries are stepped over by their stated size.

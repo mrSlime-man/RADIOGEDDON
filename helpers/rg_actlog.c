@@ -1,4 +1,5 @@
 #include "rg_actlog.h"
+#include "rg_div.h"
 #include "../radiogeddon_edition.h"
 
 #if RG_FEATURE_ACTIVITY_LOG
@@ -208,7 +209,7 @@ size_t rg_actlog_ranking(const RgActlog* log, uint8_t* order, size_t max) {
 
 uint8_t rg_actlog_coverage(const RgActlog* log, size_t index) {
     if(index >= log->count || log->elapsed_ms == 0) return 0;
-    uint64_t pct = (uint64_t)log->ch[index].observed_ms * 100u / log->elapsed_ms;
+    uint32_t pct = rg_muldiv_u32(log->ch[index].observed_ms, 100u, log->elapsed_ms);
     return (uint8_t)(pct > 100u ? 100u : pct);
 }
 

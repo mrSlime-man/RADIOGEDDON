@@ -1,5 +1,6 @@
 #include "radiogeddon_analysis.h"
 #include "rg_decode.h"
+#include "rg_div.h"
 
 /*
  * Decode with Firmware's report (radiogeddon_analysis_decode), apart from the
@@ -22,7 +23,7 @@ static void radiogeddon_analysis_decode_progress(void* context, uint32_t offset)
 }
 
 static void radiogeddon_analysis_cat_seconds(FuriString* out, uint64_t us) {
-    uint64_t ms = us / 1000u;
+    uint32_t ms = rg_div_u64_u32(us, 1000u); // saturates past 49 days
     furi_string_cat_printf(
         out, "%lu.%03lu s", (unsigned long)(ms / 1000u), (unsigned long)(ms % 1000u));
 }

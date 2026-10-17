@@ -1,4 +1,5 @@
 #include "rg_timeline.h"
+#include "rg_div.h"
 
 const uint32_t rg_timeline_zoom_us[RG_TL_ZOOM_COUNT] =
     {5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000};
@@ -25,8 +26,8 @@ void rg_timeline_raster(
         uint64_t end = t + d;
         if(d > 0 && end > left_us) {
             uint64_t from = t > left_us ? t : left_us;
-            size_t c0 = (size_t)((from - left_us) / us_per_px);
-            size_t c1 = (size_t)((end - 1 - left_us) / us_per_px);
+            size_t c0 = (size_t)rg_div_u64(from - left_us, us_per_px);
+            size_t c1 = (size_t)rg_div_u64(end - 1 - left_us, us_per_px);
             if(c1 >= width) c1 = width - 1;
             uint8_t flag = samples[i] > 0 ? RG_TL_HIGH : RG_TL_LOW;
             for(size_t c = c0; c <= c1; c++)
@@ -53,7 +54,7 @@ size_t rg_timeline_labels(
     for(size_t i = 0; i < count && t < right_us && n < max; i++) {
         uint32_t d = rg_tl_abs(samples[i]);
         if(t >= left_us && t + d <= right_us && d / us_per_px >= min_px) {
-            out[n].x = (int16_t)((t + d / 2 - left_us) / us_per_px);
+            out[n].x = (int16_t)rg_div_u64(t + d / 2 - left_us, us_per_px);
             out[n].high = samples[i] > 0;
             out[n].us = d;
             n++;

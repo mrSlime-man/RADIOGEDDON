@@ -38,28 +38,21 @@ size_t rg_db_protos_bytes(size_t cap) {
 }
 
 bool rg_db_set_protocol(RgDb* db, RgDbEntry* e, const char* protocol) {
-    if(!protocol[0]) {
-        e->proto_off = RG_DB_NO_PROTO;
-        return true;
-    }
+    e->proto_off = RG_DB_NO_PROTO;
+    if(!protocol[0]) return true;
     // Distinct names are few (one per protocol): a linear search is enough.
-    for(size_t off = 0; off < db->protos_len;) {
-        const char* p = db->protos + off;
-        size_t len = strlen(p);
-        if(strcmp(p, protocol) == 0) {
-            e->proto_off = (uint16_t)off;
-            return true;
-        }
-        off += len + 1;
+    size_t off = 0;
+    while(off < db->protos_len && strcmp(db->protos + off, protocol) != 0)
+        off += strlen(db->protos + off) + 1;
+    if(off >= db->protos_len) {
+        size_t len = strlen(protocol);
+        if(len > RG_DB_PROTO_MAX - 1) len = RG_DB_PROTO_MAX - 1;
+        if(off + len + 1 > db->protos_cap) return false;
+        memcpy(db->protos + off, protocol, len);
+        db->protos[off + len] = '\0';
+        db->protos_len = off + len + 1;
     }
-    size_t len = 0;
-    while(len < RG_DB_PROTO_MAX - 1 && protocol[len])
-        len++;
-    if(db->protos_len + len + 1 > db->protos_cap) return false;
-    memcpy(db->protos + db->protos_len, protocol, len);
-    db->protos[db->protos_len + len] = '\0';
-    e->proto_off = (uint16_t)db->protos_len;
-    db->protos_len += len + 1;
+    e->proto_off = (uint16_t)off;
     return true;
 }
 

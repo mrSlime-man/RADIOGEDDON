@@ -44,7 +44,6 @@ typedef struct {
     uint32_t sections; /* bytes of the sections the loader keeps */
     uint32_t resident; /* heap they take while loaded (blocks, debug link, bookkeeping) */
     uint32_t temporary; /* heap of the relocation tables, freed before the code runs */
-    uint32_t largest; /* the largest single block the loader asks for */
 } RgElfCost;
 
 /** Heap block the firmware's allocator takes for @p size bytes. */

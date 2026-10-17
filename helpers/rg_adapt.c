@@ -1,4 +1,5 @@
 #include "rg_adapt.h"
+#include "rg_div.h"
 #include "../radiogeddon_edition.h"
 
 #if RG_FEATURE_ADAPTIVE_SCAN
@@ -166,7 +167,7 @@ uint8_t rg_adapt_share(const RgAdapt* a, size_t index) {
     uint64_t total = 0;
     for(size_t i = 0; i < a->count; i++)
         total += a->ch[i].visits;
-    return total ? (uint8_t)((uint64_t)a->ch[index].visits * 100u / total) : 0;
+    return total ? (uint8_t)rg_div_u64((uint64_t)a->ch[index].visits * 100u, total) : 0;
 }
 
 uint32_t rg_adapt_worst_gap(const RgAdapt* a, uint32_t now_ms) {

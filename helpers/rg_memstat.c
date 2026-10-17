@@ -1,4 +1,5 @@
 #include "rg_memstat.h"
+#include "rg_div.h"
 
 #include <stddef.h>
 
@@ -78,10 +79,10 @@ void rg_diag_tick(RgDiag* d, uint32_t now_ms, const char* where) {
 
 uint8_t rg_mem_fragmentation_pct(uint32_t free_bytes, uint32_t largest_block) {
     if(free_bytes == 0 || largest_block >= free_bytes) return 0;
-    return (uint8_t)(100u - (uint32_t)((uint64_t)largest_block * 100u / free_bytes));
+    return (uint8_t)(100u - rg_muldiv_u32(largest_block, 100u, free_bytes));
 }
 
 uint32_t rg_diag_rec_rate(const RgDiag* d) {
     if(d->rec_ms == 0) return 0;
-    return (uint32_t)((uint64_t)d->rec_bytes * 1000u / d->rec_ms);
+    return rg_muldiv_u32(d->rec_bytes, 1000u, d->rec_ms); // saturates, never wraps
 }

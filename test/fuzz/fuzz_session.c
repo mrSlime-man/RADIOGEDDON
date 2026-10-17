@@ -64,11 +64,10 @@ static void check_elf(const uint8_t* data, size_t size) {
     RgElfCost c;
     if(!rg_elf_load_cost(blob_read, &b, &c)) return;
     // Sizes are bounded per section (16 MB) and in number; every loaded
-    // byte is in a resident block, and the largest block is one of them.
+    // byte is in a resident block.
     uint64_t bound = (uint64_t)RG_ELF_MAX_SECTIONS * (0x01000000u + 0x10000u + 64u);
     REQUIRE(c.sections > 0 && c.sections <= c.resident);
     REQUIRE(c.resident <= bound && c.temporary <= bound);
-    REQUIRE(c.largest <= c.resident + c.temporary);
 }
 
 int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
