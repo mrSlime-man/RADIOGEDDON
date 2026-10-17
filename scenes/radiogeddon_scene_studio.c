@@ -46,7 +46,7 @@ void radiogeddon_scene_studio_on_enter(void* context) {
     RadioGeddonAnalysisStatus status;
     // Only the result is kept past the passes, so the view below is
     // allocated with the analyzer's working state already freed.
-    RgAnalysis* a = radiogeddon_analysis_run_raw(app->studio_file, false, &status);
+    RgAnalysis* a = radiogeddon_analysis_run_raw(app->studio_file, NULL, &status);
     radiogeddon_analysis_set_progress(NULL, NULL);
     radiogeddon_scene_progress_end(app);
     if(!a ||

@@ -34,7 +34,7 @@ static void radiogeddon_analysis_progress(RadioGeddonRawFile* file, int pass) {
 static bool radiogeddon_analysis_run_into(
     RadioGeddonRawFile* file,
     RgAnalysis* out,
-    bool hypotheses,
+    RadioGeddonAnalysisFinish finish,
     RadioGeddonAnalysisStatus* status) {
     RgAnalyzer* a = malloc(sizeof(RgAnalyzer));
     int32_t chunk[RG_ANALYSIS_CHUNK];
@@ -49,7 +49,7 @@ static bool radiogeddon_analysis_run_into(
                 radiogeddon_analysis_progress(file, a->pass);
         }
     } while(rg_analyzer_next_pass(a));
-    if(hypotheses) rg_analyzer_hypotheses(a);
+    if(finish) finish(a);
     free(a);
 
     *status = file->reader.corrupt ? RadioGeddonAnalysisCorrupt : RadioGeddonAnalysisOk;
@@ -71,11 +71,11 @@ static bool radiogeddon_analysis_fits(RadioGeddonAnalysisStatus* status) {
 
 RgAnalysis* radiogeddon_analysis_run_raw(
     RadioGeddonRawFile* file,
-    bool hypotheses,
+    RadioGeddonAnalysisFinish finish,
     RadioGeddonAnalysisStatus* status) {
     if(!radiogeddon_analysis_fits(status)) return NULL;
     RgAnalysis* r = malloc(sizeof(RgAnalysis));
-    if(!radiogeddon_analysis_run_into(file, r, hypotheses, status)) {
+    if(!radiogeddon_analysis_run_into(file, r, finish, status)) {
         free(r);
         r = NULL;
     }
@@ -85,7 +85,7 @@ RgAnalysis* radiogeddon_analysis_run_raw(
 RgAnalysis* radiogeddon_analysis_run_file(
     Storage* storage,
     const char* path,
-    bool hypotheses,
+    RadioGeddonAnalysisFinish finish,
     RadioGeddonAnalysisStatus* status) {
     if(!radiogeddon_analysis_fits(status)) return NULL;
     // The result first, then the file and the working state above it: when
@@ -97,7 +97,7 @@ RgAnalysis* radiogeddon_analysis_run_file(
     if(!file) {
         *status = RadioGeddonAnalysisOpenFailed;
     } else {
-        ok = radiogeddon_analysis_run_into(file, r, hypotheses, status);
+        ok = radiogeddon_analysis_run_into(file, r, finish, status);
         radiogeddon_storage_raw_close(file);
     }
     if(!ok) {

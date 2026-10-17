@@ -53,7 +53,7 @@ bool radiogeddon_multi_capture(
         return true;
     }
 
-    RgAnalysis* r = radiogeddon_analysis_run_file(storage, path, false, status);
+    RgAnalysis* r = radiogeddon_analysis_run_file(storage, path, NULL, status);
     if(!r) return false;
     rg_multi_capture_from_analysis(cap, r);
     free(r);

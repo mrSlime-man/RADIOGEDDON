@@ -362,7 +362,7 @@ int radiogeddon_analysis_unknown(Storage* storage, const char* path, FuriString*
     RadioGeddonAnalysisStatus status;
     // The hypotheses are filled before the working state goes: the report
     // then holds only the result.
-    RgAnalysis* r = radiogeddon_analysis_run_file(storage, path, true, &status);
+    RgAnalysis* r = radiogeddon_analysis_run_file(storage, path, rg_analyzer_hypotheses, &status);
     if(!r) {
         radiogeddon_analysis_cat_status(out, status);
         return -1;

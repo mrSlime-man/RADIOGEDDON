@@ -116,7 +116,7 @@ static bool fp_compute(Storage* storage, const char* name, RgFingerprint* fp) {
             ok = file != NULL;
             if(file) {
                 RadioGeddonAnalysisStatus status;
-                RgAnalysis* a = radiogeddon_analysis_run_raw(file, false, &status);
+                RgAnalysis* a = radiogeddon_analysis_run_raw(file, NULL, &status);
                 if(a) {
                     // The 4th pass: distributions, preamble and sync gap.
                     RgFpBuilder* b = malloc(sizeof(RgFpBuilder));

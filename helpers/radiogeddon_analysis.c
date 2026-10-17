@@ -271,7 +271,7 @@ typedef struct {
 static bool
     radiogeddon_dominant_pattern(Storage* storage, const char* path, RadioGeddonPattern* p) {
     RadioGeddonAnalysisStatus status;
-    RgAnalysis* r = radiogeddon_analysis_run_file(storage, path, false, &status);
+    RgAnalysis* r = radiogeddon_analysis_run_file(storage, path, NULL, &status);
     if(!r) return false;
     bool ok = r->group_count > 0;
     if(ok) {

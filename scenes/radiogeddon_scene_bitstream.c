@@ -42,7 +42,7 @@ void radiogeddon_scene_bitstream_on_enter(void* context) {
         // This module's analyzer reports to the busy popup too.
         radiogeddon_analysis_set_progress(radiogeddon_scene_progress, app);
         app->bits_doc = radiogeddon_analysis_run_file(
-            app->storage, furi_string_get_cstr(app->file_path), false, &status);
+            app->storage, furi_string_get_cstr(app->file_path), NULL, &status);
         radiogeddon_analysis_set_progress(NULL, NULL);
         radiogeddon_scene_progress_end(app);
         // The result was allocated before the file and the working state, so

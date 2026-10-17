@@ -90,7 +90,7 @@ void radiogeddon_scene_timeline_on_enter(void* context) {
     // reader's checkpoints for seeking. The analysis is freed before the view
     // is allocated, so the two are never in memory together.
     RadioGeddonAnalysisStatus status;
-    RgAnalysis* r = radiogeddon_analysis_run_raw(app->timeline_file, false, &status);
+    RgAnalysis* r = radiogeddon_analysis_run_raw(app->timeline_file, NULL, &status);
     radiogeddon_scene_progress_end(app);
     if(!r) {
         radiogeddon_analysis_cat_status(app->temp_str, status);

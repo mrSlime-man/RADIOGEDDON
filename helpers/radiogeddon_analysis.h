@@ -56,18 +56,22 @@ typedef enum {
  * Returns the analysis (caller frees) or NULL with @p status saying why. A
  * non-NULL result may still carry RadioGeddonAnalysisCorrupt. The working
  * state of the passes is freed before returning: only the result (about
- * 4 KB on the device) is kept. @p hypotheses also fills its hypotheses.
+ * 4 KB on the device) is kept. @p finish (may be NULL) is called after the
+ * last pass, while the working state still exists: rg_analyzer_hypotheses
+ * for the reports that list them (passed in, so the tools that do not show
+ * them do not link its code).
  */
+typedef void (*RadioGeddonAnalysisFinish)(RgAnalyzer* analyzer);
 RgAnalysis* radiogeddon_analysis_run_file(
     Storage* storage,
     const char* path,
-    bool hypotheses,
+    RadioGeddonAnalysisFinish finish,
     RadioGeddonAnalysisStatus* status);
 
 /** As above on an already open file (its reader keeps the seek checkpoints). */
 RgAnalysis* radiogeddon_analysis_run_raw(
     RadioGeddonRawFile* file,
-    bool hypotheses,
+    RadioGeddonAnalysisFinish finish,
     RadioGeddonAnalysisStatus* status);
 
 /** Heap the analysis takes at its peak: the result and the working state,
