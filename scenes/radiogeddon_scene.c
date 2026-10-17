@@ -33,7 +33,8 @@ const SceneManagerHandlers radiogeddon_scene_handlers = {
 static uint32_t radiogeddon_confirm_yes;
 static uint32_t radiogeddon_confirm_no;
 
-static void radiogeddon_scene_confirm_cb(GuiButtonType result, InputType type, void* context) {
+static RG_UI_TEXT void
+    radiogeddon_scene_confirm_cb(GuiButtonType result, InputType type, void* context) {
     RadioGeddonApp* app = context;
     if(type != InputTypeShort) return;
     if(result == GuiButtonTypeLeft) {
@@ -43,7 +44,7 @@ static void radiogeddon_scene_confirm_cb(GuiButtonType result, InputType type, v
     }
 }
 
-void radiogeddon_scene_show_confirm(
+RG_UI_TEXT void radiogeddon_scene_show_confirm(
     RadioGeddonApp* app,
     const char* header,
     const char* text,
@@ -73,7 +74,7 @@ void radiogeddon_scene_show_confirm(
     view_dispatcher_switch_to_view(app->view_dispatcher, RadioGeddonViewWidget);
 }
 
-void radiogeddon_scene_show_busy(RadioGeddonApp* app, const char* text) {
+RG_UI_TEXT void radiogeddon_scene_show_busy(RadioGeddonApp* app, const char* text) {
 #if RG_FEATURE_DOLPHIN_LAB
     if(radiogeddon_ui_card(app, RadioGeddonLabCardBusy, text, NULL, 0, 0, false)) return;
 #endif
@@ -86,7 +87,7 @@ void radiogeddon_scene_show_busy(RadioGeddonApp* app, const char* text) {
 #define RADIOGEDDON_PROGRESS_MIN_MS 150u
 #define RADIOGEDDON_PROGRESS_NONE   0xFFu
 
-void radiogeddon_scene_show_progress(RadioGeddonApp* app, const char* text) {
+RG_UI_TEXT void radiogeddon_scene_show_progress(RadioGeddonApp* app, const char* text) {
     radiogeddon_memdiag_sample(text);
     app->progress_pct = RADIOGEDDON_PROGRESS_NONE;
     app->progress_tick = 0;
@@ -100,7 +101,7 @@ void radiogeddon_scene_show_progress(RadioGeddonApp* app, const char* text) {
     view_dispatcher_switch_to_view(app->view_dispatcher, RadioGeddonViewPopup);
 }
 
-void radiogeddon_scene_progress(void* context, uint32_t done, uint32_t total) {
+RG_UI_TEXT void radiogeddon_scene_progress(void* context, uint32_t done, uint32_t total) {
     RadioGeddonApp* app = context;
     radiogeddon_memdiag_sample(NULL); // the work in progress is at its largest now
     if(total == 0) return;
@@ -125,13 +126,13 @@ void radiogeddon_scene_progress(void* context, uint32_t done, uint32_t total) {
     popup_set_text(app->popup, text, 64, 42, AlignCenter, AlignCenter);
 }
 
-void radiogeddon_scene_progress_end(RadioGeddonApp* app) {
+RG_UI_TEXT void radiogeddon_scene_progress_end(RadioGeddonApp* app) {
     radiogeddon_analysis_set_progress(NULL, NULL);
     radiogeddon_memdiag_sample(NULL);
     radiogeddon_ui_event(app, RgMascotEventAnalysisCompleted, 0);
 }
 
-bool radiogeddon_scene_redraw_due(RadioGeddonApp* app) {
+RG_UI_TEXT bool radiogeddon_scene_redraw_due(RadioGeddonApp* app) {
     if(!app->settings.battery_saver) return true;
     uint32_t now = furi_get_tick();
     if(now - app->redraw_tick < furi_ms_to_ticks(RADIOGEDDON_SAVER_REDRAW_MS)) return false;
@@ -140,18 +141,18 @@ bool radiogeddon_scene_redraw_due(RadioGeddonApp* app) {
 }
 
 /* Resident, so it is valid whatever module is loaded or unloaded later. */
-static void radiogeddon_scene_var_list_noop(void* context, uint32_t index) {
+static RG_UI_TEXT void radiogeddon_scene_var_list_noop(void* context, uint32_t index) {
     UNUSED(context);
     UNUSED(index);
 }
 
-void radiogeddon_scene_var_list_release(RadioGeddonApp* app) {
+RG_UI_TEXT void radiogeddon_scene_var_list_release(RadioGeddonApp* app) {
     variable_item_list_reset(app->var_item_list);
     variable_item_list_set_enter_callback(
         app->var_item_list, radiogeddon_scene_var_list_noop, app);
 }
 
-void radiogeddon_scene_receiver_badge(RadioGeddonApp* app) {
+RG_UI_TEXT void radiogeddon_scene_receiver_badge(RadioGeddonApp* app) {
 #if RG_FEATURE_DOLPHIN_LAB
     RgMascotFrame f;
     bool cyber = false;
@@ -162,7 +163,8 @@ void radiogeddon_scene_receiver_badge(RadioGeddonApp* app) {
 #endif
 }
 
-void radiogeddon_scene_show_report(RadioGeddonApp* app, const char* title, const char* text) {
+RG_UI_TEXT void
+    radiogeddon_scene_show_report(RadioGeddonApp* app, const char* title, const char* text) {
 #if RG_FEATURE_DOLPHIN_LAB
     radiogeddon_ui_reveal(app, title, text, RadioGeddonViewTextBox);
 #else
@@ -176,17 +178,17 @@ void radiogeddon_scene_show_report(RadioGeddonApp* app, const char* title, const
  * screens and other threads' use while it runs). */
 #define RADIOGEDDON_RADIO_MARGIN (6u * 1024u)
 
-uint32_t radiogeddon_scene_radio_cost(RadioGeddonApp* app) {
+RG_UI_TEXT uint32_t radiogeddon_scene_radio_cost(RadioGeddonApp* app) {
     return app->settings.radio_heap_fw == app->fw_tag ? app->settings.radio_heap : 0;
 }
 
-bool radiogeddon_scene_decoders_fit(RadioGeddonApp* app) {
+RG_UI_TEXT bool radiogeddon_scene_decoders_fit(RadioGeddonApp* app) {
     return rg_mem_session_fits(
         radiogeddon_memdiag_free(), radiogeddon_scene_radio_cost(app), RADIOGEDDON_RADIO_MARGIN);
 }
 
 /* @p what names the user ("Radio needs") in the refusal. */
-static bool radiogeddon_scene_session_memory_ok(RadioGeddonApp* app, const char* what) {
+static RG_UI_TEXT bool radiogeddon_scene_session_memory_ok(RadioGeddonApp* app, const char* what) {
     uint32_t cost = radiogeddon_scene_radio_cost(app);
     uint32_t free_now = radiogeddon_memdiag_free();
     if(rg_mem_session_fits(free_now, cost, RADIOGEDDON_RADIO_MARGIN)) return true;
@@ -219,17 +221,17 @@ static bool radiogeddon_scene_session_memory_ok(RadioGeddonApp* app, const char*
     return false;
 }
 
-bool radiogeddon_scene_radio_memory_ok(RadioGeddonApp* app) {
+RG_UI_TEXT bool radiogeddon_scene_radio_memory_ok(RadioGeddonApp* app) {
     return radiogeddon_scene_session_memory_ok(app, "Radio needs");
 }
 
 /* The decoders and keystore are most of a receive session's cost, so its
  * measurement is a safe bound for decoding a file without the radio. */
-bool radiogeddon_scene_decoders_memory_ok(RadioGeddonApp* app) {
+RG_UI_TEXT bool radiogeddon_scene_decoders_memory_ok(RadioGeddonApp* app) {
     return radiogeddon_scene_session_memory_ok(app, "Decoders need");
 }
 
-void radiogeddon_scene_radio_memory_learn(RadioGeddonApp* app) {
+RG_UI_TEXT void radiogeddon_scene_radio_memory_learn(RadioGeddonApp* app) {
     uint32_t cost = radiogeddon_subghz_session_cost(app->subghz);
     if(!rg_mem_cost_changed(radiogeddon_scene_radio_cost(app), cost)) return;
     app->settings.radio_heap = cost;
@@ -238,7 +240,8 @@ void radiogeddon_scene_radio_memory_learn(RadioGeddonApp* app) {
     radiogeddon_settings_save(app->storage, &app->settings);
 }
 
-void radiogeddon_scene_show_message(RadioGeddonApp* app, const char* header, const char* text) {
+RG_UI_TEXT void
+    radiogeddon_scene_show_message(RadioGeddonApp* app, const char* header, const char* text) {
     radiogeddon_memdiag_message(header);
     app->message_header = header;
     app->message_text = text;
@@ -249,7 +252,7 @@ void radiogeddon_scene_show_message(RadioGeddonApp* app, const char* header, con
  * state) and grows a report text of a few kilobytes. */
 #define RADIOGEDDON_UNKNOWN_WORK (RADIOGEDDON_ANALYSIS_MEMORY + 10u * 1024u)
 
-RadioGeddonUnknownFn radiogeddon_scene_unknown_begin(void* context) {
+RG_UI_TEXT RadioGeddonUnknownFn radiogeddon_scene_unknown_begin(void* context) {
 #if RG_EDITION_FULL
     RadioGeddonApp* app = context;
     if(!radiogeddon_scene_module_load(app, RADIOGEDDON_MODULE_UNKNOWN, RADIOGEDDON_UNKNOWN_WORK))
@@ -261,7 +264,7 @@ RadioGeddonUnknownFn radiogeddon_scene_unknown_begin(void* context) {
 #endif
 }
 
-void radiogeddon_scene_unknown_end(void* context) {
+RG_UI_TEXT void radiogeddon_scene_unknown_end(void* context) {
 #if RG_EDITION_FULL
     RadioGeddonApp* app = context;
     if(app->module) radiogeddon_scene_module_unload(app);
@@ -270,7 +273,7 @@ void radiogeddon_scene_unknown_end(void* context) {
 #endif
 }
 
-void radiogeddon_scene_db_release(RadioGeddonApp* app) {
+RG_UI_TEXT void radiogeddon_scene_db_release(RadioGeddonApp* app) {
     if(app->db_view) {
         view_dispatcher_remove_view(app->view_dispatcher, RadioGeddonViewDb);
         radiogeddon_db_view_free(app->db_view);
@@ -283,7 +286,8 @@ void radiogeddon_scene_db_release(RadioGeddonApp* app) {
 }
 
 #if RG_EDITION_FULL
-bool radiogeddon_scene_module_load(RadioGeddonApp* app, const char* file, size_t extra_heap) {
+RG_UI_TEXT bool
+    radiogeddon_scene_module_load(RadioGeddonApp* app, const char* file, size_t extra_heap) {
     furi_check(!app->module);
     RadioGeddonModuleStatus status;
     app->module =
@@ -302,13 +306,13 @@ bool radiogeddon_scene_module_load(RadioGeddonApp* app, const char* file, size_t
     return false;
 }
 
-void radiogeddon_scene_module_unload(RadioGeddonApp* app) {
+RG_UI_TEXT void radiogeddon_scene_module_unload(RadioGeddonApp* app) {
     radiogeddon_module_unload(app->module);
     app->module = NULL;
     app->module_api = NULL;
 }
 
-RadioGeddonFavorites* radiogeddon_scene_favorites(RadioGeddonApp* app) {
+RG_UI_TEXT RadioGeddonFavorites* radiogeddon_scene_favorites(RadioGeddonApp* app) {
     if(!app->favorites_loaded) {
         radiogeddon_favorites_load(app->storage, &app->favorites);
         app->favorites_loaded = true;
@@ -316,11 +320,11 @@ RadioGeddonFavorites* radiogeddon_scene_favorites(RadioGeddonApp* app) {
     return &app->favorites;
 }
 
-void radiogeddon_scene_probe_bands(RadioGeddonApp* app) {
+RG_UI_TEXT void radiogeddon_scene_probe_bands(RadioGeddonApp* app) {
     radiogeddon_subghz_probe_bands(app->subghz, &app->bands);
 }
 
-RgRangeResult radiogeddon_scene_plan_range(RadioGeddonApp* app) {
+RG_UI_TEXT RgRangeResult radiogeddon_scene_plan_range(RadioGeddonApp* app) {
     app->range_result = rg_range_plan(
         &app->range,
         app->settings.range_start_hz,
@@ -332,7 +336,7 @@ RgRangeResult radiogeddon_scene_plan_range(RadioGeddonApp* app) {
 }
 #endif
 
-size_t radiogeddon_scene_build_list(
+RG_UI_TEXT size_t radiogeddon_scene_build_list(
     RadioGeddonApp* app,
     uint8_t source,
     uint32_t mask,

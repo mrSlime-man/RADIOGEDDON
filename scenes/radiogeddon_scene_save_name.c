@@ -7,17 +7,17 @@ typedef enum {
 
 #define SAVE_NAME_RESULT_MS 2500
 
-static void radiogeddon_scene_save_name_cb(void* context) {
+static RG_UI_TEXT void radiogeddon_scene_save_name_cb(void* context) {
     RadioGeddonApp* app = context;
     view_dispatcher_send_custom_event(app->view_dispatcher, SaveNameEventEntered);
 }
 
-static void radiogeddon_scene_save_name_popup_cb(void* context) {
+static RG_UI_TEXT void radiogeddon_scene_save_name_popup_cb(void* context) {
     RadioGeddonApp* app = context;
     view_dispatcher_send_custom_event(app->view_dispatcher, SaveNameEventDone);
 }
 
-void radiogeddon_scene_save_name_on_enter(void* context) {
+RG_UI_TEXT void radiogeddon_scene_save_name_on_enter(void* context) {
     RadioGeddonApp* app = context;
     TextInput* text_input = app->text_input;
 
@@ -45,7 +45,7 @@ void radiogeddon_scene_save_name_on_enter(void* context) {
 
 // Save under a name that does not exist yet ("name", else "name_2" ...), so
 // an existing recording is never replaced.
-static bool radiogeddon_scene_save_name_save(RadioGeddonApp* app, FuriString* path) {
+static RG_UI_TEXT bool radiogeddon_scene_save_name_save(RadioGeddonApp* app, FuriString* path) {
     if(!radiogeddon_storage_make_unique_path(app->storage, path, app->text_store)) return false;
     if(app->save_is_raw) {
         return radiogeddon_subghz_record_save(app->subghz, furi_string_get_cstr(path));
@@ -55,7 +55,7 @@ static bool radiogeddon_scene_save_name_save(RadioGeddonApp* app, FuriString* pa
 }
 
 // Result popup: where it went and, for RAW, how much was captured or lost.
-static void
+static RG_UI_TEXT void
     radiogeddon_scene_save_name_show_result(RadioGeddonApp* app, bool ok, FuriString* path) {
     furi_string_reset(app->temp_str);
     if(ok) {
@@ -122,7 +122,7 @@ static void
     view_dispatcher_switch_to_view(app->view_dispatcher, RadioGeddonViewPopup);
 }
 
-bool radiogeddon_scene_save_name_on_event(void* context, SceneManagerEvent event) {
+RG_UI_TEXT bool radiogeddon_scene_save_name_on_event(void* context, SceneManagerEvent event) {
     RadioGeddonApp* app = context;
     bool consumed = false;
 
@@ -146,7 +146,7 @@ bool radiogeddon_scene_save_name_on_event(void* context, SceneManagerEvent event
     return consumed;
 }
 
-void radiogeddon_scene_save_name_on_exit(void* context) {
+RG_UI_TEXT void radiogeddon_scene_save_name_on_exit(void* context) {
     RadioGeddonApp* app = context;
     radiogeddon_ui_cancel(app);
     text_input_reset(app->text_input);

@@ -15,7 +15,8 @@ typedef enum {
     SavedListEventNoMemory,
 } SavedListEvent;
 
-static void radiogeddon_scene_saved_list_view_cb(RadioGeddonDbViewEvent event, void* context) {
+static RG_UI_TEXT void
+    radiogeddon_scene_saved_list_view_cb(RadioGeddonDbViewEvent event, void* context) {
     RadioGeddonApp* app = context;
     uint32_t out = event == RadioGeddonDbViewEventOpen    ? SavedListEventOpen :
                    event == RadioGeddonDbViewEventDetails ? SavedListEventDetails :
@@ -25,7 +26,8 @@ static void radiogeddon_scene_saved_list_view_cb(RadioGeddonDbViewEvent event, v
 }
 
 /* Position of the file called @p name in the current view, if listed. */
-static bool radiogeddon_scene_saved_list_find(RadioGeddonDb* db, const char* name, size_t* pos) {
+static RG_UI_TEXT bool
+    radiogeddon_scene_saved_list_find(RadioGeddonDb* db, const char* name, size_t* pos) {
     for(size_t i = 0; i < db->view_count; i++) {
         if(strcmp(rg_db_name(&db->db, radiogeddon_db_at(db, i)), name) == 0) {
             *pos = i;
@@ -37,7 +39,7 @@ static bool radiogeddon_scene_saved_list_find(RadioGeddonDb* db, const char* nam
 
 /* (Re)build the index, keeping the query and the highlighted file: the same
  * name, else the file just renamed, else the same position. */
-static bool radiogeddon_scene_saved_list_load(RadioGeddonApp* app) {
+static RG_UI_TEXT bool radiogeddon_scene_saved_list_load(RadioGeddonApp* app) {
     RgDbQuery query = {.sort = (RgDbSort)app->settings.db_sort, .show = RgDbShowAll};
     size_t selected = 0;
     FuriString* keep = furi_string_alloc();
@@ -72,7 +74,7 @@ static bool radiogeddon_scene_saved_list_load(RadioGeddonApp* app) {
     return app->db != NULL;
 }
 
-void radiogeddon_scene_saved_list_on_enter(void* context) {
+RG_UI_TEXT void radiogeddon_scene_saved_list_on_enter(void* context) {
     RadioGeddonApp* app = context;
     app->db_keep = false;
     if(!app->db_view) {
@@ -96,7 +98,7 @@ void radiogeddon_scene_saved_list_on_enter(void* context) {
     view_dispatcher_switch_to_view(app->view_dispatcher, RadioGeddonViewDb);
 }
 
-static void radiogeddon_scene_saved_list_open(RadioGeddonApp* app, uint32_t scene) {
+static RG_UI_TEXT void radiogeddon_scene_saved_list_open(RadioGeddonApp* app, uint32_t scene) {
     const RgDbEntry* e =
         radiogeddon_db_at(app->db, radiogeddon_db_view_get_selected(app->db_view));
     if(!e) return;
@@ -117,7 +119,7 @@ static void radiogeddon_scene_saved_list_open(RadioGeddonApp* app, uint32_t scen
     scene_manager_next_scene(app->scene_manager, scene);
 }
 
-bool radiogeddon_scene_saved_list_on_event(void* context, SceneManagerEvent event) {
+RG_UI_TEXT bool radiogeddon_scene_saved_list_on_event(void* context, SceneManagerEvent event) {
     RadioGeddonApp* app = context;
     bool consumed = false;
 
@@ -159,7 +161,7 @@ bool radiogeddon_scene_saved_list_on_event(void* context, SceneManagerEvent even
     return consumed;
 }
 
-void radiogeddon_scene_saved_list_on_exit(void* context) {
+RG_UI_TEXT void radiogeddon_scene_saved_list_on_exit(void* context) {
     RadioGeddonApp* app = context;
     popup_reset(app->popup);
     if(app->db_keep) return;

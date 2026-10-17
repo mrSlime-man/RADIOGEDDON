@@ -15,16 +15,16 @@ typedef enum {
 static char (*profiles_names)[RADIOGEDDON_PROFILE_NAME_LEN];
 static size_t profiles_count;
 
-static void radiogeddon_scene_profiles_cb(void* context, uint32_t index) {
+static RG_UI_TEXT void radiogeddon_scene_profiles_cb(void* context, uint32_t index) {
     RadioGeddonApp* app = context;
     view_dispatcher_send_custom_event(app->view_dispatcher, ProfilesEventPickBase + index);
 }
 
-static bool radiogeddon_scene_profiles_deleting(RadioGeddonApp* app) {
+static RG_UI_TEXT bool radiogeddon_scene_profiles_deleting(RadioGeddonApp* app) {
     return scene_manager_get_scene_state(app->scene_manager, RadioGeddonSceneProfiles) == 1;
 }
 
-static void radiogeddon_scene_profiles_show(RadioGeddonApp* app) {
+static RG_UI_TEXT void radiogeddon_scene_profiles_show(RadioGeddonApp* app) {
     if(!profiles_names) {
         profiles_names = malloc(RADIOGEDDON_PROFILES_MAX * RADIOGEDDON_PROFILE_NAME_LEN);
     }
@@ -43,11 +43,11 @@ static void radiogeddon_scene_profiles_show(RadioGeddonApp* app) {
     view_dispatcher_switch_to_view(app->view_dispatcher, RadioGeddonViewSubmenu);
 }
 
-void radiogeddon_scene_profiles_on_enter(void* context) {
+RG_UI_TEXT void radiogeddon_scene_profiles_on_enter(void* context) {
     radiogeddon_scene_profiles_show(context);
 }
 
-bool radiogeddon_scene_profiles_on_event(void* context, SceneManagerEvent event) {
+RG_UI_TEXT bool radiogeddon_scene_profiles_on_event(void* context, SceneManagerEvent event) {
     RadioGeddonApp* app = context;
     if(event.type != SceneManagerEventTypeCustom) return false;
 
@@ -99,7 +99,7 @@ bool radiogeddon_scene_profiles_on_event(void* context, SceneManagerEvent event)
     return true;
 }
 
-void radiogeddon_scene_profiles_on_exit(void* context) {
+RG_UI_TEXT void radiogeddon_scene_profiles_on_exit(void* context) {
     RadioGeddonApp* app = context;
     submenu_reset(app->submenu);
     widget_reset(app->widget);

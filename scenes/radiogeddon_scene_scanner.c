@@ -12,7 +12,7 @@ typedef enum {
     ScannerCustomHitBase = 1000,
 } ScannerCustomEvent;
 
-static void radiogeddon_scanner_view_cb(RadioGeddonScannerEvent event, void* context) {
+static RG_UI_TEXT void radiogeddon_scanner_view_cb(RadioGeddonScannerEvent event, void* context) {
     RadioGeddonApp* app = context;
     uint32_t custom = ScannerCustomSelect;
     switch(event) {
@@ -36,17 +36,17 @@ static void radiogeddon_scanner_view_cb(RadioGeddonScannerEvent event, void* con
 }
 
 // Scanner thread -> GUI thread.
-static void radiogeddon_scanner_hit_cb(size_t index, void* context) {
+static RG_UI_TEXT void radiogeddon_scanner_hit_cb(size_t index, void* context) {
     RadioGeddonApp* app = context;
     view_dispatcher_send_custom_event(app->view_dispatcher, ScannerCustomHitBase + index);
 }
 
-static void radiogeddon_scanner_popup_cb(void* context) {
+static RG_UI_TEXT void radiogeddon_scanner_popup_cb(void* context) {
     RadioGeddonApp* app = context;
     view_dispatcher_send_custom_event(app->view_dispatcher, ScannerCustomPopupDone);
 }
 
-static void radiogeddon_scene_scanner_show_message(
+static RG_UI_TEXT void radiogeddon_scene_scanner_show_message(
     RadioGeddonApp* app,
     const char* header,
     const char* text,
@@ -64,7 +64,7 @@ static void radiogeddon_scene_scanner_show_message(
 }
 
 // Dolphin Lab: the header badge follows the mascot (nothing in Classic).
-static void radiogeddon_scene_scanner_badge(RadioGeddonApp* app) {
+static RG_UI_TEXT void radiogeddon_scene_scanner_badge(RadioGeddonApp* app) {
 #if RG_FEATURE_DOLPHIN_LAB
     RgMascotFrame f;
     bool cyber = false;
@@ -75,7 +75,7 @@ static void radiogeddon_scene_scanner_badge(RadioGeddonApp* app) {
 #endif
 }
 
-void radiogeddon_scene_scanner_on_enter(void* context) {
+RG_UI_TEXT void radiogeddon_scene_scanner_on_enter(void* context) {
     RadioGeddonApp* app = context;
     app->scanner_running = false;
 
@@ -139,7 +139,7 @@ void radiogeddon_scene_scanner_on_enter(void* context) {
     view_dispatcher_switch_to_view(app->view_dispatcher, RadioGeddonViewScanner);
 }
 
-static void radiogeddon_scene_scanner_save(RadioGeddonApp* app) {
+static RG_UI_TEXT void radiogeddon_scene_scanner_save(RadioGeddonApp* app) {
     FuriString* path = furi_string_alloc();
     radiogeddon_storage_ensure_paths(app->storage);
     radiogeddon_storage_make_scan_path(path);
@@ -164,7 +164,7 @@ static void radiogeddon_scene_scanner_save(RadioGeddonApp* app) {
     furi_string_free(path);
 }
 
-bool radiogeddon_scene_scanner_on_event(void* context, SceneManagerEvent event) {
+RG_UI_TEXT bool radiogeddon_scene_scanner_on_event(void* context, SceneManagerEvent event) {
     RadioGeddonApp* app = context;
     bool consumed = false;
 
@@ -230,7 +230,7 @@ bool radiogeddon_scene_scanner_on_event(void* context, SceneManagerEvent event) 
     return consumed;
 }
 
-void radiogeddon_scene_scanner_on_exit(void* context) {
+RG_UI_TEXT void radiogeddon_scene_scanner_on_exit(void* context) {
     RadioGeddonApp* app = context;
     app->scanner_running = false;
     radiogeddon_ui_set_scanning(app, false);

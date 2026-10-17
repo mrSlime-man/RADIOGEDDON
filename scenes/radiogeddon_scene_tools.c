@@ -82,7 +82,8 @@ static const ToolScene tool_scenes[] = {
 
 /* ---- the host table -------------------------------------------------------- */
 
-static void host_research_record(RadioGeddonApp* app, uint32_t ev, uint32_t n, const char* note) {
+static RG_UI_TEXT void
+    host_research_record(RadioGeddonApp* app, uint32_t ev, uint32_t n, const char* note) {
 #if RG_FEATURE_JOURNAL
     radiogeddon_research_record(app, (RgJournalEvent)ev, n, note);
 #else
@@ -94,25 +95,25 @@ static void host_research_record(RadioGeddonApp* app, uint32_t ev, uint32_t n, c
 }
 
 #if RG_FEATURE_JOURNAL
-static void
+static RG_UI_TEXT void
     host_research_step(RadioGeddonApp* app, const char* path, uint32_t step, uint32_t arg) {
     radiogeddon_research_step(app, path, (RadioGeddonResearchStep)step, arg);
 }
 #endif
 
-static void host_ui_event(RadioGeddonApp* app, uint32_t event, uint32_t arg) {
+static RG_UI_TEXT void host_ui_event(RadioGeddonApp* app, uint32_t event, uint32_t arg) {
     radiogeddon_ui_event(app, (RgMascotEvent)event, arg);
 }
 
-static void host_ui_cancel(RadioGeddonApp* app) {
+static RG_UI_TEXT void host_ui_cancel(RadioGeddonApp* app) {
     radiogeddon_ui_cancel(app);
 }
 
-static void host_ui_set_scanning(RadioGeddonApp* app, bool scanning) {
+static RG_UI_TEXT void host_ui_set_scanning(RadioGeddonApp* app, bool scanning) {
     radiogeddon_ui_set_scanning(app, scanning);
 }
 
-static void host_ui_apply_style(RadioGeddonApp* app) {
+static RG_UI_TEXT void host_ui_apply_style(RadioGeddonApp* app) {
 #if RG_FEATURE_DOLPHIN_LAB
     radiogeddon_ui_apply_style(app);
 #else
@@ -120,31 +121,32 @@ static void host_ui_apply_style(RadioGeddonApp* app) {
 #endif
 }
 
-static uint8_t host_subghz_get_radio(RadioGeddonSubGhz* subghz) {
+static RG_UI_TEXT uint8_t host_subghz_get_radio(RadioGeddonSubGhz* subghz) {
     return (uint8_t)radiogeddon_subghz_get_radio(subghz);
 }
 
-static uint8_t host_subghz_set_radio(RadioGeddonSubGhz* subghz, uint8_t radio, bool ext_power) {
+static RG_UI_TEXT uint8_t
+    host_subghz_set_radio(RadioGeddonSubGhz* subghz, uint8_t radio, bool ext_power) {
     return (uint8_t)radiogeddon_subghz_set_radio(subghz, (RadioGeddonRadio)radio, ext_power);
 }
 
-static uint8_t host_subghz_record_start(RadioGeddonSubGhz* subghz) {
+static RG_UI_TEXT uint8_t host_subghz_record_start(RadioGeddonSubGhz* subghz) {
     return (uint8_t)radiogeddon_subghz_record_start(subghz);
 }
 
-static bool host_subghz_record_status(RadioGeddonSubGhz* subghz, void* stats) {
+static RG_UI_TEXT bool host_subghz_record_status(RadioGeddonSubGhz* subghz, void* stats) {
     return radiogeddon_subghz_record_status(subghz, stats);
 }
 
-static const char* host_recorder_error_text(uint8_t error) {
+static RG_UI_TEXT const char* host_recorder_error_text(uint8_t error) {
     return radiogeddon_recorder_error_text((RadioGeddonRecordError)error);
 }
 
-static bool host_ui_active(RadioGeddonApp* app) {
+static RG_UI_TEXT bool host_ui_active(RadioGeddonApp* app) {
     return radiogeddon_ui_active(app);
 }
 
-static bool host_ui_badge(RadioGeddonApp* app, void* frame, bool* cyber) {
+static RG_UI_TEXT bool host_ui_badge(RadioGeddonApp* app, void* frame, bool* cyber) {
 #if RG_FEATURE_DOLPHIN_LAB
     return radiogeddon_ui_badge(app, frame, cyber);
 #else
@@ -155,15 +157,15 @@ static bool host_ui_badge(RadioGeddonApp* app, void* frame, bool* cyber) {
 #endif
 }
 
-static uint8_t host_plan_range(RadioGeddonApp* app) {
+static RG_UI_TEXT uint8_t host_plan_range(RadioGeddonApp* app) {
     return (uint8_t)radiogeddon_scene_plan_range(app);
 }
 
-static const char* host_preset_label(uint8_t index) {
+static RG_UI_TEXT const char* host_preset_label(uint8_t index) {
     return radiogeddon_presets[index].label;
 }
 
-static bool
+static RG_UI_TEXT bool
     host_session_capture_saved(Storage* storage, const char* file, char* out, size_t size) {
 #if RG_FEATURE_SESSIONS
     return radiogeddon_session_capture_saved(storage, file, out, size);
@@ -175,7 +177,7 @@ static bool
 #endif
 }
 
-static void host_session_active(Storage* storage, char* out, size_t size) {
+static RG_UI_TEXT void host_session_active(Storage* storage, char* out, size_t size) {
 #if RG_FEATURE_SESSIONS
     radiogeddon_session_active(storage, out, size);
 #else
@@ -276,13 +278,13 @@ const RadioGeddonHost radiogeddon_host_table = {
 
 /* ---- slots ----------------------------------------------------------------- */
 
-static const ToolScene* tools_find(uint32_t scene) {
+static RG_UI_TEXT const ToolScene* tools_find(uint32_t scene) {
     for(size_t i = 0; i < COUNT_OF(tool_scenes); i++)
         if(tool_scenes[i].scene == scene) return &tool_scenes[i];
     return NULL;
 }
 
-static void tools_unload_slot(RadioGeddonApp* app, size_t i) {
+static RG_UI_TEXT void tools_unload_slot(RadioGeddonApp* app, size_t i) {
     radiogeddon_module_unload(app->tool[i].module);
     app->tool[i].module = NULL;
     app->tool[i].api = NULL;
@@ -291,7 +293,7 @@ static void tools_unload_slot(RadioGeddonApp* app, size_t i) {
 }
 
 /* The module of @p t, loaded if needed; NULL with the reason set. */
-static const RadioGeddonToolModule* tools_get(RadioGeddonApp* app, const ToolScene* t) {
+static RG_UI_TEXT const RadioGeddonToolModule* tools_get(RadioGeddonApp* app, const ToolScene* t) {
     for(size_t i = 0; i < COUNT_OF(app->tool); i++) {
         if(app->tool[i].module && app->tool[i].file == t->file) {
             app->tool[i].shown = true;
@@ -320,25 +322,26 @@ static const RadioGeddonToolModule* tools_get(RadioGeddonApp* app, const ToolSce
 }
 
 /* The loaded module of @p t, without loading it. */
-static const RadioGeddonToolModule* tools_loaded(RadioGeddonApp* app, const ToolScene* t) {
+static RG_UI_TEXT const RadioGeddonToolModule*
+    tools_loaded(RadioGeddonApp* app, const ToolScene* t) {
     for(size_t i = 0; i < COUNT_OF(app->tool); i++)
         if(app->tool[i].module && app->tool[i].file == t->file) return app->tool[i].api;
     return NULL;
 }
 
-void radiogeddon_scene_tools_tick(RadioGeddonApp* app) {
+RG_UI_TEXT void radiogeddon_scene_tools_tick(RadioGeddonApp* app) {
     for(size_t i = 0; i < COUNT_OF(app->tool); i++)
         if(app->tool[i].module && !app->tool[i].shown) tools_unload_slot(app, i);
 }
 
-void radiogeddon_scene_tools_release(RadioGeddonApp* app) {
+RG_UI_TEXT void radiogeddon_scene_tools_release(RadioGeddonApp* app) {
     for(size_t i = 0; i < COUNT_OF(app->tool); i++)
         if(app->tool[i].module) tools_unload_slot(app, i);
 }
 
 /* ---- the forwarders -------------------------------------------------------- */
 
-static void tools_enter(void* context, uint32_t scene) {
+static RG_UI_TEXT void tools_enter(void* context, uint32_t scene) {
     RadioGeddonApp* app = context;
     const ToolScene* t = tools_find(scene);
     const RadioGeddonToolModule* api = t ? tools_get(app, t) : NULL;
@@ -351,7 +354,7 @@ static void tools_enter(void* context, uint32_t scene) {
     }
 }
 
-static bool tools_event(void* context, uint32_t scene, SceneManagerEvent event) {
+static RG_UI_TEXT bool tools_event(void* context, uint32_t scene, SceneManagerEvent event) {
     RadioGeddonApp* app = context;
     const ToolScene* t = tools_find(scene);
     const RadioGeddonToolModule* api = t ? tools_loaded(app, t) : NULL;
@@ -366,7 +369,7 @@ static bool tools_event(void* context, uint32_t scene, SceneManagerEvent event) 
     return false;
 }
 
-static void tools_exit(void* context, uint32_t scene) {
+static RG_UI_TEXT void tools_exit(void* context, uint32_t scene) {
     RadioGeddonApp* app = context;
     const ToolScene* t = tools_find(scene);
     const RadioGeddonToolModule* api = t ? tools_loaded(app, t) : NULL;
@@ -432,7 +435,7 @@ TOOL_SCENE(bitstream, Bitstream)
 #if RG_FEATURE_WATERFALL
 TOOL_SCENE(waterfall, Waterfall)
 
-uint32_t radiogeddon_scene_range_setup_waterfall_item(void) {
+RG_UI_TEXT uint32_t radiogeddon_scene_range_setup_waterfall_item(void) {
     return RADIOGEDDON_RANGE_ITEM_WATERFALL;
 }
 #endif

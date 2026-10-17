@@ -11,7 +11,7 @@ typedef enum {
     ReplayStateTransmitting = 1,
 } ReplayState;
 
-static void
+static RG_UI_TEXT void
     radiogeddon_scene_replay_button_cb(GuiButtonType result, InputType type, void* context) {
     RadioGeddonApp* app = context;
     if(result == GuiButtonTypeCenter && type == InputTypeShort) {
@@ -20,18 +20,18 @@ static void
 }
 
 // Fired from the file-encoder worker thread when a RAW transmission finishes.
-static void radiogeddon_scene_replay_tx_complete(void* context) {
+static RG_UI_TEXT void radiogeddon_scene_replay_tx_complete(void* context) {
     RadioGeddonApp* app = context;
     view_dispatcher_send_custom_event(app->view_dispatcher, ReplayCustomComplete);
 }
 
 // Result popup timed out: return to the signal's action menu.
-static void radiogeddon_scene_replay_popup_cb(void* context) {
+static RG_UI_TEXT void radiogeddon_scene_replay_popup_cb(void* context) {
     RadioGeddonApp* app = context;
     view_dispatcher_send_custom_event(app->view_dispatcher, ReplayCustomClosePopup);
 }
 
-static void radiogeddon_scene_replay_show_idle(RadioGeddonApp* app) {
+static RG_UI_TEXT void radiogeddon_scene_replay_show_idle(RadioGeddonApp* app) {
     Widget* widget = app->widget;
     widget_reset(widget);
     widget_add_string_element(
@@ -68,13 +68,14 @@ static void radiogeddon_scene_replay_show_idle(RadioGeddonApp* app) {
     view_dispatcher_switch_to_view(app->view_dispatcher, RadioGeddonViewWidget);
 }
 
-void radiogeddon_scene_replay_on_enter(void* context) {
+RG_UI_TEXT void radiogeddon_scene_replay_on_enter(void* context) {
     RadioGeddonApp* app = context;
     scene_manager_set_scene_state(app->scene_manager, RadioGeddonSceneReplay, ReplayStateIdle);
     radiogeddon_scene_replay_show_idle(app);
 }
 
-static void radiogeddon_scene_replay_finish(RadioGeddonApp* app, const char* msg, bool success) {
+static RG_UI_TEXT void
+    radiogeddon_scene_replay_finish(RadioGeddonApp* app, const char* msg, bool success) {
     radiogeddon_subghz_tx_stop(app->subghz);
     scene_manager_set_scene_state(app->scene_manager, RadioGeddonSceneReplay, ReplayStateIdle);
     notification_message(app->notifications, success ? &sequence_success : &sequence_error);
@@ -96,7 +97,7 @@ static void radiogeddon_scene_replay_finish(RadioGeddonApp* app, const char* msg
     view_dispatcher_switch_to_view(app->view_dispatcher, RadioGeddonViewPopup);
 }
 
-bool radiogeddon_scene_replay_on_event(void* context, SceneManagerEvent event) {
+RG_UI_TEXT bool radiogeddon_scene_replay_on_event(void* context, SceneManagerEvent event) {
     RadioGeddonApp* app = context;
     bool consumed = false;
 
@@ -186,7 +187,7 @@ bool radiogeddon_scene_replay_on_event(void* context, SceneManagerEvent event) {
     return consumed;
 }
 
-void radiogeddon_scene_replay_on_exit(void* context) {
+RG_UI_TEXT void radiogeddon_scene_replay_on_exit(void* context) {
     RadioGeddonApp* app = context;
     notification_message(app->notifications, &sequence_blink_stop);
     radiogeddon_subghz_tx_stop(app->subghz); // idempotent; ensures radio is released

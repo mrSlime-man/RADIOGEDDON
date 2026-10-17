@@ -9,14 +9,14 @@
 // Read-only: receiving is possible anywhere in the receive bands; whether a
 // transmission is allowed stays the firmware's decision.
 
-static void radiogeddon_scene_bands_line(FuriString* out, uint32_t lo, uint32_t hi) {
+static RG_UI_TEXT void radiogeddon_scene_bands_line(FuriString* out, uint32_t lo, uint32_t hi) {
     char a[RG_FREQ_TEXT_SIZE], b[RG_FREQ_TEXT_SIZE];
     rg_freq_text(lo, a, sizeof(a));
     rg_freq_text(hi, b, sizeof(b));
     furi_string_cat_printf(out, " %s - %s\n", a, b);
 }
 
-void radiogeddon_scene_bands_on_enter(void* context) {
+RG_UI_TEXT void radiogeddon_scene_bands_on_enter(void* context) {
     RadioGeddonApp* app = context;
     radiogeddon_scene_probe_bands(app);
 
@@ -50,13 +50,13 @@ void radiogeddon_scene_bands_on_enter(void* context) {
     view_dispatcher_switch_to_view(app->view_dispatcher, RadioGeddonViewWidget);
 }
 
-bool radiogeddon_scene_bands_on_event(void* context, SceneManagerEvent event) {
+RG_UI_TEXT bool radiogeddon_scene_bands_on_event(void* context, SceneManagerEvent event) {
     UNUSED(context);
     UNUSED(event);
     return false;
 }
 
-void radiogeddon_scene_bands_on_exit(void* context) {
+RG_UI_TEXT void radiogeddon_scene_bands_on_exit(void* context) {
     RadioGeddonApp* app = context;
     widget_reset(app->widget);
 }

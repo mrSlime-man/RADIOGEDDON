@@ -56,7 +56,7 @@ static char start_tip_short[16]; // the dashboard's row
 #endif
 
 /* The assistant's tip for now (none in the Catalog edition). */
-static bool radiogeddon_scene_start_tip(RadioGeddonApp* app) {
+static RG_UI_TEXT bool radiogeddon_scene_start_tip(RadioGeddonApp* app) {
 #if RG_FEATURE_ASSISTANT
     RgTip tip = radiogeddon_research_tip(app);
     if(tip == RgTipNone) return false;
@@ -69,12 +69,12 @@ static bool radiogeddon_scene_start_tip(RadioGeddonApp* app) {
 #endif
 }
 
-static void radiogeddon_scene_start_submenu_callback(void* context, uint32_t index) {
+static RG_UI_TEXT void radiogeddon_scene_start_submenu_callback(void* context, uint32_t index) {
     RadioGeddonApp* app = context;
     view_dispatcher_send_custom_event(app->view_dispatcher, index);
 }
 
-void radiogeddon_scene_start_on_enter(void* context) {
+RG_UI_TEXT void radiogeddon_scene_start_on_enter(void* context) {
     RadioGeddonApp* app = context;
     // Back at the main menu: scanner results and the Database index are no
     // longer needed.
@@ -180,7 +180,7 @@ void radiogeddon_scene_start_on_enter(void* context) {
 }
 
 /* Open the screen of the menu item @p index (StartIndex). */
-static bool radiogeddon_scene_start_open(RadioGeddonApp* app, uint32_t index) {
+static RG_UI_TEXT bool radiogeddon_scene_start_open(RadioGeddonApp* app, uint32_t index) {
     switch(index) {
     case StartIndexScanner:
         scene_manager_next_scene(app->scene_manager, RadioGeddonSceneScanner);
@@ -229,7 +229,7 @@ static bool radiogeddon_scene_start_open(RadioGeddonApp* app, uint32_t index) {
     return true;
 }
 
-bool radiogeddon_scene_start_on_event(void* context, SceneManagerEvent event) {
+RG_UI_TEXT bool radiogeddon_scene_start_on_event(void* context, SceneManagerEvent event) {
     RadioGeddonApp* app = context;
     bool consumed = false;
 
@@ -276,7 +276,7 @@ bool radiogeddon_scene_start_on_event(void* context, SceneManagerEvent event) {
     return consumed;
 }
 
-void radiogeddon_scene_start_on_exit(void* context) {
+RG_UI_TEXT void radiogeddon_scene_start_on_exit(void* context) {
     RadioGeddonApp* app = context;
     submenu_reset(app->submenu);
 }

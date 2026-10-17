@@ -21,12 +21,12 @@ typedef enum {
     AnalyzeMenuCurrent, // the recording in context
 } AnalyzeMenuIndex;
 
-static void radiogeddon_scene_analyze_menu_cb(void* context, uint32_t index) {
+static RG_UI_TEXT void radiogeddon_scene_analyze_menu_cb(void* context, uint32_t index) {
     RadioGeddonApp* app = context;
     view_dispatcher_send_custom_event(app->view_dispatcher, index);
 }
 
-void radiogeddon_scene_analyze_menu_on_enter(void* context) {
+RG_UI_TEXT void radiogeddon_scene_analyze_menu_on_enter(void* context) {
     RadioGeddonApp* app = context;
     Submenu* submenu = app->submenu;
     submenu_reset(submenu);
@@ -90,7 +90,8 @@ typedef enum {
 
 /* Ask for a recording (or take the one in context when @p current) and read
  * its metadata into app->loaded. */
-static AnalyzePick radiogeddon_scene_analyze_menu_pick(RadioGeddonApp* app, bool current) {
+static RG_UI_TEXT AnalyzePick
+    radiogeddon_scene_analyze_menu_pick(RadioGeddonApp* app, bool current) {
 #if RG_FEATURE_JOURNAL
     if(current) {
         if(!radiogeddon_research_context_path(app, app->file_path)) return AnalyzePickCancelled;
@@ -130,7 +131,7 @@ load:
     return AnalyzePickOk;
 }
 
-bool radiogeddon_scene_analyze_menu_on_event(void* context, SceneManagerEvent event) {
+RG_UI_TEXT bool radiogeddon_scene_analyze_menu_on_event(void* context, SceneManagerEvent event) {
     RadioGeddonApp* app = context;
     if(event.type != SceneManagerEventTypeCustom || event.event > AnalyzeMenuCurrent) return false;
     scene_manager_set_scene_state(app->scene_manager, RadioGeddonSceneAnalyzeMenu, event.event);
@@ -187,7 +188,7 @@ bool radiogeddon_scene_analyze_menu_on_event(void* context, SceneManagerEvent ev
     return true;
 }
 
-void radiogeddon_scene_analyze_menu_on_exit(void* context) {
+RG_UI_TEXT void radiogeddon_scene_analyze_menu_on_exit(void* context) {
     RadioGeddonApp* app = context;
     submenu_reset(app->submenu);
 }

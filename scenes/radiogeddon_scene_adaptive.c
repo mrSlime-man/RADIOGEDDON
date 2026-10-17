@@ -26,20 +26,20 @@ typedef enum {
 static const RgAdaptMode adaptive_modes[] = {RgAdaptBalanced, RgAdaptFocused, RgAdaptCustom};
 #define ADAPTIVE_MODES COUNT_OF(adaptive_modes)
 
-static uint8_t adaptive_mode_index(RadioGeddonApp* app) {
+static RG_UI_TEXT uint8_t adaptive_mode_index(RadioGeddonApp* app) {
     for(size_t i = 0; i < ADAPTIVE_MODES; i++)
         if(adaptive_modes[i] == app->settings.scan_mode) return (uint8_t)i;
     return 0;
 }
 
-static void adaptive_mode_changed(VariableItem* item) {
+static RG_UI_TEXT void adaptive_mode_changed(VariableItem* item) {
     RadioGeddonApp* app = variable_item_get_context(item);
     uint8_t i = variable_item_get_current_value_index(item);
     app->settings.scan_mode = (uint8_t)adaptive_modes[i];
     variable_item_set_current_value_text(item, rg_adapt_mode_name(adaptive_modes[i]));
 }
 
-static void adaptive_enter(void* context, uint32_t index) {
+static RG_UI_TEXT void adaptive_enter(void* context, uint32_t index) {
     RadioGeddonApp* app = context;
     if(index == AdaptiveRowStart)
         view_dispatcher_send_custom_event(app->view_dispatcher, AdaptiveEventStart);
@@ -47,7 +47,7 @@ static void adaptive_enter(void* context, uint32_t index) {
         view_dispatcher_send_custom_event(app->view_dispatcher, AdaptiveEventReset);
 }
 
-void radiogeddon_scene_adaptive_on_enter(void* context) {
+RG_UI_TEXT void radiogeddon_scene_adaptive_on_enter(void* context) {
     RadioGeddonApp* app = context;
     VariableItemList* list = app->var_item_list;
     variable_item_list_reset(list);
@@ -66,7 +66,7 @@ void radiogeddon_scene_adaptive_on_enter(void* context) {
     view_dispatcher_switch_to_view(app->view_dispatcher, RadioGeddonViewVarItemList);
 }
 
-bool radiogeddon_scene_adaptive_on_event(void* context, SceneManagerEvent event) {
+RG_UI_TEXT bool radiogeddon_scene_adaptive_on_event(void* context, SceneManagerEvent event) {
     RadioGeddonApp* app = context;
     if(event.type != SceneManagerEventTypeCustom) return false;
     if(event.event == AdaptiveEventStart) {
@@ -86,7 +86,7 @@ bool radiogeddon_scene_adaptive_on_event(void* context, SceneManagerEvent event)
     return false;
 }
 
-void radiogeddon_scene_adaptive_on_exit(void* context) {
+RG_UI_TEXT void radiogeddon_scene_adaptive_on_exit(void* context) {
     RadioGeddonApp* app = context;
     radiogeddon_app_save_settings(app);
     radiogeddon_scene_var_list_release(app);

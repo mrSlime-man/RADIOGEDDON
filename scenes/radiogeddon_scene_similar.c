@@ -54,22 +54,22 @@ typedef enum {
     SimilarEventFailed = 960,
 } SimilarItem;
 
-static const char* similar_name(const char* path) {
+static RG_UI_TEXT const char* similar_name(const char* path) {
     const char* slash = strrchr(path, '/');
     return slash ? slash + 1 : path;
 }
 
-static void similar_release(RadioGeddonApp* app) {
+static RG_UI_TEXT void similar_release(RadioGeddonApp* app) {
     free(app->similar);
     app->similar = NULL;
 }
 
-static void similar_cb(void* context, uint32_t index) {
+static RG_UI_TEXT void similar_cb(void* context, uint32_t index) {
     RadioGeddonApp* app = context;
     view_dispatcher_send_custom_event(app->view_dispatcher, index);
 }
 
-static void similar_show_list(RadioGeddonApp* app, uint32_t selected) {
+static RG_UI_TEXT void similar_show_list(RadioGeddonApp* app, uint32_t selected) {
     RadioGeddonSimilar* s = app->similar;
     Submenu* submenu = app->submenu;
     submenu_reset(submenu);
@@ -120,7 +120,7 @@ static void similar_show_list(RadioGeddonApp* app, uint32_t selected) {
     view_dispatcher_switch_to_view(app->view_dispatcher, RadioGeddonViewSubmenu);
 }
 
-static void similar_show_match(RadioGeddonApp* app, size_t i) {
+static RG_UI_TEXT void similar_show_match(RadioGeddonApp* app, size_t i) {
     RadioGeddonSimilar* s = app->similar;
     Submenu* submenu = app->submenu;
     submenu_reset(submenu);
@@ -132,7 +132,7 @@ static void similar_show_match(RadioGeddonApp* app, size_t i) {
 }
 
 /* Run the search. */
-static bool similar_search(RadioGeddonApp* app) {
+static RG_UI_TEXT bool similar_search(RadioGeddonApp* app) {
     // The session scope reads the session (its names) for the search only.
     size_t need = radiogeddon_fp_memory() + sizeof(RadioGeddonSimilar) + sizeof(RgSession);
     if(memmgr_heap_get_max_free_block() < need) {
@@ -206,7 +206,7 @@ static bool similar_search(RadioGeddonApp* app) {
     return true;
 }
 
-void radiogeddon_scene_similar_on_enter(void* context) {
+RG_UI_TEXT void radiogeddon_scene_similar_on_enter(void* context) {
     RadioGeddonApp* app = context;
     uint32_t state = scene_manager_get_scene_state(app->scene_manager, RadioGeddonSceneSimilar);
     const char* target = similar_name(furi_string_get_cstr(app->file_path));
@@ -224,7 +224,7 @@ void radiogeddon_scene_similar_on_enter(void* context) {
 
 /* Load @p name of the signals folder into app->loaded (file_path) or
  * loaded_b (file_path_b). */
-static bool similar_load(RadioGeddonApp* app, const char* name, bool second) {
+static RG_UI_TEXT bool similar_load(RadioGeddonApp* app, const char* name, bool second) {
     FuriString* path = second ? app->file_path_b : app->file_path;
     RadioGeddonLoadedSignal* sig = second ? &app->loaded_b : &app->loaded;
     furi_string_printf(path, "%s/%s", RADIOGEDDON_SIGNALS_FOLDER, name);
@@ -233,7 +233,7 @@ static bool similar_load(RadioGeddonApp* app, const char* name, bool second) {
     return radiogeddon_storage_load(app->storage, furi_string_get_cstr(path), sig);
 }
 
-bool radiogeddon_scene_similar_on_event(void* context, SceneManagerEvent event) {
+RG_UI_TEXT bool radiogeddon_scene_similar_on_event(void* context, SceneManagerEvent event) {
     RadioGeddonApp* app = context;
     if(event.type == SceneManagerEventTypeBack) {
         uint32_t state =
@@ -344,7 +344,7 @@ bool radiogeddon_scene_similar_on_event(void* context, SceneManagerEvent event) 
     }
 }
 
-void radiogeddon_scene_similar_on_exit(void* context) {
+RG_UI_TEXT void radiogeddon_scene_similar_on_exit(void* context) {
     RadioGeddonApp* app = context;
     radiogeddon_ui_cancel(app);
     submenu_reset(app->submenu);

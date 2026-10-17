@@ -13,18 +13,18 @@ typedef enum {
     MultiIndexFile = 100, // + list position: remove it from the list
 } MultiIndex;
 
-static void radiogeddon_scene_multi_cb(void* context, uint32_t index) {
+static RG_UI_TEXT void radiogeddon_scene_multi_cb(void* context, uint32_t index) {
     RadioGeddonApp* app = context;
     view_dispatcher_send_custom_event(app->view_dispatcher, index);
 }
 
-size_t radiogeddon_scene_multi_memory(size_t count) {
+RG_UI_TEXT size_t radiogeddon_scene_multi_memory(size_t count) {
     if(count > RG_MULTI_MAX_CAPTURES) count = RG_MULTI_MAX_CAPTURES;
     // Summaries, the result and one analysis at a time (rg_multi.h).
     return count * sizeof(RgMultiCapture) + sizeof(RgMultiResult) + RADIOGEDDON_ANALYSIS_MEMORY;
 }
 
-bool radiogeddon_multi_add(RadioGeddonApp* app, const char* path) {
+RG_UI_TEXT bool radiogeddon_multi_add(RadioGeddonApp* app, const char* path) {
     for(size_t i = 0; i < app->multi_count; i++)
         if(furi_string_cmp_str(app->multi_paths[i], path) == 0) return true; // already in
     if(app->multi_count >= RG_MULTI_MAX_CAPTURES) return false;
@@ -35,7 +35,7 @@ bool radiogeddon_multi_add(RadioGeddonApp* app, const char* path) {
     return true;
 }
 
-void radiogeddon_multi_clear(RadioGeddonApp* app) {
+RG_UI_TEXT void radiogeddon_multi_clear(RadioGeddonApp* app) {
     for(size_t i = 0; i < RG_MULTI_MAX_CAPTURES; i++) {
         if(app->multi_paths[i]) furi_string_free(app->multi_paths[i]);
         app->multi_paths[i] = NULL;
@@ -43,7 +43,7 @@ void radiogeddon_multi_clear(RadioGeddonApp* app) {
     app->multi_count = 0;
 }
 
-static void radiogeddon_scene_multi_show(RadioGeddonApp* app) {
+static RG_UI_TEXT void radiogeddon_scene_multi_show(RadioGeddonApp* app) {
     Submenu* submenu = app->submenu;
     submenu_reset(submenu);
     snprintf(
@@ -76,12 +76,12 @@ static void radiogeddon_scene_multi_show(RadioGeddonApp* app) {
     view_dispatcher_switch_to_view(app->view_dispatcher, RadioGeddonViewSubmenu);
 }
 
-void radiogeddon_scene_multi_on_enter(void* context) {
+RG_UI_TEXT void radiogeddon_scene_multi_on_enter(void* context) {
     RadioGeddonApp* app = context;
     radiogeddon_scene_multi_show(app);
 }
 
-static void radiogeddon_scene_multi_browse(RadioGeddonApp* app) {
+static RG_UI_TEXT void radiogeddon_scene_multi_browse(RadioGeddonApp* app) {
     DialogsFileBrowserOptions options;
     dialog_file_browser_set_basic_options(&options, RADIOGEDDON_SUB_EXTENSION, NULL);
     options.base_path = RADIOGEDDON_SIGNALS_FOLDER;
@@ -96,7 +96,7 @@ static void radiogeddon_scene_multi_browse(RadioGeddonApp* app) {
     furi_string_free(start);
 }
 
-bool radiogeddon_scene_multi_on_event(void* context, SceneManagerEvent event) {
+RG_UI_TEXT bool radiogeddon_scene_multi_on_event(void* context, SceneManagerEvent event) {
     RadioGeddonApp* app = context;
     if(event.type != SceneManagerEventTypeCustom) return false;
     if(event.event == MultiIndexAdd) {
@@ -129,7 +129,7 @@ bool radiogeddon_scene_multi_on_event(void* context, SceneManagerEvent event) {
     return true;
 }
 
-void radiogeddon_scene_multi_on_exit(void* context) {
+RG_UI_TEXT void radiogeddon_scene_multi_on_exit(void* context) {
     RadioGeddonApp* app = context;
     submenu_reset(app->submenu);
 }

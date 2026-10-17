@@ -25,14 +25,14 @@ typedef enum {
 #define SESSION_HEAP_SPARE  (4u * 1024u)
 #define SESSION_REPORT_SIZE (6u * 1024u)
 
-static void radiogeddon_scene_session_menu_cb(void* context, uint32_t index) {
+static RG_UI_TEXT void radiogeddon_scene_session_menu_cb(void* context, uint32_t index) {
     RadioGeddonApp* app = context;
     scene_manager_set_scene_state(app->scene_manager, RadioGeddonSceneSessionMenu, index);
     view_dispatcher_send_custom_event(app->view_dispatcher, index);
 }
 
 /* The session named app->session_name in app->session; false on failure. */
-static bool radiogeddon_scene_session_menu_load(RadioGeddonApp* app) {
+static RG_UI_TEXT bool radiogeddon_scene_session_menu_load(RadioGeddonApp* app) {
     if(app->session && strcmp(app->session->name, app->session_name) == 0) return true;
     if(!app->session) {
         if(memmgr_heap_get_max_free_block() <
@@ -52,7 +52,7 @@ static bool radiogeddon_scene_session_menu_load(RadioGeddonApp* app) {
     return false;
 }
 
-static void radiogeddon_scene_session_menu_show(RadioGeddonApp* app) {
+static RG_UI_TEXT void radiogeddon_scene_session_menu_show(RadioGeddonApp* app) {
     RgSession* s = app->session;
     char active[RG_SESSION_NAME_MAX];
     radiogeddon_session_active(app->storage, active, sizeof(active));
@@ -97,7 +97,7 @@ static void radiogeddon_scene_session_menu_show(RadioGeddonApp* app) {
     view_dispatcher_switch_to_view(app->view_dispatcher, RadioGeddonViewSubmenu);
 }
 
-void radiogeddon_scene_session_menu_on_enter(void* context) {
+RG_UI_TEXT void radiogeddon_scene_session_menu_on_enter(void* context) {
     RadioGeddonApp* app = context;
     if(!radiogeddon_scene_session_menu_load(app)) {
         view_dispatcher_send_custom_event(app->view_dispatcher, SessionMenuEventFailed);
@@ -107,7 +107,7 @@ void radiogeddon_scene_session_menu_on_enter(void* context) {
 }
 
 /* Returns true when a message was shown (it covers this scene). */
-static bool radiogeddon_scene_session_menu_add(RadioGeddonApp* app) {
+static RG_UI_TEXT bool radiogeddon_scene_session_menu_add(RadioGeddonApp* app) {
     bool message = true;
     DialogsFileBrowserOptions options;
     dialog_file_browser_set_basic_options(&options, RADIOGEDDON_SUB_EXTENSION, NULL);
@@ -146,7 +146,7 @@ static bool radiogeddon_scene_session_menu_add(RadioGeddonApp* app) {
     return message;
 }
 
-static void radiogeddon_scene_session_menu_compare(RadioGeddonApp* app) {
+static RG_UI_TEXT void radiogeddon_scene_session_menu_compare(RadioGeddonApp* app) {
     radiogeddon_multi_clear(app);
     FuriString* path = furi_string_alloc();
     size_t skipped = 0;
@@ -168,7 +168,8 @@ static void radiogeddon_scene_session_menu_compare(RadioGeddonApp* app) {
     }
 }
 
-static void radiogeddon_scene_session_menu_file(void* context, size_t index, size_t count) {
+static RG_UI_TEXT void
+    radiogeddon_scene_session_menu_file(void* context, size_t index, size_t count) {
     RadioGeddonApp* app = context;
     snprintf(
         app->multi_header,
@@ -182,7 +183,7 @@ static void radiogeddon_scene_session_menu_file(void* context, size_t index, siz
 /* A text report: the recordings, then the comparison of up to 8 of them by
  * the Multi-Capture Compare module. Written to reports/SESSION_<name>.txt.
  * Returns false with app->message_* set on failure. */
-static bool radiogeddon_scene_session_menu_export(RadioGeddonApp* app) {
+static RG_UI_TEXT bool radiogeddon_scene_session_menu_export(RadioGeddonApp* app) {
     RgSession* s = app->session;
     const char* paths[RG_MULTI_MAX_CAPTURES];
     FuriString* path_store[RG_MULTI_MAX_CAPTURES];
@@ -266,7 +267,7 @@ static bool radiogeddon_scene_session_menu_export(RadioGeddonApp* app) {
     return ok;
 }
 
-bool radiogeddon_scene_session_menu_on_event(void* context, SceneManagerEvent event) {
+RG_UI_TEXT bool radiogeddon_scene_session_menu_on_event(void* context, SceneManagerEvent event) {
     RadioGeddonApp* app = context;
     if(event.type == SceneManagerEventTypeBack) {
         // Back while confirming a delete returns to the menu.
@@ -362,7 +363,7 @@ bool radiogeddon_scene_session_menu_on_event(void* context, SceneManagerEvent ev
     return true;
 }
 
-void radiogeddon_scene_session_menu_on_exit(void* context) {
+RG_UI_TEXT void radiogeddon_scene_session_menu_on_exit(void* context) {
     RadioGeddonApp* app = context;
     submenu_reset(app->submenu);
     widget_reset(app->widget);

@@ -11,14 +11,14 @@ typedef enum {
     FrequencyEventEntered = 700,
 } FrequencyEvent;
 
-static void radiogeddon_scene_frequency_entered(void* context, int32_t number) {
+static RG_UI_TEXT void radiogeddon_scene_frequency_entered(void* context, int32_t number) {
     RadioGeddonApp* app = context;
     // The keyboard only returns numbers within the range it was given.
     scene_manager_set_scene_state(app->scene_manager, RadioGeddonSceneFrequency, (uint32_t)number);
     view_dispatcher_send_custom_event(app->view_dispatcher, FrequencyEventEntered);
 }
 
-void radiogeddon_scene_frequency_on_enter(void* context) {
+RG_UI_TEXT void radiogeddon_scene_frequency_on_enter(void* context) {
     RadioGeddonApp* app = context;
     if(!app->number_input) {
         app->number_input = number_input_alloc();
@@ -55,7 +55,7 @@ void radiogeddon_scene_frequency_on_enter(void* context) {
     view_dispatcher_switch_to_view(app->view_dispatcher, RadioGeddonViewNumberInput);
 }
 
-bool radiogeddon_scene_frequency_on_event(void* context, SceneManagerEvent event) {
+RG_UI_TEXT bool radiogeddon_scene_frequency_on_event(void* context, SceneManagerEvent event) {
     RadioGeddonApp* app = context;
     if(event.type != SceneManagerEventTypeCustom || event.event != FrequencyEventEntered) {
         return false;
@@ -113,7 +113,7 @@ bool radiogeddon_scene_frequency_on_event(void* context, SceneManagerEvent event
     return true;
 }
 
-void radiogeddon_scene_frequency_on_exit(void* context) {
+RG_UI_TEXT void radiogeddon_scene_frequency_on_exit(void* context) {
     RadioGeddonApp* app = context;
     // Showing the message leaves this scene too; the keyboard is made again
     // on return, so nothing is kept while another screen is open.

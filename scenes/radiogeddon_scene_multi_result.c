@@ -12,7 +12,8 @@
 /* Free heap kept beyond the comparison and its report. */
 #define MULTI_HEAP_SPARE  (6u * 1024u)
 
-static void radiogeddon_scene_multi_result_file(void* context, size_t index, size_t count) {
+static RG_UI_TEXT void
+    radiogeddon_scene_multi_result_file(void* context, size_t index, size_t count) {
     RadioGeddonApp* app = context;
     snprintf(
         app->multi_header,
@@ -23,7 +24,7 @@ static void radiogeddon_scene_multi_result_file(void* context, size_t index, siz
     radiogeddon_scene_show_progress(app, app->multi_header);
 }
 
-void radiogeddon_scene_multi_result_on_enter(void* context) {
+RG_UI_TEXT void radiogeddon_scene_multi_result_on_enter(void* context) {
     RadioGeddonApp* app = context;
     size_t n = app->multi_count;
     text_box_reset(app->text_box);
@@ -65,13 +66,13 @@ void radiogeddon_scene_multi_result_on_enter(void* context) {
     radiogeddon_scene_show_report(app, "Comparison", app->multi_report);
 }
 
-bool radiogeddon_scene_multi_result_on_event(void* context, SceneManagerEvent event) {
+RG_UI_TEXT bool radiogeddon_scene_multi_result_on_event(void* context, SceneManagerEvent event) {
     UNUSED(context);
     UNUSED(event);
     return false;
 }
 
-void radiogeddon_scene_multi_result_on_exit(void* context) {
+RG_UI_TEXT void radiogeddon_scene_multi_result_on_exit(void* context) {
     RadioGeddonApp* app = context;
     radiogeddon_ui_cancel(app);
     text_box_reset(app->text_box);

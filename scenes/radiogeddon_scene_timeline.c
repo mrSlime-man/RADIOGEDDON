@@ -16,7 +16,8 @@ typedef enum {
     TimelineEventReload = 700,
 } TimelineEvent;
 
-static void radiogeddon_scene_timeline_view_cb(RadioGeddonTimelineEvent event, void* context) {
+static RG_UI_TEXT void
+    radiogeddon_scene_timeline_view_cb(RadioGeddonTimelineEvent event, void* context) {
     RadioGeddonApp* app = context;
     if(event == RadioGeddonTimelineEventReload) {
         view_dispatcher_send_custom_event(app->view_dispatcher, TimelineEventReload);
@@ -24,7 +25,7 @@ static void radiogeddon_scene_timeline_view_cb(RadioGeddonTimelineEvent event, v
 }
 
 /* Stream a window that starts a quarter screen before the visible span. */
-static void radiogeddon_scene_timeline_load(RadioGeddonApp* app) {
+static RG_UI_TEXT void radiogeddon_scene_timeline_load(RadioGeddonApp* app) {
     RadioGeddonTimelineView* view = app->timeline_view;
     RgRawReader* reader = &app->timeline_file->reader;
     uint64_t left = 0, span = 0;
@@ -65,14 +66,14 @@ static void radiogeddon_scene_timeline_load(RadioGeddonApp* app) {
         view, reader->eof && loaded < RADIOGEDDON_TIMELINE_WINDOW);
 }
 
-static void radiogeddon_scene_timeline_show_text(RadioGeddonApp* app) {
+static RG_UI_TEXT void radiogeddon_scene_timeline_show_text(RadioGeddonApp* app) {
     text_box_reset(app->text_box);
     text_box_set_font(app->text_box, TextBoxFontText);
     text_box_set_text(app->text_box, furi_string_get_cstr(app->temp_str));
     view_dispatcher_switch_to_view(app->view_dispatcher, RadioGeddonViewTextBox);
 }
 
-void radiogeddon_scene_timeline_on_enter(void* context) {
+RG_UI_TEXT void radiogeddon_scene_timeline_on_enter(void* context) {
     RadioGeddonApp* app = context;
     furi_string_reset(app->temp_str);
     radiogeddon_scene_show_progress(app, "Indexing...");
@@ -138,7 +139,7 @@ void radiogeddon_scene_timeline_on_enter(void* context) {
     view_dispatcher_switch_to_view(app->view_dispatcher, RadioGeddonViewTimeline);
 }
 
-bool radiogeddon_scene_timeline_on_event(void* context, SceneManagerEvent event) {
+RG_UI_TEXT bool radiogeddon_scene_timeline_on_event(void* context, SceneManagerEvent event) {
     RadioGeddonApp* app = context;
     if(event.type == SceneManagerEventTypeCustom && event.event == TimelineEventReload) {
         if(app->timeline_view && app->timeline_file) radiogeddon_scene_timeline_load(app);
@@ -147,7 +148,7 @@ bool radiogeddon_scene_timeline_on_event(void* context, SceneManagerEvent event)
     return false;
 }
 
-void radiogeddon_scene_timeline_on_exit(void* context) {
+RG_UI_TEXT void radiogeddon_scene_timeline_on_exit(void* context) {
     RadioGeddonApp* app = context;
     if(app->timeline_view) {
         view_dispatcher_remove_view(app->view_dispatcher, RadioGeddonViewTimeline);

@@ -16,7 +16,7 @@ typedef enum {
     BitstreamEventFailed = 970,
 } BitstreamEvent;
 
-static const char* radiogeddon_scene_bitstream_error(RadioGeddonAnalysisStatus status) {
+static RG_UI_TEXT const char* radiogeddon_scene_bitstream_error(RadioGeddonAnalysisStatus status) {
     switch(status) {
     case RadioGeddonAnalysisNoMemory:
         return "Not enough free\nmemory. Close other\napps and retry.";
@@ -29,7 +29,7 @@ static const char* radiogeddon_scene_bitstream_error(RadioGeddonAnalysisStatus s
     }
 }
 
-void radiogeddon_scene_bitstream_on_enter(void* context) {
+RG_UI_TEXT void radiogeddon_scene_bitstream_on_enter(void* context) {
     RadioGeddonApp* app = context;
     RadioGeddonAnalysisStatus status = RadioGeddonAnalysisOk;
     // The analysis at its peak (result and working state). The module was
@@ -65,7 +65,7 @@ void radiogeddon_scene_bitstream_on_enter(void* context) {
     view_dispatcher_switch_to_view(app->view_dispatcher, RadioGeddonViewBits);
 }
 
-bool radiogeddon_scene_bitstream_on_event(void* context, SceneManagerEvent event) {
+RG_UI_TEXT bool radiogeddon_scene_bitstream_on_event(void* context, SceneManagerEvent event) {
     RadioGeddonApp* app = context;
     if(!app->bits_doc && event.type == SceneManagerEventTypeCustom &&
        event.event == BitstreamEventFailed) {
@@ -79,7 +79,7 @@ bool radiogeddon_scene_bitstream_on_event(void* context, SceneManagerEvent event
     return false;
 }
 
-void radiogeddon_scene_bitstream_on_exit(void* context) {
+RG_UI_TEXT void radiogeddon_scene_bitstream_on_exit(void* context) {
     RadioGeddonApp* app = context;
     if(app->bits_view) {
         view_dispatcher_remove_view(app->view_dispatcher, RadioGeddonViewBits);

@@ -33,7 +33,7 @@ static const char* const customize_expression[RgLookExpressionCount] = {
 static const char* const customize_accessory[RgLookAccessoryCount] =
     {"None", "Bow tie", "Scarf", "ID badge"};
 
-static uint8_t customize_level(RadioGeddonApp* app) {
+static RG_UI_TEXT uint8_t customize_level(RadioGeddonApp* app) {
 #if RG_FEATURE_JOURNAL
     return rg_journal_unlock_level(&app->research.journal, app->settings.research_xp);
 #else
@@ -42,7 +42,8 @@ static uint8_t customize_level(RadioGeddonApp* app) {
 #endif
 }
 
-static void customize_decoration_text(RadioGeddonApp* app, VariableItem* item, uint8_t d) {
+static RG_UI_TEXT void
+    customize_decoration_text(RadioGeddonApp* app, VariableItem* item, uint8_t d) {
     char text[24];
     if(rg_decoration_unlocked((RgDecoration)d, customize_level(app))) {
         strlcpy(text, rg_decoration_name((RgDecoration)d), sizeof(text));
@@ -57,7 +58,7 @@ static void customize_decoration_text(RadioGeddonApp* app, VariableItem* item, u
     variable_item_set_current_value_text(item, text);
 }
 
-static void customize_changed(VariableItem* item) {
+static RG_UI_TEXT void customize_changed(VariableItem* item) {
     RadioGeddonApp* app = variable_item_get_context(item);
     uint8_t v = variable_item_get_current_value_index(item);
     uint8_t row = variable_item_list_get_selected_item_index(app->var_item_list);
@@ -102,7 +103,7 @@ static void customize_changed(VariableItem* item) {
     radiogeddon_ui_apply_style(app);
 }
 
-static VariableItem* customize_add(
+static RG_UI_TEXT VariableItem* customize_add(
     RadioGeddonApp* app,
     const char* label,
     uint8_t count,
@@ -116,7 +117,7 @@ static VariableItem* customize_add(
     return item;
 }
 
-void radiogeddon_scene_customize_on_enter(void* context) {
+RG_UI_TEXT void radiogeddon_scene_customize_on_enter(void* context) {
     RadioGeddonApp* app = context;
     // No enter action here: never keep another screen's callback.
     radiogeddon_scene_var_list_release(app);
@@ -151,13 +152,13 @@ void radiogeddon_scene_customize_on_enter(void* context) {
     view_dispatcher_switch_to_view(app->view_dispatcher, RadioGeddonViewVarItemList);
 }
 
-bool radiogeddon_scene_customize_on_event(void* context, SceneManagerEvent event) {
+RG_UI_TEXT bool radiogeddon_scene_customize_on_event(void* context, SceneManagerEvent event) {
     UNUSED(context);
     UNUSED(event);
     return false;
 }
 
-void radiogeddon_scene_customize_on_exit(void* context) {
+RG_UI_TEXT void radiogeddon_scene_customize_on_exit(void* context) {
     RadioGeddonApp* app = context;
     radiogeddon_app_save_settings(app);
     radiogeddon_scene_var_list_release(app);

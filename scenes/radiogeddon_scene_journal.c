@@ -37,12 +37,12 @@ typedef enum {
 
 static char* journal_text;
 
-static void journal_cb(void* context, uint32_t index) {
+static RG_UI_TEXT void journal_cb(void* context, uint32_t index) {
     RadioGeddonApp* app = context;
     view_dispatcher_send_custom_event(app->view_dispatcher, index);
 }
 
-static void journal_show_menu(RadioGeddonApp* app, uint32_t selected) {
+static RG_UI_TEXT void journal_show_menu(RadioGeddonApp* app, uint32_t selected) {
     scene_manager_set_scene_state(app->scene_manager, RadioGeddonSceneJournal, JournalModeMenu);
     Submenu* submenu = app->submenu;
     submenu_reset(submenu);
@@ -80,7 +80,7 @@ static void journal_show_menu(RadioGeddonApp* app, uint32_t selected) {
 }
 
 /* A text page. */
-static void journal_show_page(RadioGeddonApp* app, bool achievements) {
+static RG_UI_TEXT void journal_show_page(RadioGeddonApp* app, bool achievements) {
     if(!journal_text) journal_text = malloc(JOURNAL_TEXT_SIZE);
     RadioGeddonResearch* r = &app->research;
     if(achievements) {
@@ -98,12 +98,12 @@ static void journal_show_page(RadioGeddonApp* app, bool achievements) {
     view_dispatcher_switch_to_view(app->view_dispatcher, RadioGeddonViewTextBox);
 }
 
-void radiogeddon_scene_journal_on_enter(void* context) {
+RG_UI_TEXT void radiogeddon_scene_journal_on_enter(void* context) {
     RadioGeddonApp* app = context;
     journal_show_menu(app, 0);
 }
 
-bool radiogeddon_scene_journal_on_event(void* context, SceneManagerEvent event) {
+RG_UI_TEXT bool radiogeddon_scene_journal_on_event(void* context, SceneManagerEvent event) {
     RadioGeddonApp* app = context;
     uint32_t mode = scene_manager_get_scene_state(app->scene_manager, RadioGeddonSceneJournal);
     if(event.type == SceneManagerEventTypeBack) {
@@ -166,7 +166,7 @@ bool radiogeddon_scene_journal_on_event(void* context, SceneManagerEvent event) 
     return true;
 }
 
-void radiogeddon_scene_journal_on_exit(void* context) {
+RG_UI_TEXT void radiogeddon_scene_journal_on_exit(void* context) {
     RadioGeddonApp* app = context;
     submenu_reset(app->submenu);
     text_box_reset(app->text_box);

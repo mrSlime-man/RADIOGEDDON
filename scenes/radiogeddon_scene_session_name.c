@@ -8,7 +8,7 @@ typedef enum {
     SessionNameEventEntered = 990,
 } SessionNameEvent;
 
-static bool
+static RG_UI_TEXT bool
     radiogeddon_scene_session_name_validator(const char* text, FuriString* error, void* context) {
     RadioGeddonApp* app = context;
     if(!rg_session_name_valid(text)) {
@@ -25,12 +25,12 @@ static bool
     return true;
 }
 
-static void radiogeddon_scene_session_name_cb(void* context) {
+static RG_UI_TEXT void radiogeddon_scene_session_name_cb(void* context) {
     RadioGeddonApp* app = context;
     view_dispatcher_send_custom_event(app->view_dispatcher, SessionNameEventEntered);
 }
 
-void radiogeddon_scene_session_name_on_enter(void* context) {
+RG_UI_TEXT void radiogeddon_scene_session_name_on_enter(void* context) {
     RadioGeddonApp* app = context;
     bool rename = app->session_name_mode == RadioGeddonSessionNameRename && app->session;
     strlcpy(app->text_store, rename ? app->session->name : "", sizeof(app->text_store));
@@ -49,7 +49,7 @@ void radiogeddon_scene_session_name_on_enter(void* context) {
     view_dispatcher_switch_to_view(app->view_dispatcher, RadioGeddonViewTextInput);
 }
 
-bool radiogeddon_scene_session_name_on_event(void* context, SceneManagerEvent event) {
+RG_UI_TEXT bool radiogeddon_scene_session_name_on_event(void* context, SceneManagerEvent event) {
     RadioGeddonApp* app = context;
     if(event.type != SceneManagerEventTypeCustom || event.event != SessionNameEventEntered)
         return false;
@@ -85,7 +85,7 @@ bool radiogeddon_scene_session_name_on_event(void* context, SceneManagerEvent ev
     return true;
 }
 
-void radiogeddon_scene_session_name_on_exit(void* context) {
+RG_UI_TEXT void radiogeddon_scene_session_name_on_exit(void* context) {
     RadioGeddonApp* app = context;
     text_input_set_validator(app->text_input, NULL, NULL);
     text_input_reset(app->text_input);

@@ -77,7 +77,7 @@ static const char* const config_freq_step_text[] =
 static const char* const config_source_text[RadioGeddonSourceCount] = {"List", "Favorites"};
 #endif
 
-static uint32_t radiogeddon_config_band_mask(size_t band) {
+static RG_UI_TEXT uint32_t radiogeddon_config_band_mask(size_t band) {
     return rg_scan_band_mask(
         radiogeddon_frequencies,
         radiogeddon_frequencies_count,
@@ -85,14 +85,14 @@ static uint32_t radiogeddon_config_band_mask(size_t band) {
         config_bands[band].hi_hz);
 }
 
-static size_t radiogeddon_config_current_band(uint32_t mask) {
+static RG_UI_TEXT size_t radiogeddon_config_current_band(uint32_t mask) {
     for(size_t i = 0; i < CONFIG_BAND_COUNT; i++) {
         if(radiogeddon_config_band_mask(i) == mask) return i;
     }
     return CONFIG_BAND_CUSTOM;
 }
 
-static void radiogeddon_scene_config_freq_changed(VariableItem* item) {
+static RG_UI_TEXT void radiogeddon_scene_config_freq_changed(VariableItem* item) {
     RadioGeddonApp* app = variable_item_get_context(item);
     uint8_t index = variable_item_get_current_value_index(item);
     char text[RG_FREQ_TEXT_SIZE];
@@ -114,14 +114,14 @@ static void radiogeddon_scene_config_freq_changed(VariableItem* item) {
     app->frequency = hz;
 }
 
-static void radiogeddon_scene_config_preset_changed(VariableItem* item) {
+static RG_UI_TEXT void radiogeddon_scene_config_preset_changed(VariableItem* item) {
     RadioGeddonApp* app = variable_item_get_context(item);
     uint8_t index = variable_item_get_current_value_index(item);
     variable_item_set_current_value_text(item, radiogeddon_presets[index].label);
     app->preset_index = index;
 }
 
-static void radiogeddon_scene_config_band_changed(VariableItem* item) {
+static RG_UI_TEXT void radiogeddon_scene_config_band_changed(VariableItem* item) {
     RadioGeddonApp* app = variable_item_get_context(item);
     uint8_t index = variable_item_get_current_value_index(item);
     if(index < CONFIG_BAND_COUNT) {
@@ -138,25 +138,25 @@ static void radiogeddon_scene_config_band_changed(VariableItem* item) {
 // scan list, then "Custom".
 #define CONFIG_HOP_CHOICES (CONFIG_BAND_COUNT + 2)
 
-static uint32_t radiogeddon_config_hop_choice_mask(size_t choice) {
+static RG_UI_TEXT uint32_t radiogeddon_config_hop_choice_mask(size_t choice) {
     if(choice == 0) return radiogeddon_settings_default_hop_mask();
     return radiogeddon_config_band_mask(choice - 1);
 }
 
-static const char* radiogeddon_config_hop_choice_label(size_t choice) {
+static RG_UI_TEXT const char* radiogeddon_config_hop_choice_label(size_t choice) {
     if(choice == 0) return "Common";
     if(choice <= CONFIG_BAND_COUNT) return config_bands[choice - 1].label;
     return "Custom";
 }
 
-static size_t radiogeddon_config_current_hop_choice(uint32_t mask) {
+static RG_UI_TEXT size_t radiogeddon_config_current_hop_choice(uint32_t mask) {
     for(size_t i = 0; i < CONFIG_HOP_CHOICES - 1; i++) {
         if(radiogeddon_config_hop_choice_mask(i) == mask) return i;
     }
     return CONFIG_HOP_CHOICES - 1;
 }
 
-static void radiogeddon_scene_config_hop_list_changed(VariableItem* item) {
+static RG_UI_TEXT void radiogeddon_scene_config_hop_list_changed(VariableItem* item) {
     RadioGeddonApp* app = variable_item_get_context(item);
     uint8_t index = variable_item_get_current_value_index(item);
     if(index < CONFIG_HOP_CHOICES - 1) {
@@ -166,7 +166,7 @@ static void radiogeddon_scene_config_hop_list_changed(VariableItem* item) {
     variable_item_set_current_value_text(item, radiogeddon_config_hop_choice_label(index));
 }
 
-static void radiogeddon_scene_config_hop_dwell_changed(VariableItem* item) {
+static RG_UI_TEXT void radiogeddon_scene_config_hop_dwell_changed(VariableItem* item) {
     RadioGeddonApp* app = variable_item_get_context(item);
     uint8_t index = variable_item_get_current_value_index(item);
     app->settings.hop_dwell_ms = config_hop_dwell_ms[index];
@@ -175,7 +175,7 @@ static void radiogeddon_scene_config_hop_dwell_changed(VariableItem* item) {
     variable_item_set_current_value_text(item, text);
 }
 
-static void radiogeddon_scene_config_hop_hold_changed(VariableItem* item) {
+static RG_UI_TEXT void radiogeddon_scene_config_hop_hold_changed(VariableItem* item) {
     RadioGeddonApp* app = variable_item_get_context(item);
     uint8_t index = variable_item_get_current_value_index(item);
     app->settings.hop_hold_ms = config_hop_hold_ms[index];
@@ -184,14 +184,14 @@ static void radiogeddon_scene_config_hop_hold_changed(VariableItem* item) {
     variable_item_set_current_value_text(item, text);
 }
 
-static void radiogeddon_scene_config_hop_record_changed(VariableItem* item) {
+static RG_UI_TEXT void radiogeddon_scene_config_hop_record_changed(VariableItem* item) {
     RadioGeddonApp* app = variable_item_get_context(item);
     uint8_t index = variable_item_get_current_value_index(item);
     app->settings.hop_auto_record = (index == 1);
     variable_item_set_current_value_text(item, index ? "On" : "Off");
 }
 
-static void radiogeddon_scene_config_dwell_changed(VariableItem* item) {
+static RG_UI_TEXT void radiogeddon_scene_config_dwell_changed(VariableItem* item) {
     RadioGeddonApp* app = variable_item_get_context(item);
     uint8_t index = variable_item_get_current_value_index(item);
     app->settings.scan_dwell_ms = config_dwell_ms[index];
@@ -200,7 +200,7 @@ static void radiogeddon_scene_config_dwell_changed(VariableItem* item) {
     variable_item_set_current_value_text(item, text);
 }
 
-static void radiogeddon_scene_config_threshold_changed(VariableItem* item) {
+static RG_UI_TEXT void radiogeddon_scene_config_threshold_changed(VariableItem* item) {
     RadioGeddonApp* app = variable_item_get_context(item);
     uint8_t index = variable_item_get_current_value_index(item);
     app->settings.scan_threshold_db = config_threshold_db[index];
@@ -209,7 +209,7 @@ static void radiogeddon_scene_config_threshold_changed(VariableItem* item) {
     variable_item_set_current_value_text(item, text);
 }
 
-static void radiogeddon_scene_config_hold_changed(VariableItem* item) {
+static RG_UI_TEXT void radiogeddon_scene_config_hold_changed(VariableItem* item) {
     RadioGeddonApp* app = variable_item_get_context(item);
     uint8_t index = variable_item_get_current_value_index(item);
     app->settings.scan_hold_on_hit = (index == 1);
@@ -218,7 +218,8 @@ static void radiogeddon_scene_config_hold_changed(VariableItem* item) {
 
 /* Switch to the radio the settings ask for. False if an external module was
  * wanted but did not answer (the internal radio is then in use). */
-static bool radiogeddon_scene_config_apply_radio(RadioGeddonApp* app, bool want_external) {
+static RG_UI_TEXT bool
+    radiogeddon_scene_config_apply_radio(RadioGeddonApp* app, bool want_external) {
     // Start from the internal radio so a changed 5 V setting takes effect.
     radiogeddon_subghz_set_radio(app->subghz, RadioGeddonRadioInternal, false);
     bool external = false;
@@ -231,12 +232,12 @@ static bool radiogeddon_scene_config_apply_radio(RadioGeddonApp* app, bool want_
     return external == want_external;
 }
 
-static void radiogeddon_scene_config_radio_text(VariableItem* item, bool external) {
+static RG_UI_TEXT void radiogeddon_scene_config_radio_text(VariableItem* item, bool external) {
     variable_item_set_current_value_index(item, external ? 1 : 0);
     variable_item_set_current_value_text(item, external ? "External" : "Internal");
 }
 
-static void radiogeddon_scene_config_radio_changed(VariableItem* item) {
+static RG_UI_TEXT void radiogeddon_scene_config_radio_changed(VariableItem* item) {
     RadioGeddonApp* app = variable_item_get_context(item);
     bool want = variable_item_get_current_value_index(item) == 1;
     bool ok = radiogeddon_scene_config_apply_radio(app, want);
@@ -244,7 +245,7 @@ static void radiogeddon_scene_config_radio_changed(VariableItem* item) {
     if(!ok) view_dispatcher_send_custom_event(app->view_dispatcher, ConfigCustomExtMissing);
 }
 
-static void radiogeddon_scene_config_ext_power_changed(VariableItem* item) {
+static RG_UI_TEXT void radiogeddon_scene_config_ext_power_changed(VariableItem* item) {
     RadioGeddonApp* app = variable_item_get_context(item);
     uint8_t index = variable_item_get_current_value_index(item);
     app->settings.ext_power = (index == 1);
@@ -257,21 +258,21 @@ static void radiogeddon_scene_config_ext_power_changed(VariableItem* item) {
 }
 
 #if RG_EDITION_FULL
-static void radiogeddon_scene_config_scan_source_changed(VariableItem* item) {
+static RG_UI_TEXT void radiogeddon_scene_config_scan_source_changed(VariableItem* item) {
     RadioGeddonApp* app = variable_item_get_context(item);
     uint8_t index = variable_item_get_current_value_index(item);
     app->settings.scan_source = index;
     variable_item_set_current_value_text(item, config_source_text[index]);
 }
 
-static void radiogeddon_scene_config_hop_source_changed(VariableItem* item) {
+static RG_UI_TEXT void radiogeddon_scene_config_hop_source_changed(VariableItem* item) {
     RadioGeddonApp* app = variable_item_get_context(item);
     uint8_t index = variable_item_get_current_value_index(item);
     app->settings.hop_source = index;
     variable_item_set_current_value_text(item, config_source_text[index]);
 }
 
-static void radiogeddon_scene_config_freq_step_changed(VariableItem* item) {
+static RG_UI_TEXT void radiogeddon_scene_config_freq_step_changed(VariableItem* item) {
     RadioGeddonApp* app = variable_item_get_context(item);
     uint8_t index = variable_item_get_current_value_index(item);
     bool was_list = app->settings.freq_step_hz == 0;
@@ -284,7 +285,7 @@ static void radiogeddon_scene_config_freq_step_changed(VariableItem* item) {
 }
 #endif
 
-static void radiogeddon_scene_config_enter_cb(void* context, uint32_t index) {
+static RG_UI_TEXT void radiogeddon_scene_config_enter_cb(void* context, uint32_t index) {
     RadioGeddonApp* app = context;
 #if RG_FEATURE_BAND_INFO
     if(index == ConfigItemBands) {
@@ -302,27 +303,27 @@ static void radiogeddon_scene_config_enter_cb(void* context, uint32_t index) {
 }
 
 #if RG_FEATURE_DOLPHIN_LAB
-static void radiogeddon_scene_config_ui_style_changed(VariableItem* item) {
+static RG_UI_TEXT void radiogeddon_scene_config_ui_style_changed(VariableItem* item) {
     RadioGeddonApp* app = variable_item_get_context(item);
     uint8_t index = variable_item_get_current_value_index(item);
     app->settings.ui_style = index;
     variable_item_set_current_value_text(item, rg_ui_style_name((RgUiStyle)index));
 }
 
-static void radiogeddon_scene_config_ui_feedback_changed(VariableItem* item) {
+static RG_UI_TEXT void radiogeddon_scene_config_ui_feedback_changed(VariableItem* item) {
     RadioGeddonApp* app = variable_item_get_context(item);
     uint8_t index = variable_item_get_current_value_index(item);
     app->settings.ui_feedback = index;
     variable_item_set_current_value_text(item, rg_ui_feedback_name((RgUiFeedbackLevel)index));
 }
 
-static void radiogeddon_scene_config_transitions_changed(VariableItem* item) {
+static RG_UI_TEXT void radiogeddon_scene_config_transitions_changed(VariableItem* item) {
     RadioGeddonApp* app = variable_item_get_context(item);
     app->settings.ui_transitions = variable_item_get_current_value_index(item) == 1;
     variable_item_set_current_value_text(item, app->settings.ui_transitions ? "On" : "Off");
 }
 
-static void radiogeddon_scene_config_animation_changed(VariableItem* item) {
+static RG_UI_TEXT void radiogeddon_scene_config_animation_changed(VariableItem* item) {
     RadioGeddonApp* app = variable_item_get_context(item);
     app->settings.ui_animation = variable_item_get_current_value_index(item);
     variable_item_set_current_value_text(
@@ -330,26 +331,27 @@ static void radiogeddon_scene_config_animation_changed(VariableItem* item) {
     radiogeddon_ui_apply_style(app); // at once
 }
 
-static void radiogeddon_scene_config_assistant_changed(VariableItem* item) {
+static RG_UI_TEXT void radiogeddon_scene_config_assistant_changed(VariableItem* item) {
     RadioGeddonApp* app = variable_item_get_context(item);
     app->settings.assistant = variable_item_get_current_value_index(item) == 1;
     variable_item_set_current_value_text(item, app->settings.assistant ? "On" : "Off");
 }
 
-static void radiogeddon_scene_config_xp_changed(VariableItem* item) {
+static RG_UI_TEXT void radiogeddon_scene_config_xp_changed(VariableItem* item) {
     RadioGeddonApp* app = variable_item_get_context(item);
     app->settings.research_xp = variable_item_get_current_value_index(item) == 1;
     variable_item_set_current_value_text(item, app->settings.research_xp ? "On" : "Off");
 }
 #endif
 
-static void radiogeddon_scene_config_saver_changed(VariableItem* item) {
+static RG_UI_TEXT void radiogeddon_scene_config_saver_changed(VariableItem* item) {
     RadioGeddonApp* app = variable_item_get_context(item);
     app->settings.battery_saver = variable_item_get_current_value_index(item) == 1;
     variable_item_set_current_value_text(item, app->settings.battery_saver ? "On" : "Off");
 }
 
-static uint8_t radiogeddon_config_nearest_u16(const uint16_t* values, size_t n, uint16_t v) {
+static RG_UI_TEXT uint8_t
+    radiogeddon_config_nearest_u16(const uint16_t* values, size_t n, uint16_t v) {
     uint8_t best = 0;
     for(size_t i = 0; i < n; i++) {
         if(values[i] <= v) best = (uint8_t)i;
@@ -357,7 +359,8 @@ static uint8_t radiogeddon_config_nearest_u16(const uint16_t* values, size_t n, 
     return best;
 }
 
-static uint8_t radiogeddon_config_nearest_u8(const uint8_t* values, size_t n, uint8_t v) {
+static RG_UI_TEXT uint8_t
+    radiogeddon_config_nearest_u8(const uint8_t* values, size_t n, uint8_t v) {
     uint8_t best = 0;
     for(size_t i = 0; i < n; i++) {
         if(values[i] <= v) best = (uint8_t)i;
@@ -365,7 +368,7 @@ static uint8_t radiogeddon_config_nearest_u8(const uint8_t* values, size_t n, ui
     return best;
 }
 
-void radiogeddon_scene_config_on_enter(void* context) {
+RG_UI_TEXT void radiogeddon_scene_config_on_enter(void* context) {
     RadioGeddonApp* app = context;
     VariableItemList* list = app->var_item_list;
     variable_item_list_reset(list);
@@ -592,7 +595,7 @@ void radiogeddon_scene_config_on_enter(void* context) {
     view_dispatcher_switch_to_view(app->view_dispatcher, RadioGeddonViewVarItemList);
 }
 
-bool radiogeddon_scene_config_on_event(void* context, SceneManagerEvent event) {
+RG_UI_TEXT bool radiogeddon_scene_config_on_event(void* context, SceneManagerEvent event) {
     RadioGeddonApp* app = context;
     if(event.type == SceneManagerEventTypeCustom && event.event == ConfigCustomExtMissing) {
         scene_manager_set_scene_state(app->scene_manager, RadioGeddonSceneConfig, ConfigItemRadio);
@@ -638,7 +641,7 @@ bool radiogeddon_scene_config_on_event(void* context, SceneManagerEvent event) {
     return false;
 }
 
-void radiogeddon_scene_config_on_exit(void* context) {
+RG_UI_TEXT void radiogeddon_scene_config_on_exit(void* context) {
     RadioGeddonApp* app = context;
     // A custom frequency may not suit a radio chosen after it was typed.
     if(!radiogeddon_subghz_is_frequency_allowed(app->subghz, app->frequency)) {

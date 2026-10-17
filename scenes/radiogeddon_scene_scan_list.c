@@ -3,12 +3,12 @@
 // One On/Off row per known frequency. Scene state 0 edits the scanner's list,
 // 1 the hopper's.
 
-static uint32_t* radiogeddon_scene_scan_list_mask(RadioGeddonApp* app) {
+static RG_UI_TEXT uint32_t* radiogeddon_scene_scan_list_mask(RadioGeddonApp* app) {
     bool hop = scene_manager_get_scene_state(app->scene_manager, RadioGeddonSceneScanList) == 1;
     return hop ? &app->settings.hop_mask : &app->settings.scan_mask;
 }
 
-static void radiogeddon_scene_scan_list_changed(VariableItem* item) {
+static RG_UI_TEXT void radiogeddon_scene_scan_list_changed(VariableItem* item) {
     RadioGeddonApp* app = variable_item_get_context(item);
     uint8_t on = variable_item_get_current_value_index(item);
     uint8_t row = variable_item_list_get_selected_item_index(app->var_item_list);
@@ -27,7 +27,7 @@ static void radiogeddon_scene_scan_list_changed(VariableItem* item) {
     variable_item_set_current_value_text(item, on ? "On" : "Off");
 }
 
-void radiogeddon_scene_scan_list_on_enter(void* context) {
+RG_UI_TEXT void radiogeddon_scene_scan_list_on_enter(void* context) {
     RadioGeddonApp* app = context;
     VariableItemList* list = app->var_item_list;
     // No enter action here: never keep another screen's callback.
@@ -53,13 +53,13 @@ void radiogeddon_scene_scan_list_on_enter(void* context) {
     view_dispatcher_switch_to_view(app->view_dispatcher, RadioGeddonViewVarItemList);
 }
 
-bool radiogeddon_scene_scan_list_on_event(void* context, SceneManagerEvent event) {
+RG_UI_TEXT bool radiogeddon_scene_scan_list_on_event(void* context, SceneManagerEvent event) {
     UNUSED(context);
     UNUSED(event);
     return false;
 }
 
-void radiogeddon_scene_scan_list_on_exit(void* context) {
+RG_UI_TEXT void radiogeddon_scene_scan_list_on_exit(void* context) {
     RadioGeddonApp* app = context;
     radiogeddon_app_save_settings(app);
     radiogeddon_scene_var_list_release(app);

@@ -29,7 +29,7 @@ static RadioGeddonGroups* radiogeddon_groups;
 /* Set just before a message is shown over the list: keep it for the return. */
 static bool radiogeddon_groups_keep;
 
-static void radiogeddon_scene_session_groups_free(void) {
+static RG_UI_TEXT void radiogeddon_scene_session_groups_free(void) {
     RadioGeddonGroups* g = radiogeddon_groups;
     if(!g) return;
     radiogeddon_db_free(g->db);
@@ -39,12 +39,12 @@ static void radiogeddon_scene_session_groups_free(void) {
     radiogeddon_groups = NULL;
 }
 
-static void radiogeddon_scene_session_groups_cb(void* context, uint32_t index) {
+static RG_UI_TEXT void radiogeddon_scene_session_groups_cb(void* context, uint32_t index) {
     RadioGeddonApp* app = context;
     view_dispatcher_send_custom_event(app->view_dispatcher, index);
 }
 
-static void
+static RG_UI_TEXT void
     radiogeddon_scene_session_groups_label(const RgSessionGroup* g, char* out, size_t size) {
     char freq[RG_FREQ_TEXT_SIZE];
     rg_freq_text(g->frequency, freq, sizeof(freq));
@@ -57,7 +57,7 @@ static void
     }
 }
 
-static void radiogeddon_scene_session_groups_show(RadioGeddonApp* app) {
+static RG_UI_TEXT void radiogeddon_scene_session_groups_show(RadioGeddonApp* app) {
     RadioGeddonGroups* g = radiogeddon_groups;
     Submenu* submenu = app->submenu;
     submenu_reset(submenu);
@@ -71,7 +71,7 @@ static void radiogeddon_scene_session_groups_show(RadioGeddonApp* app) {
     view_dispatcher_switch_to_view(app->view_dispatcher, RadioGeddonViewSubmenu);
 }
 
-void radiogeddon_scene_session_groups_on_enter(void* context) {
+RG_UI_TEXT void radiogeddon_scene_session_groups_on_enter(void* context) {
     RadioGeddonApp* app = context;
     scene_manager_set_scene_state(app->scene_manager, RadioGeddonSceneSessionGroups, 0);
     if(radiogeddon_groups) {
@@ -121,7 +121,7 @@ void radiogeddon_scene_session_groups_on_enter(void* context) {
 }
 
 /* A free session name from the group: "433.92 Princeton", "... 2" ... */
-static bool
+static RG_UI_TEXT bool
     radiogeddon_scene_session_groups_name(RadioGeddonApp* app, const RgSessionGroup* g, char* out) {
     char base[RG_SESSION_NAME_MAX];
     char freq[RG_FREQ_TEXT_SIZE];
@@ -141,7 +141,7 @@ static bool
     return false;
 }
 
-static void radiogeddon_scene_session_groups_create(RadioGeddonApp* app) {
+static RG_UI_TEXT void radiogeddon_scene_session_groups_create(RadioGeddonApp* app) {
     RadioGeddonGroups* g = radiogeddon_groups;
     const RgSessionGroup* grp = &g->group[g->chosen];
     RgSession* s = malloc(sizeof(RgSession));
@@ -166,7 +166,7 @@ static void radiogeddon_scene_session_groups_create(RadioGeddonApp* app) {
     }
 }
 
-bool radiogeddon_scene_session_groups_on_event(void* context, SceneManagerEvent event) {
+RG_UI_TEXT bool radiogeddon_scene_session_groups_on_event(void* context, SceneManagerEvent event) {
     RadioGeddonApp* app = context;
     RadioGeddonGroups* g = radiogeddon_groups;
     // Back while asking returns to the list.
@@ -216,7 +216,7 @@ bool radiogeddon_scene_session_groups_on_event(void* context, SceneManagerEvent 
     return false;
 }
 
-void radiogeddon_scene_session_groups_on_exit(void* context) {
+RG_UI_TEXT void radiogeddon_scene_session_groups_on_exit(void* context) {
     RadioGeddonApp* app = context;
     submenu_reset(app->submenu);
     widget_reset(app->widget);

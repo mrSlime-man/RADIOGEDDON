@@ -18,7 +18,7 @@ typedef enum {
 } AboutEvent;
 
 /* The report's facts: what a bug report needs, nothing of the captures. */
-static void about_facts(RadioGeddonApp* app, FuriString* out) {
+static RG_UI_TEXT void about_facts(RadioGeddonApp* app, FuriString* out) {
     const Version* v = version_get();
     furi_string_cat_printf(
         out,
@@ -39,14 +39,14 @@ static void about_facts(RadioGeddonApp* app, FuriString* out) {
     radiogeddon_memdiag_report_diag(out);
 }
 
-static void about_save_cb(GuiButtonType type, InputType input, void* context) {
+static RG_UI_TEXT void about_save_cb(GuiButtonType type, InputType input, void* context) {
     RadioGeddonApp* app = context;
     if(type == GuiButtonTypeCenter && input == InputTypeShort)
         view_dispatcher_send_custom_event(app->view_dispatcher, AboutEventSave);
 }
 
 /* Write the report; false (with the reason in the popup) if the card refused. */
-static bool about_save(RadioGeddonApp* app, FuriString* path) {
+static RG_UI_TEXT bool about_save(RadioGeddonApp* app, FuriString* path) {
     storage_common_mkdir(app->storage, ABOUT_DIAG_FOLDER);
     FuriString* name = furi_string_alloc();
     radiogeddon_storage_default_name(name);
@@ -68,7 +68,7 @@ static bool about_save(RadioGeddonApp* app, FuriString* path) {
     return ok;
 }
 
-void radiogeddon_scene_about_on_enter(void* context) {
+RG_UI_TEXT void radiogeddon_scene_about_on_enter(void* context) {
     RadioGeddonApp* app = context;
     Widget* widget = app->widget;
     widget_reset(widget);
@@ -124,7 +124,7 @@ void radiogeddon_scene_about_on_enter(void* context) {
     view_dispatcher_switch_to_view(app->view_dispatcher, RadioGeddonViewWidget);
 }
 
-bool radiogeddon_scene_about_on_event(void* context, SceneManagerEvent event) {
+RG_UI_TEXT bool radiogeddon_scene_about_on_event(void* context, SceneManagerEvent event) {
     RadioGeddonApp* app = context;
     if(event.type != SceneManagerEventTypeCustom || event.event != AboutEventSave) return false;
     FuriString* path = furi_string_alloc();
@@ -140,7 +140,7 @@ bool radiogeddon_scene_about_on_event(void* context, SceneManagerEvent event) {
     return true;
 }
 
-void radiogeddon_scene_about_on_exit(void* context) {
+RG_UI_TEXT void radiogeddon_scene_about_on_exit(void* context) {
     RadioGeddonApp* app = context;
     widget_reset(app->widget);
 }

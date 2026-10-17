@@ -8,7 +8,7 @@
 #define FILE_DETAILS_MAX_DUPS  8u
 #define FILE_DETAILS_PEEK_SIZE 40u
 
-static void radiogeddon_scene_file_details_time(FuriString* out, uint32_t timestamp) {
+static RG_UI_TEXT void radiogeddon_scene_file_details_time(FuriString* out, uint32_t timestamp) {
     if(timestamp == 0) {
         furi_string_cat_str(out, "unknown");
         return;
@@ -20,7 +20,7 @@ static void radiogeddon_scene_file_details_time(FuriString* out, uint32_t timest
 }
 
 /* The first line of a damaged file, with anything unprintable shown as '.'. */
-static void radiogeddon_scene_file_details_peek(RadioGeddonApp* app, FuriString* out) {
+static RG_UI_TEXT void radiogeddon_scene_file_details_peek(RadioGeddonApp* app, FuriString* out) {
     char buf[FILE_DETAILS_PEEK_SIZE + 1];
     size_t n = 0;
     File* file = storage_file_alloc(app->storage);
@@ -44,7 +44,8 @@ static void radiogeddon_scene_file_details_peek(RadioGeddonApp* app, FuriString*
     furi_string_cat_printf(out, "Starts with:\n%s\n", buf);
 }
 
-static void radiogeddon_scene_file_details_dups(RadioGeddonApp* app, const char* file_name) {
+static RG_UI_TEXT void
+    radiogeddon_scene_file_details_dups(RadioGeddonApp* app, const char* file_name) {
     if(!app->db) return;
     const RgDb* db = &app->db->db;
     int32_t self = rg_db_find(db, file_name);
@@ -65,7 +66,7 @@ static void radiogeddon_scene_file_details_dups(RadioGeddonApp* app, const char*
     }
 }
 
-void radiogeddon_scene_file_details_on_enter(void* context) {
+RG_UI_TEXT void radiogeddon_scene_file_details_on_enter(void* context) {
     RadioGeddonApp* app = context;
     FuriString* out = app->temp_str;
     const char* path = furi_string_get_cstr(app->file_path);
@@ -119,13 +120,13 @@ void radiogeddon_scene_file_details_on_enter(void* context) {
     view_dispatcher_switch_to_view(app->view_dispatcher, RadioGeddonViewTextBox);
 }
 
-bool radiogeddon_scene_file_details_on_event(void* context, SceneManagerEvent event) {
+RG_UI_TEXT bool radiogeddon_scene_file_details_on_event(void* context, SceneManagerEvent event) {
     UNUSED(context);
     UNUSED(event);
     return false;
 }
 
-void radiogeddon_scene_file_details_on_exit(void* context) {
+RG_UI_TEXT void radiogeddon_scene_file_details_on_exit(void* context) {
     RadioGeddonApp* app = context;
     text_box_reset(app->text_box);
 }

@@ -15,7 +15,7 @@ typedef enum {
     AssistantEventDismiss,
 } AssistantEvent;
 
-static void assistant_button(GuiButtonType result, InputType type, void* context) {
+static RG_UI_TEXT void assistant_button(GuiButtonType result, InputType type, void* context) {
     RadioGeddonApp* app = context;
     if(type != InputTypeShort) return;
     view_dispatcher_send_custom_event(
@@ -23,7 +23,7 @@ static void assistant_button(GuiButtonType result, InputType type, void* context
         result == GuiButtonTypeRight ? AssistantEventGo : AssistantEventDismiss);
 }
 
-void radiogeddon_scene_assistant_on_enter(void* context) {
+RG_UI_TEXT void radiogeddon_scene_assistant_on_enter(void* context) {
     RadioGeddonApp* app = context;
     RgTip tip = (RgTip)app->research.tip;
     Widget* widget = app->widget;
@@ -50,7 +50,7 @@ void radiogeddon_scene_assistant_on_enter(void* context) {
 }
 
 /* The recording in context into app->loaded / file_path. */
-static bool assistant_load(RadioGeddonApp* app) {
+static RG_UI_TEXT bool assistant_load(RadioGeddonApp* app) {
     if(!radiogeddon_research_context_path(app, app->file_path)) return false;
     radiogeddon_loaded_signal_reset(&app->loaded);
     radiogeddon_loaded_signal_init(&app->loaded);
@@ -62,11 +62,11 @@ static bool assistant_load(RadioGeddonApp* app) {
 }
 
 /* The tool replaces this card: Back from it returns to the main menu. */
-static void assistant_open(SceneManager* sm, uint32_t scene) {
+static RG_UI_TEXT void assistant_open(SceneManager* sm, uint32_t scene) {
     scene_manager_search_and_switch_to_another_scene(sm, scene);
 }
 
-static void assistant_go(RadioGeddonApp* app, RgTipAction action) {
+static RG_UI_TEXT void assistant_go(RadioGeddonApp* app, RgTipAction action) {
     SceneManager* sm = app->scene_manager;
     switch(action) {
     case RgTipActionSettings:
@@ -145,7 +145,7 @@ static void assistant_go(RadioGeddonApp* app, RgTipAction action) {
     }
 }
 
-bool radiogeddon_scene_assistant_on_event(void* context, SceneManagerEvent event) {
+RG_UI_TEXT bool radiogeddon_scene_assistant_on_event(void* context, SceneManagerEvent event) {
     RadioGeddonApp* app = context;
     if(event.type != SceneManagerEventTypeCustom) return false;
     if(event.event == AssistantEventDismiss) {
@@ -160,7 +160,7 @@ bool radiogeddon_scene_assistant_on_event(void* context, SceneManagerEvent event
     return false;
 }
 
-void radiogeddon_scene_assistant_on_exit(void* context) {
+RG_UI_TEXT void radiogeddon_scene_assistant_on_exit(void* context) {
     RadioGeddonApp* app = context;
     widget_reset(app->widget);
 }

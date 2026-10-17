@@ -27,13 +27,13 @@ typedef struct {
 /* Free heap kept beyond the grid and the view. */
 #define HEATMAP_SPARE (4u * 1024u)
 
-static void heatmap_fail(RadioGeddonApp* app, const char* header, const char* text) {
+static RG_UI_TEXT void heatmap_fail(RadioGeddonApp* app, const char* header, const char* text) {
     app->message_header = header;
     app->message_text = text;
     view_dispatcher_send_custom_event(app->view_dispatcher, HeatmapEventFailed);
 }
 
-void radiogeddon_scene_heatmap_on_enter(void* context) {
+RG_UI_TEXT void radiogeddon_scene_heatmap_on_enter(void* context) {
     RadioGeddonApp* app = context;
     app->message_header = NULL;
     FuriString* path = furi_string_alloc_set(RADIOGEDDON_ACTLOG_FOLDER);
@@ -78,7 +78,7 @@ void radiogeddon_scene_heatmap_on_enter(void* context) {
     view_dispatcher_switch_to_view(app->view_dispatcher, RadioGeddonViewHeatmap);
 }
 
-bool radiogeddon_scene_heatmap_on_event(void* context, SceneManagerEvent event) {
+RG_UI_TEXT bool radiogeddon_scene_heatmap_on_event(void* context, SceneManagerEvent event) {
     RadioGeddonApp* app = context;
     if(event.type == SceneManagerEventTypeCustom && event.event == HeatmapEventFailed) {
         // Leave first, then explain (nothing to say when no log was chosen).
@@ -91,7 +91,7 @@ bool radiogeddon_scene_heatmap_on_event(void* context, SceneManagerEvent event) 
     return false;
 }
 
-void radiogeddon_scene_heatmap_on_exit(void* context) {
+RG_UI_TEXT void radiogeddon_scene_heatmap_on_exit(void* context) {
     RadioGeddonApp* app = context;
     HeatmapRun* run = app->heatmap;
     if(!run) return;

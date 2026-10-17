@@ -20,13 +20,13 @@ typedef enum {
 static uint8_t room_gallery = RgMascotStateIdle;
 static uint32_t room_gallery_since;
 
-static void radiogeddon_scene_room_cb(uint8_t station, void* context) {
+static RG_UI_TEXT void radiogeddon_scene_room_cb(uint8_t station, void* context) {
     RadioGeddonApp* app = context;
     view_dispatcher_send_custom_event(app->view_dispatcher, RoomEventActionBase + station);
 }
 
 /* The oscilloscope: the first samples of a RAW recording the user picks. */
-static void radiogeddon_scene_room_scope(RadioGeddonApp* app) {
+static RG_UI_TEXT void radiogeddon_scene_room_scope(RadioGeddonApp* app) {
     DialogsFileBrowserOptions options;
     dialog_file_browser_set_basic_options(&options, RADIOGEDDON_SUB_EXTENSION, NULL);
     options.base_path = RADIOGEDDON_SIGNALS_FOLDER;
@@ -39,7 +39,7 @@ static void radiogeddon_scene_room_scope(RadioGeddonApp* app) {
     furi_string_free(sel);
 }
 
-void radiogeddon_scene_room_on_enter(void* context) {
+RG_UI_TEXT void radiogeddon_scene_room_on_enter(void* context) {
     RadioGeddonApp* app = context;
     app->room_view = radiogeddon_room_view_alloc();
     view_dispatcher_add_view(
@@ -75,7 +75,7 @@ void radiogeddon_scene_room_on_enter(void* context) {
 
 /* The dolphin's pose at each station (the corner shows the chosen one),
  * with the look and animation level chosen. */
-static void radiogeddon_scene_room_frame(RadioGeddonApp* app, RgMascotFrame* f) {
+static RG_UI_TEXT void radiogeddon_scene_room_frame(RadioGeddonApp* app, RgMascotFrame* f) {
     uint32_t now = furi_get_tick();
     uint8_t station = radiogeddon_room_view_get_station(app->room_view);
     uint32_t t = now - room_gallery_since;
@@ -116,7 +116,7 @@ static void radiogeddon_scene_room_frame(RadioGeddonApp* app, RgMascotFrame* f) 
 }
 
 /* Open the recording in context's file menu (or the Database). */
-static void radiogeddon_scene_room_workbench(RadioGeddonApp* app) {
+static RG_UI_TEXT void radiogeddon_scene_room_workbench(RadioGeddonApp* app) {
     if(radiogeddon_research_context_path(app, app->file_path)) {
         radiogeddon_loaded_signal_reset(&app->loaded);
         radiogeddon_loaded_signal_init(&app->loaded);
@@ -131,7 +131,7 @@ static void radiogeddon_scene_room_workbench(RadioGeddonApp* app) {
     }
 }
 
-bool radiogeddon_scene_room_on_event(void* context, SceneManagerEvent event) {
+RG_UI_TEXT bool radiogeddon_scene_room_on_event(void* context, SceneManagerEvent event) {
     RadioGeddonApp* app = context;
     if(!app->room_view) return false;
     if(event.type == SceneManagerEventTypeTick) {
@@ -184,7 +184,7 @@ bool radiogeddon_scene_room_on_event(void* context, SceneManagerEvent event) {
     return true;
 }
 
-void radiogeddon_scene_room_on_exit(void* context) {
+RG_UI_TEXT void radiogeddon_scene_room_on_exit(void* context) {
     RadioGeddonApp* app = context;
     if(app->room_view) {
         view_dispatcher_remove_view(app->view_dispatcher, RadioGeddonViewRoom);

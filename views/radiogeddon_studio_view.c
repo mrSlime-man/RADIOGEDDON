@@ -1,4 +1,5 @@
 #include "radiogeddon_studio_view.h"
+#include "../radiogeddon_edition.h" /* RG_UI_TEXT */
 #include "../helpers/rg_div.h"
 
 #if RG_FEATURE_PULSE_STUDIO
@@ -73,7 +74,7 @@ typedef struct {
 
 /* ---- drawing --------------------------------------------------------------- */
 
-static void studio_header(Canvas* canvas, StudioModel* m) {
+static RG_UI_TEXT void studio_header(Canvas* canvas, StudioModel* m) {
     canvas_set_color(canvas, ColorBlack);
     canvas_draw_box(canvas, 0, 0, 128, 10);
     canvas_set_color(canvas, ColorWhite);
@@ -94,14 +95,14 @@ static void studio_header(Canvas* canvas, StudioModel* m) {
     canvas_set_color(canvas, ColorBlack);
 }
 
-static int32_t studio_x(StudioModel* m, uint64_t t) {
+static RG_UI_TEXT int32_t studio_x(StudioModel* m, uint64_t t) {
     uint32_t per = rg_studio_zoom_us(m->zoom);
     if(t < m->view_us) return -1;
     uint64_t x = rg_div_u64(t - m->view_us, per);
     return x > 1000 ? 1000 : (int32_t)x;
 }
 
-static void studio_draw_wave(Canvas* canvas, StudioModel* m) {
+static RG_UI_TEXT void studio_draw_wave(Canvas* canvas, StudioModel* m) {
     const RgStudioFrame* f = &m->f;
     uint64_t t = 0;
     bool prev_hi = false;
@@ -220,7 +221,7 @@ static void studio_draw_wave(Canvas* canvas, StudioModel* m) {
 }
 
 /* Lines of text, scrolled; each at most TEXT_CHARS. */
-static void studio_draw_lines(Canvas* canvas, StudioModel* m, const char* text) {
+static RG_UI_TEXT void studio_draw_lines(Canvas* canvas, StudioModel* m, const char* text) {
     canvas_set_font(canvas, FontSecondary);
     uint16_t line = 0, shown = 0;
     const char* p = text;
@@ -241,7 +242,7 @@ static void studio_draw_lines(Canvas* canvas, StudioModel* m, const char* text) 
     }
 }
 
-static void studio_draw_frame(Canvas* canvas, StudioModel* m) {
+static RG_UI_TEXT void studio_draw_frame(Canvas* canvas, StudioModel* m) {
     const StudioFrameInfo* fi = &m->info[m->frame];
     char text[320];
     uint8_t diff[(RG_ANALYZER_MAX_BITS + 7) / 8];
@@ -283,7 +284,7 @@ static void studio_draw_frame(Canvas* canvas, StudioModel* m) {
     studio_draw_lines(canvas, m, text);
 }
 
-static void studio_draw_bits(Canvas* canvas, StudioModel* m, bool hex, bool diff) {
+static RG_UI_TEXT void studio_draw_bits(Canvas* canvas, StudioModel* m, bool hex, bool diff) {
     const RgStudioFrame* f = &m->f;
     canvas_set_font(canvas, FontKeyboard);
     if(f->nbits == 0) {
@@ -331,7 +332,7 @@ static void studio_draw_bits(Canvas* canvas, StudioModel* m, bool hex, bool diff
     if(lines > 5) elements_scrollbar_pos(canvas, 128, 11, 52, m->scroll, lines - 4u);
 }
 
-static void studio_draw_timing(Canvas* canvas, StudioModel* m) {
+static RG_UI_TEXT void studio_draw_timing(Canvas* canvas, StudioModel* m) {
     uint8_t hi[RG_STUDIO_HIST], lo[RG_STUDIO_HIST];
     rg_studio_hist(&m->f, hi, lo);
     uint8_t most = 1;
@@ -358,7 +359,7 @@ static void studio_draw_timing(Canvas* canvas, StudioModel* m) {
         canvas_draw_str(canvas, 14 + ticks[i] * 7, 63, labels[i]);
 }
 
-static void studio_draw(Canvas* canvas, void* model) {
+static RG_UI_TEXT void studio_draw(Canvas* canvas, void* model) {
     StudioModel* m = model;
     canvas_clear(canvas);
     studio_header(canvas, m);
@@ -396,7 +397,7 @@ static void studio_draw(Canvas* canvas, void* model) {
 
 /* ---- input ----------------------------------------------------------------- */
 
-static bool studio_input(InputEvent* event, void* context) {
+static RG_UI_TEXT bool studio_input(InputEvent* event, void* context) {
     RadioGeddonStudioView* instance = context;
     if(event->key == InputKeyBack) return false;
     bool load = false;
@@ -445,7 +446,7 @@ static bool studio_input(InputEvent* event, void* context) {
 
 /* ---- API ------------------------------------------------------------------- */
 
-RadioGeddonStudioView* radiogeddon_studio_view_alloc(void) {
+RG_UI_TEXT RadioGeddonStudioView* radiogeddon_studio_view_alloc(void) {
     RadioGeddonStudioView* instance = malloc(sizeof(RadioGeddonStudioView));
     instance->view = view_alloc();
     instance->callback = NULL;
@@ -465,16 +466,16 @@ RadioGeddonStudioView* radiogeddon_studio_view_alloc(void) {
     return instance;
 }
 
-void radiogeddon_studio_view_free(RadioGeddonStudioView* instance) {
+RG_UI_TEXT void radiogeddon_studio_view_free(RadioGeddonStudioView* instance) {
     view_free(instance->view);
     free(instance);
 }
 
-View* radiogeddon_studio_view_get_view(RadioGeddonStudioView* instance) {
+RG_UI_TEXT View* radiogeddon_studio_view_get_view(RadioGeddonStudioView* instance) {
     return instance->view;
 }
 
-void radiogeddon_studio_view_set_callback(
+RG_UI_TEXT void radiogeddon_studio_view_set_callback(
     RadioGeddonStudioView* instance,
     RadioGeddonStudioCallback callback,
     void* context) {
@@ -482,13 +483,13 @@ void radiogeddon_studio_view_set_callback(
     instance->context = context;
 }
 
-size_t radiogeddon_studio_view_memory(void) {
+RG_UI_TEXT size_t radiogeddon_studio_view_memory(void) {
     // The model, and what reading a frame borrows for a moment.
     return sizeof(StudioModel) + sizeof(RadioGeddonStudioView) + sizeof(RgStudioFrame) +
            RG_STUDIO_MAX_SAMPLES * sizeof(int32_t) + 512u;
 }
 
-void radiogeddon_studio_view_set_analysis(
+RG_UI_TEXT void radiogeddon_studio_view_set_analysis(
     RadioGeddonStudioView* instance,
     const char* name,
     const RgAnalysis* a) {
@@ -532,7 +533,7 @@ void radiogeddon_studio_view_set_analysis(
         true);
 }
 
-void radiogeddon_studio_view_load_frame(
+RG_UI_TEXT void radiogeddon_studio_view_load_frame(
     RadioGeddonStudioView* instance,
     RgRawReader* reader,
     uint8_t frame) {

@@ -13,7 +13,7 @@
 /* Kept free for a session, its save buffers and a recording's file menu. */
 #define SESSIONS_WORK         (sizeof(RgSession) + RADIOGEDDON_SESSION_SCRATCH + 6u * 1024u)
 
-void radiogeddon_scene_sessions_release(RadioGeddonApp* app) {
+RG_UI_TEXT void radiogeddon_scene_sessions_release(RadioGeddonApp* app) {
     free(app->session_list);
     app->session_list = NULL;
     free(app->session);
@@ -23,7 +23,7 @@ void radiogeddon_scene_sessions_release(RadioGeddonApp* app) {
     app->sessions_api = NULL;
 }
 
-static const RadioGeddonSessionsModule* radiogeddon_sessions_api(RadioGeddonApp* app) {
+static RG_UI_TEXT const RadioGeddonSessionsModule* radiogeddon_sessions_api(RadioGeddonApp* app) {
     if(!app->sessions_module) {
         RadioGeddonModuleStatus status;
         app->sessions_module = radiogeddon_module_load(
@@ -38,7 +38,7 @@ static const RadioGeddonSessionsModule* radiogeddon_sessions_api(RadioGeddonApp*
     return app->sessions_api;
 }
 
-static void radiogeddon_sessions_enter(void* context, RadioGeddonSessionsScene scene) {
+static RG_UI_TEXT void radiogeddon_sessions_enter(void* context, RadioGeddonSessionsScene scene) {
     RadioGeddonApp* app = context;
     const RadioGeddonSessionsModule* api = radiogeddon_sessions_api(app);
     if(api) {
@@ -48,7 +48,7 @@ static void radiogeddon_sessions_enter(void* context, RadioGeddonSessionsScene s
     }
 }
 
-static bool radiogeddon_sessions_event(
+static RG_UI_TEXT bool radiogeddon_sessions_event(
     void* context,
     SceneManagerEvent event,
     RadioGeddonSessionsScene scene) {
@@ -67,7 +67,7 @@ static bool radiogeddon_sessions_event(
     return false;
 }
 
-static void radiogeddon_sessions_exit(void* context, RadioGeddonSessionsScene scene) {
+static RG_UI_TEXT void radiogeddon_sessions_exit(void* context, RadioGeddonSessionsScene scene) {
     RadioGeddonApp* app = context;
     if(app->sessions_api)
         ((const RadioGeddonSessionsModule*)app->sessions_api)->on_exit[scene](context);

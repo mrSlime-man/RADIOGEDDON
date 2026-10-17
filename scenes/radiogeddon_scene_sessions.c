@@ -13,12 +13,12 @@ typedef enum {
     SessionsIndexSession = 100, // + list position
 } SessionsIndex;
 
-static void radiogeddon_scene_sessions_cb(void* context, uint32_t index) {
+static RG_UI_TEXT void radiogeddon_scene_sessions_cb(void* context, uint32_t index) {
     RadioGeddonApp* app = context;
     view_dispatcher_send_custom_event(app->view_dispatcher, index);
 }
 
-void radiogeddon_scene_sessions_on_enter(void* context) {
+RG_UI_TEXT void radiogeddon_scene_sessions_on_enter(void* context) {
     RadioGeddonApp* app = context;
     if(!app->session_list) app->session_list = malloc(sizeof(RadioGeddonSessionList));
     radiogeddon_sessions_list(app->storage, app->session_list);
@@ -46,7 +46,7 @@ void radiogeddon_scene_sessions_on_enter(void* context) {
     view_dispatcher_switch_to_view(app->view_dispatcher, RadioGeddonViewSubmenu);
 }
 
-bool radiogeddon_scene_sessions_on_event(void* context, SceneManagerEvent event) {
+RG_UI_TEXT bool radiogeddon_scene_sessions_on_event(void* context, SceneManagerEvent event) {
     RadioGeddonApp* app = context;
     if(event.type != SceneManagerEventTypeCustom) return false;
     if(event.event == SessionsIndexNew) {
@@ -74,7 +74,7 @@ bool radiogeddon_scene_sessions_on_event(void* context, SceneManagerEvent event)
     return false;
 }
 
-void radiogeddon_scene_sessions_on_exit(void* context) {
+RG_UI_TEXT void radiogeddon_scene_sessions_on_exit(void* context) {
     RadioGeddonApp* app = context;
     submenu_reset(app->submenu);
 }

@@ -13,12 +13,12 @@ typedef enum {
     FavoriteOptDeleteNo,
 } FavoriteOpt;
 
-static void radiogeddon_scene_favorite_options_cb(void* context, uint32_t index) {
+static RG_UI_TEXT void radiogeddon_scene_favorite_options_cb(void* context, uint32_t index) {
     RadioGeddonApp* app = context;
     view_dispatcher_send_custom_event(app->view_dispatcher, index);
 }
 
-static void radiogeddon_scene_favorite_options_menu(RadioGeddonApp* app) {
+static RG_UI_TEXT void radiogeddon_scene_favorite_options_menu(RadioGeddonApp* app) {
     RadioGeddonFavorites* fav = radiogeddon_scene_favorites(app);
     char freq[RG_FREQ_TEXT_SIZE];
     rg_freq_text(fav->freq[app->favorite_index], freq, sizeof(freq));
@@ -41,7 +41,7 @@ static void radiogeddon_scene_favorite_options_menu(RadioGeddonApp* app) {
     view_dispatcher_switch_to_view(app->view_dispatcher, RadioGeddonViewSubmenu);
 }
 
-void radiogeddon_scene_favorite_options_on_enter(void* context) {
+RG_UI_TEXT void radiogeddon_scene_favorite_options_on_enter(void* context) {
     RadioGeddonApp* app = context;
     if(app->favorite_index >= radiogeddon_scene_favorites(app)->count) {
         scene_manager_previous_scene(app->scene_manager);
@@ -50,7 +50,8 @@ void radiogeddon_scene_favorite_options_on_enter(void* context) {
     radiogeddon_scene_favorite_options_menu(app);
 }
 
-bool radiogeddon_scene_favorite_options_on_event(void* context, SceneManagerEvent event) {
+RG_UI_TEXT bool
+    radiogeddon_scene_favorite_options_on_event(void* context, SceneManagerEvent event) {
     RadioGeddonApp* app = context;
     if(event.type != SceneManagerEventTypeCustom) return false;
     RadioGeddonFavorites* fav = radiogeddon_scene_favorites(app);
@@ -109,7 +110,7 @@ bool radiogeddon_scene_favorite_options_on_event(void* context, SceneManagerEven
     }
 }
 
-void radiogeddon_scene_favorite_options_on_exit(void* context) {
+RG_UI_TEXT void radiogeddon_scene_favorite_options_on_exit(void* context) {
     RadioGeddonApp* app = context;
     submenu_reset(app->submenu);
     widget_reset(app->widget);

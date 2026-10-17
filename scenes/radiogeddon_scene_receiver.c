@@ -12,7 +12,7 @@ typedef enum {
 // --- Radio decode callback (runs on the Sub-GHz worker thread) ------------
 // Only records into the (mutex-protected) history and signals the UI thread.
 // All GUI/view updates happen on the UI thread in the custom-event handler.
-static void radiogeddon_scene_receiver_decode_cb(
+static RG_UI_TEXT void radiogeddon_scene_receiver_decode_cb(
     const char* protocol_name,
     uint8_t hash,
     FuriString* text,
@@ -30,7 +30,7 @@ static void radiogeddon_scene_receiver_decode_cb(
 }
 
 // Refresh the decoded-signal view from history (UI thread only).
-static void radiogeddon_scene_receiver_refresh_history(RadioGeddonApp* app) {
+static RG_UI_TEXT void radiogeddon_scene_receiver_refresh_history(RadioGeddonApp* app) {
     furi_mutex_acquire(app->history_mutex, FuriWaitForever);
     size_t count = radiogeddon_history_count(app->history);
     const char* latest = count ? radiogeddon_history_get_name(app->history, count - 1) : "";
@@ -40,7 +40,7 @@ static void radiogeddon_scene_receiver_refresh_history(RadioGeddonApp* app) {
 
 // Keep the displayed protocol name in step with the highlighted entry, so the
 // name shown next to "[i]" is the one OK will actually save.
-static void radiogeddon_scene_receiver_show_selected(RadioGeddonApp* app) {
+static RG_UI_TEXT void radiogeddon_scene_receiver_show_selected(RadioGeddonApp* app) {
     size_t sel = radiogeddon_receiver_view_get_selected(app->receiver_view);
     furi_mutex_acquire(app->history_mutex, FuriWaitForever);
     size_t count = radiogeddon_history_count(app->history);
@@ -51,13 +51,13 @@ static void radiogeddon_scene_receiver_show_selected(RadioGeddonApp* app) {
 }
 
 // Show a short note on the hint line; the tick handler clears it again.
-static void radiogeddon_scene_receiver_note(RadioGeddonApp* app, const char* text) {
+static RG_UI_TEXT void radiogeddon_scene_receiver_note(RadioGeddonApp* app, const char* text) {
     radiogeddon_receiver_view_set_status(app->receiver_view, text);
     scene_manager_set_scene_state(
         app->scene_manager, RadioGeddonSceneReceiver, RECEIVER_NOTE_TICKS);
 }
 
-static void radiogeddon_scene_receiver_start_recording(RadioGeddonApp* app) {
+static RG_UI_TEXT void radiogeddon_scene_receiver_start_recording(RadioGeddonApp* app) {
     RadioGeddonRecordError err = radiogeddon_subghz_record_start(app->subghz);
     if(err == RadioGeddonRecordOk) {
         radiogeddon_memdiag_sample("Recording");
@@ -77,7 +77,7 @@ static void radiogeddon_scene_receiver_start_recording(RadioGeddonApp* app) {
 }
 
 // Stop capturing, let the writer empty its buffer, then offer to save.
-static void radiogeddon_scene_receiver_stop_recording(RadioGeddonApp* app) {
+static RG_UI_TEXT void radiogeddon_scene_receiver_stop_recording(RadioGeddonApp* app) {
     notification_message(app->notifications, &sequence_reset_red);
     radiogeddon_scene_show_busy(app, "Writing to SD...");
     radiogeddon_subghz_record_stop(app->subghz);
@@ -100,7 +100,8 @@ static void radiogeddon_scene_receiver_stop_recording(RadioGeddonApp* app) {
 }
 
 // --- View input callback (UI thread) --------------------------------------
-static void radiogeddon_scene_receiver_view_cb(RadioGeddonReceiverEvent event, void* context) {
+static RG_UI_TEXT void
+    radiogeddon_scene_receiver_view_cb(RadioGeddonReceiverEvent event, void* context) {
     RadioGeddonApp* app = context;
     if(event == RadioGeddonReceiverEventSave) {
         view_dispatcher_send_custom_event(app->view_dispatcher, ReceiverCustomSave);
@@ -109,7 +110,7 @@ static void radiogeddon_scene_receiver_view_cb(RadioGeddonReceiverEvent event, v
     }
 }
 
-void radiogeddon_scene_receiver_on_enter(void* context) {
+RG_UI_TEXT void radiogeddon_scene_receiver_on_enter(void* context) {
     RadioGeddonApp* app = context;
     bool autorecord = app->receiver_autorecord;
     app->receiver_autorecord = false;
@@ -166,7 +167,7 @@ void radiogeddon_scene_receiver_on_enter(void* context) {
     view_dispatcher_switch_to_view(app->view_dispatcher, RadioGeddonViewReceiver);
 }
 
-bool radiogeddon_scene_receiver_on_event(void* context, SceneManagerEvent event) {
+RG_UI_TEXT bool radiogeddon_scene_receiver_on_event(void* context, SceneManagerEvent event) {
     RadioGeddonApp* app = context;
     bool consumed = false;
 
@@ -269,7 +270,7 @@ bool radiogeddon_scene_receiver_on_event(void* context, SceneManagerEvent event)
     return consumed;
 }
 
-void radiogeddon_scene_receiver_on_exit(void* context) {
+RG_UI_TEXT void radiogeddon_scene_receiver_on_exit(void* context) {
     RadioGeddonApp* app = context;
     notification_message(app->notifications, &sequence_reset_red);
     // Stop the radio. A capture still running is written out and stays

@@ -1,4 +1,5 @@
 #include "radiogeddon_spectrum_view.h"
+#include "../radiogeddon_edition.h" /* RG_UI_TEXT */
 
 #if RG_FEATURE_RANGE_SCAN
 
@@ -36,13 +37,13 @@ typedef struct {
 #endif
 } RadioGeddonSpectrumModel;
 
-static int32_t radiogeddon_spectrum_y(int32_t dbm) {
+static RG_UI_TEXT int32_t radiogeddon_spectrum_y(int32_t dbm) {
     if(dbm < DBM_BOTTOM) dbm = DBM_BOTTOM;
     if(dbm > DBM_TOP) dbm = DBM_TOP;
     return GRAPH_BOTTOM - (dbm - DBM_BOTTOM) * (GRAPH_BOTTOM - GRAPH_TOP) / (DBM_TOP - DBM_BOTTOM);
 }
 
-static void radiogeddon_spectrum_view_draw(Canvas* canvas, void* model) {
+static RG_UI_TEXT void radiogeddon_spectrum_view_draw(Canvas* canvas, void* model) {
     RadioGeddonSpectrumModel* m = model;
     const RadioGeddonRangeSnapshot* s = &m->snap;
     canvas_clear(canvas);
@@ -145,12 +146,12 @@ static void radiogeddon_spectrum_view_draw(Canvas* canvas, void* model) {
     }
 }
 
-static void
+static RG_UI_TEXT void
     radiogeddon_spectrum_view_send(RadioGeddonSpectrumView* instance, RadioGeddonSpectrumEvent e) {
     if(instance->callback) instance->callback(e, instance->context);
 }
 
-static bool radiogeddon_spectrum_view_input(InputEvent* event, void* context) {
+static RG_UI_TEXT bool radiogeddon_spectrum_view_input(InputEvent* event, void* context) {
     RadioGeddonSpectrumView* instance = context;
     bool consumed = false;
 
@@ -225,7 +226,7 @@ static bool radiogeddon_spectrum_view_input(InputEvent* event, void* context) {
     return consumed;
 }
 
-RadioGeddonSpectrumView* radiogeddon_spectrum_view_alloc(void) {
+RG_UI_TEXT RadioGeddonSpectrumView* radiogeddon_spectrum_view_alloc(void) {
     RadioGeddonSpectrumView* instance = malloc(sizeof(RadioGeddonSpectrumView));
     instance->view = view_alloc();
     instance->callback = NULL;
@@ -246,17 +247,17 @@ RadioGeddonSpectrumView* radiogeddon_spectrum_view_alloc(void) {
     return instance;
 }
 
-void radiogeddon_spectrum_view_free(RadioGeddonSpectrumView* instance) {
+RG_UI_TEXT void radiogeddon_spectrum_view_free(RadioGeddonSpectrumView* instance) {
     furi_assert(instance);
     view_free(instance->view);
     free(instance);
 }
 
-View* radiogeddon_spectrum_view_get_view(RadioGeddonSpectrumView* instance) {
+RG_UI_TEXT View* radiogeddon_spectrum_view_get_view(RadioGeddonSpectrumView* instance) {
     return instance->view;
 }
 
-void radiogeddon_spectrum_view_set_callback(
+RG_UI_TEXT void radiogeddon_spectrum_view_set_callback(
     RadioGeddonSpectrumView* instance,
     RadioGeddonSpectrumCallback callback,
     void* context) {
@@ -264,7 +265,7 @@ void radiogeddon_spectrum_view_set_callback(
     instance->context = context;
 }
 
-void radiogeddon_spectrum_view_update(
+RG_UI_TEXT void radiogeddon_spectrum_view_update(
     RadioGeddonSpectrumView* instance,
     RadioGeddonRangeScan* scan) {
     with_view_model(
@@ -279,12 +280,14 @@ void radiogeddon_spectrum_view_update(
         true);
 }
 
-void radiogeddon_spectrum_view_set_external(RadioGeddonSpectrumView* instance, bool external) {
+RG_UI_TEXT void
+    radiogeddon_spectrum_view_set_external(RadioGeddonSpectrumView* instance, bool external) {
     with_view_model(
         instance->view, RadioGeddonSpectrumModel * m, { m->external = external; }, true);
 }
 
-void radiogeddon_spectrum_view_set_cursor(RadioGeddonSpectrumView* instance, uint32_t index) {
+RG_UI_TEXT void
+    radiogeddon_spectrum_view_set_cursor(RadioGeddonSpectrumView* instance, uint32_t index) {
     with_view_model(
         instance->view,
         RadioGeddonSpectrumModel * m,
@@ -294,13 +297,13 @@ void radiogeddon_spectrum_view_set_cursor(RadioGeddonSpectrumView* instance, uin
         true);
 }
 
-uint32_t radiogeddon_spectrum_view_get_cursor(RadioGeddonSpectrumView* instance) {
+RG_UI_TEXT uint32_t radiogeddon_spectrum_view_get_cursor(RadioGeddonSpectrumView* instance) {
     uint32_t cursor = 0;
     with_view_model(instance->view, RadioGeddonSpectrumModel * m, { cursor = m->cursor; }, false);
     return cursor;
 }
 
-bool radiogeddon_spectrum_view_sweeping(RadioGeddonSpectrumView* instance) {
+RG_UI_TEXT bool radiogeddon_spectrum_view_sweeping(RadioGeddonSpectrumView* instance) {
     bool on = false;
     with_view_model(
         instance->view,
@@ -311,7 +314,7 @@ bool radiogeddon_spectrum_view_sweeping(RadioGeddonSpectrumView* instance) {
 }
 
 #if RG_FEATURE_DOLPHIN_LAB
-void radiogeddon_spectrum_view_set_badge(
+RG_UI_TEXT void radiogeddon_spectrum_view_set_badge(
     RadioGeddonSpectrumView* instance,
     const RgMascotFrame* frame,
     bool cyber) {

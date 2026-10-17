@@ -4,6 +4,7 @@
  * estimated.
  */
 #include "radiogeddon_journal_text.h"
+#include "../radiogeddon_edition.h" /* RG_UI_TEXT */
 
 #if RG_FEATURE_JOURNAL
 
@@ -18,7 +19,7 @@ typedef struct {
     size_t len;
 } JText;
 
-static void jcat(JText* t, const char* fmt, ...) {
+static RG_UI_TEXT void jcat(JText* t, const char* fmt, ...) {
     if(t->len + 1 >= t->size) return;
     va_list ap;
     va_start(ap, fmt);
@@ -33,7 +34,7 @@ static void jcat(JText* t, const char* fmt, ...) {
     t->len += (size_t)n;
 }
 
-static void jtime(char* out, size_t size, uint32_t ts) {
+static RG_UI_TEXT void jtime(char* out, size_t size, uint32_t ts) {
     if(ts == 0) {
         strlcpy(out, "--", size);
         return;
@@ -43,7 +44,7 @@ static void jtime(char* out, size_t size, uint32_t ts) {
     snprintf(out, size, "%02u-%02u %02u:%02u", dt.month, dt.day, dt.hour, dt.minute);
 }
 
-size_t radiogeddon_journal_text(const RgJournal* j, bool xp_on, char* out, size_t size) {
+RG_UI_TEXT size_t radiogeddon_journal_text(const RgJournal* j, bool xp_on, char* out, size_t size) {
     JText t = {out, size, 0};
     if(size) out[0] = '\0';
     if(xp_on) {
@@ -93,7 +94,7 @@ size_t radiogeddon_journal_text(const RgJournal* j, bool xp_on, char* out, size_
     return t.len < size ? t.len : strlen(out);
 }
 
-size_t radiogeddon_journal_achievements_text(
+RG_UI_TEXT size_t radiogeddon_journal_achievements_text(
     const RgJournal* j,
     uint32_t fresh,
     char* out,

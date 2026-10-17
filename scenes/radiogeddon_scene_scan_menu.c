@@ -15,12 +15,12 @@ typedef enum {
     ScanMenuHeatmap,
 } ScanMenuIndex;
 
-static void radiogeddon_scene_scan_menu_cb(void* context, uint32_t index) {
+static RG_UI_TEXT void radiogeddon_scene_scan_menu_cb(void* context, uint32_t index) {
     RadioGeddonApp* app = context;
     view_dispatcher_send_custom_event(app->view_dispatcher, index);
 }
 
-void radiogeddon_scene_scan_menu_on_enter(void* context) {
+RG_UI_TEXT void radiogeddon_scene_scan_menu_on_enter(void* context) {
     RadioGeddonApp* app = context;
     Submenu* submenu = app->submenu;
     submenu_reset(submenu);
@@ -47,7 +47,7 @@ void radiogeddon_scene_scan_menu_on_enter(void* context) {
     view_dispatcher_switch_to_view(app->view_dispatcher, RadioGeddonViewSubmenu);
 }
 
-bool radiogeddon_scene_scan_menu_on_event(void* context, SceneManagerEvent event) {
+RG_UI_TEXT bool radiogeddon_scene_scan_menu_on_event(void* context, SceneManagerEvent event) {
     RadioGeddonApp* app = context;
     if(event.type != SceneManagerEventTypeCustom || event.event > ScanMenuHeatmap) return false;
     scene_manager_set_scene_state(app->scene_manager, RadioGeddonSceneScanMenu, event.event);
@@ -97,7 +97,7 @@ bool radiogeddon_scene_scan_menu_on_event(void* context, SceneManagerEvent event
     return true;
 }
 
-void radiogeddon_scene_scan_menu_on_exit(void* context) {
+RG_UI_TEXT void radiogeddon_scene_scan_menu_on_exit(void* context) {
     RadioGeddonApp* app = context;
     submenu_reset(app->submenu);
 }

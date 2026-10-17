@@ -1,4 +1,5 @@
 #include "radiogeddon_heatmap_view.h"
+#include "../radiogeddon_edition.h" /* RG_UI_TEXT */
 
 #if RG_FEATURE_ACTIVITY_LOG
 
@@ -29,7 +30,7 @@ typedef struct {
 } HeatmapModel;
 
 /* Rows of the grid: as tall as fit, 3 to 8 lines (one blank between). */
-static uint8_t hm_row_h(const RgHeatmap* h) {
+static RG_UI_TEXT uint8_t hm_row_h(const RgHeatmap* h) {
     uint8_t n = h->channels ? h->channels : 1;
     uint8_t rh = (uint8_t)(HM_HEIGHT / n);
     if(rh > 8) rh = 8;
@@ -40,7 +41,7 @@ static uint8_t hm_row_h(const RgHeatmap* h) {
 /* One cell: the number of lit pixels grows with the level, in an order that
  * keeps them spread; a quiet cell is a single dot, a cell nobody listened to
  * is blank. */
-static void hm_cell(Canvas* canvas, int x, int y, uint8_t hh, RgHeatLevel level) {
+static RG_UI_TEXT void hm_cell(Canvas* canvas, int x, int y, uint8_t hh, RgHeatLevel level) {
     if(level == RgHeatNotObserved) return;
     if(level == RgHeatQuiet) {
         canvas_draw_dot(canvas, x, y + hh / 2);
@@ -61,7 +62,7 @@ static void hm_cell(Canvas* canvas, int x, int y, uint8_t hh, RgHeatLevel level)
     }
 }
 
-static void hm_legend(Canvas* canvas) {
+static RG_UI_TEXT void hm_legend(Canvas* canvas) {
     static const char* const text[] = {
         "not observed",
         "observed, quiet",
@@ -81,7 +82,7 @@ static void hm_legend(Canvas* canvas) {
     }
 }
 
-static void hm_draw(Canvas* canvas, void* model) {
+static RG_UI_TEXT void hm_draw(Canvas* canvas, void* model) {
     HeatmapModel* m = model;
     const RgHeatmap* h = m->map;
     canvas_clear(canvas);
@@ -132,7 +133,7 @@ static void hm_draw(Canvas* canvas, void* model) {
     canvas_draw_str(canvas, 0, 62, text);
 }
 
-static bool hm_input(InputEvent* event, void* context) {
+static RG_UI_TEXT bool hm_input(InputEvent* event, void* context) {
     RadioGeddonHeatmapView* instance = context;
     if(event->key == InputKeyBack) return false;
     if(event->type != InputTypeShort && event->type != InputTypeRepeat) return true;
@@ -157,7 +158,7 @@ static bool hm_input(InputEvent* event, void* context) {
     return true;
 }
 
-RadioGeddonHeatmapView* radiogeddon_heatmap_view_alloc(void) {
+RG_UI_TEXT RadioGeddonHeatmapView* radiogeddon_heatmap_view_alloc(void) {
     RadioGeddonHeatmapView* instance = malloc(sizeof(RadioGeddonHeatmapView));
     instance->view = view_alloc();
     view_set_context(instance->view, instance);
@@ -168,16 +169,17 @@ RadioGeddonHeatmapView* radiogeddon_heatmap_view_alloc(void) {
     return instance;
 }
 
-void radiogeddon_heatmap_view_free(RadioGeddonHeatmapView* instance) {
+RG_UI_TEXT void radiogeddon_heatmap_view_free(RadioGeddonHeatmapView* instance) {
     view_free(instance->view);
     free(instance);
 }
 
-View* radiogeddon_heatmap_view_get_view(RadioGeddonHeatmapView* instance) {
+RG_UI_TEXT View* radiogeddon_heatmap_view_get_view(RadioGeddonHeatmapView* instance) {
     return instance->view;
 }
 
-void radiogeddon_heatmap_view_set_map(RadioGeddonHeatmapView* instance, const RgHeatmap* map) {
+RG_UI_TEXT void
+    radiogeddon_heatmap_view_set_map(RadioGeddonHeatmapView* instance, const RgHeatmap* map) {
     with_view_model(
         instance->view,
         HeatmapModel * m,
@@ -191,7 +193,7 @@ void radiogeddon_heatmap_view_set_map(RadioGeddonHeatmapView* instance, const Rg
         true);
 }
 
-size_t radiogeddon_heatmap_view_memory(void) {
+RG_UI_TEXT size_t radiogeddon_heatmap_view_memory(void) {
     return sizeof(RadioGeddonHeatmapView) + sizeof(HeatmapModel) + 256u;
 }
 

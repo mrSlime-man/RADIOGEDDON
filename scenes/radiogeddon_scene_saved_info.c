@@ -34,17 +34,18 @@ typedef enum {
 
 #define SAVED_INFO_MODE_MASK 0xFFu
 
-static uint32_t radiogeddon_scene_saved_info_state(RadioGeddonApp* app) {
+static RG_UI_TEXT uint32_t radiogeddon_scene_saved_info_state(RadioGeddonApp* app) {
     return scene_manager_get_scene_state(app->scene_manager, RadioGeddonSceneSavedInfo);
 }
 
-static void radiogeddon_scene_saved_info_set_mode(RadioGeddonApp* app, SavedInfoState mode) {
+static RG_UI_TEXT void
+    radiogeddon_scene_saved_info_set_mode(RadioGeddonApp* app, SavedInfoState mode) {
     uint32_t state = radiogeddon_scene_saved_info_state(app);
     scene_manager_set_scene_state(
         app->scene_manager, RadioGeddonSceneSavedInfo, (state & ~SAVED_INFO_MODE_MASK) | mode);
 }
 
-static void radiogeddon_scene_saved_info_cb(void* context, uint32_t index) {
+static RG_UI_TEXT void radiogeddon_scene_saved_info_cb(void* context, uint32_t index) {
     RadioGeddonApp* app = context;
     uint32_t state = radiogeddon_scene_saved_info_state(app);
     scene_manager_set_scene_state(
@@ -54,7 +55,7 @@ static void radiogeddon_scene_saved_info_cb(void* context, uint32_t index) {
     view_dispatcher_send_custom_event(app->view_dispatcher, index);
 }
 
-static void radiogeddon_scene_saved_info_delete_button_cb(
+static RG_UI_TEXT void radiogeddon_scene_saved_info_delete_button_cb(
     GuiButtonType result,
     InputType type,
     void* context) {
@@ -67,7 +68,7 @@ static void radiogeddon_scene_saved_info_delete_button_cb(
     }
 }
 
-static void radiogeddon_scene_saved_info_show_menu(RadioGeddonApp* app) {
+static RG_UI_TEXT void radiogeddon_scene_saved_info_show_menu(RadioGeddonApp* app) {
     Submenu* submenu = app->submenu;
     submenu_reset(submenu);
     submenu_set_header(submenu, furi_string_get_cstr(app->loaded.name));
@@ -153,7 +154,7 @@ static void radiogeddon_scene_saved_info_show_menu(RadioGeddonApp* app) {
     view_dispatcher_switch_to_view(app->view_dispatcher, RadioGeddonViewSubmenu);
 }
 
-static void radiogeddon_scene_saved_info_show_confirm(RadioGeddonApp* app) {
+static RG_UI_TEXT void radiogeddon_scene_saved_info_show_confirm(RadioGeddonApp* app) {
     Widget* widget = app->widget;
     widget_reset(widget);
     widget_add_string_element(
@@ -178,7 +179,7 @@ static void radiogeddon_scene_saved_info_show_confirm(RadioGeddonApp* app) {
     view_dispatcher_switch_to_view(app->view_dispatcher, RadioGeddonViewWidget);
 }
 
-void radiogeddon_scene_saved_info_on_enter(void* context) {
+RG_UI_TEXT void radiogeddon_scene_saved_info_on_enter(void* context) {
     RadioGeddonApp* app = context;
 #if RG_FEATURE_JOURNAL
     // The recording opened is the one in context for the workflow.
@@ -193,7 +194,7 @@ void radiogeddon_scene_saved_info_on_enter(void* context) {
     radiogeddon_scene_saved_info_show_menu(app);
 }
 
-bool radiogeddon_scene_saved_info_on_event(void* context, SceneManagerEvent event) {
+RG_UI_TEXT bool radiogeddon_scene_saved_info_on_event(void* context, SceneManagerEvent event) {
     RadioGeddonApp* app = context;
     bool consumed = false;
 
@@ -328,7 +329,7 @@ bool radiogeddon_scene_saved_info_on_event(void* context, SceneManagerEvent even
     return consumed;
 }
 
-void radiogeddon_scene_saved_info_on_exit(void* context) {
+RG_UI_TEXT void radiogeddon_scene_saved_info_on_exit(void* context) {
     RadioGeddonApp* app = context;
     submenu_reset(app->submenu);
     widget_reset(app->widget);

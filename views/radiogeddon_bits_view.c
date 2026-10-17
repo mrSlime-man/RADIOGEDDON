@@ -1,4 +1,5 @@
 #include "radiogeddon_bits_view.h"
+#include "../radiogeddon_edition.h" /* RG_UI_TEXT */
 #include "../helpers/rg_div.h"
 
 #if RG_FEATURE_BITSTREAM
@@ -53,19 +54,19 @@ typedef struct {
     uint16_t n_unknown;
 } RadioGeddonBitsModel;
 
-static const RgFrame* radiogeddon_bits_sel(const RadioGeddonBitsModel* m) {
+static RG_UI_TEXT const RgFrame* radiogeddon_bits_sel(const RadioGeddonBitsModel* m) {
     if(!m->r || m->frame >= m->r->frames_kept) return NULL;
     return &m->r->frames[m->frame];
 }
 
-static uint16_t radiogeddon_bits_len(const RadioGeddonBitsModel* m) {
+static RG_UI_TEXT uint16_t radiogeddon_bits_len(const RadioGeddonBitsModel* m) {
     const RgFrame* f = radiogeddon_bits_sel(m);
     if(!f) return 0;
     return f->bit_count > RG_ANALYZER_MAX_BITS ? RG_ANALYZER_MAX_BITS : f->bit_count;
 }
 
 /* The selected frame changed: reset the cursors that depend on it. */
-static void radiogeddon_bits_select(RadioGeddonBitsModel* m, uint16_t frame) {
+static RG_UI_TEXT void radiogeddon_bits_select(RadioGeddonBitsModel* m, uint16_t frame) {
     m->frame = frame;
     m->bit = 0;
     m->line_top = 0;
@@ -82,7 +83,8 @@ static void radiogeddon_bits_select(RadioGeddonBitsModel* m, uint16_t frame) {
     m->n_unknown = (uint16_t)u;
 }
 
-static void radiogeddon_bits_glyph(Canvas* canvas, int32_t x, int32_t y, char c, bool inverted) {
+static RG_UI_TEXT void
+    radiogeddon_bits_glyph(Canvas* canvas, int32_t x, int32_t y, char c, bool inverted) {
     if(inverted) {
         canvas_draw_box(canvas, x - 1, y - 1, RG_GLYPH_W + 2, RG_GLYPH_H + 2);
         canvas_set_color(canvas, ColorWhite);
@@ -93,23 +95,24 @@ static void radiogeddon_bits_glyph(Canvas* canvas, int32_t x, int32_t y, char c,
     if(inverted) canvas_set_color(canvas, ColorBlack);
 }
 
-static void radiogeddon_bits_glyphs(Canvas* canvas, int32_t x, int32_t y, const char* s) {
+static RG_UI_TEXT void
+    radiogeddon_bits_glyphs(Canvas* canvas, int32_t x, int32_t y, const char* s) {
     for(; *s; s++, x += RG_GLYPH_PITCH)
         radiogeddon_bits_glyph(canvas, x, y, *s, false);
 }
 
 /* Position label: three digits. */
-static void radiogeddon_bits_label(Canvas* canvas, int32_t y, unsigned pos) {
+static RG_UI_TEXT void radiogeddon_bits_label(Canvas* canvas, int32_t y, unsigned pos) {
     char text[8];
     snprintf(text, sizeof(text), "%03u", pos % 1000u);
     radiogeddon_bits_glyphs(canvas, 0, y, text);
 }
 
-static int32_t radiogeddon_bits_x(uint32_t k) {
+static RG_UI_TEXT int32_t radiogeddon_bits_x(uint32_t k) {
     return BITS_X + (int32_t)(k * RG_GLYPH_PITCH + (k / 8u) * 3u);
 }
 
-static void radiogeddon_bits_header(Canvas* canvas, const RadioGeddonBitsModel* m) {
+static RG_UI_TEXT void radiogeddon_bits_header(Canvas* canvas, const RadioGeddonBitsModel* m) {
     char text[32];
     const RgFrame* f = radiogeddon_bits_sel(m);
     snprintf(
@@ -132,7 +135,8 @@ static void radiogeddon_bits_header(Canvas* canvas, const RadioGeddonBitsModel* 
     }
 }
 
-static void radiogeddon_bits_draw_frames(Canvas* canvas, const RadioGeddonBitsModel* m) {
+static RG_UI_TEXT void
+    radiogeddon_bits_draw_frames(Canvas* canvas, const RadioGeddonBitsModel* m) {
     const RgAnalysis* r = m->r;
     char text[40];
     // "+" when the capture had more frames than the analyzer keeps.
@@ -197,7 +201,7 @@ static void radiogeddon_bits_draw_frames(Canvas* canvas, const RadioGeddonBitsMo
     canvas_draw_str(canvas, 0, 61, text);
 }
 
-static void radiogeddon_bits_draw_bits(Canvas* canvas, const RadioGeddonBitsModel* m) {
+static RG_UI_TEXT void radiogeddon_bits_draw_bits(Canvas* canvas, const RadioGeddonBitsModel* m) {
     const RgFrame* f = radiogeddon_bits_sel(m);
     uint16_t len = radiogeddon_bits_len(m);
     for(uint16_t line = 0; line < BITS_LINES; line++) {
@@ -225,7 +229,7 @@ static void radiogeddon_bits_draw_bits(Canvas* canvas, const RadioGeddonBitsMode
     canvas_draw_str(canvas, 0, 61, text);
 }
 
-static void radiogeddon_bits_draw_hex(Canvas* canvas, const RadioGeddonBitsModel* m) {
+static RG_UI_TEXT void radiogeddon_bits_draw_hex(Canvas* canvas, const RadioGeddonBitsModel* m) {
     const RgFrame* f = radiogeddon_bits_sel(m);
     RgBitsBytes layout;
     rg_bits_bytes(f, m->align, &layout);
@@ -286,7 +290,7 @@ static void radiogeddon_bits_draw_hex(Canvas* canvas, const RadioGeddonBitsModel
     }
 }
 
-static void radiogeddon_bits_draw_diff(Canvas* canvas, const RadioGeddonBitsModel* m) {
+static RG_UI_TEXT void radiogeddon_bits_draw_diff(Canvas* canvas, const RadioGeddonBitsModel* m) {
     const RgFrame* f = radiogeddon_bits_sel(m);
     uint16_t len = radiogeddon_bits_len(m);
     for(uint16_t chunk = 0; chunk < DIFF_CHUNKS; chunk++) {
@@ -318,7 +322,7 @@ static void radiogeddon_bits_draw_diff(Canvas* canvas, const RadioGeddonBitsMode
     canvas_draw_str(canvas, 0, 61, text);
 }
 
-static void radiogeddon_bits_draw_field(Canvas* canvas, const RadioGeddonBitsModel* m) {
+static RG_UI_TEXT void radiogeddon_bits_draw_field(Canvas* canvas, const RadioGeddonBitsModel* m) {
     const RgFrame* f = radiogeddon_bits_sel(m);
     uint16_t len = radiogeddon_bits_len(m);
     char text[48];
@@ -367,7 +371,7 @@ static void radiogeddon_bits_draw_field(Canvas* canvas, const RadioGeddonBitsMod
     canvas_draw_str(canvas, 0, 61, "Up/Dn start  L/R end");
 }
 
-static void radiogeddon_bits_view_draw(Canvas* canvas, void* model) {
+static RG_UI_TEXT void radiogeddon_bits_view_draw(Canvas* canvas, void* model) {
     RadioGeddonBitsModel* m = model;
     canvas_clear(canvas);
     canvas_set_color(canvas, ColorBlack);
@@ -400,13 +404,13 @@ static void radiogeddon_bits_view_draw(Canvas* canvas, void* model) {
 }
 
 /* Keep the bit cursor's line in view (BITS: 6 lines). */
-static void radiogeddon_bits_follow(RadioGeddonBitsModel* m, uint16_t lines) {
+static RG_UI_TEXT void radiogeddon_bits_follow(RadioGeddonBitsModel* m, uint16_t lines) {
     uint16_t line = (uint16_t)(m->bit / BITS_PER_LINE);
     if(line < m->line_top) m->line_top = line;
     if(line >= m->line_top + lines) m->line_top = (uint16_t)(line - lines + 1u);
 }
 
-static void radiogeddon_bits_input_model(RadioGeddonBitsModel* m, InputEvent* event) {
+static RG_UI_TEXT void radiogeddon_bits_input_model(RadioGeddonBitsModel* m, InputEvent* event) {
     bool press = event->type == InputTypeShort || event->type == InputTypeRepeat ||
                  event->type == InputTypeLong;
     uint16_t len = radiogeddon_bits_len(m);
@@ -476,7 +480,7 @@ static void radiogeddon_bits_input_model(RadioGeddonBitsModel* m, InputEvent* ev
     }
 }
 
-static bool radiogeddon_bits_view_input(InputEvent* event, void* context) {
+static RG_UI_TEXT bool radiogeddon_bits_view_input(InputEvent* event, void* context) {
     RadioGeddonBitsView* instance = context;
     if(event->key == InputKeyBack) return false;
     with_view_model(
@@ -487,7 +491,7 @@ static bool radiogeddon_bits_view_input(InputEvent* event, void* context) {
     return true;
 }
 
-RadioGeddonBitsView* radiogeddon_bits_view_alloc(void) {
+RG_UI_TEXT RadioGeddonBitsView* radiogeddon_bits_view_alloc(void) {
     RadioGeddonBitsView* instance = malloc(sizeof(RadioGeddonBitsView));
     instance->view = view_alloc();
     view_set_context(instance->view, instance);
@@ -499,17 +503,17 @@ RadioGeddonBitsView* radiogeddon_bits_view_alloc(void) {
     return instance;
 }
 
-void radiogeddon_bits_view_free(RadioGeddonBitsView* instance) {
+RG_UI_TEXT void radiogeddon_bits_view_free(RadioGeddonBitsView* instance) {
     furi_assert(instance);
     view_free(instance->view);
     free(instance);
 }
 
-View* radiogeddon_bits_view_get_view(RadioGeddonBitsView* instance) {
+RG_UI_TEXT View* radiogeddon_bits_view_get_view(RadioGeddonBitsView* instance) {
     return instance->view;
 }
 
-static void radiogeddon_bits_set(RadioGeddonBitsModel* m, const RgAnalysis* analysis) {
+static RG_UI_TEXT void radiogeddon_bits_set(RadioGeddonBitsModel* m, const RgAnalysis* analysis) {
     memset(m, 0, sizeof(*m));
     m->r = analysis;
     m->ref = analysis ? (uint16_t)rg_bits_reference(analysis) : 0;
@@ -518,12 +522,14 @@ static void radiogeddon_bits_set(RadioGeddonBitsModel* m, const RgAnalysis* anal
     m->frame_top = start >= FRAME_LINES ? (uint16_t)(start - FRAME_LINES + 1u) : 0;
 }
 
-void radiogeddon_bits_view_set_analysis(RadioGeddonBitsView* instance, const RgAnalysis* analysis) {
+RG_UI_TEXT void
+    radiogeddon_bits_view_set_analysis(RadioGeddonBitsView* instance, const RgAnalysis* analysis) {
     with_view_model(
         instance->view, RadioGeddonBitsModel * m, { radiogeddon_bits_set(m, analysis); }, true);
 }
 
-void radiogeddon_bits_view_set_mode(RadioGeddonBitsView* instance, RadioGeddonBitsMode mode) {
+RG_UI_TEXT void
+    radiogeddon_bits_view_set_mode(RadioGeddonBitsView* instance, RadioGeddonBitsMode mode) {
     with_view_model(
         instance->view,
         RadioGeddonBitsModel * m,
@@ -531,7 +537,7 @@ void radiogeddon_bits_view_set_mode(RadioGeddonBitsView* instance, RadioGeddonBi
         true);
 }
 
-RadioGeddonBitsMode radiogeddon_bits_view_get_mode(RadioGeddonBitsView* instance) {
+RG_UI_TEXT RadioGeddonBitsMode radiogeddon_bits_view_get_mode(RadioGeddonBitsView* instance) {
     RadioGeddonBitsMode mode = RadioGeddonBitsModeFrames;
     with_view_model(
         instance->view, RadioGeddonBitsModel * m, { mode = (RadioGeddonBitsMode)m->mode; }, false);
