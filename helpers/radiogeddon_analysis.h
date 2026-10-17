@@ -68,10 +68,24 @@ RgAnalysis* radiogeddon_analysis_run_file(
     RadioGeddonAnalysisFinish finish,
     RadioGeddonAnalysisStatus* status);
 
-/** As above on an already open file (its reader keeps the seek checkpoints). */
+/**
+ * Another reader of the samples, fed during the analyzer's second pass so
+ * it needs no pass of its own: start() is called once the timing pass has
+ * set the base time and the frame gap (final from then on), then feed()
+ * gets every sample of the recording, in order, once.
+ */
+typedef struct {
+    void (*start)(void* context, const RgAnalysis* timing);
+    void (*feed)(void* context, const int32_t* samples, size_t count);
+    void* context;
+} RadioGeddonAnalysisTap;
+
+/** As above on an already open file (its reader keeps the seek checkpoints).
+ * @p tap (may be NULL) reads the samples along. */
 RgAnalysis* radiogeddon_analysis_run_raw(
     RadioGeddonRawFile* file,
     RadioGeddonAnalysisFinish finish,
+    const RadioGeddonAnalysisTap* tap,
     RadioGeddonAnalysisStatus* status);
 
 /** Heap the analysis takes at its peak: the result and the working state,

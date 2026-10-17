@@ -67,7 +67,11 @@ void radiogeddon_loaded_signal_reset(RadioGeddonLoadedSignal* sig) {
     memset(sig, 0, sizeof(RadioGeddonLoadedSignal));
 }
 
-bool radiogeddon_storage_load(Storage* storage, const char* path, RadioGeddonLoadedSignal* out) {
+static bool radiogeddon_storage_load_impl(
+    Storage* storage,
+    const char* path,
+    RadioGeddonLoadedSignal* out,
+    bool count_raw) {
     FlipperFormat* ff = flipper_format_file_alloc(storage);
     FuriString* type = furi_string_alloc();
     FuriString* value = furi_string_alloc();
@@ -105,8 +109,8 @@ bool radiogeddon_storage_load(Storage* storage, const char* path, RadioGeddonLoa
 
         if(furi_string_equal_str(value, "RAW")) {
             out->kind = RadioGeddonSignalKindRaw;
-            flipper_format_rewind(ff);
-            while(flipper_format_read_string(ff, "RAW_Data", value)) {
+            if(count_raw) flipper_format_rewind(ff);
+            while(count_raw && flipper_format_read_string(ff, "RAW_Data", value)) {
                 radiogeddon_dsp_parse_line(
                     furi_string_get_cstr(value),
                     &out->raw_sample_count,
@@ -140,6 +144,17 @@ bool radiogeddon_storage_load(Storage* storage, const char* path, RadioGeddonLoa
     furi_string_free(value);
     flipper_format_free(ff);
     return ok;
+}
+
+bool radiogeddon_storage_load(Storage* storage, const char* path, RadioGeddonLoadedSignal* out) {
+    return radiogeddon_storage_load_impl(storage, path, out, true);
+}
+
+bool radiogeddon_storage_load_header(
+    Storage* storage,
+    const char* path,
+    RadioGeddonLoadedSignal* out) {
+    return radiogeddon_storage_load_impl(storage, path, out, false);
 }
 
 static size_t radiogeddon_raw_stream_read(void* ctx, uint8_t* buf, size_t len) {

@@ -24,7 +24,7 @@ bool radiogeddon_multi_capture(
 
     RadioGeddonLoadedSignal sig;
     radiogeddon_loaded_signal_init(&sig);
-    bool loaded = radiogeddon_storage_load(storage, path, &sig);
+    bool loaded = radiogeddon_storage_load_header(storage, path, &sig);
     if(loaded) {
         cap->frequency = sig.frequency;
         strlcpy(cap->preset, furi_string_get_cstr(sig.preset), sizeof(cap->preset));

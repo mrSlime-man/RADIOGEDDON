@@ -680,6 +680,7 @@ size_t storage_file_read(File* file, void* buf, size_t size) {
     if(!file->fp) return 0;
     size_t n = fread(buf, 1, size, file->fp);
     if(ferror(file->fp)) file->error = true;
+    stub_io.read_bytes += n;
     return n;
 }
 

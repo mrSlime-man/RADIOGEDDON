@@ -35,16 +35,21 @@ static bool radiogeddon_analysis_run_into(
     RadioGeddonRawFile* file,
     RgAnalysis* out,
     RadioGeddonAnalysisFinish finish,
+    const RadioGeddonAnalysisTap* tap,
     RadioGeddonAnalysisStatus* status) {
     RgAnalyzer* a = malloc(sizeof(RgAnalyzer));
     int32_t chunk[RG_ANALYSIS_CHUNK];
     rg_analyzer_begin(a, out);
     do {
         rg_raw_reader_rewind(&file->reader);
+        // The tap reads along with the second pass: the timing is known.
+        bool tapped = tap && a->pass == 2;
+        if(tapped) tap->start(tap->context, out);
         size_t n;
         uint32_t chunks = 0;
         while((n = rg_raw_reader_read(&file->reader, chunk, RG_ANALYSIS_CHUNK)) > 0) {
             rg_analyzer_feed(a, chunk, n);
+            if(tapped) tap->feed(tap->context, chunk, n);
             if(++chunks % RG_ANALYSIS_PROGRESS_CHUNKS == 0)
                 radiogeddon_analysis_progress(file, a->pass);
         }
@@ -72,10 +77,11 @@ static bool radiogeddon_analysis_fits(RadioGeddonAnalysisStatus* status) {
 RgAnalysis* radiogeddon_analysis_run_raw(
     RadioGeddonRawFile* file,
     RadioGeddonAnalysisFinish finish,
+    const RadioGeddonAnalysisTap* tap,
     RadioGeddonAnalysisStatus* status) {
     if(!radiogeddon_analysis_fits(status)) return NULL;
     RgAnalysis* r = malloc(sizeof(RgAnalysis));
-    if(!radiogeddon_analysis_run_into(file, r, finish, status)) {
+    if(!radiogeddon_analysis_run_into(file, r, finish, tap, status)) {
         free(r);
         r = NULL;
     }
@@ -97,7 +103,7 @@ RgAnalysis* radiogeddon_analysis_run_file(
     if(!file) {
         *status = RadioGeddonAnalysisOpenFailed;
     } else {
-        ok = radiogeddon_analysis_run_into(file, r, finish, status);
+        ok = radiogeddon_analysis_run_into(file, r, finish, NULL, status);
         radiogeddon_storage_raw_close(file);
     }
     if(!ok) {

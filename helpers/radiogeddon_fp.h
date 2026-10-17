@@ -66,6 +66,8 @@ typedef struct {
 } RadioGeddonFpResult;
 
 #define RG_FP_HAS_LIMIT 1
+/* Heap a search needs per recording it tracks (beta 10: 8). */
+#define RG_FP_TRACK_BYTES 4u
 
 /** Heap a search needs besides the module (an analysis, name hashes). */
 size_t radiogeddon_fp_memory(void);

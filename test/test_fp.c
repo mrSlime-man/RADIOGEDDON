@@ -370,7 +370,49 @@ static void test_evidence_text(void) {
         "open bucket and no Te");
 }
 
+/* The builder fed during the analyzer's second pass (as Find Similar does
+ * since beta 11, radiogeddon_analysis_run_raw's tap) ends exactly as when
+ * it is fed in a pass of its own after the analysis. */
+static void test_builder_in_pass_two(void) {
+    printf("test_builder_in_pass_two\n");
+    static const int tes[] = {300, 450, 620};
+    for(int k = 0; k < 4; k++) {
+        g_n = 0;
+        push(-20000);
+        if(k == 3) noise(300);
+        for(int i = 0; i < 6; i++)
+            pwm(k % 2 ? KEY_A : KEY_B, tes[k % 3], i == 0 ? 12 : 0, 31, 5);
+        // Separate pass after the analysis (beta 10).
+        rg_analyzer_run(g_buf, g_n, &g_an);
+        RgFpBuilder after;
+        rg_fp_builder_init(&after, &g_an);
+        rg_fp_builder_feed(&after, g_buf, g_n);
+        // Along with pass 2, in chunks of 64 like the file runner.
+        static RgAnalyzer an;
+        static RgAnalysis res;
+        RgFpBuilder along;
+        rg_fp_builder_init(&along, NULL);
+        rg_analyzer_begin(&an, &res);
+        do {
+            bool tapped = an.pass == 2;
+            if(tapped) rg_fp_builder_init(&along, &res);
+            for(size_t i = 0; i < g_n; i += 64) {
+                size_t n = g_n - i < 64 ? g_n - i : 64;
+                rg_analyzer_feed(&an, g_buf + i, n);
+                if(tapped) rg_fp_builder_feed(&along, g_buf + i, n);
+            }
+        } while(rg_analyzer_next_pass(&an));
+        CHECK(memcmp(&after, &along, sizeof(after)) == 0, "same builder state");
+        RgFingerprint fa, fb;
+        rg_analyzer_hypotheses(&an);
+        rg_fp_from_analysis(&fa, &g_an, &after, 433920000, 1);
+        rg_fp_from_analysis(&fb, &res, &along, 433920000, 1);
+        CHECK(memcmp(&fa, &fb, sizeof(fa)) == 0, "same fingerprint");
+    }
+}
+
 int main(void) {
+    test_builder_in_pass_two();
     test_identical();
     test_jitter_offset_repeats();
     test_other_button();
