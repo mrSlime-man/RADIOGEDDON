@@ -182,6 +182,70 @@ static void test_scanner_adaptive(void) {
     CHECK(stub_live_bytes == base_bytes && stub_live_blocks == base_blocks, "freed fully");
 }
 
+/* Beta 12: the Adaptive Scanner the way its screens drive it, 1,200 times:
+ * the scanner allocated when missing and freed every few runs (app exit),
+ * Balanced, Focused and Custom (with favorite priorities) in turn, lists of
+ * 1..24 frequencies, pause and resume, learning reset while running,
+ * snapshots for the screen. Nothing may leak, every radio session must
+ * close, the memory held while running must not grow, and the pre-start
+ * memory check (radiogeddon_scanner_start_cost) must cover what a start
+ * actually allocates besides the thread (the stub thread has no stack). */
+static void test_scanner_adaptive_stress(void) {
+    printf("test_scanner_adaptive_stress\n");
+    size_t base_bytes = stub_live_bytes, base_blocks = stub_live_blocks;
+    static const uint8_t modes[] = {RgAdaptBalanced, RgAdaptFocused, RgAdaptCustom};
+    uint32_t list[RADIOGEDDON_SCANNER_MAX_CHANNELS];
+    for(size_t i = 0; i < RADIOGEDDON_SCANNER_MAX_CHANNELS; i++)
+        list[i] = 433050000 + (uint32_t)i * 50000;
+    RadioGeddonScanner* sc = NULL;
+    RadioGeddonScannerSnapshot* snap = malloc(sizeof(RadioGeddonScannerSnapshot));
+    size_t held_first = 0;
+    bool grew = false, cost_ok = true, pause_ok = true;
+    const size_t thread_stack = 1536 + 512; /* in start_cost, not allocated by the stub */
+    for(int c = 0; c < 1200; c++) {
+        uint8_t mode = modes[c % 3];
+        size_t count = 1 + (size_t)(c * 7) % RADIOGEDDON_SCANNER_MAX_CHANNELS;
+        size_t before = stub_live_bytes;
+        size_t cost = radiogeddon_scanner_start_cost(sc, mode);
+        if(!sc) sc = radiogeddon_scanner_alloc(fake_radio);
+        radiogeddon_scanner_set_mode(sc, mode);
+        radiogeddon_scanner_configure(sc, list, count, 1, 10, c % 5 == 0);
+        if(mode == RgAdaptCustom)
+            for(size_t i = 0; i < count; i++)
+                radiogeddon_scanner_set_priority(sc, i, (uint8_t)(i % 4));
+        radiogeddon_scanner_set_callback(sc, scanner_hit, NULL);
+        atomic_store(&fake_active_hz, (c % 4 == 0) ? list[count / 2] : 0);
+        radiogeddon_scanner_start(sc);
+        if(stub_live_bytes - before + thread_stack > cost + 64 * 8) cost_ok = false;
+        if(c % 3 == 1) {
+            radiogeddon_scanner_toggle_pause(sc);
+            if(!radiogeddon_scanner_is_paused(sc) && radiogeddon_scanner_hold_index(sc) < 0)
+                pause_ok = false;
+            radiogeddon_scanner_toggle_pause(sc);
+        }
+        if(c % 7 == 0) radiogeddon_scanner_reset_learning(sc);
+        radiogeddon_scanner_snapshot(sc, snap);
+        if(snap->mode != mode || snap->count != count) pause_ok = false;
+        radiogeddon_scanner_stop(sc);
+        radiogeddon_scanner_set_callback(sc, NULL, NULL);
+        // Memory held between runs (results kept), the same every time.
+        if(c == 2) held_first = stub_live_bytes;
+        if(c > 2 && c % 10 != 9 && stub_live_bytes > held_first + 0) grew = true;
+        if(c % 10 == 9) {
+            radiogeddon_scanner_free(sc);
+            sc = NULL;
+        }
+    }
+    if(sc) radiogeddon_scanner_free(sc);
+    free(snap);
+    atomic_store(&fake_active_hz, 0);
+    CHECK(atomic_load(&fake_scan_sessions) == 0, "every adaptive session closed");
+    CHECK(!grew, "memory held between runs does not grow");
+    CHECK(cost_ok, "start_cost covers what a start allocates");
+    CHECK(pause_ok, "pause/resume and snapshots consistent");
+    CHECK(stub_live_bytes == base_bytes && stub_live_blocks == base_blocks, "freed fully");
+}
+
 static void test_rangescan_cycles(void) {
     printf("test_rangescan_cycles\n");
     size_t base_bytes = stub_live_bytes, base_blocks = stub_live_blocks;
@@ -392,6 +456,7 @@ static void test_hopper_cycles(void) {
 int main(void) {
     test_scanner_cycles();
     test_scanner_adaptive();
+    test_scanner_adaptive_stress();
     test_rangescan_cycles();
     test_waterfall_cycles();
     test_hopper_cycles();
