@@ -227,7 +227,8 @@ Before and after each, note About's free heap and its lowest point.
 
 ## Crash and relaunch fixes (beta 12)
 
-Builds: `radiogeddon-full-roguemaster.fap` built for your firmware
+Builds: on RogueMaster `4f2e0620 [88.4]`, the release's
+`radiogeddon-full-roguemaster-4f2e06200-api88.4.fap`; on another RogueMaster commit, a build for it
 (`RM_REF=<commit> RM_API=<api>`, see
 [STABILITY_BETA12.md](STABILITY_BETA12.md#3-roguemaster-version-on-the-device-source)).
 Keep a CLI log open (`log info`) for every item and save it with the result.

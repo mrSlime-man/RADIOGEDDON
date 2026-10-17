@@ -519,6 +519,11 @@ bool rg_fp_decode(const uint8_t in[RG_FP_BYTES], RgFingerprint* fp) {
     fp->stable_hash = rg_fp_get32(p);
     p += 4;
     fp->proto_hash = rg_fp_get32(p);
+    p += 4;
+    // The reserved tail is written as zeros; anything else is not a record
+    // this format wrote (and would not encode back to the same bytes).
+    for(; p < in + RG_FP_BYTES; p++)
+        if(*p) return false;
     if(fp->flags & ~0x0Fu) return false;
     if(fp->encoding >= RgEncodingCount || fp->alternative >= RgEncodingCount) return false;
     if(fp->quality > RgQualityPoor || fp->noise_pct > 100 || fp->jitter_pct > 100) return false;

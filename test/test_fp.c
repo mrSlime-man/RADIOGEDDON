@@ -6,6 +6,7 @@
  * evidence about real captures (those are in test_fwanalyze's benchmark).
  * Run: make -C test
  */
+#include "../helpers/rg_crc.h"
 #include "../helpers/rg_fp.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -349,6 +350,18 @@ static void test_serialization(void) {
     raw[2] = RgEncodingCount;
     RgFingerprint f;
     CHECK(!rg_fp_decode(raw, &f), "bad encoding refused");
+    // The reserved tail must stay zero (fuzz_fp: a record with a valid CRC
+    // and non-zero reserved bytes decoded but did not encode back).
+    rg_fp_encode(&rec.fp, raw);
+    CHECK(rg_fp_decode(raw, &f), "clean fingerprint decodes");
+    raw[RG_FP_BYTES - 1] = 0x6D;
+    CHECK(!rg_fp_decode(raw, &f), "non-zero reserved byte refused");
+    CHECK(rg_fp_record_encode(&rec, buf), "re-encodes");
+    buf[RG_FP_NAME_MAX + 8 + RG_FP_BYTES - 4] = 0x3D;
+    uint32_t crc = rg_crc32(0, buf, RG_FP_RECORD_BYTES - 4);
+    for(size_t i = 0; i < 4; i++)
+        buf[RG_FP_RECORD_BYTES - 4 + i] = (uint8_t)(crc >> (8 * i));
+    CHECK(!rg_fp_record_decode(buf, &back), "record with non-zero reserved bytes refused");
 }
 
 static void test_evidence_text(void) {

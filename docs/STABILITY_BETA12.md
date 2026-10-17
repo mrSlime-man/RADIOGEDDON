@@ -152,7 +152,10 @@ RM_REF=4f2e06200 RM_API=88.4 scripts/build_target.sh full-roguemaster
 ```
 
 which builds in that commit's tree, asserts its API and records it as a
-device build (not a release artifact). To find your own: *Settings → About →
+device build, named `radiogeddon-full-roguemaster-4f2e06200-api88.4.fap` so it never replaces the
+RogueMaster release build. The beta 12 release ships this exact build as a
+fifth file (target `full-roguemaster-device`, pinned in
+`scripts/firmware_pins.sh`). To find your own: *Settings → About →
 Firmware Info*, second line: `<commit> [<API>]`.
 
 ## 4. Lifetimes that were checked [source, host]

@@ -2,10 +2,12 @@
 
 What has been verified, how, and what has not. Integrity rule: nothing is
 marked hardware-verified without evidence from a physical device. As of
-`1.0.0-beta.11`, the only physical-hardware results are tester reports on
+`1.0.0-beta.12`, the only physical-hardware results are tester reports on
 beta 1 and beta 2 code (see "Reported by users" below); no checklist item is
 independently verified, and the "Not verified" section stands open.
-**Beta 11 is NOT HARDWARE TESTED**: every figure below comes from builds,
+**Beta 12 is NOT HARDWARE TESTED** (nor was beta 11; the owner's beta 11
+report of the Adaptive Scanner crash is in
+[STABILITY_BETA12.md](STABILITY_BETA12.md)): every figure below comes from builds,
 host tests, a stub SD card or a host model of the firmware's heap.
 
 ## Environment
@@ -26,6 +28,7 @@ locally.
 | Full edition, RogueMaster build | RogueMaster source at commit `38d7ae9`, built with its own `fbt`, API asserted 88.16, manifest (name `RadioGeddon Full`) verified, all 319 imports, and each of the 16 modules' imports, exported by its `api_symbols.csv` | Pass — `radiogeddon-full-roguemaster.fap` |
 | Full edition, Momentum build | Momentum mntm-012 SDK pinned by SHA-256 (matches Momentum's update index), API asserted 87.1, manifest verified, all 319 imports and the 16 modules' imports exported by Momentum's SDK | Pass — `radiogeddon-full-momentum.fap` |
 | Full edition, Unleashed build | SDK unlshd-093 pinned by SHA-256, API asserted 88.9, manifest verified, all 319 imports and the 16 modules' imports exported by the SDK | Pass — `radiogeddon-full-unleashed.fap` |
+| Full edition, RogueMaster device build (beta 12) | RogueMaster source at commit `4f2e06200`, built with its own `fbt`, API asserted 88.4, manifest verified, all imports and the 16 modules' imports exported by that commit's `api_symbols.csv`; the release package checks the build record names that commit and that all five files come from one source revision | Pass — `radiogeddon-full-roguemaster-4f2e06200-api88.4.fap` |
 | Edition switches | `test_edition` built three times: as Full, as Catalog and with no edition (must be Catalog); defining both must not compile | Pass — 19 checks each, conflict refused |
 | Lint | `ufbt lint` (clang-format) | Pass, no warnings |
 | DSP/parse unit tests | `make -C test check` → `test_dsp` | Pass — 36 checks |

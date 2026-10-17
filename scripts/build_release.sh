@@ -7,7 +7,7 @@
 #
 #   OUT_DIR  default: dist/release
 #   TARGET   any of: catalog-official full-roguemaster full-momentum
-#            full-unleashed (default: all four)
+#            full-unleashed full-roguemaster-device (default: all five)
 #
 # Each target is built by scripts/build_target.sh against the SDK pinned in
 # scripts/firmware_pins.sh — the same path CI and the release workflow use.
@@ -20,7 +20,7 @@ PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 out_dir="${1:-${PROJECT_DIR}/dist/release}"
 shift || true
 targets=("$@")
-[ "${#targets[@]}" -gt 0 ] || targets=(catalog-official full-roguemaster full-momentum full-unleashed)
+[ "${#targets[@]}" -gt 0 ] || targets=(catalog-official full-roguemaster full-momentum full-unleashed full-roguemaster-device)
 
 mkdir -p "${out_dir}"
 for t in "${targets[@]}"; do
