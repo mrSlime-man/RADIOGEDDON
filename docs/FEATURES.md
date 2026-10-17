@@ -30,10 +30,13 @@ settings — is the same code in both.
 | [Pulse Studio](#pulse-studio-full-edition) | — | ✓ |
 | [Adaptive Scanner](#adaptive-scanner-full-edition) | — | ✓ |
 | [RF Activity Logger](#rf-activity-logger-full-edition) | — | ✓ |
+| [RF Activity Heatmap](#rf-activity-heatmap-full-edition) | — | ✓ |
+| [Recording recovery](#raw-signal-capture) | ✓ | ✓ |
+| [Diagnostics report, Battery saver](#memory-diagnostics) | ✓ | ✓ |
 | [Research Journal, Research XP, Dolphin Assistant](#research-journal-xp-and-assistant-full-edition) | — | ✓ |
 | Main menu | the tools listed directly | grouped: Scan, Receive & Record, Analyze, Database, Sessions, Settings, About |
 | [Replay](#authorized-signal-replay) | the app checks the firmware's region first and explains a refusal; then the firmware's own check | the firmware's own check only |
-| Resident code (from the built files, beta 9) | 80,553 B | 119,132 B, plus [modules](#modules-full-edition) loaded only while used |
+| Resident code (from the built files; beta 9 in brackets) | 86,501 B (80,552 B) | 112,364 B (119,132 B), plus [modules](#modules-full-edition) loaded only while used |
 
 The Catalog edition keeps every receiving and analysis feature the app had;
 the Full-only features are the research tools that go beyond the built-in
@@ -302,8 +305,12 @@ customization screens are the 18 KB `radiogeddon_lab` module.
 - **Index**: `apps_data/radiogeddon/fingerprints.idx` — a header and
   fixed-size records, each with a CRC. A search brings it up to date
   (new or changed recordings are fingerprinted in batches, deleted ones
-  dropped), writing a temporary file and renaming it; a damaged index or
-  record is rebuilt rather than trusted.
+  dropped), writing a temporary file and committing it crash-safely; a
+  damaged index or record is rebuilt rather than trusted. Up to 2,000
+  recordings, or as many as the free heap can track (8 bytes each); beyond
+  that the first ones are indexed and the result line says `first N`.
+- **Scope**: all recordings, or only those saved within an hour or a day of
+  the one searched for (the Scope row on the results; the index is reused).
 - **Ranking**: weighted feature agreement, at most 8 matches. Every score is
   capped by its evidence: 30 when either side has no frame structure, 60 for
   RAW against decoded, 65 when the timing disagrees; bit patterns count only
@@ -366,6 +373,24 @@ threshold.
   coverage per frequency, the busiest frequencies, first and last activity.
 - The CC1101 hears one frequency at a time: everything is per visit.
 
+## RF Activity Heatmap (Full edition)
+
+Scan → Activity Heatmap opens a saved RF Activity Logger file (any part of
+it; all its parts are read) as a picture: one row per frequency, time left to
+right in up to 64 columns.
+
+- **Not observed** (nobody listened to that frequency then): blank — never
+  shown as silence. **Observed and quiet**: one dot. **Active**: denser
+  marks in three levels, by bursts relative to the busiest cell, or (OK
+  switches) by how far the peak rose above the noise floor (<10, <20,
+  ≥20 dB). OK a third time shows the legend.
+- The footer shows the cursor cell's frequency, bursts and **coverage** (the
+  share of the cell's time spent listening to it: a quiet cell at 2 % says
+  little). The header shows its time window.
+- The log is read once, a few hundred bytes at a time; a long log merges
+  neighbouring columns, so memory depends only on the number of frequencies
+  (6 bytes a cell). It is a module (`radiogeddon_heatmap.fal`).
+
 ## Research Journal, XP and Assistant (Full edition)
 
 - **Journal** (Analyze → Research Journal; the room's terminal): counts of
@@ -396,18 +421,21 @@ The Full edition's optional tools are plugins packed inside the `.fap`
 Each is loaded when its screen opens and unloaded when it closes, so its code
 takes RAM only then:
 
-| Module | Size (beta 9) | Loaded while |
+| Module | Size | Loaded while |
 |--------|------:|--------------|
 | `radiogeddon_wf.fal` | 4,496 B | the Waterfall is open |
-| `radiogeddon_bits.fal` | 6,720 B | the Bitstream Explorer is open |
-| `radiogeddon_multi.fal` | 16,987 B | a comparison or a session export runs |
-| `radiogeddon_unknown.fal` | 18,612 B | Protocol Discovery (or a report) runs |
-| `radiogeddon_sessions.fal` | 16,422 B | any Sessions screen is open |
-| `radiogeddon_lab.fal` | 18,297 B | the room, journal, assistant or customization screen is open |
-| `radiogeddon_fp.fal` | 20,370 B | Find Similar runs or shows its results |
-| `radiogeddon_studio.fal` | 21,904 B | Pulse Studio or the Pulse Timeline is open |
+| `radiogeddon_bits.fal` | 15,982 B | the Bitstream Explorer is open (it runs the analysis itself) |
+| `radiogeddon_multi.fal` | 17,160 B | a comparison or a session export runs |
+| `radiogeddon_unknown.fal` | 18,784 B | Protocol Discovery (or a report) runs |
+| `radiogeddon_sessions.fal` | 16,870 B | any Sessions screen is open |
+| `radiogeddon_lab.fal` | 18,496 B | the room, journal, assistant or customization screen is open |
+| `radiogeddon_fp.fal` | 21,824 B | Find Similar runs or shows its results |
+| `radiogeddon_studio.fal` | 22,096 B | Pulse Studio or the Pulse Timeline is open |
 | `radiogeddon_log.fal` | 9,158 B | the Activity Logger or the adaptive setup is open |
-| `radiogeddon_reports.fal` | 18,198 B | an analysis, crypto, comparison or session report is shown |
+| `radiogeddon_reports.fal` | 18,370 B | an analysis, crypto, comparison or session report is shown |
+| `radiogeddon_heatmap.fal` | 5,945 B | the Activity Heatmap is open |
+| `radiogeddon_about.fal` | 4,153 B | About is open |
+| `radiogeddon_recover.fal` | 3,556 B | at start, only when a recording was cut off |
 
 Sizes are the bytes the loader places in RAM, measured from the Momentum
 build. Beta 9's screens are hosted by a generic forwarder with two module
@@ -503,6 +531,13 @@ the firmware can't decode — and saves it as a standard RAW `.sub` file
 - The REC line shows the recording time and sample count; the result screen
   after saving shows the file name, sample count, duration and losses.
 - A failed SD write stops the recording and is reported; it is not saved.
+- **Recovery.** The file is synced to the card at most every 2 s, so a
+  reboot or a flat battery during recording loses about 2 s at most. At the
+  next start the app finds the cut-off capture, checks it, repairs its end
+  (only complete values are kept; a `# Recovered:` note is added) and asks:
+  Keep saves it as `Recovered_<time>.sub`, Delete removes it, Back keeps it.
+  Nothing is invented: what was not on the card is missing, and the note
+  says so.
 - The file layout is the firmware's own, so the stock Sub-GHz app opens and
   replays it.
 - Uses the frequency and modulation chosen in **Settings**: one of the 19
@@ -573,7 +608,9 @@ Unit tests cover PWM, PPM and Manchester identification, noise and jitter
 robustness, cut-off frames, several patterns in one file and chunked
 streaming, all on synthetic signals. The capture tests also score it on the
 firmware's own 50 RAW test captures: Te right for 50, encoding family for 48,
-frame length within one bit for 42 (beta 8: 43 and 35). Every reading's fit is listed, so an
+frame length within one bit for 43 of the decoders' minimum lengths, 44 of
+the lengths the decoders actually decode from those captures (beta 9: 42 and 43;
+beta 8: 43 and 35 for encoding and frame length). Every reading's fit is listed, so an
 ambiguous capture shows as one; when Manchester's grammar fits but every
 pulse pairs with its gap by one rule (always opposite, or always equal), the
 pulse-width reading is taken and the report says why. The frame list ends
@@ -732,6 +769,18 @@ region check.
 - **Optional screens** (Waterfall, Bitstream Explorer, comparisons, Sessions,
   Unknown Protocol Analysis in the Full edition) check what they and their
   module need before allocating anything and explain a refusal.
+- **Diagnostics** (About): how responsive the screen has been (the slowest
+  gap between UI ticks and the stalls over 250 ms), module loads (refused for
+  memory, failed, the slowest), RAW recordings (samples, losses, radio
+  overruns, write errors, SD write speed), a heap fragmentation figure and
+  the messages shown. **Save report** writes them with the version and
+  firmware to `apps_data/radiogeddon/diagnostics/RG_DIAG_<time>.txt` for bug
+  reports — counts only, never a file name, frequency or sample.
+- **Battery saver** (Settings, off by default): live screens redraw at most
+  twice a second, the logger's status every 5 s, the dolphin's animation
+  once a second. The radio's scanning, hopping, recording and logging run
+  exactly as without it. How much battery it saves has not been measured on
+  a Flipper yet.
 - A one-line memory summary goes to the log when the app closes.
 
 ## Not implemented / out of scope

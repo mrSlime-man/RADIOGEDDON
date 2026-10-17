@@ -114,12 +114,24 @@ Flipper, with no computer, phone, network or cloud service.
   each symbol (`?` where unsure), and Frame, Bits, Hex, Diff and Timing pages.
 - **Smart Protocol Discovery** — competing readings, each with its evidence
   and score, instead of a single answer; on the firmware's 50 test captures
-  the encoding family is right for 48 (beta 8: 43) and the frame length for 42
-  (beta 8: 35). No protocol answer is hardcoded.
+  the encoding family is right for 48 (beta 8: 43) and the frame length for 43
+  (beta 8: 35), 44 against the lengths the decoders actually decode. No
+  protocol answer is hardcoded.
 - **Adaptive Scanner** — Balanced Adaptive, Activity Focused and Custom modes
   visit busy frequencies more while every frequency keeps a bounded wait.
 - **RF Activity Logger** — hours of passive observation to CSV, keeping
   "quiet" and "not observed" apart, with a summary; it never overwrites.
+- **RF Activity Heatmap** — a saved log as frequency × time on the screen:
+  not observed (blank), observed and quiet (a dot), activity by bursts or
+  strength, with each cell's coverage.
+- **Recording recovery and crash-safe files** (both editions) — a capture
+  cut off by a reboot or a flat battery is repaired and offered back at the
+  next start; settings, the journal, favorites, profiles and the fingerprint
+  index survive a reboot in the middle of a save.
+- **Diagnostics and Battery saver** (both editions) — About shows
+  responsiveness, module, recording and heap figures and saves them as a
+  report; the battery saver redraws live screens less often without slowing
+  the radio.
 - **Research Journal**, optional **Research XP** and 12 achievements (real
   events only, nothing for transmitting), a rule-based **Dolphin Assistant**
   (one dismissable tip at a time, never while recording), dolphin

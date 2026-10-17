@@ -4,6 +4,17 @@ Where RadioGeddon is headed. This is a plan, not a promise — priorities shift
 with what hardware testing finds and what contributors pick up. Dates are
 deliberately omitted.
 
+## Next release (unreleased, on `main` when merged)
+
+Engineering pass: the resident Full edition is 6.8 KB smaller (the analyzer
+and About became module-only); saves survive a reboot mid-save; a recording
+cut off by a reboot is repaired and offered back; the Database sorts and
+finds duplicates in O(n log n); Find Similar lists the folder far less
+often, indexes beyond 500 recordings and searches within a time window; an
+RF Activity Heatmap, a diagnostics report and a battery saver; data races
+in the engines' stop paths fixed, with ThreadSanitizer in CI. Hardware
+checks U1–U10 pending.
+
 ## Now — `1.0.0-beta.9`
 
 `1.0.0-beta.9` makes the Full edition a standalone research lab: signal

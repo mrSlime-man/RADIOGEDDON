@@ -7,6 +7,55 @@ to follow [Semantic Versioning](https://semver.org/) (pre-1.0.0 releases use
 
 ## [Unreleased]
 
+Engineering pass: less resident RAM in the Full edition, files that survive
+a reboot, faster Database and Find Similar, and new on-device tools. Nothing
+new transmits. Not yet verified on hardware (checklist U1–U10).
+
+### Added
+- **Recording recovery** (both editions): the RAW writer syncs at most every
+  2 s, and a capture cut off by a reboot or a flat battery is checked,
+  repaired (complete values only, a `# Recovered:` note) and offered at the
+  next start: Keep (`signals/Recovered_<time>.sub`), Delete, Back keeps.
+  Before, the leftover file was deleted. Full edition: a module loaded only
+  then.
+- **RF Activity Heatmap** (Full; Scan → Activity Heatmap): a saved activity
+  log as frequency × time; not observed, observed-quiet and active cells
+  told apart; bursts or strength; coverage per cell.
+- **Find Similar scope**: all recordings, within 1 hour or within 1 day.
+- **Diagnostics** (both editions; About): UI responsiveness (slowest tick
+  gap, stalls over 250 ms), module loads, recordings (losses, overruns,
+  write errors, SD write speed), heap fragmentation, messages; **Save
+  report** writes them to `diagnostics/` (counts only, no capture data).
+- **Battery saver** (Settings, both editions, off by default): live screens
+  redraw at most twice a second, the logger's status every 5 s, the
+  animation once a second; radio work unchanged. Battery effect not measured.
+
+### Changed
+- **Resident RAM, Full edition: 119,132 → 112,364 B.** The analyzer was
+  resident only for the Bitstream scene: the bits module now runs it
+  (−8,100 B). About and the diagnostics text are a module (−2,859 B).
+  Catalog: 80,552 → 86,501 B, the new resident features (it has no modules).
+- **Crash-safe saves** for settings, journal, favorites, scan profiles and
+  the fingerprint index: a commit marker makes every interrupted save
+  recoverable to the old or the new version (the firmware's rename copies;
+  a reboot during it used to lose both).
+- **Database**: sorting, searching and duplicate marking in O(n log n),
+  identical results (7–18× less work at 500–1,000 files on the host).
+- **Fingerprint index**: one folder listing when nothing is new, batches
+  sized to the heap, 64-bit name hashes in a sorted array; up to 2,000
+  recordings (was 500), or what the heap allows, never refused for a short
+  heap. 500 recordings, first search: 43 → 9 folder listings.
+- **Protocol discovery**: preamble filler between back-to-back repeats is no
+  longer counted as data (Nero Sketch 89 → 39 bits); the capture tests also
+  score against the lengths the decoders actually decode (43 → 44 of 50).
+
+### Fixed
+- Data races on the Scanner, Range Scanner and Hopper stop flags (found by
+  ThreadSanitizer, now a CI job).
+- Two names with equal 32-bit hashes kept one recording out of the
+  fingerprint index.
+
+
 ## [1.0.0-beta.9] - 2026-10-11
 
 Standalone Research Lab (Full edition): signal fingerprints and Find Similar
