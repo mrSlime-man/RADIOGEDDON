@@ -37,12 +37,14 @@
  * decodes a quiet line after the capture would give (a second receiver, fed
  * the same samples with the last one held into a TAIL_GAP_US gap).
  */
+#include <malloc.h> /* before furi.h, which maps malloc to calloc */
 #include "furi.h"
 #include "../helpers/rg_decode.h"
 #include "fw_decoded_bits.h"
 #include "../helpers/rg_raw.h"
 #include "../helpers/radiogeddon_decode_text.h"
 #include "../helpers/radiogeddon_bands.h"
+#include "../helpers/radiogeddon_decoders.h"
 
 #include <lib/subghz/receiver.h>
 #include <lib/subghz/environment.h>
@@ -829,11 +831,167 @@ static void test_random_capture(RunResult* r) {
     }
 }
 
+/* ---- The decode-only receiver (radiogeddon_decoders.h) -------------------- */
+
+/* Every decode's protocol, text and hash folded in order: two receivers that
+ * report the same decodes in the same order give the same digest. */
+typedef struct {
+    uint64_t digest;
+    uint32_t decodes;
+    FuriString* text;
+} DecodeTrace;
+
+static uint64_t fold(uint64_t h, const void* data, size_t len) {
+    const uint8_t* p = data;
+    for(size_t i = 0; i < len; i++)
+        h = (h ^ p[i]) * 1099511628211ull;
+    return h;
+}
+
+static void trace_callback(
+    SubGhzReceiver* receiver,
+    SubGhzProtocolDecoderBase* decoder_base,
+    void* context) {
+    DecodeTrace* t = context;
+    const char* name = decoder_base->protocol ? decoder_base->protocol->name : "";
+    radiogeddon_decode_text(decoder_base, NULL, t->text);
+    uint8_t hash = subghz_protocol_decoder_base_get_hash_data(decoder_base);
+    t->digest = fold(t->digest, name, strlen(name) + 1);
+    t->digest = fold(t->digest, furi_string_get_cstr(t->text), furi_string_size(t->text) + 1);
+    t->digest = fold(t->digest, &hash, 1);
+    t->decodes++;
+    subghz_receiver_reset(receiver);
+}
+
+typedef struct {
+    SubGhzReceiver* full;
+    SubGhzReceiver* fed;
+} TwoReceivers;
+
+static void feed_two(void* ctx, bool level, uint32_t duration) {
+    TwoReceivers* t = ctx;
+    subghz_receiver_decode(t->full, level, duration);
+    subghz_receiver_decode(t->fed, level, duration);
+}
+
+/* Bytes the process has allocated now (the decoders allocate through the
+ * host's calloc here). */
+#if defined(__SANITIZE_ADDRESS__)
+size_t __sanitizer_get_current_allocated_bytes(void);
+#endif
+static size_t live_heap(void) {
+#if defined(__SANITIZE_ADDRESS__)
+    return __sanitizer_get_current_allocated_bytes();
+#else
+    return mallinfo2().uordblks;
+#endif
+}
+
+static void test_decode_only_receiver(void) {
+    printf("test_decode_only_receiver\n");
+    const SubGhzProtocolRegistry* all = &subghz_protocol_registry;
+    const SubGhzProtocolFlag filter = SubGhzProtocolFlag_Decodable;
+    size_t count = subghz_protocol_registry_count(all);
+
+    /* The selection: every protocol the filter feeds, in registry order,
+     * and nothing else; here (Official 1.4.3) all but RAW and BinRAW. */
+    const SubGhzProtocol* sel[128];
+    size_t n = radiogeddon_decoders_select(all, filter, sel, 128);
+    size_t fed = 0, order_ok = 1, raw_in = 0, binraw_in = 0;
+    for(size_t i = 0, k = 0; i < count; i++) {
+        const SubGhzProtocol* p = subghz_protocol_registry_get_by_index(all, i);
+        if(p->decoder && p->decoder->alloc && (p->flag & filter)) {
+            fed++;
+            if(k >= n || sel[k++] != p) order_ok = 0;
+        }
+    }
+    for(size_t k = 0; k < n; k++) {
+        if(strcmp(sel[k]->name, "RAW") == 0) raw_in++;
+        if(strcmp(sel[k]->name, "BinRAW") == 0) binraw_in++;
+    }
+    printf("  %zu protocols registered, %zu fed under the Decodable filter\n", count, n);
+    CHECK(n == fed && order_ok, "exactly the fed protocols, in registry order");
+    CHECK(n == count - 2 && raw_in == 0 && binraw_in == 0, "only RAW and BinRAW left out");
+    CHECK(radiogeddon_decoders_select(all, filter, sel, 3) == n, "count returned past the room");
+    CHECK(radiogeddon_decoders_skips_binraw(all, filter), "BinRAW's decoder is skipped");
+    CHECK(
+        !radiogeddon_decoders_skips_binraw(all, filter | SubGhzProtocolFlag_BinRAW),
+        "a BinRAW filter would feed it");
+
+    SubGhzEnvironment* environment = subghz_environment_alloc();
+    subghz_environment_set_protocol_registry(environment, (void*)all);
+    subghz_environment_set_came_atomo_rainbow_table_file_name(environment, NULL);
+    subghz_environment_set_alutech_at_4n_rainbow_table_file_name(environment, NULL);
+    subghz_environment_set_nice_flor_s_rainbow_table_file_name(environment, NULL);
+
+    /* What each takes from the heap (host sizes: 64-bit pointers). */
+    size_t before = live_heap();
+    SubGhzReceiver* full = receiver_alloc(environment);
+    size_t full_bytes = live_heap() - before;
+    before = live_heap();
+    SubGhzReceiver* only = radiogeddon_decoders_receiver_alloc(environment, all, filter);
+    size_t fed_bytes = live_heap() - before;
+    printf(
+        "  receiver with every decoder %zu B, with the fed ones %zu B (host), %zu B less\n",
+        full_bytes,
+        fed_bytes,
+        full_bytes - fed_bytes);
+    CHECK(
+        full_bytes >= fed_bytes + RADIOGEDDON_DECODERS_BINRAW_BUFFERS,
+        "BinRAW's two buffers are not allocated");
+    CHECK(
+        subghz_environment_get_protocol_registry(environment) == all,
+        "the environment has the full registry back");
+
+    /* Same decodes, same order, same texts and hashes, on every capture. */
+    DecodeTrace tf = {14695981039346656037ull, 0, furi_string_alloc()};
+    DecodeTrace to = {14695981039346656037ull, 0, furi_string_alloc()};
+    subghz_receiver_set_rx_callback(full, trace_callback, &tf);
+    subghz_receiver_set_rx_callback(only, trace_callback, &to);
+    TwoReceivers two = {full, only};
+    static RgRawReader reader;
+    static RgDecodeLog log;
+    size_t files = 0, same = 0;
+    for(size_t i = 0; i <= PAIR_COUNT; i++) {
+        const char* name = i < PAIR_COUNT ? pairs[i].file : RANDOM_FILE;
+        char path[512];
+        FILE* fp = find_file(name, path, sizeof(path)) ? fopen(path, "rb") : NULL;
+        if(!fp) continue;
+        uint32_t cf = tf.decodes, co = to.decodes;
+        RgRawSource source = {file_read, file_seek, fp};
+        rg_raw_reader_init(&reader, source);
+        rg_decode_log_init(&log);
+        rg_decode_run(&reader, &log, feed_two, &two, NULL, NULL);
+        fclose(fp);
+        subghz_receiver_reset(full);
+        subghz_receiver_reset(only);
+        files++;
+        bool equal = (tf.digest == to.digest) && (tf.decodes - cf == to.decodes - co);
+        if(equal) {
+            same++;
+        } else {
+            printf("  differs: %s\n", name);
+        }
+    }
+    printf(
+        "  %zu captures: %zu decode the same, %u decodes each way\n", files, same, to.decodes);
+    CHECK(files == PAIR_COUNT + 1, "every capture was fed");
+    CHECK(same == files && tf.decodes == to.decodes && tf.digest == to.digest, "identical decodes");
+    CHECK(to.decodes > PAIR_COUNT, "the captures decoded");
+
+    furi_string_free(tf.text);
+    furi_string_free(to.text);
+    subghz_receiver_free(full);
+    subghz_receiver_free(only);
+    subghz_environment_free(environment);
+}
+
 int main(void) {
     struct timespec t0, t1;
     clock_gettime(CLOCK_MONOTONIC, &t0);
 
     test_list_matches_firmware();
+    test_decode_only_receiver();
     RunResult* r =
         mmap(NULL, sizeof(*r), PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
     CHECK(r != MAP_FAILED, "shared memory for the children");

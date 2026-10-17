@@ -22,6 +22,11 @@ static void radiogeddon_tick_event_callback(void* context) {
     RadioGeddonApp* app = context;
     radiogeddon_memdiag_tick();
     radiogeddon_memdiag_sample(NULL);
+#if RG_EDITION_FULL
+    // Before the scene's tick too: a module whose screen a key closed since
+    // the last tick goes before the next screen's tick makes anything.
+    radiogeddon_scene_tools_tick(app);
+#endif
 #if RG_FEATURE_DOLPHIN_LAB
     radiogeddon_ui_tick(app);
 #endif

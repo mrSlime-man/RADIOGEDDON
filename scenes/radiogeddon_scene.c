@@ -179,7 +179,14 @@ RG_UI_TEXT void
 #define RADIOGEDDON_RADIO_MARGIN (6u * 1024u)
 
 RG_UI_TEXT uint32_t radiogeddon_scene_radio_cost(RadioGeddonApp* app) {
-    return app->settings.radio_heap_fw == app->fw_tag ? app->settings.radio_heap : 0;
+    if(app->settings.radio_heap_fw != app->fw_tag) return 0;
+    // Measured by an older app on this firmware: still a bound once what it
+    // allocated and this one does not is taken off (rg_mem_cost_for_model).
+    return rg_mem_cost_for_model(
+        app->settings.radio_heap,
+        app->settings.radio_heap_model,
+        app->settings.radio_heap_model == RG_MEM_SESSION_MODEL ? 0u :
+                                                                 radiogeddon_subghz_model0_extra());
 }
 
 RG_UI_TEXT bool radiogeddon_scene_decoders_fit(RadioGeddonApp* app) {
@@ -233,9 +240,12 @@ RG_UI_TEXT bool radiogeddon_scene_decoders_memory_ok(RadioGeddonApp* app) {
 
 RG_UI_TEXT void radiogeddon_scene_radio_memory_learn(RadioGeddonApp* app) {
     uint32_t cost = radiogeddon_subghz_session_cost(app->subghz);
-    if(!rg_mem_cost_changed(radiogeddon_scene_radio_cost(app), cost)) return;
+    if(app->settings.radio_heap_model == RG_MEM_SESSION_MODEL &&
+       !rg_mem_cost_changed(radiogeddon_scene_radio_cost(app), cost))
+        return;
     app->settings.radio_heap = cost;
     app->settings.radio_heap_fw = app->fw_tag;
+    app->settings.radio_heap_model = RG_MEM_SESSION_MODEL;
     // Only this changes; the stored frequency and preset stay as they were.
     radiogeddon_settings_save(app->storage, &app->settings);
 }

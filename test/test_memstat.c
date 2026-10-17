@@ -61,6 +61,28 @@ static void test_session(void) {
     CHECK(rg_mem_cost_changed(15000, 13900), "shrink over 1 KB stored");
 }
 
+static void test_cost_model(void) {
+    printf("test_cost_model\n");
+    const uint32_t binraw = 2048u * 4u + 2048u;
+    // The owner's beta 12 measurement on RogueMaster 4f2e06200.
+    CHECK(rg_mem_cost_for_model(36568, 0, binraw) == 36568 - binraw, "beta 12 cost less BinRAW");
+    CHECK(rg_mem_cost_for_model(36568, 0, 0) == 36568, "nothing dropped: unchanged");
+    CHECK(
+        rg_mem_cost_for_model(36568, RG_MEM_SESSION_MODEL, binraw) == 36568,
+        "current model: as measured");
+    CHECK(rg_mem_cost_for_model(0, 0, binraw) == 0, "never measured stays unmeasured");
+    // Never below the smallest session, never above what was stored.
+    CHECK(
+        rg_mem_cost_for_model(RG_MEM_MIN_SESSION_COST + 100, 0, binraw) == RG_MEM_MIN_SESSION_COST,
+        "floored at the smallest session");
+    CHECK(rg_mem_cost_for_model(5000, 0, binraw) == 5000, "a tiny stored cost is not raised");
+    for(uint32_t stored = 1; stored < 80000; stored += 97) {
+        uint32_t c = rg_mem_cost_for_model(stored, 0, binraw);
+        CHECK(c <= stored, "never more than stored");
+        CHECK(c + binraw >= stored, "never less than stored minus what was dropped");
+    }
+}
+
 static void test_cost(void) {
     printf("test_cost\n");
     // Steady: low-water mark untouched (an earlier, deeper low exists).
@@ -119,6 +141,7 @@ int main(void) {
     test_stat();
     test_session();
     test_cost();
+    test_cost_model();
     test_tag();
     test_diag();
 

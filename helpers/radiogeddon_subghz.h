@@ -113,6 +113,14 @@ bool radiogeddon_subghz_is_rx_running(RadioGeddonSubGhz* instance);
 uint32_t radiogeddon_subghz_session_cost(RadioGeddonSubGhz* instance);
 
 /**
+ * Heap a receive session of beta 12 and older (RG_MEM_SESSION_MODEL 0)
+ * allocated that a session now does not, on this firmware: BinRAW's capture
+ * buffers when its decoder is no longer allocated (radiogeddon_decoders.h).
+ */
+uint32_t radiogeddon_subghz_model0_extra(void);
+
+
+/**
  * Retune an already-running RX session to a new frequency without powering the
  * radio down (used by the Frequency Hopper). The decode callback stays active.
  * Invalid (out-of-band) frequencies are ignored. No-op if RX is not running.

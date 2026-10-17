@@ -39,6 +39,10 @@ struct RadioGeddonHopper {
     void* context;
 };
 
+size_t radiogeddon_hopper_object_cost(void) {
+    return sizeof(RadioGeddonHopper) + 64u; // and its mutex
+}
+
 RadioGeddonHopper* radiogeddon_hopper_alloc(RadioGeddonSubGhz* subghz) {
     RadioGeddonHopper* instance = malloc(sizeof(RadioGeddonHopper));
     memset(instance, 0, sizeof(RadioGeddonHopper));

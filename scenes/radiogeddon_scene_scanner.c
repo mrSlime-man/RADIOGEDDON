@@ -10,6 +10,9 @@ typedef enum {
     // + channel index; kept clear of every other scene's custom event values,
     // because a hit posted just as the scene closes is delivered to the next one.
     ScannerCustomHitBase = 1000,
+    // Full edition: start once the module that opened the Scanner is
+    // unloaded (above every hit index; handled first).
+    ScannerCustomBegin = 0x7101,
 } ScannerCustomEvent;
 
 static RG_UI_TEXT void radiogeddon_scanner_view_cb(RadioGeddonScannerEvent event, void* context) {
@@ -75,6 +78,8 @@ static RG_UI_TEXT void radiogeddon_scene_scanner_badge(RadioGeddonApp* app) {
 #endif
 }
 
+static RG_UI_TEXT void radiogeddon_scene_scanner_begin(RadioGeddonApp* app);
+
 RG_UI_TEXT void radiogeddon_scene_scanner_on_enter(void* context) {
     RadioGeddonApp* app = context;
     app->scanner_running = false;
@@ -84,7 +89,22 @@ RG_UI_TEXT void radiogeddon_scene_scanner_on_enter(void* context) {
             app, "No radio", "Sub-GHz device not\nfound or not responding.", false);
         return;
     }
+#if RG_EDITION_FULL
+    // Opened from a tool module's screen (the Adaptive Scanner's setup): that
+    // module's code is still running now and is unloaded only afterwards.
+    // The scanner and its schedule are kept until the main menu, so made
+    // now they would sit above the module's blocks and split the free space
+    // once it is gone (the RF Activity Logger then no longer fit). Start
+    // from the event loop instead, after unloading it.
+    if(!radiogeddon_scene_tools_settled(app)) {
+        view_dispatcher_send_custom_event(app->view_dispatcher, ScannerCustomBegin);
+        return;
+    }
+#endif
+    radiogeddon_scene_scanner_begin(app);
+}
 
+static RG_UI_TEXT void radiogeddon_scene_scanner_begin(RadioGeddonApp* app) {
     uint32_t list[RADIOGEDDON_SCANNER_MAX_CHANNELS];
     size_t count = radiogeddon_scene_build_list(
         app,
@@ -204,6 +224,14 @@ RG_UI_TEXT bool radiogeddon_scene_scanner_on_event(void* context, SceneManagerEv
         consumed = true;
     } else if(event.type == SceneManagerEventTypeCustom) {
         consumed = true;
+#if RG_EDITION_FULL
+        if(event.event == ScannerCustomBegin) {
+            // No module code runs from the event loop: unload, then start.
+            radiogeddon_scene_tools_tick(app);
+            radiogeddon_scene_scanner_begin(app);
+            return consumed;
+        }
+#endif
         if(!app->scanner) return consumed;
 
         if(event.event >= ScannerCustomHitBase) {

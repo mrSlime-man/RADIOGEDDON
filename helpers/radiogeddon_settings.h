@@ -31,6 +31,7 @@ typedef struct {
     bool ext_power; // switch on 5 V (GPIO pin 1) for the external module
     uint32_t radio_heap; // heap the last measured receive session took (0: none)
     uint32_t radio_heap_fw; // firmware it was measured on (rg_mem_firmware_tag)
+    uint8_t radio_heap_model; // what a session was made of then (RG_MEM_SESSION_MODEL)
     // Full edition. Both editions read and write these, so a settings file
     // keeps them when the other edition saves it.
     uint32_t range_start_hz; // range scanner: first frequency

@@ -39,6 +39,26 @@ uint32_t rg_memstat_peak_use(const RgMemStat* s);
  */
 bool rg_mem_session_fits(uint32_t free_now, uint32_t cost, uint32_t margin);
 
+/*
+ * What a receive session is made of. Model 1 (beta 13): the receiver holds
+ * only the decoders it feeds, so BinRAW's decoder and its two capture
+ * buffers are no longer allocated (radiogeddon_decoders.h). Settings files
+ * of beta 12 and older carry no model: their cost is model 0, measured with
+ * those buffers.
+ */
+#define RG_MEM_SESSION_MODEL 1u
+
+/**
+ * A stored session cost as a bound for a session of the current model.
+ * @p stored was measured with @p stored_model; @p dropped is the heap the
+ * current model no longer allocates compared with that one (exact, from the
+ * firmware source; 0 when nothing was dropped on this firmware). The old
+ * session allocated everything the new one does plus @p dropped, so the
+ * result is still an upper bound until a session of this model measures its
+ * own cost. Never below RG_MEM_MIN_SESSION_COST; 0 (never measured) stays 0.
+ */
+uint32_t rg_mem_cost_for_model(uint32_t stored, uint32_t stored_model, uint32_t dropped);
+
 /** Whether a new measurement should replace the stored cost (none, or >1 KB off). */
 bool rg_mem_cost_changed(uint32_t stored, uint32_t measured);
 

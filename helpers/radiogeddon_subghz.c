@@ -3,6 +3,7 @@
 #include "rg_memstat.h"
 #include "radiogeddon_memdiag.h"
 #include "radiogeddon_decode_text.h"
+#include "radiogeddon_decoders.h"
 #include "rg_preset.h"
 #include "../radiogeddon_edition.h"
 
@@ -176,7 +177,7 @@ static void radiogeddon_subghz_receiver_callback(
 /* ---- Lifecycle --------------------------------------------------------- */
 
 // The protocol environment (keystore + registry) and the receiver (one decoder
-// instance per registered protocol) are by far the largest allocations this
+// instance per protocol the receiver feeds) are by far the largest allocations this
 // toolkit makes; on firmwares with big protocol sets and keystores they alone
 // can exhaust the heap. They are therefore only alive while a receive or
 // transmit session actually needs them, never at application start.
@@ -208,8 +209,9 @@ static void radiogeddon_subghz_environment_release(RadioGeddonSubGhz* instance) 
 static void radiogeddon_subghz_decoders_alloc(RadioGeddonSubGhz* instance) {
     radiogeddon_subghz_environment_acquire(instance, true);
 
-    instance->receiver = subghz_receiver_alloc_init(instance->environment);
-    subghz_receiver_set_filter(instance->receiver, SubGhzProtocolFlag_Decodable);
+    // Only the decoders the Decodable filter feeds (radiogeddon_decoders.h).
+    instance->receiver = radiogeddon_decoders_receiver_alloc(
+        instance->environment, &subghz_protocol_registry, SubGhzProtocolFlag_Decodable);
     subghz_receiver_set_rx_callback(
         instance->receiver, radiogeddon_subghz_receiver_callback, instance);
 
@@ -426,6 +428,13 @@ bool radiogeddon_subghz_is_rx_running(RadioGeddonSubGhz* instance) {
 
 uint32_t radiogeddon_subghz_session_cost(RadioGeddonSubGhz* instance) {
     return instance->session_cost;
+}
+
+uint32_t radiogeddon_subghz_model0_extra(void) {
+    return radiogeddon_decoders_skips_binraw(
+               &subghz_protocol_registry, SubGhzProtocolFlag_Decodable) ?
+               RADIOGEDDON_DECODERS_BINRAW_BUFFERS :
+               0u;
 }
 
 void radiogeddon_subghz_rx_retune(RadioGeddonSubGhz* instance, uint32_t frequency) {
@@ -981,8 +990,8 @@ bool radiogeddon_subghz_decode_raw(
 
     radiogeddon_subghz_environment_acquire(instance, true);
     RadioGeddonDecodeRun run = {.log = log, .text = furi_string_alloc()};
-    run.receiver = subghz_receiver_alloc_init(instance->environment);
-    subghz_receiver_set_filter(run.receiver, SubGhzProtocolFlag_Decodable);
+    run.receiver = radiogeddon_decoders_receiver_alloc(
+        instance->environment, &subghz_protocol_registry, SubGhzProtocolFlag_Decodable);
     subghz_receiver_set_rx_callback(run.receiver, radiogeddon_subghz_decode_callback, &run);
 
     rg_decode_run(reader, log, radiogeddon_subghz_decode_feed, &run, progress, progress_context);

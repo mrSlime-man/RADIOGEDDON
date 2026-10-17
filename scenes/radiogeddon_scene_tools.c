@@ -20,63 +20,75 @@
 
 #define TOOLS_FAILED_EVENT 0x7001u
 
+/* Engines a tool screen makes and the app keeps after the screen closes
+ * (until the main menu). They are made before its module is loaded: made
+ * by the screen, they would sit above the module's blocks and split the
+ * heap once it is unloaded. */
+typedef enum {
+    ToolPrepNone,
+    ToolPrepScanner, // app->scanner, in the schedule of the settings
+    ToolPrepHopper, // app->hopper
+} ToolPrep;
+
 typedef struct {
     uint32_t scene;
     const char* file;
     uint8_t index;
     uint16_t work_kb; // heap its work needs besides the module
+    uint8_t prep; // ToolPrep
 } ToolScene;
 
 static const ToolScene tool_scenes[] = {
 #if RG_FEATURE_FINGERPRINT
-    {RadioGeddonSceneSimilar, RADIOGEDDON_MODULE_FP, 0, 16},
+    {RadioGeddonSceneSimilar, RADIOGEDDON_MODULE_FP, 0, 16, ToolPrepNone},
 #endif
 #if RG_FEATURE_PULSE_STUDIO
-    {RadioGeddonSceneStudio, RADIOGEDDON_MODULE_STUDIO, 0, 20},
-    {RadioGeddonSceneTimeline, RADIOGEDDON_MODULE_STUDIO, 1, 16},
+    {RadioGeddonSceneStudio, RADIOGEDDON_MODULE_STUDIO, 0, 20, ToolPrepNone},
+    {RadioGeddonSceneTimeline, RADIOGEDDON_MODULE_STUDIO, 1, 16, ToolPrepNone},
 #endif
-    {RadioGeddonSceneAnalyze, RADIOGEDDON_MODULE_REPORTS, 0, 14},
-    {RadioGeddonSceneCrypto, RADIOGEDDON_MODULE_REPORTS, 1, 2},
-    {RadioGeddonSceneCompareResult, RADIOGEDDON_MODULE_REPORTS, 2, 14},
-    {RadioGeddonSceneReport, RADIOGEDDON_MODULE_REPORTS, 3, 14},
+    {RadioGeddonSceneAnalyze, RADIOGEDDON_MODULE_REPORTS, 0, 14, ToolPrepNone},
+    {RadioGeddonSceneCrypto, RADIOGEDDON_MODULE_REPORTS, 1, 2, ToolPrepNone},
+    {RadioGeddonSceneCompareResult, RADIOGEDDON_MODULE_REPORTS, 2, 14, ToolPrepNone},
+    {RadioGeddonSceneReport, RADIOGEDDON_MODULE_REPORTS, 3, 14, ToolPrepNone},
 #if RG_FEATURE_ACTIVITY_LOG
-    {RadioGeddonSceneActlog, RADIOGEDDON_MODULE_LOG, 0, 8},
-    {RadioGeddonSceneAdaptive, RADIOGEDDON_MODULE_LOG, 1, 1},
-    {RadioGeddonSceneHeatmap, RADIOGEDDON_MODULE_HEATMAP, 0, 12},
+    {RadioGeddonSceneActlog, RADIOGEDDON_MODULE_LOG, 0, 8, ToolPrepScanner},
+    {RadioGeddonSceneAdaptive, RADIOGEDDON_MODULE_LOG, 1, 1, ToolPrepNone},
+    {RadioGeddonSceneHeatmap, RADIOGEDDON_MODULE_HEATMAP, 0, 12, ToolPrepNone},
 #endif
-    {RadioGeddonSceneAbout, RADIOGEDDON_MODULE_ABOUT, 0, 2},
+    {RadioGeddonSceneAbout, RADIOGEDDON_MODULE_ABOUT, 0, 2, ToolPrepNone},
 #if RG_FEATURE_DOLPHIN_LAB
-    {RadioGeddonSceneRoom, RADIOGEDDON_MODULE_LAB, 0, 4},
+    {RadioGeddonSceneRoom, RADIOGEDDON_MODULE_LAB, 0, 4, ToolPrepNone},
 #endif
 #if RG_FEATURE_JOURNAL
-    {RadioGeddonSceneJournal, RADIOGEDDON_MODULE_LAB, 1, 3},
+    {RadioGeddonSceneJournal, RADIOGEDDON_MODULE_LAB, 1, 3, ToolPrepNone},
 #endif
 #if RG_FEATURE_DOLPHIN_LAB
-    {RadioGeddonSceneCustomize, RADIOGEDDON_MODULE_LAB, 2, 1},
+    {RadioGeddonSceneCustomize, RADIOGEDDON_MODULE_LAB, 2, 1, ToolPrepNone},
 #endif
 #if RG_FEATURE_ASSISTANT
-    {RadioGeddonSceneAssistant, RADIOGEDDON_MODULE_LAB, 3, 1},
+    {RadioGeddonSceneAssistant, RADIOGEDDON_MODULE_LAB, 3, 1, ToolPrepNone},
 #endif
 #if RG_FEATURE_RANGE_SCAN
     // The setup checks the engine's memory itself before starting a scan.
-    {RadioGeddonSceneRangeSetup, RADIOGEDDON_MODULE_RANGE, 0, 1},
-    {RadioGeddonSceneRangeScan, RADIOGEDDON_MODULE_RANGE, 1, 4},
-    {RadioGeddonSceneProfiles, RADIOGEDDON_MODULE_RANGE, 2, 1},
-    {RadioGeddonSceneProfileName, RADIOGEDDON_MODULE_RANGE, 3, 1},
+    {RadioGeddonSceneRangeSetup, RADIOGEDDON_MODULE_RANGE, 0, 1, ToolPrepNone},
+    {RadioGeddonSceneRangeScan, RADIOGEDDON_MODULE_RANGE, 1, 4, ToolPrepNone},
+    {RadioGeddonSceneProfiles, RADIOGEDDON_MODULE_RANGE, 2, 1, ToolPrepNone},
+    {RadioGeddonSceneProfileName, RADIOGEDDON_MODULE_RANGE, 3, 1, ToolPrepNone},
 #endif
 #if RG_FEATURE_WATERFALL
-    {RadioGeddonSceneWaterfall, RADIOGEDDON_MODULE_RANGE, 4, 4},
+    {RadioGeddonSceneWaterfall, RADIOGEDDON_MODULE_RANGE, 4, 4, ToolPrepNone},
 #endif
-    {RadioGeddonSceneConfig, RADIOGEDDON_MODULE_SETTINGS, 0, 1},
-    {RadioGeddonSceneBands, RADIOGEDDON_MODULE_SETTINGS, 1, 1},
+    {RadioGeddonSceneConfig, RADIOGEDDON_MODULE_SETTINGS, 0, 1, ToolPrepNone},
+    {RadioGeddonSceneBands, RADIOGEDDON_MODULE_SETTINGS, 1, 1, ToolPrepNone},
     // The Hopper checks the receive session's memory itself.
-    {RadioGeddonSceneHopper, RADIOGEDDON_MODULE_HOPPER, 0, 1},
-    {RadioGeddonSceneHopperStats, RADIOGEDDON_MODULE_HOPPER, 1, 1},
+    {RadioGeddonSceneHopper, RADIOGEDDON_MODULE_HOPPER, 0, 1, ToolPrepHopper},
+    {RadioGeddonSceneHopperStats, RADIOGEDDON_MODULE_HOPPER, 1, 1, ToolPrepNone},
 #if RG_FEATURE_BITSTREAM
     {RadioGeddonSceneBitstream,
      RADIOGEDDON_MODULE_BITS,
      0,
-     (RADIOGEDDON_BITSTREAM_WORK + 1023u) / 1024u},
+     (RADIOGEDDON_BITSTREAM_WORK + 1023u) / 1024u,
+     ToolPrepNone},
 #endif
 };
 
@@ -292,6 +304,31 @@ static RG_UI_TEXT void tools_unload_slot(RadioGeddonApp* app, size_t i) {
     app->tool[i].shown = false;
 }
 
+/* Free heap kept when an engine is made ahead of its screen's module (the
+ * module, its work and the GUI still to come). */
+#define TOOLS_PREP_MARGIN (8u * 1024u)
+
+/* Make @p t's kept engine before its module is loaded (ToolPrep), when it
+ * fits with room to spare; otherwise the screen makes it later, as before. */
+static RG_UI_TEXT void tools_prepare(RadioGeddonApp* app, const ToolScene* t) {
+    size_t largest = memmgr_heap_get_max_free_block();
+    if(t->prep == ToolPrepScanner && !app->scanner) {
+#if RG_FEATURE_ADAPTIVE_SCAN
+        uint8_t mode = app->settings.scan_mode;
+#else
+        uint8_t mode = 0;
+#endif
+        if(largest < radiogeddon_scanner_start_cost(NULL, mode) + TOOLS_PREP_MARGIN) return;
+        app->scanner = radiogeddon_scanner_alloc(app->subghz);
+#if RG_FEATURE_ADAPTIVE_SCAN
+        radiogeddon_scanner_set_mode(app->scanner, mode);
+#endif
+    } else if(t->prep == ToolPrepHopper && !app->hopper) {
+        if(largest < radiogeddon_hopper_object_cost() + TOOLS_PREP_MARGIN) return;
+        app->hopper = radiogeddon_hopper_alloc(app->subghz);
+    }
+}
+
 /* The module of @p t, loaded if needed; NULL with the reason set. */
 static RG_UI_TEXT const RadioGeddonToolModule* tools_get(RadioGeddonApp* app, const ToolScene* t) {
     for(size_t i = 0; i < COUNT_OF(app->tool); i++) {
@@ -302,6 +339,7 @@ static RG_UI_TEXT const RadioGeddonToolModule* tools_get(RadioGeddonApp* app, co
     }
     for(size_t i = 0; i < COUNT_OF(app->tool); i++) {
         if(app->tool[i].module) continue;
+        tools_prepare(app, t);
         RadioGeddonModuleStatus status;
         app->tool[i].module = radiogeddon_module_load(
             app->storage, t->file, (size_t)t->work_kb * 1024u, &app->tool[i].api, &status);
@@ -332,6 +370,12 @@ static RG_UI_TEXT const RadioGeddonToolModule*
 RG_UI_TEXT void radiogeddon_scene_tools_tick(RadioGeddonApp* app) {
     for(size_t i = 0; i < COUNT_OF(app->tool); i++)
         if(app->tool[i].module && !app->tool[i].shown) tools_unload_slot(app, i);
+}
+
+RG_UI_TEXT bool radiogeddon_scene_tools_settled(RadioGeddonApp* app) {
+    for(size_t i = 0; i < COUNT_OF(app->tool); i++)
+        if(app->tool[i].module && !app->tool[i].shown) return false;
+    return true;
 }
 
 RG_UI_TEXT void radiogeddon_scene_tools_release(RadioGeddonApp* app) {
