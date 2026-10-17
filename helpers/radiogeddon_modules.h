@@ -185,6 +185,14 @@ RadioGeddonModule* radiogeddon_module_load(
     const void** ep,
     RadioGeddonModuleStatus* status);
 
+#include "rg_elf.h"
+/**
+ * Contiguous free heap a module of load cost @p cost needs with @p extra_heap
+ * for its work: what the loader keeps, its fixed structures, the larger of
+ * the relocation tables and the work (they never coexist), and a margin.
+ */
+size_t radiogeddon_module_need(const RgElfCost* cost, size_t extra_heap);
+
 /** Unload; nothing it allocated may still be in use (views removed first). */
 void radiogeddon_module_unload(RadioGeddonModule* module);
 

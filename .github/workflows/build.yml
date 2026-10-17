@@ -192,6 +192,17 @@ jobs:
       - name: Build and verify (${{ matrix.target }})
         run: scripts/build_target.sh "${{ matrix.target }}" out
 
+      # The module load-cost model (helpers/rg_elf.c) read the same way by
+      # its C code and by scripts/module_cost.py on the modules just built,
+      # and the loads replayed on fragmented heaps (test/bench_modules.c).
+      - name: Module load cost (C and Python models agree; replay on fragmented heaps)
+        if: matrix.target == 'full-momentum' || matrix.target == 'full-unleashed'
+        run: |
+          make -C test build/elf_cost
+          python3 scripts/module_cost.py --check test/build/elf_cost ".stage/${{ matrix.target }}/dist"
+          python3 scripts/module_cost.py ".stage/${{ matrix.target }}/dist"
+          make -C test benchmodules FAL_DIR="../.stage/${{ matrix.target }}/dist"
+
       - name: Lint (clang-format)
         if: matrix.target == 'catalog-official'
         env:

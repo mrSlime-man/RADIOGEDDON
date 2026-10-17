@@ -1,6 +1,6 @@
 /**
  * Fuzz target: research session files (helpers/rg_session.c) and the module
- * size estimate (helpers/rg_elf.c), both read from the SD card.
+ * load-cost model (helpers/rg_elf.c), both read from the SD card.
  *
  * Input: the first byte picks the target. Session: the rest is a session
  * file's text. ELF: the rest is a module file.
@@ -61,9 +61,14 @@ static void check_session(const uint8_t* data, size_t size) {
 
 static void check_elf(const uint8_t* data, size_t size) {
     Blob b = {data, size};
-    size_t total = rg_elf_alloc_bytes(blob_read, &b);
-    // At most RG_ELF_MAX_SECTIONS sizes of 32 bits each.
-    REQUIRE(total <= (size_t)RG_ELF_MAX_SECTIONS * 0xFFFFFFFFull);
+    RgElfCost c;
+    if(!rg_elf_load_cost(blob_read, &b, &c)) return;
+    // Sizes are bounded per section (16 MB) and in number; every loaded
+    // byte is in a resident block, and the largest block is one of them.
+    uint64_t bound = (uint64_t)RG_ELF_MAX_SECTIONS * (0x01000000u + 0x10000u + 64u);
+    REQUIRE(c.sections > 0 && c.sections <= c.resident);
+    REQUIRE(c.resident <= bound && c.temporary <= bound);
+    REQUIRE(c.largest <= c.resident + c.temporary);
 }
 
 int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
