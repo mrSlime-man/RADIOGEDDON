@@ -225,6 +225,26 @@ Before and after each, note About's free heap and its lowest point.
 | V7 | Open and close every Full tool 20 times in a row (Range Scanner, Settings, Hopper, Bitstream, Find Similar, Studio, Heatmap, Logger, Lab, About). | No crash; About's free heap after the round is close to the one before it. |
 | V8 | Signal Info & Analysis, Unknown Protocol Analysis, Compare and a saved report on RAW recordings with known results from beta 10. | Every figure (Te, peaks, noise %, jitter %, encodings and fits, frames, durations) equal to beta 10's. |
 
+## Crash and relaunch fixes (beta 12)
+
+Builds: `radiogeddon-full-roguemaster.fap` built for your firmware
+(`RM_REF=<commit> RM_API=<api>`, see
+[STABILITY_BETA12.md](STABILITY_BETA12.md#3-roguemaster-version-on-the-device-source)).
+Keep a CLI log open (`log info`) for every item and save it with the result.
+
+| ID | Check | Pass when |
+|----|-------|-----------|
+| X1 | Fresh boot. Scan → Adaptive Scanner, Mode **Balanced**, Start scanner. Let it run 1 min, then Back twice. | No reboot. The header reads `Balanced`; log shows `Adaptive Scanner started`, then `Scanner stopped`. |
+| X2 | As X1 with **Focused**, then **Custom** (with two favorites in the list). | No reboot; Custom's favorites get the most visits (the bar under the frequency). |
+| X3 | Adaptive Scanner screen: change the Mode, press Back without starting; open it again and choose Reset learning. | No reboot (beta 11 crashed on this Back too). |
+| X4 | Scan → RF Activity Logger: open, Back; open, Start logging, Back. Then Database → a file's options → Back. | No reboot on any Back (same bug in beta 11). |
+| X5 | Settings → Customize and the Scanner's frequency list: press OK on several rows. | Nothing happens (no crash, no jump to another screen). |
+| X6 | Start the Scanner with little free heap (after opening several tools). | It runs or says `Not enough memory`; never reboots. |
+| X7 | Settings → System → Heap Trace = `Main`. Launch, Receive → Stop, Frequency Scanner, Adaptive Scanner, Database, Pulse Studio, Bitstream Explorer, Dolphin Lab, Research Sessions; back to the main menu after each; exit. | The log's `radiogeddon_full allocation balance:` is 0; the app's `RG.mem` `exit` line says `heap returned`. Note both. |
+| X8 | Exit the app and reopen it within 1 s; repeat 20 times (with X7's round in between every 5th time). | Opens every time. If one fails, note the `free` and `free_blocks` CLI output right after the failure. |
+| X9 | Run X8 with beta 11, reboot, run X8 with beta 12 (same SD card, same steps). | Note how many of the 20 relaunches each version failed; beta 12 should fail no more often. |
+| X10 | Open and close every module screen 10 times (Range Scanner, Waterfall, Settings, Hopper, Bitstream, Find Similar, Studio, Heatmap, Logger, Lab, About, Sessions, reports). | No reboot; each `module unloaded` line's free heap returns close to the previous one. |
+
 ## Catalog edition transmit check (Official)
 
 | ID | Check | Pass when |
