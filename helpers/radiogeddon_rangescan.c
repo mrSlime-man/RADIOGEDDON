@@ -1,6 +1,11 @@
 #include "radiogeddon_rangescan.h"
 
 #if RG_FEATURE_RANGE_SCAN
+/* Built into the Range Scanner module: the radio through the app's table. */
+#include "radiogeddon_host_map.h"
+#endif
+
+#if RG_FEATURE_RANGE_SCAN
 
 #define TAG "RadioGeddonRange"
 

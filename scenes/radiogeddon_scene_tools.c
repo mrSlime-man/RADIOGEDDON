@@ -57,6 +57,27 @@ static const ToolScene tool_scenes[] = {
 #if RG_FEATURE_ASSISTANT
     {RadioGeddonSceneAssistant, RADIOGEDDON_MODULE_LAB, 3, 1},
 #endif
+#if RG_FEATURE_RANGE_SCAN
+    // The setup checks the engine's memory itself before starting a scan.
+    {RadioGeddonSceneRangeSetup, RADIOGEDDON_MODULE_RANGE, 0, 1},
+    {RadioGeddonSceneRangeScan, RADIOGEDDON_MODULE_RANGE, 1, 4},
+    {RadioGeddonSceneProfiles, RADIOGEDDON_MODULE_RANGE, 2, 1},
+    {RadioGeddonSceneProfileName, RADIOGEDDON_MODULE_RANGE, 3, 1},
+#endif
+#if RG_FEATURE_WATERFALL
+    {RadioGeddonSceneWaterfall, RADIOGEDDON_MODULE_RANGE, 4, 4},
+#endif
+    {RadioGeddonSceneConfig, RADIOGEDDON_MODULE_SETTINGS, 0, 1},
+    {RadioGeddonSceneBands, RADIOGEDDON_MODULE_SETTINGS, 1, 1},
+    // The Hopper checks the receive session's memory itself.
+    {RadioGeddonSceneHopper, RADIOGEDDON_MODULE_HOPPER, 0, 1},
+    {RadioGeddonSceneHopperStats, RADIOGEDDON_MODULE_HOPPER, 1, 1},
+#if RG_FEATURE_BITSTREAM
+    {RadioGeddonSceneBitstream,
+     RADIOGEDDON_MODULE_BITS,
+     0,
+     (RADIOGEDDON_BITSTREAM_WORK + 1023u) / 1024u},
+#endif
 };
 
 /* ---- the host table -------------------------------------------------------- */
@@ -79,10 +100,6 @@ static void
 }
 #endif
 
-static uint32_t host_subghz_is_external(RadioGeddonSubGhz* subghz) {
-    return radiogeddon_subghz_get_radio(subghz) == RadioGeddonRadioExternal;
-}
-
 static void host_ui_event(RadioGeddonApp* app, uint32_t event, uint32_t arg) {
     radiogeddon_ui_event(app, (RgMascotEvent)event, arg);
 }
@@ -101,6 +118,45 @@ static void host_ui_apply_style(RadioGeddonApp* app) {
 #else
     UNUSED(app);
 #endif
+}
+
+static uint8_t host_subghz_get_radio(RadioGeddonSubGhz* subghz) {
+    return (uint8_t)radiogeddon_subghz_get_radio(subghz);
+}
+
+static uint8_t host_subghz_set_radio(RadioGeddonSubGhz* subghz, uint8_t radio, bool ext_power) {
+    return (uint8_t)radiogeddon_subghz_set_radio(subghz, (RadioGeddonRadio)radio, ext_power);
+}
+
+static uint8_t host_subghz_record_start(RadioGeddonSubGhz* subghz) {
+    return (uint8_t)radiogeddon_subghz_record_start(subghz);
+}
+
+static bool host_subghz_record_status(RadioGeddonSubGhz* subghz, void* stats) {
+    return radiogeddon_subghz_record_status(subghz, stats);
+}
+
+static const char* host_recorder_error_text(uint8_t error) {
+    return radiogeddon_recorder_error_text((RadioGeddonRecordError)error);
+}
+
+static bool host_ui_active(RadioGeddonApp* app) {
+    return radiogeddon_ui_active(app);
+}
+
+static bool host_ui_badge(RadioGeddonApp* app, void* frame, bool* cyber) {
+#if RG_FEATURE_DOLPHIN_LAB
+    return radiogeddon_ui_badge(app, frame, cyber);
+#else
+    UNUSED(app);
+    UNUSED(frame);
+    *cyber = false;
+    return false;
+#endif
+}
+
+static uint8_t host_plan_range(RadioGeddonApp* app) {
+    return (uint8_t)radiogeddon_scene_plan_range(app);
 }
 
 static const char* host_preset_label(uint8_t index) {
@@ -156,6 +212,10 @@ const RadioGeddonHost radiogeddon_host_table = {
     .ui_cancel = host_ui_cancel,
     .ui_set_scanning = host_ui_set_scanning,
     .ui_apply_style = host_ui_apply_style,
+    .ui_active = host_ui_active,
+    .ui_badge = host_ui_badge,
+    .probe_bands = radiogeddon_scene_probe_bands,
+    .plan_range = host_plan_range,
     .save_settings = radiogeddon_app_save_settings,
     .build_list = radiogeddon_scene_build_list,
     .memdiag_sample = radiogeddon_memdiag_sample,
@@ -175,6 +235,30 @@ const RadioGeddonHost radiogeddon_host_table = {
     .scanner_reset_peaks = radiogeddon_scanner_reset_peaks,
     .subghz_is_device_present = radiogeddon_subghz_is_device_present,
     .subghz_set_preset = radiogeddon_subghz_set_preset,
+    .subghz_set_frequency = radiogeddon_subghz_set_frequency,
+    .subghz_is_frequency_allowed = radiogeddon_subghz_is_frequency_allowed,
+    .subghz_get_radio = host_subghz_get_radio,
+    .subghz_scan_begin = radiogeddon_subghz_scan_begin,
+    .subghz_scan_end = radiogeddon_subghz_scan_end,
+    .subghz_probe_rssi_dwell = radiogeddon_subghz_probe_rssi_dwell,
+    .subghz_set_radio = host_subghz_set_radio,
+    .subghz_device_name = radiogeddon_subghz_device_name,
+    .subghz_region_name = radiogeddon_subghz_region_name,
+    .settings_default_hop_mask = radiogeddon_settings_default_hop_mask,
+    .subghz_rx_start = radiogeddon_subghz_rx_start,
+    .subghz_rx_stop = radiogeddon_subghz_rx_stop,
+    .subghz_rx_retune = radiogeddon_subghz_rx_retune,
+    .subghz_get_rssi = radiogeddon_subghz_get_rssi,
+    .subghz_record_start = host_subghz_record_start,
+    .subghz_record_stop = radiogeddon_subghz_record_stop,
+    .subghz_record_status = host_subghz_record_status,
+    .subghz_record_pending = radiogeddon_subghz_record_pending,
+    .subghz_record_save = radiogeddon_subghz_record_save,
+    .subghz_record_discard = radiogeddon_subghz_record_discard,
+    .recorder_error_text = host_recorder_error_text,
+    .radio_memory_ok = radiogeddon_scene_radio_memory_ok,
+    .radio_memory_learn = radiogeddon_scene_radio_memory_learn,
+    .receiver_badge = radiogeddon_scene_receiver_badge,
     .session_capture_saved = host_session_capture_saved,
     .session_active = host_session_active,
     .show_report = radiogeddon_scene_show_report,
@@ -184,9 +268,6 @@ const RadioGeddonHost radiogeddon_host_table = {
     .analysis_decode = radiogeddon_analysis_decode,
     .memdiag_stats = radiogeddon_memdiag_stats,
     .memdiag_diags = radiogeddon_memdiag_diags,
-    .subghz_is_external = host_subghz_is_external,
-    .subghz_device_name = radiogeddon_subghz_device_name,
-    .subghz_region_name = radiogeddon_subghz_region_name,
     .subghz_session_cost = radiogeddon_subghz_session_cost,
     .radio_cost = radiogeddon_scene_radio_cost,
 };
@@ -332,6 +413,26 @@ TOOL_SCENE(journal, Journal)
 #endif
 #if RG_FEATURE_ASSISTANT
 TOOL_SCENE(assistant, Assistant)
+#endif
+#if RG_FEATURE_RANGE_SCAN
+TOOL_SCENE(range_setup, RangeSetup)
+TOOL_SCENE(range_scan, RangeScan)
+TOOL_SCENE(profiles, Profiles)
+TOOL_SCENE(profile_name, ProfileName)
+#endif
+TOOL_SCENE(config, Config)
+TOOL_SCENE(bands, Bands)
+TOOL_SCENE(hopper, Hopper)
+TOOL_SCENE(hopper_stats, HopperStats)
+#if RG_FEATURE_BITSTREAM
+TOOL_SCENE(bitstream, Bitstream)
+#endif
+#if RG_FEATURE_WATERFALL
+TOOL_SCENE(waterfall, Waterfall)
+
+uint32_t radiogeddon_scene_range_setup_waterfall_item(void) {
+    return RADIOGEDDON_RANGE_ITEM_WATERFALL;
+}
 #endif
 
 #endif

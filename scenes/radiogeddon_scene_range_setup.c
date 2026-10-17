@@ -60,9 +60,10 @@ static const uint8_t range_threshold_db[] = {6, 8, 10, 15, 20, 30};
 static VariableItem* range_plan_item;
 
 #if RG_FEATURE_WATERFALL
-uint32_t radiogeddon_scene_range_setup_waterfall_item(void) {
-    return RangeItemWaterfall;
-}
+/* The app opens this screen on the Waterfall row (scene_tools.c). */
+_Static_assert(
+    RangeItemWaterfall == RADIOGEDDON_RANGE_ITEM_WATERFALL,
+    "RADIOGEDDON_RANGE_ITEM_WATERFALL must be the Waterfall row");
 #endif
 
 static void radiogeddon_range_step_text(uint32_t hz, char* out, size_t size) {

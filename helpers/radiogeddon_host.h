@@ -24,6 +24,13 @@ typedef struct RadioGeddonSubGhz RadioGeddonSubGhz;
 /* radiogeddon_analysis.h's RadioGeddonUnknownFn. */
 typedef int (*RadioGeddonHostUnknownFn)(Storage* storage, const char* path, FuriString* out);
 typedef void (*RadioGeddonHostScannerHit)(size_t index, void* context);
+/* radiogeddon_subghz.h's RadioGeddonSubGhzDecodeCallback. */
+typedef void (*RadioGeddonHostDecodeCallback)(
+    const char* protocol_name,
+    uint8_t hash,
+    FuriString* text,
+    FuriString* serialized,
+    void* context);
 typedef void (*RadioGeddonHostScannerObserver)(
     void* context,
     size_t index,
@@ -67,6 +74,12 @@ typedef struct {
     void (*ui_cancel)(RadioGeddonApp* app);
     void (*ui_set_scanning)(RadioGeddonApp* app, bool scanning);
     void (*ui_apply_style)(RadioGeddonApp* app);
+    bool (*ui_active)(RadioGeddonApp* app);
+    /* Dolphin Lab badge: RgMascotFrame* frame (radiogeddon_ui_badge). */
+    bool (*ui_badge)(RadioGeddonApp* app, void* frame, bool* cyber);
+    /* Range Scanner (Full edition): bands of the radio, the planned range. */
+    void (*probe_bands)(RadioGeddonApp* app);
+    uint8_t (*plan_range)(RadioGeddonApp* app); // RgRangeResult
     /* The app. */
     void (*save_settings)(RadioGeddonApp* app);
     size_t (
@@ -95,6 +108,35 @@ typedef struct {
     /* The radio and sessions. */
     bool (*subghz_is_device_present)(RadioGeddonSubGhz* subghz);
     void (*subghz_set_preset)(RadioGeddonSubGhz* subghz, uint8_t index);
+    void (*subghz_set_frequency)(RadioGeddonSubGhz* subghz, uint32_t frequency);
+    bool (*subghz_is_frequency_allowed)(RadioGeddonSubGhz* subghz, uint32_t frequency);
+    uint8_t (*subghz_get_radio)(RadioGeddonSubGhz* subghz); // RadioGeddonRadio
+    void (*subghz_scan_begin)(RadioGeddonSubGhz* subghz);
+    void (*subghz_scan_end)(RadioGeddonSubGhz* subghz);
+    float (*subghz_probe_rssi_dwell)(
+        RadioGeddonSubGhz* subghz,
+        uint32_t frequency,
+        uint32_t dwell_ms);
+    /* RadioGeddonRadio radio; returns the radio now in use. */
+    uint8_t (*subghz_set_radio)(RadioGeddonSubGhz* subghz, uint8_t radio, bool ext_power);
+    const char* (*subghz_device_name)(RadioGeddonSubGhz* subghz);
+    const char* (*subghz_region_name)(void);
+    uint32_t (*settings_default_hop_mask)(void);
+    /* Receive sessions and recording (the Hopper). */
+    void (*subghz_rx_start)(RadioGeddonSubGhz* subghz, RadioGeddonHostDecodeCallback cb, void* ctx);
+    void (*subghz_rx_stop)(RadioGeddonSubGhz* subghz);
+    void (*subghz_rx_retune)(RadioGeddonSubGhz* subghz, uint32_t frequency);
+    float (*subghz_get_rssi)(RadioGeddonSubGhz* subghz);
+    uint8_t (*subghz_record_start)(RadioGeddonSubGhz* subghz); // RadioGeddonRecordError
+    void (*subghz_record_stop)(RadioGeddonSubGhz* subghz);
+    bool (*subghz_record_status)(RadioGeddonSubGhz* subghz, void* stats); // RadioGeddonRecordStats
+    bool (*subghz_record_pending)(RadioGeddonSubGhz* subghz);
+    bool (*subghz_record_save)(RadioGeddonSubGhz* subghz, const char* path);
+    void (*subghz_record_discard)(RadioGeddonSubGhz* subghz);
+    const char* (*recorder_error_text)(uint8_t error); // RadioGeddonRecordError
+    bool (*radio_memory_ok)(RadioGeddonApp* app);
+    void (*radio_memory_learn)(RadioGeddonApp* app);
+    void (*receiver_badge)(RadioGeddonApp* app);
     bool (*session_capture_saved)(Storage* storage, const char* file, char* out, size_t size);
     void (*session_active)(Storage* storage, char* out, size_t size);
     /* Reports (the reports module). */
@@ -110,9 +152,6 @@ typedef struct {
     /* About and its diagnostics report (the about module). */
     const RgMemStat* (*memdiag_stats)(void);
     const RgDiag* (*memdiag_diags)(void);
-    uint32_t (*subghz_is_external)(RadioGeddonSubGhz* subghz);
-    const char* (*subghz_device_name)(RadioGeddonSubGhz* subghz);
-    const char* (*subghz_region_name)(void);
     uint32_t (*subghz_session_cost)(RadioGeddonSubGhz* subghz);
     uint32_t (*radio_cost)(RadioGeddonApp* app);
 } RadioGeddonHost;

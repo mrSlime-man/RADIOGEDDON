@@ -45,6 +45,9 @@
 #define RADIOGEDDON_MODULE_RECOVER   "radiogeddon_recover.fal"
 #define RADIOGEDDON_MODULE_HEATMAP   "radiogeddon_heatmap.fal"
 #define RADIOGEDDON_MODULE_ABOUT     "radiogeddon_about.fal"
+#define RADIOGEDDON_MODULE_RANGE     "radiogeddon_range.fal"
+#define RADIOGEDDON_MODULE_SETTINGS  "radiogeddon_settings.fal"
+#define RADIOGEDDON_MODULE_HOPPER    "radiogeddon_hopper.fal"
 
 #include <dialogs/dialogs.h>
 /* Recording recovery at startup (radiogeddon_recovery.h), only when a
@@ -60,25 +63,9 @@ typedef struct {
 } RadioGeddonUnknownModule;
 
 #if RG_FEATURE_BITSTREAM
-#include "../views/radiogeddon_bits_view.h"
-typedef struct {
-    RadioGeddonBitsView* (*alloc)(void);
-    void (*free)(RadioGeddonBitsView* view);
-    View* (*get_view)(RadioGeddonBitsView* view);
-    void (*set_analysis)(RadioGeddonBitsView* view, const RgAnalysis* analysis);
-    /**
-     * Stream @p path through the analyzer (in this module, so the analyzer's
-     * code is in RAM only while the explorer is) and return its result in a
-     * new allocation the caller frees, or NULL with @p status saying why.
-     * Progress goes to @p progress.
-     */
-    RgAnalysis* (*analyze)(
-        Storage* storage,
-        const char* path,
-        RadioGeddonAnalysisStatus* status,
-        RadioGeddonProgressCallback progress,
-        void* context);
-} RadioGeddonBitsModule;
+/* The Bitstream Explorer's work besides its module: the analyzer and its
+ * copied result exist together for a moment, with heap kept beyond them. */
+#define RADIOGEDDON_BITSTREAM_WORK (sizeof(RgAnalyzer) + sizeof(RgAnalysis) + 6u * 1024u)
 #endif
 
 #if RG_FEATURE_MULTI_COMPARE
@@ -159,8 +146,13 @@ typedef struct {
  *   radiogeddon_log.fal     0 RF Activity Logger, 1 Adaptive Scanner setup
  *   radiogeddon_lab.fal     0 Dolphin Lab room, 1 Research Journal,
  *                           2 Dolphin customization, 3 Dolphin Assistant tip
+ *   radiogeddon_range.fal   0 Range Scanner setup, 1 Range scan, 2 Scan
+ *                           profiles, 3 Profile name, 4 Waterfall
+ *   radiogeddon_settings.fal 0 Settings, 1 Radio bands
+ *   radiogeddon_hopper.fal  0 Frequency Hopper, 1 Hopper statistics
+ *   radiogeddon_bits.fal    0 Bitstream Explorer
  */
-#define RADIOGEDDON_TOOL_SCENES 4u
+#define RADIOGEDDON_TOOL_SCENES 5u
 typedef struct {
     void (*set_host)(const RadioGeddonHost* host);
     void (*on_enter[RADIOGEDDON_TOOL_SCENES])(void* context);
