@@ -83,6 +83,8 @@ RG_UI_TEXT void radiogeddon_scene_start_on_enter(void* context) {
         radiogeddon_scanner_free(app->scanner);
         app->scanner = NULL;
     }
+    app->scanner_selected = 0; // the next Scanner list starts at the top
+    app->scanner_top = 0;
     if(app->hopper) {
         radiogeddon_hopper_free(app->hopper);
         app->hopper = NULL;

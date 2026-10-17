@@ -28,6 +28,10 @@ typedef struct {
     size_t view_count;
     size_t total_files; /* .sub files in the folder */
     bool truncated; /* not all of them fit in memory */
+    /* The list's place (highlighted position and first row shown), kept
+     * while a screen opened from it is shown and the list's view is not. */
+    size_t place_selected;
+    size_t place_top;
 } RadioGeddonDb;
 
 /**

@@ -3,6 +3,7 @@
 #include "rg_memstat.h"
 #include "radiogeddon_memdiag.h"
 #include "radiogeddon_decode_text.h"
+#include "radiogeddon_decoders.h"
 #include "rg_preset.h"
 #include "../radiogeddon_edition.h"
 
@@ -63,11 +64,13 @@ struct RadioGeddonSubGhz {
     uint32_t tx_frequency; // frequency of the last transmit attempt
 };
 
-static FuriHalSubGhzPreset radiogeddon_subghz_current_preset(RadioGeddonSubGhz* instance) {
+static RG_CORE_TEXT FuriHalSubGhzPreset
+    radiogeddon_subghz_current_preset(RadioGeddonSubGhz* instance) {
     return radiogeddon_presets[instance->preset_index].preset;
 }
 
-static SubGhzRadioPreset radiogeddon_subghz_build_radio_preset(RadioGeddonSubGhz* instance) {
+static RG_CORE_TEXT SubGhzRadioPreset
+    radiogeddon_subghz_build_radio_preset(RadioGeddonSubGhz* instance) {
     SubGhzRadioPreset preset;
     radiogeddon_decode_preset(&preset, instance->preset_index, instance->frequency);
     return preset;
@@ -82,7 +85,7 @@ static SubGhzRadioPreset radiogeddon_subghz_build_radio_preset(RadioGeddonSubGhz
  * `recorder`, can wait until no call still holds the old pointer (both sides
  * use sequentially consistent order: store own flag, then load the other's).
  */
-static void radiogeddon_subghz_record_event(
+static RG_CORE_TEXT void radiogeddon_subghz_record_event(
     RadioGeddonSubGhz* instance,
     bool overrun,
     bool level,
@@ -101,14 +104,15 @@ static void radiogeddon_subghz_record_event(
 }
 
 // Worker reports a capture buffer overrun: drop partial decode state.
-static void radiogeddon_subghz_overrun_callback(void* context) {
+static RG_CORE_TEXT void radiogeddon_subghz_overrun_callback(void* context) {
     RadioGeddonSubGhz* instance = context;
     if(instance->receiver) subghz_receiver_reset(instance->receiver);
     radiogeddon_subghz_record_event(instance, true, false, 0);
 }
 
 // Called from the worker thread for every (level,duration) pair received.
-static void radiogeddon_subghz_pair_callback(void* context, bool level, uint32_t duration) {
+static RG_CORE_TEXT void
+    radiogeddon_subghz_pair_callback(void* context, bool level, uint32_t duration) {
     RadioGeddonSubGhz* instance = context;
 
     // Feed the protocol decoders (live known-protocol identification).
@@ -121,7 +125,7 @@ static void radiogeddon_subghz_pair_callback(void* context, bool level, uint32_t
 }
 
 // Called by the receiver when a protocol is fully decoded.
-static void radiogeddon_subghz_receiver_callback(
+static RG_CORE_TEXT void radiogeddon_subghz_receiver_callback(
     SubGhzReceiver* receiver,
     SubGhzProtocolDecoderBase* decoder_base,
     void* context) {
@@ -176,11 +180,12 @@ static void radiogeddon_subghz_receiver_callback(
 /* ---- Lifecycle --------------------------------------------------------- */
 
 // The protocol environment (keystore + registry) and the receiver (one decoder
-// instance per registered protocol) are by far the largest allocations this
+// instance per protocol the receiver feeds) are by far the largest allocations this
 // toolkit makes; on firmwares with big protocol sets and keystores they alone
 // can exhaust the heap. They are therefore only alive while a receive or
 // transmit session actually needs them, never at application start.
-static void radiogeddon_subghz_environment_acquire(RadioGeddonSubGhz* instance, bool keystore) {
+static RG_CORE_TEXT void
+    radiogeddon_subghz_environment_acquire(RadioGeddonSubGhz* instance, bool keystore) {
     if(instance->environment) return;
     instance->environment = subghz_environment_alloc();
     subghz_environment_set_protocol_registry(
@@ -198,28 +203,33 @@ static void radiogeddon_subghz_environment_acquire(RadioGeddonSubGhz* instance, 
     subghz_environment_set_nice_flor_s_rainbow_table_file_name(instance->environment, NULL);
 }
 
-static void radiogeddon_subghz_environment_release(RadioGeddonSubGhz* instance) {
+static RG_CORE_TEXT void radiogeddon_subghz_environment_release(RadioGeddonSubGhz* instance) {
     if(!instance->environment) return;
     if(instance->rx_running || instance->transmitter) return; // still in use
     subghz_environment_free(instance->environment);
     instance->environment = NULL;
 }
 
-static void radiogeddon_subghz_decoders_alloc(RadioGeddonSubGhz* instance) {
-    radiogeddon_subghz_environment_acquire(instance, true);
-
-    instance->receiver = subghz_receiver_alloc_init(instance->environment);
-    subghz_receiver_set_filter(instance->receiver, SubGhzProtocolFlag_Decodable);
-    subghz_receiver_set_rx_callback(
-        instance->receiver, radiogeddon_subghz_receiver_callback, instance);
-
+static RG_CORE_TEXT void radiogeddon_subghz_decoders_alloc(RadioGeddonSubGhz* instance) {
+    // The worker first: its stream buffer and thread stack are the session's
+    // largest blocks (RG_MEM_SESSION_BLOCK), so they take the largest free
+    // block the memory check saw before the keystore's and the decoders'
+    // hundred small blocks can cut it up. It is not started until rx_start.
     instance->worker = subghz_worker_alloc();
     subghz_worker_set_overrun_callback(instance->worker, radiogeddon_subghz_overrun_callback);
     subghz_worker_set_pair_callback(instance->worker, radiogeddon_subghz_pair_callback);
     subghz_worker_set_context(instance->worker, instance);
+
+    radiogeddon_subghz_environment_acquire(instance, true);
+
+    // Only the decoders the Decodable filter feeds (radiogeddon_decoders.h).
+    instance->receiver = radiogeddon_decoders_receiver_alloc(
+        instance->environment, &subghz_protocol_registry, SubGhzProtocolFlag_Decodable);
+    subghz_receiver_set_rx_callback(
+        instance->receiver, radiogeddon_subghz_receiver_callback, instance);
 }
 
-static void radiogeddon_subghz_decoders_free(RadioGeddonSubGhz* instance) {
+static RG_CORE_TEXT void radiogeddon_subghz_decoders_free(RadioGeddonSubGhz* instance) {
     if(instance->worker) {
         subghz_worker_free(instance->worker);
         instance->worker = NULL;
@@ -232,7 +242,7 @@ static void radiogeddon_subghz_decoders_free(RadioGeddonSubGhz* instance) {
 }
 
 /* 5 V on GPIO pin 1 for the external module, the way the Sub-GHz app does it. */
-static void radiogeddon_subghz_ext_power(RadioGeddonSubGhz* instance, bool on) {
+static RG_CORE_TEXT void radiogeddon_subghz_ext_power(RadioGeddonSubGhz* instance, bool on) {
     if(on) {
         if(instance->ext_power_ours || furi_hal_power_is_otg_enabled()) return;
         Power* power = furi_record_open(RECORD_POWER);
@@ -247,7 +257,7 @@ static void radiogeddon_subghz_ext_power(RadioGeddonSubGhz* instance, bool on) {
     }
 }
 
-RadioGeddonSubGhz* radiogeddon_subghz_alloc(void) {
+RG_CORE_TEXT RadioGeddonSubGhz* radiogeddon_subghz_alloc(void) {
     RadioGeddonSubGhz* instance = malloc(sizeof(RadioGeddonSubGhz));
     memset(instance, 0, sizeof(RadioGeddonSubGhz));
 
@@ -261,7 +271,7 @@ RadioGeddonSubGhz* radiogeddon_subghz_alloc(void) {
     return instance;
 }
 
-void radiogeddon_subghz_free(RadioGeddonSubGhz* instance) {
+RG_CORE_TEXT void radiogeddon_subghz_free(RadioGeddonSubGhz* instance) {
     furi_assert(instance);
     if(instance->rx_running) radiogeddon_subghz_rx_stop(instance);
     if(instance->tx_mode != RadioGeddonTxModeNone) radiogeddon_subghz_tx_stop(instance);
@@ -276,7 +286,7 @@ void radiogeddon_subghz_free(RadioGeddonSubGhz* instance) {
     free(instance);
 }
 
-bool radiogeddon_subghz_is_device_present(RadioGeddonSubGhz* instance) {
+RG_CORE_TEXT bool radiogeddon_subghz_is_device_present(RadioGeddonSubGhz* instance) {
     if(!instance->device) return false;
     // NOTE: subghz_devices_begin() returns the device's interconnect begin()
     // result, which is NULL (=> false) for the INTERNAL cc1101 because it needs
@@ -290,7 +300,7 @@ bool radiogeddon_subghz_is_device_present(RadioGeddonSubGhz* instance) {
     return connected;
 }
 
-RadioGeddonRadio radiogeddon_subghz_set_radio(
+RG_CORE_TEXT RadioGeddonRadio radiogeddon_subghz_set_radio(
     RadioGeddonSubGhz* instance,
     RadioGeddonRadio radio,
     bool ext_power) {
@@ -317,29 +327,32 @@ RadioGeddonRadio radiogeddon_subghz_set_radio(
     return instance->radio;
 }
 
-RadioGeddonRadio radiogeddon_subghz_get_radio(RadioGeddonSubGhz* instance) {
+RG_CORE_TEXT RadioGeddonRadio radiogeddon_subghz_get_radio(RadioGeddonSubGhz* instance) {
     return instance->radio;
 }
 
-const char* radiogeddon_subghz_device_name(RadioGeddonSubGhz* instance) {
+RG_CORE_TEXT const char* radiogeddon_subghz_device_name(RadioGeddonSubGhz* instance) {
     if(!instance->device) return "none";
     const char* name = subghz_devices_get_name(instance->device);
     return name ? name : "unknown";
 }
 
-void radiogeddon_subghz_set_frequency(RadioGeddonSubGhz* instance, uint32_t frequency) {
+RG_CORE_TEXT void
+    radiogeddon_subghz_set_frequency(RadioGeddonSubGhz* instance, uint32_t frequency) {
     instance->frequency = frequency;
 }
 
-uint32_t radiogeddon_subghz_get_frequency(RadioGeddonSubGhz* instance) {
+RG_CORE_TEXT uint32_t radiogeddon_subghz_get_frequency(RadioGeddonSubGhz* instance) {
     return instance->frequency;
 }
 
-void radiogeddon_subghz_set_preset(RadioGeddonSubGhz* instance, uint8_t preset_index) {
+RG_CORE_TEXT void
+    radiogeddon_subghz_set_preset(RadioGeddonSubGhz* instance, uint8_t preset_index) {
     if(preset_index < radiogeddon_presets_count) instance->preset_index = preset_index;
 }
 
-bool radiogeddon_subghz_is_frequency_allowed(RadioGeddonSubGhz* instance, uint32_t frequency) {
+RG_CORE_TEXT bool
+    radiogeddon_subghz_is_frequency_allowed(RadioGeddonSubGhz* instance, uint32_t frequency) {
     if(!instance->device) return false;
     if(!subghz_devices_is_frequency_valid(instance->device, frequency)) return false;
     return true;
@@ -347,7 +360,7 @@ bool radiogeddon_subghz_is_frequency_allowed(RadioGeddonSubGhz* instance, uint32
 
 /* ---- Receive ----------------------------------------------------------- */
 
-void radiogeddon_subghz_rx_start(
+RG_CORE_TEXT void radiogeddon_subghz_rx_start(
     RadioGeddonSubGhz* instance,
     RadioGeddonSubGhzDecodeCallback decode_callback,
     void* context) {
@@ -395,7 +408,7 @@ void radiogeddon_subghz_rx_start(
     instance->rx_running = true;
 }
 
-void radiogeddon_subghz_rx_stop(RadioGeddonSubGhz* instance) {
+RG_CORE_TEXT void radiogeddon_subghz_rx_stop(RadioGeddonSubGhz* instance) {
     furi_assert(instance);
     if(!instance->rx_running) return;
 
@@ -420,15 +433,22 @@ void radiogeddon_subghz_rx_stop(RadioGeddonSubGhz* instance) {
     radiogeddon_subghz_decoders_free(instance);
 }
 
-bool radiogeddon_subghz_is_rx_running(RadioGeddonSubGhz* instance) {
+RG_CORE_TEXT bool radiogeddon_subghz_is_rx_running(RadioGeddonSubGhz* instance) {
     return instance->rx_running;
 }
 
-uint32_t radiogeddon_subghz_session_cost(RadioGeddonSubGhz* instance) {
+RG_CORE_TEXT uint32_t radiogeddon_subghz_session_cost(RadioGeddonSubGhz* instance) {
     return instance->session_cost;
 }
 
-void radiogeddon_subghz_rx_retune(RadioGeddonSubGhz* instance, uint32_t frequency) {
+RG_CORE_TEXT uint32_t radiogeddon_subghz_model0_extra(void) {
+    return radiogeddon_decoders_skips_binraw(
+               &subghz_protocol_registry, SubGhzProtocolFlag_Decodable) ?
+               RADIOGEDDON_DECODERS_BINRAW_BUFFERS :
+               0u;
+}
+
+RG_CORE_TEXT void radiogeddon_subghz_rx_retune(RadioGeddonSubGhz* instance, uint32_t frequency) {
     if(!instance->rx_running || !instance->device) return;
     if(!subghz_devices_is_frequency_valid(instance->device, frequency)) return;
     if(frequency == instance->frequency) return;
@@ -446,12 +466,12 @@ void radiogeddon_subghz_rx_retune(RadioGeddonSubGhz* instance, uint32_t frequenc
     subghz_worker_start(instance->worker);
 }
 
-float radiogeddon_subghz_get_rssi(RadioGeddonSubGhz* instance) {
+RG_CORE_TEXT float radiogeddon_subghz_get_rssi(RadioGeddonSubGhz* instance) {
     if(!instance->device || !instance->rx_running) return -127.0f;
     return subghz_devices_get_rssi(instance->device);
 }
 
-void radiogeddon_subghz_scan_begin(RadioGeddonSubGhz* instance) {
+RG_CORE_TEXT void radiogeddon_subghz_scan_begin(RadioGeddonSubGhz* instance) {
     if(!instance->device || instance->device_begun || instance->rx_running) return;
     subghz_devices_begin(instance->device);
     subghz_devices_reset(instance->device);
@@ -460,7 +480,7 @@ void radiogeddon_subghz_scan_begin(RadioGeddonSubGhz* instance) {
     instance->device_begun = true;
 }
 
-void radiogeddon_subghz_scan_end(RadioGeddonSubGhz* instance) {
+RG_CORE_TEXT void radiogeddon_subghz_scan_end(RadioGeddonSubGhz* instance) {
     if(!instance->device || !instance->device_begun || instance->rx_running) return;
     subghz_devices_idle(instance->device);
     subghz_devices_sleep(instance->device);
@@ -468,11 +488,11 @@ void radiogeddon_subghz_scan_end(RadioGeddonSubGhz* instance) {
     instance->device_begun = false;
 }
 
-float radiogeddon_subghz_probe_rssi(RadioGeddonSubGhz* instance, uint32_t frequency) {
+RG_CORE_TEXT float radiogeddon_subghz_probe_rssi(RadioGeddonSubGhz* instance, uint32_t frequency) {
     return radiogeddon_subghz_probe_rssi_dwell(instance, frequency, 0);
 }
 
-float radiogeddon_subghz_probe_rssi_dwell(
+RG_CORE_TEXT float radiogeddon_subghz_probe_rssi_dwell(
     RadioGeddonSubGhz* instance,
     uint32_t frequency,
     uint32_t dwell_ms) {
@@ -511,7 +531,8 @@ float radiogeddon_subghz_probe_rssi_dwell(
 
 // Detach the recorder from the worker thread and wait until no callback still
 // uses it. The stats at this moment stand in for readers until it finishes.
-static RadioGeddonRecorder* radiogeddon_subghz_record_detach(RadioGeddonSubGhz* instance) {
+static RG_CORE_TEXT RadioGeddonRecorder*
+    radiogeddon_subghz_record_detach(RadioGeddonSubGhz* instance) {
     furi_mutex_acquire(instance->rec_mutex, FuriWaitForever);
     RadioGeddonRecorder* rec = instance->recorder;
     if(rec) {
@@ -525,13 +546,13 @@ static RadioGeddonRecorder* radiogeddon_subghz_record_detach(RadioGeddonSubGhz* 
     return rec;
 }
 
-static void radiogeddon_subghz_record_remove_temp(void) {
+static RG_CORE_TEXT void radiogeddon_subghz_record_remove_temp(void) {
     Storage* storage = furi_record_open(RECORD_STORAGE);
     storage_common_remove(storage, RADIOGEDDON_RECORD_TEMP);
     furi_record_close(RECORD_STORAGE);
 }
 
-RadioGeddonRecordError radiogeddon_subghz_record_start(RadioGeddonSubGhz* instance) {
+RG_CORE_TEXT RadioGeddonRecordError radiogeddon_subghz_record_start(RadioGeddonSubGhz* instance) {
     if(!instance->rx_running || instance->recorder) return RadioGeddonRecordOpenFailed;
     radiogeddon_subghz_record_discard(instance);
 
@@ -568,7 +589,7 @@ RadioGeddonRecordError radiogeddon_subghz_record_start(RadioGeddonSubGhz* instan
     return err;
 }
 
-void radiogeddon_subghz_record_stop(RadioGeddonSubGhz* instance) {
+RG_CORE_TEXT void radiogeddon_subghz_record_stop(RadioGeddonSubGhz* instance) {
     RadioGeddonRecorder* rec = radiogeddon_subghz_record_detach(instance);
     if(!rec) return;
     RadioGeddonRecordStats st;
@@ -590,11 +611,12 @@ void radiogeddon_subghz_record_stop(RadioGeddonSubGhz* instance) {
     if(!keep) radiogeddon_subghz_record_remove_temp();
 }
 
-bool radiogeddon_subghz_is_recording(RadioGeddonSubGhz* instance) {
+RG_CORE_TEXT bool radiogeddon_subghz_is_recording(RadioGeddonSubGhz* instance) {
     return __atomic_load_n(&instance->recorder, __ATOMIC_ACQUIRE) != NULL;
 }
 
-bool radiogeddon_subghz_record_status(RadioGeddonSubGhz* instance, RadioGeddonRecordStats* out) {
+RG_CORE_TEXT bool
+    radiogeddon_subghz_record_status(RadioGeddonSubGhz* instance, RadioGeddonRecordStats* out) {
     furi_mutex_acquire(instance->rec_mutex, FuriWaitForever);
     bool active = instance->recorder != NULL;
     if(active) {
@@ -606,14 +628,14 @@ bool radiogeddon_subghz_record_status(RadioGeddonSubGhz* instance, RadioGeddonRe
     return active;
 }
 
-bool radiogeddon_subghz_record_pending(RadioGeddonSubGhz* instance) {
+RG_CORE_TEXT bool radiogeddon_subghz_record_pending(RadioGeddonSubGhz* instance) {
     furi_mutex_acquire(instance->rec_mutex, FuriWaitForever);
     bool pending = instance->rec_pending;
     furi_mutex_release(instance->rec_mutex);
     return pending;
 }
 
-bool radiogeddon_subghz_record_save(RadioGeddonSubGhz* instance, const char* path) {
+RG_CORE_TEXT bool radiogeddon_subghz_record_save(RadioGeddonSubGhz* instance, const char* path) {
     if(!radiogeddon_subghz_record_pending(instance)) return false;
     Storage* storage = furi_record_open(RECORD_STORAGE);
     bool ok = storage_common_rename(storage, RADIOGEDDON_RECORD_TEMP, path) == FSE_OK;
@@ -626,7 +648,7 @@ bool radiogeddon_subghz_record_save(RadioGeddonSubGhz* instance, const char* pat
     return ok;
 }
 
-void radiogeddon_subghz_record_discard(RadioGeddonSubGhz* instance) {
+RG_CORE_TEXT void radiogeddon_subghz_record_discard(RadioGeddonSubGhz* instance) {
     if(!radiogeddon_subghz_record_pending(instance)) return;
     radiogeddon_subghz_record_remove_temp();
     furi_mutex_acquire(instance->rec_mutex, FuriWaitForever);
@@ -636,7 +658,8 @@ void radiogeddon_subghz_record_discard(RadioGeddonSubGhz* instance) {
 
 /* ---- Transmit / replay ------------------------------------------------- */
 
-RgTxVerdict radiogeddon_subghz_tx_check(RadioGeddonSubGhz* instance, uint32_t frequency) {
+RG_CORE_TEXT RgTxVerdict
+    radiogeddon_subghz_tx_check(RadioGeddonSubGhz* instance, uint32_t frequency) {
     RgTxFacts facts = {
         .device_valid = radiogeddon_subghz_is_frequency_allowed(instance, frequency),
         .hardware_valid = furi_hal_subghz_is_frequency_valid(frequency),
@@ -646,22 +669,23 @@ RgTxVerdict radiogeddon_subghz_tx_check(RadioGeddonSubGhz* instance, uint32_t fr
     return rg_txpolicy_check(&facts, RG_FEATURE_REGION_TX_GATE);
 }
 
-RgTxVerdict radiogeddon_subghz_tx_verdict(RadioGeddonSubGhz* instance, uint32_t* frequency) {
+RG_CORE_TEXT RgTxVerdict
+    radiogeddon_subghz_tx_verdict(RadioGeddonSubGhz* instance, uint32_t* frequency) {
     if(frequency) *frequency = instance->tx_frequency;
     return instance->tx_verdict;
 }
 
-const char* radiogeddon_subghz_region_name(void) {
+RG_CORE_TEXT const char* radiogeddon_subghz_region_name(void) {
     const char* name = furi_hal_region_is_provisioned() ? furi_hal_region_get_name() : NULL;
     return (name && name[0]) ? name : "--";
 }
 
 #if RG_EDITION_FULL
-static bool radiogeddon_subghz_valid_cb(uint32_t hz, void* context) {
+static RG_CORE_TEXT bool radiogeddon_subghz_valid_cb(uint32_t hz, void* context) {
     return radiogeddon_subghz_is_frequency_allowed(context, hz);
 }
 
-void radiogeddon_subghz_probe_bands(RadioGeddonSubGhz* instance, RgBandSet* out) {
+RG_CORE_TEXT void radiogeddon_subghz_probe_bands(RadioGeddonSubGhz* instance, RgBandSet* out) {
     rg_range_probe_bands(
         rg_range_cc1101_bands,
         sizeof(rg_range_cc1101_bands) / sizeof(rg_range_cc1101_bands[0]),
@@ -671,12 +695,12 @@ void radiogeddon_subghz_probe_bands(RadioGeddonSubGhz* instance, RgBandSet* out)
 }
 #endif
 
-static void radiogeddon_subghz_file_encoder_end(void* context) {
+static RG_CORE_TEXT void radiogeddon_subghz_file_encoder_end(void* context) {
     RadioGeddonSubGhz* instance = context;
     if(instance->tx_complete_cb) instance->tx_complete_cb(instance->tx_complete_ctx);
 }
 
-RadioGeddonTxResult radiogeddon_subghz_tx_start(
+RG_CORE_TEXT RadioGeddonTxResult radiogeddon_subghz_tx_start(
     RadioGeddonSubGhz* instance,
     const char* file_path,
     RadioGeddonTxCompleteCallback complete_cb,
@@ -903,12 +927,12 @@ RadioGeddonTxResult radiogeddon_subghz_tx_start(
     return result;
 }
 
-bool radiogeddon_subghz_is_tx_running(RadioGeddonSubGhz* instance) {
+RG_CORE_TEXT bool radiogeddon_subghz_is_tx_running(RadioGeddonSubGhz* instance) {
     if(instance->tx_mode == RadioGeddonTxModeNone) return false;
     return !subghz_devices_is_async_complete_tx(instance->device);
 }
 
-void radiogeddon_subghz_tx_stop(RadioGeddonSubGhz* instance) {
+RG_CORE_TEXT void radiogeddon_subghz_tx_stop(RadioGeddonSubGhz* instance) {
     if(instance->tx_mode == RadioGeddonTxModeNone) return;
 
     subghz_devices_stop_async_tx(instance->device);
@@ -944,13 +968,14 @@ typedef struct {
     FuriString* text;
 } RadioGeddonDecodeRun;
 
-static void radiogeddon_subghz_decode_feed(void* context, bool level, uint32_t duration) {
+static RG_CORE_TEXT void
+    radiogeddon_subghz_decode_feed(void* context, bool level, uint32_t duration) {
     RadioGeddonDecodeRun* run = context;
     subghz_receiver_decode(run->receiver, level, duration);
 }
 
 // Called by the receiver, inside subghz_receiver_decode, on each decode.
-static void radiogeddon_subghz_decode_callback(
+static RG_CORE_TEXT void radiogeddon_subghz_decode_callback(
     SubGhzReceiver* receiver,
     SubGhzProtocolDecoderBase* decoder_base,
     void* context) {
@@ -970,7 +995,7 @@ static void radiogeddon_subghz_decode_callback(
     subghz_receiver_reset(receiver);
 }
 
-bool radiogeddon_subghz_decode_raw(
+RG_CORE_TEXT bool radiogeddon_subghz_decode_raw(
     RadioGeddonSubGhz* instance,
     RgRawReader* reader,
     RgDecodeLog* log,
@@ -981,8 +1006,8 @@ bool radiogeddon_subghz_decode_raw(
 
     radiogeddon_subghz_environment_acquire(instance, true);
     RadioGeddonDecodeRun run = {.log = log, .text = furi_string_alloc()};
-    run.receiver = subghz_receiver_alloc_init(instance->environment);
-    subghz_receiver_set_filter(run.receiver, SubGhzProtocolFlag_Decodable);
+    run.receiver = radiogeddon_decoders_receiver_alloc(
+        instance->environment, &subghz_protocol_registry, SubGhzProtocolFlag_Decodable);
     subghz_receiver_set_rx_callback(run.receiver, radiogeddon_subghz_decode_callback, &run);
 
     rg_decode_run(reader, log, radiogeddon_subghz_decode_feed, &run, progress, progress_context);

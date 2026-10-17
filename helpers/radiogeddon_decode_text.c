@@ -1,4 +1,5 @@
 #include "radiogeddon_decode_text.h"
+#include "../radiogeddon_edition.h" /* RG_CORE_TEXT */
 #include "radiogeddon_bands.h"
 
 #include <lib/flipper_format/flipper_format.h>
@@ -10,7 +11,7 @@ static const char* const radiogeddon_table_decoders[] = {
     "Alutech AT-4N",
 };
 
-bool radiogeddon_decode_text_avoids_decoder(const char* protocol_name) {
+RG_CORE_TEXT bool radiogeddon_decode_text_avoids_decoder(const char* protocol_name) {
     if(!protocol_name) return false;
     for(size_t i = 0; i < COUNT_OF(radiogeddon_table_decoders); i++) {
         if(strcmp(protocol_name, radiogeddon_table_decoders[i]) == 0) return true;
@@ -19,7 +20,7 @@ bool radiogeddon_decode_text_avoids_decoder(const char* protocol_name) {
 }
 
 /* Name, bit count and key from the decode's serialized form. */
-static bool radiogeddon_decode_text_from_data(
+static RG_CORE_TEXT bool radiogeddon_decode_text_from_data(
     SubGhzProtocolDecoderBase* decoder_base,
     SubGhzRadioPreset* preset,
     FuriString* out) {
@@ -50,7 +51,7 @@ static bool radiogeddon_decode_text_from_data(
     return true;
 }
 
-bool radiogeddon_decode_text(
+RG_CORE_TEXT bool radiogeddon_decode_text(
     SubGhzProtocolDecoderBase* decoder_base,
     SubGhzRadioPreset* preset,
     FuriString* out) {
@@ -62,7 +63,8 @@ bool radiogeddon_decode_text(
     return subghz_protocol_decoder_base_get_string(decoder_base, out);
 }
 
-void radiogeddon_decode_preset(SubGhzRadioPreset* preset, size_t index, uint32_t frequency) {
+RG_CORE_TEXT void
+    radiogeddon_decode_preset(SubGhzRadioPreset* preset, size_t index, uint32_t frequency) {
     if(index >= radiogeddon_presets_count) index = 0;
     // Not the file name: the firmware writes a name it does not know as a
     // custom preset with the register list given here (none), and neither

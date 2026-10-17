@@ -1,4 +1,5 @@
 #include "radiogeddon_research.h"
+#include "../radiogeddon_edition.h" /* RG_LAB_TEXT */
 
 #if RG_FEATURE_JOURNAL
 
@@ -12,7 +13,7 @@
 /* A changed journal is written this long after the last change. */
 #define RESEARCH_SAVE_DELAY_MS 3000u
 
-static uint32_t research_time(void) {
+static RG_LAB_TEXT uint32_t research_time(void) {
     return furi_hal_rtc_get_timestamp();
 }
 
@@ -22,11 +23,11 @@ static const RgSafeFile journal_file = {
     RADIOGEDDON_JOURNAL_MARK,
 };
 
-static RadioGeddonResearch* research(RadioGeddonApp* app) {
+static RG_LAB_TEXT RadioGeddonResearch* research(RadioGeddonApp* app) {
     return &app->research;
 }
 
-void radiogeddon_research_alloc(RadioGeddonApp* app) {
+RG_LAB_TEXT void radiogeddon_research_alloc(RadioGeddonApp* app) {
     RadioGeddonResearch* r = research(app);
     memset(r, 0, sizeof(*r));
     rg_journal_init(&r->journal);
@@ -55,7 +56,7 @@ void radiogeddon_research_alloc(RadioGeddonApp* app) {
     free(buf);
 }
 
-bool radiogeddon_research_save(RadioGeddonApp* app) {
+RG_LAB_TEXT bool radiogeddon_research_save(RadioGeddonApp* app) {
     RadioGeddonResearch* r = research(app);
     if(!r->dirty) return true;
     size_t size = rg_journal_encoded_size();
@@ -85,11 +86,11 @@ bool radiogeddon_research_save(RadioGeddonApp* app) {
     return true;
 }
 
-void radiogeddon_research_free(RadioGeddonApp* app) {
+RG_LAB_TEXT void radiogeddon_research_free(RadioGeddonApp* app) {
     radiogeddon_research_save(app);
 }
 
-void radiogeddon_research_record(
+RG_LAB_TEXT void radiogeddon_research_record(
     RadioGeddonApp* app,
     RgJournalEvent event,
     uint32_t count,
@@ -109,12 +110,13 @@ void radiogeddon_research_record(
     if(event == RgJrnReport) r->session_reported = true;
 }
 
-static const char* research_name(const char* path) {
+static RG_LAB_TEXT const char* research_name(const char* path) {
     const char* slash = strrchr(path, '/');
     return slash ? slash + 1 : path;
 }
 
-void radiogeddon_research_set_context(RadioGeddonApp* app, const char* path, bool raw) {
+RG_LAB_TEXT void
+    radiogeddon_research_set_context(RadioGeddonApp* app, const char* path, bool raw) {
     RadioGeddonResearch* r = research(app);
     const char* name = research_name(path);
     if(strcmp(name, r->ctx_name) == 0 && r->ctx_raw == raw) return;
@@ -131,7 +133,7 @@ void radiogeddon_research_set_context(RadioGeddonApp* app, const char* path, boo
     rg_assist_new_context(&r->assist);
 }
 
-bool radiogeddon_research_context_path(RadioGeddonApp* app, FuriString* out) {
+RG_LAB_TEXT bool radiogeddon_research_context_path(RadioGeddonApp* app, FuriString* out) {
     RadioGeddonResearch* r = research(app);
     if(!r->ctx_name[0]) return false;
     furi_string_printf(out, "%s/%s", RADIOGEDDON_SIGNALS_FOLDER, r->ctx_name);
@@ -143,7 +145,7 @@ bool radiogeddon_research_context_path(RadioGeddonApp* app, FuriString* out) {
     return true;
 }
 
-void radiogeddon_research_step(
+RG_LAB_TEXT void radiogeddon_research_step(
     RadioGeddonApp* app,
     const char* path,
     RadioGeddonResearchStep step,
@@ -171,20 +173,21 @@ void radiogeddon_research_step(
     }
 }
 
-void radiogeddon_research_set_similar(RadioGeddonApp* app, const char* const* names, size_t n) {
+RG_LAB_TEXT void
+    radiogeddon_research_set_similar(RadioGeddonApp* app, const char* const* names, size_t n) {
     RadioGeddonResearch* r = research(app);
     memset(r->similar, 0, sizeof(r->similar));
     for(size_t i = 0; i < n && i < RADIOGEDDON_RESEARCH_SIMILAR; i++)
         strlcpy(r->similar[i], names[i], sizeof(r->similar[i]));
 }
 
-void radiogeddon_research_session_added(RadioGeddonApp* app) {
+RG_LAB_TEXT void radiogeddon_research_session_added(RadioGeddonApp* app) {
     RadioGeddonResearch* r = research(app);
     if(r->session_added < 255) r->session_added++;
     r->session_reported = false;
 }
 
-void radiogeddon_research_tick(RadioGeddonApp* app) {
+RG_LAB_TEXT void radiogeddon_research_tick(RadioGeddonApp* app) {
     RadioGeddonResearch* r = research(app);
     if(!r->dirty) return;
     // Never compete with a recording for the card.
@@ -193,7 +196,7 @@ void radiogeddon_research_tick(RadioGeddonApp* app) {
     radiogeddon_research_save(app);
 }
 
-RgTip radiogeddon_research_tip(RadioGeddonApp* app) {
+RG_LAB_TEXT RgTip radiogeddon_research_tip(RadioGeddonApp* app) {
     RadioGeddonResearch* r = research(app);
     r->assist.enabled = app->settings.assistant;
     RgAssistFacts f;
@@ -228,12 +231,12 @@ RgTip radiogeddon_research_tip(RadioGeddonApp* app) {
     return tip;
 }
 
-void radiogeddon_research_dismiss_tip(RadioGeddonApp* app) {
+RG_LAB_TEXT void radiogeddon_research_dismiss_tip(RadioGeddonApp* app) {
     rg_assist_dismiss(&research(app)->assist);
     research(app)->tip = RgTipNone;
 }
 
-bool radiogeddon_research_clear(RadioGeddonApp* app, bool everything) {
+RG_LAB_TEXT bool radiogeddon_research_clear(RadioGeddonApp* app, bool everything) {
     RadioGeddonResearch* r = research(app);
     if(everything) {
         rg_journal_init(&r->journal);

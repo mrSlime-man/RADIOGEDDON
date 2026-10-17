@@ -1,4 +1,5 @@
 #include "rg_analyzer.h"
+#include "../radiogeddon_edition.h" /* RG_TOOL_TEXT */
 #include "rg_div.h"
 
 #include <stdlib.h>
@@ -6,12 +7,12 @@
 
 /* ---- small helpers ------------------------------------------------------ */
 
-static uint32_t rg_abs32(int32_t v) {
+static RG_TOOL_TEXT uint32_t rg_abs32(int32_t v) {
     return (uint32_t)(v < 0 ? -(int64_t)v : v);
 }
 
 /* |value - center| <= pct% of center (plus 10 us so tiny pulses can match). */
-static bool rg_near(uint32_t value, uint32_t center, uint32_t pct) {
+static RG_TOOL_TEXT bool rg_near(uint32_t value, uint32_t center, uint32_t pct) {
     if(center == 0) return false;
     uint32_t diff = value > center ? value - center : center - value;
     // floor(center * pct / 100) in 32 bits, exactly: with pct <= 100 (the
@@ -20,14 +21,14 @@ static bool rg_near(uint32_t value, uint32_t center, uint32_t pct) {
     return diff <= tol + 10u;
 }
 
-static void rg_pack_bits(const char* bits, size_t n, uint8_t* out) {
+static RG_TOOL_TEXT void rg_pack_bits(const char* bits, size_t n, uint8_t* out) {
     memset(out, 0, RG_ANALYZER_MAX_BITS / 8);
     for(size_t i = 0; i < n && i < RG_ANALYZER_MAX_BITS; i++) {
         if(bits[i] == '1') out[i / 8] |= (uint8_t)(0x80u >> (i % 8));
     }
 }
 
-void rg_analyzer_frame_bits(const RgFrame* frame, char* out) {
+RG_TOOL_TEXT void rg_analyzer_frame_bits(const RgFrame* frame, char* out) {
     size_t n = frame->bit_count;
     if(n > RG_ANALYZER_MAX_BITS) n = RG_ANALYZER_MAX_BITS;
     for(size_t i = 0; i < n; i++) {
@@ -42,7 +43,7 @@ void rg_analyzer_frame_bits(const RgFrame* frame, char* out) {
 static uint32_t rg_bin_edges[RG_ANALYZER_HIST_BINS];
 static bool rg_bin_edges_ready = false;
 
-static void rg_bins_init(void) {
+static RG_TOOL_TEXT void rg_bins_init(void) {
     if(rg_bin_edges_ready) return;
     uint32_t e = 20;
     for(size_t i = 0; i < RG_ANALYZER_HIST_BINS; i++) {
@@ -53,7 +54,7 @@ static void rg_bins_init(void) {
     rg_bin_edges_ready = true;
 }
 
-static size_t rg_bin_of(uint32_t us) {
+static RG_TOOL_TEXT size_t rg_bin_of(uint32_t us) {
     /* Last bin whose lower edge is <= us (binary search). */
     size_t lo = 0, hi = RG_ANALYZER_HIST_BINS;
     while(hi - lo > 1) {
@@ -66,7 +67,7 @@ static size_t rg_bin_of(uint32_t us) {
     return lo;
 }
 
-static void rg_hist_add(RgHistogram* h, uint32_t us) {
+static RG_TOOL_TEXT void rg_hist_add(RgHistogram* h, uint32_t us) {
     size_t b = rg_bin_of(us);
     h->count[b]++;
     h->sum[b] += us;
@@ -89,7 +90,7 @@ typedef struct {
     uint64_t deviation; /* sum over bins of count * |bin mean - centre| */
 } RgPeakWork;
 
-static size_t rg_find_peaks(const RgHistogram* h, RgPeakWork* out, size_t max) {
+static RG_TOOL_TEXT size_t rg_find_peaks(const RgHistogram* h, RgPeakWork* out, size_t max) {
     uint32_t smooth[RG_ANALYZER_HIST_BINS];
     bool claimed[RG_ANALYZER_HIST_BINS];
     const size_t bins = RG_ANALYZER_HIST_BINS;
@@ -174,7 +175,7 @@ static size_t rg_find_peaks(const RgHistogram* h, RgPeakWork* out, size_t max) {
 /* The two most populous peaks at or above RG_ANALYZER_MIN_TE_US, returned as
  * (shorter, longer) when the longer is at least @p ratio_x10 / 10 times the
  * shorter; 0 if missing. */
-static void rg_top_two_ratio(
+static RG_TOOL_TEXT void rg_top_two_ratio(
     const RgPeak* p,
     size_t n,
     uint32_t* shorter,
@@ -205,14 +206,15 @@ static void rg_top_two_ratio(
 }
 
 /* As above for widths that carry a bit: they must be clearly distinct. */
-static void rg_top_two(const RgPeak* p, size_t n, uint32_t* shorter, uint32_t* longer) {
+static RG_TOOL_TEXT void
+    rg_top_two(const RgPeak* p, size_t n, uint32_t* shorter, uint32_t* longer) {
     rg_top_two_ratio(p, n, shorter, longer, 14u);
 }
 
 /* Shortest peak holding at least a quarter of the side's largest peak: a
  * sparse cluster of glitches below the real timing must not become Te. Peaks
  * below RG_ANALYZER_MIN_TE_US are receiver glitches however many there are. */
-static uint32_t rg_shortest_major(const RgPeak* p, size_t n) {
+static RG_TOOL_TEXT uint32_t rg_shortest_major(const RgPeak* p, size_t n) {
     uint32_t most = 0;
     for(size_t i = 0; i < n; i++)
         if(p[i].center_us >= RG_ANALYZER_MIN_TE_US && p[i].count > most) most = p[i].count;
@@ -223,7 +225,7 @@ static uint32_t rg_shortest_major(const RgPeak* p, size_t n) {
 }
 
 /* A duration as Manchester half-cells: 1 or 2 Te, else 0 (as the decoder). */
-static int rg_cells(uint32_t d, uint32_t te) {
+static RG_TOOL_TEXT int rg_cells(uint32_t d, uint32_t te) {
     if(d * 2u >= te && d * 2u <= te * 3u) return 1;
     if(d * 2u > te * 3u && d * 10u <= te * 26u) return 2;
     return 0;
@@ -240,7 +242,7 @@ static int rg_cells(uint32_t d, uint32_t te) {
  * low after it; phase 1 skips the frame's first high (a start pulse) and pairs
  * each low with the high after it, as protocols that send the low first do.
  */
-static size_t rg_decode_pairs_phase(
+static RG_TOOL_TEXT size_t rg_decode_pairs_phase(
     RgEncoding enc,
     const RgDecodeParams* p,
     const int32_t* s,
@@ -310,7 +312,7 @@ static size_t rg_decode_pairs_phase(
     return b;
 }
 
-static size_t rg_decode_pairs(
+static RG_TOOL_TEXT size_t rg_decode_pairs(
     RgEncoding enc,
     const RgDecodeParams* p,
     const int32_t* s,
@@ -331,7 +333,7 @@ static size_t rg_decode_pairs(
  * second cell). Phase 1 assumes the frame's first half-cell was swallowed by
  * the idle low before it.
  */
-static size_t rg_decode_manchester_phase(
+static RG_TOOL_TEXT size_t rg_decode_manchester_phase(
     const RgDecodeParams* p,
     const int32_t* s,
     size_t n,
@@ -398,7 +400,7 @@ static size_t rg_decode_manchester_phase(
     return b;
 }
 
-static size_t rg_decode_manchester(
+static RG_TOOL_TEXT size_t rg_decode_manchester(
     const RgDecodeParams* p,
     const int32_t* s,
     size_t n,
@@ -416,7 +418,7 @@ static size_t rg_decode_manchester(
     return nb;
 }
 
-size_t rg_analyzer_decode_map(
+RG_TOOL_TEXT size_t rg_analyzer_decode_map(
     RgEncoding enc,
     const RgDecodeParams* params,
     const int32_t* samples,
@@ -450,7 +452,7 @@ size_t rg_analyzer_decode_map(
     return n;
 }
 
-size_t rg_analyzer_decode(
+RG_TOOL_TEXT size_t rg_analyzer_decode(
     RgEncoding enc,
     const RgDecodeParams* params,
     const int32_t* samples,
@@ -463,7 +465,7 @@ size_t rg_analyzer_decode(
 
 /* ---- alignment ---------------------------------------------------------- */
 
-size_t rg_analyzer_align(
+RG_TOOL_TEXT size_t rg_analyzer_align(
     const char* a,
     size_t na,
     const char* b,
@@ -504,7 +506,7 @@ size_t rg_analyzer_align(
 /* Count how each high pulse pairs with the gap after it. Square-wave runs
  * (preambles, also one between frames sent with no gap) are skipped: their
  * equal pairs belong to no bit. */
-static void rg_count_pairs(RgAnalyzer* a, const int32_t* s, size_t n, uint32_t te) {
+static RG_TOOL_TEXT void rg_count_pairs(RgAnalyzer* a, const int32_t* s, size_t n, uint32_t te) {
     size_t i = 0;
     while(i + 1 < n) {
         size_t run = i;
@@ -532,7 +534,7 @@ static void rg_count_pairs(RgAnalyzer* a, const int32_t* s, size_t n, uint32_t t
 
 /* ---- streaming passes ---------------------------------------------------- */
 
-static bool rg_repeats_at(const char* bits, size_t n, size_t p) {
+static RG_TOOL_TEXT bool rg_repeats_at(const char* bits, size_t n, size_t p) {
     size_t match = 0;
     for(size_t i = 0; i + p < n; i++) {
         if(bits[i] == bits[i + p]) match++;
@@ -540,7 +542,7 @@ static bool rg_repeats_at(const char* bits, size_t n, size_t p) {
     return match * 100u >= (n - p) * RG_ANALYZER_REPEAT_MATCH_PCT;
 }
 
-size_t rg_analyzer_repeat_period(const char* bits, size_t n) {
+RG_TOOL_TEXT size_t rg_analyzer_repeat_period(const char* bits, size_t n) {
     // A stream that repeats at a few bits (a square wave, a preamble) is not
     // made of frames.
     for(size_t q = 1; q < RG_ANALYZER_MIN_REPEAT_BITS && q * 2 <= n; q++) {
@@ -558,7 +560,7 @@ size_t rg_analyzer_repeat_period(const char* bits, size_t n) {
     return 0;
 }
 
-size_t rg_analyzer_strip_filler(char* bits, size_t n) {
+RG_TOOL_TEXT size_t rg_analyzer_strip_filler(char* bits, size_t n) {
     size_t lead = 0, trail = 0;
     while(lead < n && bits[lead] == bits[0])
         lead++;
@@ -573,7 +575,7 @@ size_t rg_analyzer_strip_filler(char* bits, size_t n) {
 }
 
 /* Count a frame of @p nb bits that fits reading @p e (pass 2). */
-static void rg_hyp_tally(RgAnalyzer* a, int e, size_t nb) {
+static RG_TOOL_TEXT void rg_hyp_tally(RgAnalyzer* a, int e, size_t nb) {
     if(a->hyp_frames[e] < UINT16_MAX) a->hyp_frames[e]++;
     uint16_t len = (uint16_t)(nb > UINT16_MAX ? UINT16_MAX : nb);
     size_t k, weakest = 0;
@@ -590,13 +592,13 @@ static void rg_hyp_tally(RgAnalyzer* a, int e, size_t nb) {
     }
 }
 
-static void rg_frame_reset(RgAnalyzer* a) {
+static RG_TOOL_TEXT void rg_frame_reset(RgAnalyzer* a) {
     a->frame_n = 0;
     a->frame_samples = 0;
     a->frame_duration_us = 0;
 }
 
-static void rg_frame_end(RgAnalyzer* a) {
+static RG_TOOL_TEXT void rg_frame_end(RgAnalyzer* a) {
     RgAnalysis* r = a->out;
     if(a->frame_samples == 0) return;
     if(a->frame_samples < RG_ANALYZER_MIN_FRAME_SAMPLES) {
@@ -684,7 +686,7 @@ static void rg_frame_end(RgAnalyzer* a) {
     rg_frame_reset(a);
 }
 
-static void rg_process(RgAnalyzer* a, int32_t v) {
+static RG_TOOL_TEXT void rg_process(RgAnalyzer* a, int32_t v) {
     RgAnalysis* r = a->out;
     uint32_t d = rg_abs32(v);
     if(a->pass == 1) {
@@ -712,7 +714,7 @@ static void rg_process(RgAnalyzer* a, int32_t v) {
     a->index++;
 }
 
-void rg_analyzer_begin(RgAnalyzer* a, RgAnalysis* out) {
+RG_TOOL_TEXT void rg_analyzer_begin(RgAnalyzer* a, RgAnalysis* out) {
     rg_bins_init();
     memset(a, 0, sizeof(*a));
     memset(out, 0, sizeof(*out));
@@ -720,7 +722,7 @@ void rg_analyzer_begin(RgAnalyzer* a, RgAnalysis* out) {
     a->pass = 1;
 }
 
-void rg_analyzer_feed(RgAnalyzer* a, const int32_t* samples, size_t count) {
+RG_TOOL_TEXT void rg_analyzer_feed(RgAnalyzer* a, const int32_t* samples, size_t count) {
     if(a->pass == 0 || !samples) return;
     for(size_t i = 0; i < count; i++) {
         int32_t v = samples[i];
@@ -741,7 +743,7 @@ void rg_analyzer_feed(RgAnalyzer* a, const int32_t* samples, size_t count) {
 }
 
 /* Pass 1 done: derive the timing model. */
-static void rg_finish_timing(RgAnalyzer* a) {
+static RG_TOOL_TEXT void rg_finish_timing(RgAnalyzer* a) {
     RgAnalysis* r = a->out;
     RgPeakWork work[RG_ANALYZER_MAX_PEAKS];
     uint64_t dev = 0, weight = 0;
@@ -871,7 +873,7 @@ static void rg_finish_timing(RgAnalyzer* a) {
 }
 
 /* Pass 2 done: pick the encoding whose grammar fits the signal frames best. */
-static void rg_finish_encoding(RgAnalyzer* a) {
+static RG_TOOL_TEXT void rg_finish_encoding(RgAnalyzer* a) {
     RgAnalysis* r = a->out;
     r->encoding = RgEncodingUnknown;
     r->alternative = RgEncodingUnknown;
@@ -940,14 +942,14 @@ static void rg_finish_encoding(RgAnalyzer* a) {
 
 /* The chosen reading had no testable rival: Manchester chosen while neither
  * the pulse-width nor the pulse-position decoder had the widths it needs. */
-static bool rg_no_rival(const RgAnalysis* r) {
+static RG_TOOL_TEXT bool rg_no_rival(const RgAnalysis* r) {
     return r->encoding == RgEncodingManchester &&
            !(r->params.pwm_short_us && r->params.pwm_long_us) &&
            !(r->params.ppm_short_us && r->params.ppm_long_us);
 }
 
 /* The evidence for and against reading the signal as @p e. */
-static void rg_hyp_evidence(const RgAnalyzer* a, int e, RgHypothesis* h) {
+static RG_TOOL_TEXT void rg_hyp_evidence(const RgAnalyzer* a, int e, RgHypothesis* h) {
     const RgAnalysis* r = a->out;
     if(h->fit >= 80) h->support |= RgHypFitHigh;
     if(h->fit < RG_ANALYZER_GOOD_FIT) h->against |= RgHypFitLow;
@@ -984,7 +986,7 @@ static void rg_hyp_evidence(const RgAnalyzer* a, int e, RgHypothesis* h) {
     }
 }
 
-void rg_analyzer_hypotheses(RgAnalyzer* a) {
+RG_TOOL_TEXT void rg_analyzer_hypotheses(RgAnalyzer* a) {
     RgAnalysis* r = a->out;
     RgHypothesis* out = r->hypotheses;
     size_t n = 0;
@@ -1059,14 +1061,14 @@ static const char* const rg_hyp_names[RG_HYP_EVIDENCE_COUNT] = {
     "no other reading testable",
 };
 
-const char* rg_hyp_evidence_name(RgHypEvidence ev) {
+RG_TOOL_TEXT const char* rg_hyp_evidence_name(RgHypEvidence ev) {
     for(size_t i = 0; i < RG_HYP_EVIDENCE_COUNT; i++)
         if((uint32_t)ev == (1u << i)) return rg_hyp_names[i];
     return "?";
 }
 
 /* Pass 3 done: group, align and compare the kept frames. */
-static void rg_finish_frames(RgAnalyzer* a) {
+static RG_TOOL_TEXT void rg_finish_frames(RgAnalyzer* a) {
     RgAnalysis* r = a->out;
     char cur[RG_ANALYZER_MAX_BITS + 1];
     char pat[RG_ANALYZER_MAX_BITS + 1];
@@ -1237,7 +1239,7 @@ static void rg_finish_frames(RgAnalyzer* a) {
     r->encoding_confidence = conf;
 }
 
-bool rg_analyzer_next_pass(RgAnalyzer* a) {
+RG_TOOL_TEXT bool rg_analyzer_next_pass(RgAnalyzer* a) {
     if(a->pass == 0) return false;
     if(a->pending != 0) {
         rg_process(a, a->pending);
@@ -1268,7 +1270,7 @@ bool rg_analyzer_next_pass(RgAnalyzer* a) {
     return again;
 }
 
-void rg_analyzer_run(const int32_t* samples, size_t count, RgAnalysis* out) {
+RG_TOOL_TEXT void rg_analyzer_run(const int32_t* samples, size_t count, RgAnalysis* out) {
     // Only the working state is allocated: the result is written in place.
     RgAnalyzer* a = malloc(sizeof(RgAnalyzer));
     if(!a) {
@@ -1283,7 +1285,8 @@ void rg_analyzer_run(const int32_t* samples, size_t count, RgAnalysis* out) {
     free(a);
 }
 
-bool rg_analyzer_repeat_timing(const RgAnalysis* r, uint8_t group, RgRepeatTiming* out) {
+RG_TOOL_TEXT bool
+    rg_analyzer_repeat_timing(const RgAnalysis* r, uint8_t group, RgRepeatTiming* out) {
     uint32_t iv[RG_ANALYZER_MAX_FRAMES];
     uint32_t n = 0;
     const RgFrame* prev = NULL;
@@ -1314,7 +1317,7 @@ bool rg_analyzer_repeat_timing(const RgAnalysis* r, uint8_t group, RgRepeatTimin
     return true;
 }
 
-const char* rg_analyzer_encoding_name(RgEncoding e) {
+RG_TOOL_TEXT const char* rg_analyzer_encoding_name(RgEncoding e) {
     switch(e) {
     case RgEncodingPWM:
         return "PWM";
@@ -1327,7 +1330,7 @@ const char* rg_analyzer_encoding_name(RgEncoding e) {
     }
 }
 
-const char* rg_analyzer_quality_name(RgQuality q) {
+RG_TOOL_TEXT const char* rg_analyzer_quality_name(RgQuality q) {
     switch(q) {
     case RgQualityGood:
         return "good";
@@ -1342,7 +1345,7 @@ const char* rg_analyzer_quality_name(RgQuality q) {
 
 /* ---- similarity --------------------------------------------------------- */
 
-static bool rg_pair_match(int32_t a, int32_t b) {
+static RG_TOOL_TEXT bool rg_pair_match(int32_t a, int32_t b) {
     if((a < 0) != (b < 0)) return false;
     uint32_t aa = rg_abs32(a), bb = rg_abs32(b);
     uint32_t hi = aa > bb ? aa : bb;
@@ -1352,29 +1355,30 @@ static bool rg_pair_match(int32_t a, int32_t b) {
     return diff <= tol;
 }
 
-void rg_similarity_init(RgSimilarity* s) {
+RG_TOOL_TEXT void rg_similarity_init(RgSimilarity* s) {
     memset(s, 0, sizeof(*s));
 }
 
-void rg_similarity_feed(RgSimilarity* s, const int32_t* a, const int32_t* b, size_t n) {
+RG_TOOL_TEXT void
+    rg_similarity_feed(RgSimilarity* s, const int32_t* a, const int32_t* b, size_t n) {
     for(size_t i = 0; i < n; i++)
         if(rg_pair_match(a[i], b[i])) s->matches++;
     s->na += n;
     s->nb += n;
 }
 
-void rg_similarity_tail(RgSimilarity* s, size_t extra_a, size_t extra_b) {
+RG_TOOL_TEXT void rg_similarity_tail(RgSimilarity* s, size_t extra_a, size_t extra_b) {
     s->na += extra_a;
     s->nb += extra_b;
 }
 
-int rg_similarity_score(const RgSimilarity* s) {
+RG_TOOL_TEXT int rg_similarity_score(const RgSimilarity* s) {
     if(s->na == 0 || s->nb == 0) return 0;
     size_t max_len = s->na > s->nb ? s->na : s->nb;
     return (int)((s->matches * 100) / max_len);
 }
 
-int rg_analyzer_similarity(const int32_t* a, size_t na, const int32_t* b, size_t nb) {
+RG_TOOL_TEXT int rg_analyzer_similarity(const int32_t* a, size_t na, const int32_t* b, size_t nb) {
     RgSimilarity s;
     rg_similarity_init(&s);
     size_t common = na < nb ? na : nb;

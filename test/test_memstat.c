@@ -61,6 +61,43 @@ static void test_session(void) {
     CHECK(rg_mem_cost_changed(15000, 13900), "shrink over 1 KB stored");
 }
 
+static void test_fits_heap(void) {
+    printf("test_fits_heap\n");
+    CHECK(rg_mem_session_fits_heap(40000, 30000, 25000, 6000), "enough in total and in one block");
+    CHECK(
+        !rg_mem_session_fits_heap(40000, RG_MEM_SESSION_BLOCK - 1, 25000, 6000),
+        "the worker's buffer does not fit in one block");
+    CHECK(
+        rg_mem_session_fits_heap(40000, RG_MEM_SESSION_BLOCK, 25000, 6000),
+        "exactly the worker's buffer fits");
+    CHECK(!rg_mem_session_fits_heap(30000, 30000, 25000, 6000), "not enough in total");
+    CHECK(
+        !rg_mem_session_fits_heap(RG_MEM_MIN_SESSION_COST - 1, 30000, 0, 6000),
+        "unmeasured: still refused below the smallest session");
+}
+
+static void test_cost_model(void) {
+    printf("test_cost_model\n");
+    const uint32_t binraw = 2048u * 4u + 2048u;
+    // The owner's beta 12 measurement on RogueMaster 4f2e06200.
+    CHECK(rg_mem_cost_for_model(36568, 0, binraw) == 36568 - binraw, "beta 12 cost less BinRAW");
+    CHECK(rg_mem_cost_for_model(36568, 0, 0) == 36568, "nothing dropped: unchanged");
+    CHECK(
+        rg_mem_cost_for_model(36568, RG_MEM_SESSION_MODEL, binraw) == 36568,
+        "current model: as measured");
+    CHECK(rg_mem_cost_for_model(0, 0, binraw) == 0, "never measured stays unmeasured");
+    // Never below the smallest session, never above what was stored.
+    CHECK(
+        rg_mem_cost_for_model(RG_MEM_MIN_SESSION_COST + 100, 0, binraw) == RG_MEM_MIN_SESSION_COST,
+        "floored at the smallest session");
+    CHECK(rg_mem_cost_for_model(5000, 0, binraw) == 5000, "a tiny stored cost is not raised");
+    for(uint32_t stored = 1; stored < 80000; stored += 97) {
+        uint32_t c = rg_mem_cost_for_model(stored, 0, binraw);
+        CHECK(c <= stored, "never more than stored");
+        CHECK(c + binraw >= stored, "never less than stored minus what was dropped");
+    }
+}
+
 static void test_cost(void) {
     printf("test_cost\n");
     // Steady: low-water mark untouched (an earlier, deeper low exists).
@@ -119,6 +156,8 @@ int main(void) {
     test_stat();
     test_session();
     test_cost();
+    test_cost_model();
+    test_fits_heap();
     test_tag();
     test_diag();
 

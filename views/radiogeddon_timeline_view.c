@@ -1,5 +1,5 @@
 #include "radiogeddon_timeline_view.h"
-#include "../radiogeddon_edition.h" /* RG_UI_TEXT */
+#include "../radiogeddon_edition.h" /* RG_VIEW_TEXT */
 #include "../helpers/rg_div.h"
 #include "../helpers/rg_timeline.h"
 
@@ -42,22 +42,22 @@ typedef struct {
     int window_zoom;
 } RadioGeddonTimelineModel;
 
-static RG_UI_TEXT uint64_t tl_span(const RadioGeddonTimelineModel* m) {
+static RG_VIEW_TEXT uint64_t tl_span(const RadioGeddonTimelineModel* m) {
     return (uint64_t)rg_timeline_zoom_us[m->zoom] * TL_WIDTH;
 }
 
-static RG_UI_TEXT bool tl_need_reload(const RadioGeddonTimelineModel* m) {
+static RG_VIEW_TEXT bool tl_need_reload(const RadioGeddonTimelineModel* m) {
     if(m->left_us == m->window_left && m->zoom == m->window_zoom) return false;
     return !rg_timeline_covered(m->first_us, m->end_us, m->at_end, m->left_us, tl_span(m));
 }
 
-static RG_UI_TEXT void tl_cat_time(char* buf, size_t len, uint64_t us) {
+static RG_VIEW_TEXT void tl_cat_time(char* buf, size_t len, uint64_t us) {
     uint32_t t = rg_div_u64_u32(us, 100u); // 0.1 ms units; saturates past 119 hours
     snprintf(buf, len, "%lu.%04lus", (unsigned long)(t / 10000u), (unsigned long)(t % 10000u));
 }
 
 /* Sample index (in the file) of the first sample visible at the left edge. */
-static RG_UI_TEXT uint32_t tl_left_index(const RadioGeddonTimelineModel* m) {
+static RG_VIEW_TEXT uint32_t tl_left_index(const RadioGeddonTimelineModel* m) {
     uint64_t t = m->first_us;
     for(size_t i = 0; i < m->count; i++) {
         int32_t v = m->samples[i];
@@ -67,7 +67,7 @@ static RG_UI_TEXT uint32_t tl_left_index(const RadioGeddonTimelineModel* m) {
     return m->first_index + (uint32_t)m->count;
 }
 
-static RG_UI_TEXT void radiogeddon_timeline_view_draw(Canvas* canvas, void* model) {
+static RG_VIEW_TEXT void radiogeddon_timeline_view_draw(Canvas* canvas, void* model) {
     RadioGeddonTimelineModel* m = model;
     uint32_t upp = rg_timeline_zoom_us[m->zoom];
     uint64_t span = tl_span(m);
@@ -173,7 +173,7 @@ static RG_UI_TEXT void radiogeddon_timeline_view_draw(Canvas* canvas, void* mode
     canvas_draw_str_aligned(canvas, 64, 63, AlignCenter, AlignBottom, "^v zoom  <> pan  OK frame");
 }
 
-static RG_UI_TEXT bool radiogeddon_timeline_view_input(InputEvent* event, void* context) {
+static RG_VIEW_TEXT bool radiogeddon_timeline_view_input(InputEvent* event, void* context) {
     RadioGeddonTimelineView* instance = context;
     if(event->key == InputKeyBack) return false;
     bool repeatable = event->type == InputTypeShort || event->type == InputTypeRepeat;
@@ -220,12 +220,12 @@ static RG_UI_TEXT bool radiogeddon_timeline_view_input(InputEvent* event, void* 
     return true;
 }
 
-RG_UI_TEXT size_t radiogeddon_timeline_view_heap_size(void) {
+RG_VIEW_TEXT size_t radiogeddon_timeline_view_heap_size(void) {
     // The View object itself is small; 256 bytes covers it and the allocator.
     return sizeof(RadioGeddonTimelineView) + sizeof(RadioGeddonTimelineModel) + 256u;
 }
 
-RG_UI_TEXT RadioGeddonTimelineView* radiogeddon_timeline_view_alloc(void) {
+RG_VIEW_TEXT RadioGeddonTimelineView* radiogeddon_timeline_view_alloc(void) {
     RadioGeddonTimelineView* instance = malloc(sizeof(RadioGeddonTimelineView));
     instance->view = view_alloc();
     instance->callback = NULL;
@@ -243,17 +243,17 @@ RG_UI_TEXT RadioGeddonTimelineView* radiogeddon_timeline_view_alloc(void) {
     return instance;
 }
 
-RG_UI_TEXT void radiogeddon_timeline_view_free(RadioGeddonTimelineView* instance) {
+RG_VIEW_TEXT void radiogeddon_timeline_view_free(RadioGeddonTimelineView* instance) {
     furi_assert(instance);
     view_free(instance->view);
     free(instance);
 }
 
-RG_UI_TEXT View* radiogeddon_timeline_view_get_view(RadioGeddonTimelineView* instance) {
+RG_VIEW_TEXT View* radiogeddon_timeline_view_get_view(RadioGeddonTimelineView* instance) {
     return instance->view;
 }
 
-RG_UI_TEXT void radiogeddon_timeline_view_set_callback(
+RG_VIEW_TEXT void radiogeddon_timeline_view_set_callback(
     RadioGeddonTimelineView* instance,
     RadioGeddonTimelineCallback callback,
     void* context) {
@@ -261,7 +261,7 @@ RG_UI_TEXT void radiogeddon_timeline_view_set_callback(
     instance->context = context;
 }
 
-RG_UI_TEXT void radiogeddon_timeline_view_set_recording(
+RG_VIEW_TEXT void radiogeddon_timeline_view_set_recording(
     RadioGeddonTimelineView* instance,
     uint64_t total_us,
     uint32_t total_samples,
@@ -281,7 +281,7 @@ RG_UI_TEXT void radiogeddon_timeline_view_set_recording(
     view_commit_model(instance->view, true);
 }
 
-RG_UI_TEXT void radiogeddon_timeline_view_get_span(
+RG_VIEW_TEXT void radiogeddon_timeline_view_get_span(
     RadioGeddonTimelineView* instance,
     uint64_t* left_us,
     uint64_t* span_us) {
@@ -291,7 +291,7 @@ RG_UI_TEXT void radiogeddon_timeline_view_get_span(
     view_commit_model(instance->view, false);
 }
 
-RG_UI_TEXT void radiogeddon_timeline_view_window_begin(
+RG_VIEW_TEXT void radiogeddon_timeline_view_window_begin(
     RadioGeddonTimelineView* instance,
     uint32_t first_index,
     uint64_t first_us) {
@@ -307,7 +307,7 @@ RG_UI_TEXT void radiogeddon_timeline_view_window_begin(
     view_commit_model(instance->view, true);
 }
 
-RG_UI_TEXT void radiogeddon_timeline_view_window_append(
+RG_VIEW_TEXT void radiogeddon_timeline_view_window_append(
     RadioGeddonTimelineView* instance,
     const int32_t* samples,
     size_t count) {
@@ -320,7 +320,7 @@ RG_UI_TEXT void radiogeddon_timeline_view_window_append(
     view_commit_model(instance->view, false);
 }
 
-RG_UI_TEXT void
+RG_VIEW_TEXT void
     radiogeddon_timeline_view_window_end(RadioGeddonTimelineView* instance, bool at_end) {
     RadioGeddonTimelineModel* m = view_get_model(instance->view);
     m->at_end = at_end;

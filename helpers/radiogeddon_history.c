@@ -1,4 +1,5 @@
 #include "radiogeddon_history.h"
+#include "../radiogeddon_edition.h" /* RG_CORE_TEXT */
 
 typedef struct {
     FuriString* name;
@@ -13,13 +14,13 @@ struct RadioGeddonHistory {
     size_t count;
 };
 
-RadioGeddonHistory* radiogeddon_history_alloc(void) {
+RG_CORE_TEXT RadioGeddonHistory* radiogeddon_history_alloc(void) {
     RadioGeddonHistory* instance = malloc(sizeof(RadioGeddonHistory));
     memset(instance, 0, sizeof(RadioGeddonHistory));
     return instance;
 }
 
-static void radiogeddon_history_item_free(RadioGeddonHistoryItem* item) {
+static RG_CORE_TEXT void radiogeddon_history_item_free(RadioGeddonHistoryItem* item) {
     if(item->name) furi_string_free(item->name);
     if(item->text) furi_string_free(item->text);
     if(item->serialized) furi_string_free(item->serialized);
@@ -29,23 +30,23 @@ static void radiogeddon_history_item_free(RadioGeddonHistoryItem* item) {
     item->has_serialized = false;
 }
 
-void radiogeddon_history_reset(RadioGeddonHistory* instance) {
+RG_CORE_TEXT void radiogeddon_history_reset(RadioGeddonHistory* instance) {
     for(size_t i = 0; i < instance->count; i++) {
         radiogeddon_history_item_free(&instance->items[i]);
     }
     instance->count = 0;
 }
 
-void radiogeddon_history_free(RadioGeddonHistory* instance) {
+RG_CORE_TEXT void radiogeddon_history_free(RadioGeddonHistory* instance) {
     radiogeddon_history_reset(instance);
     free(instance);
 }
 
-size_t radiogeddon_history_count(RadioGeddonHistory* instance) {
+RG_CORE_TEXT size_t radiogeddon_history_count(RadioGeddonHistory* instance) {
     return instance->count;
 }
 
-bool radiogeddon_history_add(
+RG_CORE_TEXT bool radiogeddon_history_add(
     RadioGeddonHistory* instance,
     const char* protocol_name,
     uint8_t hash,
@@ -83,22 +84,23 @@ bool radiogeddon_history_add(
     return true;
 }
 
-const char* radiogeddon_history_get_name(RadioGeddonHistory* instance, size_t index) {
+RG_CORE_TEXT const char* radiogeddon_history_get_name(RadioGeddonHistory* instance, size_t index) {
     if(index >= instance->count) return "";
     return furi_string_get_cstr(instance->items[index].name);
 }
 
-FuriString* radiogeddon_history_get_text(RadioGeddonHistory* instance, size_t index) {
+RG_CORE_TEXT FuriString* radiogeddon_history_get_text(RadioGeddonHistory* instance, size_t index) {
     if(index >= instance->count) return NULL;
     return instance->items[index].text;
 }
 
-FuriString* radiogeddon_history_get_serialized(RadioGeddonHistory* instance, size_t index) {
+RG_CORE_TEXT FuriString*
+    radiogeddon_history_get_serialized(RadioGeddonHistory* instance, size_t index) {
     if(index >= instance->count) return NULL;
     return instance->items[index].serialized;
 }
 
-bool radiogeddon_history_has_serialized(RadioGeddonHistory* instance, size_t index) {
+RG_CORE_TEXT bool radiogeddon_history_has_serialized(RadioGeddonHistory* instance, size_t index) {
     if(index >= instance->count) return false;
     return instance->items[index].has_serialized;
 }

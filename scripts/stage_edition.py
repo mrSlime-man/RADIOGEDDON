@@ -8,7 +8,7 @@ built) into DEST, then rewrites DEST/application.fam for the edition:
 
 - catalog: application.fam as committed (it already is the Catalog edition);
 - full:    appid "radiogeddon_full", name "RadioGeddon Full", the Full
-           description and cdefines ["RADIOGEDDON_EDITION_FULL"].
+           description and cdefines ["RADIOGEDDON_EDITION_FULL", "RG_SECTIONED"].
 
 Each rewrite must match exactly once, so a reworded application.fam fails the
 build instead of silently producing the wrong edition. Both editions keep
@@ -28,7 +28,10 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 FULL_REWRITES = (
     (r'appid="radiogeddon"', 'appid="radiogeddon_full"'),
     (r'name="RadioGeddon"', 'name="RadioGeddon Full"'),
-    (r'cdefines=\["RADIOGEDDON_EDITION_CATALOG"\]', 'cdefines=["RADIOGEDDON_EDITION_FULL"]'),
+    (
+        r'cdefines=\["RADIOGEDDON_EDITION_CATALOG", "RG_SECTIONED"\]',
+        'cdefines=["RADIOGEDDON_EDITION_FULL", "RG_SECTIONED"]',
+    ),
     (
         r'fap_description="[^"]*"',
         'fap_description="Full edition: Sub-GHz research toolkit: range scanning, waterfall, '
@@ -104,6 +107,27 @@ FULL_MODULE_ONLY = (
     "scenes/radiogeddon_scene_hopper.c",
     "scenes/radiogeddon_scene_hopper_stats.c",
     "scenes/radiogeddon_scene_bitstream.c",
+    # The Signal Database's screens and list (the index itself is plain data
+    # the app frees; radiogeddon_db.h).
+    "scenes/radiogeddon_scene_saved_list.c",
+    "scenes/radiogeddon_scene_db_options.c",
+    "scenes/radiogeddon_scene_file_details.c",
+    "scenes/radiogeddon_scene_rename.c",
+    "views/radiogeddon_db_view.c",
+    # Favorites and the frequency keyboard (the settings module).
+    "scenes/radiogeddon_scene_favorites.c",
+    "scenes/radiogeddon_scene_favorite_options.c",
+    "scenes/radiogeddon_scene_frequency.c",
+    # The analysis menu's screens (the analyze module).
+    "scenes/radiogeddon_scene_analyze_menu.c",
+    "scenes/radiogeddon_scene_multi.c",
+    "scenes/radiogeddon_scene_multi_result.c",
+    "scenes/radiogeddon_scene_unknown.c",
+    "scenes/radiogeddon_scene_decode.c",
+    # The Frequency Scanner's screen and view (the scan module; the engine,
+    # which the RF Activity Logger shares, stays in the app).
+    "scenes/radiogeddon_scene_scanner.c",
+    "views/radiogeddon_scanner_view.c",
 )
 FULL_MODULES_FAM = "modules/modules.fam"
 

@@ -7,6 +7,65 @@ to follow [Semantic Versioning](https://semver.org/) (pre-1.0.0 releases use
 
 ## [Unreleased]
 
+## [1.0.0-beta.13] - 2026-10-17
+
+Memory release, from the owner's beta 12 device log (RogueMaster
+`4f2e0620`, API 88.4): the app failed to reopen after closing (`Error
+loading section '.rgtext'`), Receive was refused (`24704 free, session took
+36568`) and the RF Activity Logger could not load again after the Adaptive
+Scanner (`needs 17088, 13024 free`). No feature removed; all of beta 12's 16
+modules kept and three added (module API 7). **Not hardware tested**; the
+device checks are Y1–Y10 of the
+[hardware checklist](docs/HARDWARE_CHECKLIST.md#memory-and-relaunch-beta-13),
+the figures and their sources in
+[PERFORMANCE_BETA13.md](docs/PERFORMANCE_BETA13.md).
+
+### Changed
+- **Resident code 84,812 → 66,003 B** (RogueMaster device build; −22 %).
+  The Signal Database's screens and list (new `radiogeddon_db.fal`), the
+  analysis menu with Multi-Compare, Smart Protocol Discovery and Decode
+  (new `radiogeddon_analyze.fal`), the Frequency Scanner's screen (new
+  `radiogeddon_scan.fal`; the engine stays in the app) and the favorites
+  and frequency keyboard (settings module) load only while used.
+- **The app's code is five sections of 8–13.5 KB** instead of 39.8 KB +
+  31.1 KB (`radiogeddon_edition.h`, `RG_SECTIONED`): the largest block a
+  launch needs is 13,492 B, and the relocation tables' largest 4,737 B. On
+  the loader replay, launches that fit right after an app closed rise from
+  31,643 to 83,569 of 126,000 heaps, none lost. The Catalog edition has six
+  sections, largest 19,992 B instead of 43,704 B.
+- **Receive takes about 10 KB less**: the receiver gets only the decoders
+  its filter feeds, so BinRAW's never-fed 10 KB of capture buffers are not
+  allocated; every decode is the same (checked on the firmware's 51 test
+  captures). A session cost stored by beta 12 is reduced by exactly those
+  buffers until a new session measures its own (`Radio_heap_model`).
+- The scanner view exists only while the Scanner is shown (~0.9 KB less
+  from app start on); the Database list's view only while the list is.
+
+### Fixed
+- **The RF Activity Logger (and the Adaptive setup) could not load again
+  after the Adaptive Scanner**: the scanner was allocated while the setup
+  screen's module was loaded, leaving a hole once it unloaded. The Scanner
+  now starts after unloading it; the Logger's and Hopper's engines are made
+  before their module loads.
+- **Receive opened from a tool's screen** checked memory and allocated its
+  session while that tool's module was still loaded; it now does both after
+  unloading it.
+- **A receive session could start and then run out of memory** when the
+  free heap was enough in total but in pieces (on the heap model: 298 of
+  18,000 split heaps). The worker's buffers are now allocated first and the
+  check also needs the largest buffer of any supported firmware (16,640 B)
+  in one block.
+
+### Added
+- `docs/PERFORMANCE_BETA13.md`; `scripts/text_sections.py` (CI: every
+  function in its file's code section, in the source and the built app);
+  `test/bench_flows.c` (CI): the device-logged Adaptive → Logger sequence
+  (the model reproduces the log's `needs 17088`), receive sessions on split
+  heaps and repeated launches with the built files; `bench_launch` compares
+  up to eight files.
+- `scripts/build_target.sh` builds from scratch (staged copies keep file
+  times, which let SCons reuse stale objects).
+
 ## [1.0.0-beta.12] - 2026-10-17
 
 Stability release: the Adaptive Scanner crash reported on RogueMaster and

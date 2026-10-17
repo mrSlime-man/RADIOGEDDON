@@ -1,6 +1,7 @@
 #include "radiogeddon_scene.h"
 #include "../helpers/rg_div.h"
 #include "../helpers/rg_memstat.h"
+#include "../helpers/rg_multi.h"
 
 #define TAG "RadioGeddonScene"
 
@@ -179,24 +180,37 @@ RG_UI_TEXT void
 #define RADIOGEDDON_RADIO_MARGIN (6u * 1024u)
 
 RG_UI_TEXT uint32_t radiogeddon_scene_radio_cost(RadioGeddonApp* app) {
-    return app->settings.radio_heap_fw == app->fw_tag ? app->settings.radio_heap : 0;
+    if(app->settings.radio_heap_fw != app->fw_tag) return 0;
+    // Measured by an older app on this firmware: still a bound once what it
+    // allocated and this one does not is taken off (rg_mem_cost_for_model).
+    return rg_mem_cost_for_model(
+        app->settings.radio_heap,
+        app->settings.radio_heap_model,
+        app->settings.radio_heap_model == RG_MEM_SESSION_MODEL ?
+            0u :
+            radiogeddon_subghz_model0_extra());
 }
 
 RG_UI_TEXT bool radiogeddon_scene_decoders_fit(RadioGeddonApp* app) {
-    return rg_mem_session_fits(
-        radiogeddon_memdiag_free(), radiogeddon_scene_radio_cost(app), RADIOGEDDON_RADIO_MARGIN);
+    return rg_mem_session_fits_heap(
+        radiogeddon_memdiag_free(),
+        memmgr_heap_get_max_free_block(),
+        radiogeddon_scene_radio_cost(app),
+        RADIOGEDDON_RADIO_MARGIN);
 }
 
 /* @p what names the user ("Radio needs") in the refusal. */
 static RG_UI_TEXT bool radiogeddon_scene_session_memory_ok(RadioGeddonApp* app, const char* what) {
     uint32_t cost = radiogeddon_scene_radio_cost(app);
     uint32_t free_now = radiogeddon_memdiag_free();
-    if(rg_mem_session_fits(free_now, cost, RADIOGEDDON_RADIO_MARGIN)) return true;
+    uint32_t largest = memmgr_heap_get_max_free_block();
+    if(rg_mem_session_fits_heap(free_now, largest, cost, RADIOGEDDON_RADIO_MARGIN)) return true;
 
     FURI_LOG_W(
         TAG,
-        "Radio not started: %lu free, session took %lu",
+        "Radio not started: %lu free (largest block %lu), session took %lu",
         (unsigned long)free_now,
+        (unsigned long)largest,
         (unsigned long)cost);
     snprintf(
         app->memory_text,
@@ -233,9 +247,12 @@ RG_UI_TEXT bool radiogeddon_scene_decoders_memory_ok(RadioGeddonApp* app) {
 
 RG_UI_TEXT void radiogeddon_scene_radio_memory_learn(RadioGeddonApp* app) {
     uint32_t cost = radiogeddon_subghz_session_cost(app->subghz);
-    if(!rg_mem_cost_changed(radiogeddon_scene_radio_cost(app), cost)) return;
+    if(app->settings.radio_heap_model == RG_MEM_SESSION_MODEL &&
+       !rg_mem_cost_changed(radiogeddon_scene_radio_cost(app), cost))
+        return;
     app->settings.radio_heap = cost;
     app->settings.radio_heap_fw = app->fw_tag;
+    app->settings.radio_heap_model = RG_MEM_SESSION_MODEL;
     // Only this changes; the stored frequency and preset stay as they were.
     radiogeddon_settings_save(app->storage, &app->settings);
 }
@@ -274,11 +291,9 @@ RG_UI_TEXT void radiogeddon_scene_unknown_end(void* context) {
 }
 
 RG_UI_TEXT void radiogeddon_scene_db_release(RadioGeddonApp* app) {
-    if(app->db_view) {
-        view_dispatcher_remove_view(app->view_dispatcher, RadioGeddonViewDb);
-        radiogeddon_db_view_free(app->db_view);
-        app->db_view = NULL;
-    }
+    // The list's view is freed with its screen (radiogeddon_scene_saved_list.c);
+    // in the Full edition its code is in the Database module.
+    furi_assert(!app->db_view);
     radiogeddon_db_free(app->db);
     app->db = NULL;
     app->db_keep = false;
@@ -363,3 +378,32 @@ RG_UI_TEXT size_t radiogeddon_scene_build_list(
     }
     return n;
 }
+
+#if RG_FEATURE_MULTI_COMPARE
+/* The Multi-Capture Compare list (its screens are radiogeddon_scene_multi.c
+ * and _multi_result.c): kept by the app, so it is here, beside them. */
+RG_UI_TEXT size_t radiogeddon_scene_multi_memory(size_t count) {
+    if(count > RG_MULTI_MAX_CAPTURES) count = RG_MULTI_MAX_CAPTURES;
+    // Summaries, the result and one analysis at a time (rg_multi.h).
+    return count * sizeof(RgMultiCapture) + sizeof(RgMultiResult) + RADIOGEDDON_ANALYSIS_MEMORY;
+}
+
+RG_UI_TEXT bool radiogeddon_multi_add(RadioGeddonApp* app, const char* path) {
+    for(size_t i = 0; i < app->multi_count; i++)
+        if(furi_string_cmp_str(app->multi_paths[i], path) == 0) return true; // already in
+    if(app->multi_count >= RG_MULTI_MAX_CAPTURES) return false;
+    if(!app->multi_paths[app->multi_count])
+        app->multi_paths[app->multi_count] = furi_string_alloc();
+    furi_string_set_str(app->multi_paths[app->multi_count], path);
+    app->multi_count++;
+    return true;
+}
+
+RG_UI_TEXT void radiogeddon_multi_clear(RadioGeddonApp* app) {
+    for(size_t i = 0; i < RG_MULTI_MAX_CAPTURES; i++) {
+        if(app->multi_paths[i]) furi_string_free(app->multi_paths[i]);
+        app->multi_paths[i] = NULL;
+    }
+    app->multi_count = 0;
+}
+#endif

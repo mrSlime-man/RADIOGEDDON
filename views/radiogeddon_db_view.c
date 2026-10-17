@@ -1,5 +1,5 @@
 #include "radiogeddon_db_view.h"
-#include "../radiogeddon_edition.h" /* RG_UI_TEXT */
+#include "../radiogeddon_edition.h" /* RG_VIEW_TEXT */
 #include "../helpers/rg_freq.h"
 #include <gui/elements.h>
 #include <furi.h>
@@ -23,7 +23,7 @@ struct RadioGeddonDbView {
 };
 
 /* Short type tag shown at the right of a row. */
-static RG_UI_TEXT void
+static RG_VIEW_TEXT void
     radiogeddon_db_view_tag(const RgDb* db, const RgDbEntry* e, char* out, size_t size) {
     const char* t;
     char proto[8];
@@ -47,7 +47,7 @@ static RG_UI_TEXT void
 }
 
 /* Copy @p text into @p out, shortened until it fits @p width pixels. */
-static RG_UI_TEXT void radiogeddon_db_view_fit(
+static RG_VIEW_TEXT void radiogeddon_db_view_fit(
     Canvas* canvas,
     const char* text,
     size_t text_len,
@@ -62,7 +62,7 @@ static RG_UI_TEXT void radiogeddon_db_view_fit(
     }
 }
 
-static RG_UI_TEXT void radiogeddon_db_view_header(Canvas* canvas, const RadioGeddonDb* db) {
+static RG_VIEW_TEXT void radiogeddon_db_view_header(Canvas* canvas, const RadioGeddonDb* db) {
     char left[24];
     const RgDbQuery* q = &db->query;
     const char* what = q->show == RgDbShowAll      ? "Signals" :
@@ -86,7 +86,7 @@ static RG_UI_TEXT void radiogeddon_db_view_header(Canvas* canvas, const RadioGed
     canvas_draw_line(canvas, 0, 10, 127, 10);
 }
 
-static RG_UI_TEXT void radiogeddon_db_view_footer(Canvas* canvas, const RgDbEntry* e) {
+static RG_VIEW_TEXT void radiogeddon_db_view_footer(Canvas* canvas, const RgDbEntry* e) {
     canvas_draw_line(canvas, 0, 52, 127, 52);
     if(!e) {
         canvas_draw_str(canvas, 1, 62, "Right: options");
@@ -113,7 +113,7 @@ static RG_UI_TEXT void radiogeddon_db_view_footer(Canvas* canvas, const RgDbEntr
     canvas_draw_str(canvas, 1, 62, line);
 }
 
-static RG_UI_TEXT void radiogeddon_db_view_draw(Canvas* canvas, void* model) {
+static RG_VIEW_TEXT void radiogeddon_db_view_draw(Canvas* canvas, void* model) {
     RadioGeddonDbModel* m = model;
     canvas_clear(canvas);
     canvas_set_color(canvas, ColorBlack);
@@ -161,12 +161,12 @@ static RG_UI_TEXT void radiogeddon_db_view_draw(Canvas* canvas, void* model) {
     radiogeddon_db_view_footer(canvas, radiogeddon_db_at(db, m->selected));
 }
 
-static RG_UI_TEXT void radiogeddon_db_view_keep_visible(RadioGeddonDbModel* m) {
+static RG_VIEW_TEXT void radiogeddon_db_view_keep_visible(RadioGeddonDbModel* m) {
     if(m->selected < m->top) m->top = m->selected;
     if(m->selected >= m->top + DB_VIEW_ROWS) m->top = m->selected - DB_VIEW_ROWS + 1;
 }
 
-static RG_UI_TEXT bool radiogeddon_db_view_input(InputEvent* event, void* context) {
+static RG_VIEW_TEXT bool radiogeddon_db_view_input(InputEvent* event, void* context) {
     RadioGeddonDbView* instance = context;
     bool consumed = false;
     RadioGeddonDbViewEvent out;
@@ -215,7 +215,7 @@ static RG_UI_TEXT bool radiogeddon_db_view_input(InputEvent* event, void* contex
     return consumed;
 }
 
-RG_UI_TEXT RadioGeddonDbView* radiogeddon_db_view_alloc(void) {
+RG_VIEW_TEXT RadioGeddonDbView* radiogeddon_db_view_alloc(void) {
     RadioGeddonDbView* instance = malloc(sizeof(RadioGeddonDbView));
     instance->view = view_alloc();
     instance->callback = NULL;
@@ -237,17 +237,17 @@ RG_UI_TEXT RadioGeddonDbView* radiogeddon_db_view_alloc(void) {
     return instance;
 }
 
-RG_UI_TEXT void radiogeddon_db_view_free(RadioGeddonDbView* instance) {
+RG_VIEW_TEXT void radiogeddon_db_view_free(RadioGeddonDbView* instance) {
     furi_assert(instance);
     view_free(instance->view);
     free(instance);
 }
 
-RG_UI_TEXT View* radiogeddon_db_view_get_view(RadioGeddonDbView* instance) {
+RG_VIEW_TEXT View* radiogeddon_db_view_get_view(RadioGeddonDbView* instance) {
     return instance->view;
 }
 
-RG_UI_TEXT void radiogeddon_db_view_set_callback(
+RG_VIEW_TEXT void radiogeddon_db_view_set_callback(
     RadioGeddonDbView* instance,
     RadioGeddonDbViewCallback callback,
     void* context) {
@@ -255,7 +255,7 @@ RG_UI_TEXT void radiogeddon_db_view_set_callback(
     instance->context = context;
 }
 
-RG_UI_TEXT void radiogeddon_db_view_set_db(RadioGeddonDbView* instance, RadioGeddonDb* db) {
+RG_VIEW_TEXT void radiogeddon_db_view_set_db(RadioGeddonDbView* instance, RadioGeddonDb* db) {
     with_view_model(
         instance->view,
         RadioGeddonDbModel * m,
@@ -267,12 +267,12 @@ RG_UI_TEXT void radiogeddon_db_view_set_db(RadioGeddonDbView* instance, RadioGed
         true);
 }
 
-RG_UI_TEXT RadioGeddonDb* radiogeddon_db_view_lock(RadioGeddonDbView* instance) {
+RG_VIEW_TEXT RadioGeddonDb* radiogeddon_db_view_lock(RadioGeddonDbView* instance) {
     instance->locked = view_get_model(instance->view);
     return instance->locked->db;
 }
 
-RG_UI_TEXT void radiogeddon_db_view_unlock(RadioGeddonDbView* instance, bool to_top) {
+RG_VIEW_TEXT void radiogeddon_db_view_unlock(RadioGeddonDbView* instance, bool to_top) {
     RadioGeddonDbModel* m = instance->locked;
     instance->locked = NULL;
     if(m->db) radiogeddon_db_apply(m->db);
@@ -285,13 +285,13 @@ RG_UI_TEXT void radiogeddon_db_view_unlock(RadioGeddonDbView* instance, bool to_
     view_commit_model(instance->view, true);
 }
 
-RG_UI_TEXT size_t radiogeddon_db_view_get_selected(RadioGeddonDbView* instance) {
+RG_VIEW_TEXT size_t radiogeddon_db_view_get_selected(RadioGeddonDbView* instance) {
     size_t sel = 0;
     with_view_model(instance->view, RadioGeddonDbModel * m, { sel = m->selected; }, false);
     return sel;
 }
 
-RG_UI_TEXT void radiogeddon_db_view_set_selected(RadioGeddonDbView* instance, size_t position) {
+RG_VIEW_TEXT void radiogeddon_db_view_set_selected(RadioGeddonDbView* instance, size_t position) {
     with_view_model(
         instance->view,
         RadioGeddonDbModel * m,
@@ -299,6 +299,32 @@ RG_UI_TEXT void radiogeddon_db_view_set_selected(RadioGeddonDbView* instance, si
             size_t n = m->db ? m->db->view_count : 0;
             m->selected = n == 0 ? 0 : (position < n ? position : n - 1);
             m->top = 0;
+            radiogeddon_db_view_keep_visible(m);
+        },
+        true);
+}
+
+RG_VIEW_TEXT void
+    radiogeddon_db_view_get_place(RadioGeddonDbView* instance, size_t* selected, size_t* top) {
+    with_view_model(
+        instance->view,
+        RadioGeddonDbModel * m,
+        {
+            *selected = m->selected;
+            *top = m->top;
+        },
+        false);
+}
+
+RG_VIEW_TEXT void
+    radiogeddon_db_view_set_place(RadioGeddonDbView* instance, size_t selected, size_t top) {
+    with_view_model(
+        instance->view,
+        RadioGeddonDbModel * m,
+        {
+            size_t n = m->db ? m->db->view_count : 0;
+            m->selected = n == 0 ? 0 : (selected < n ? selected : n - 1);
+            m->top = top <= m->selected ? top : m->selected;
             radiogeddon_db_view_keep_visible(m);
         },
         true);

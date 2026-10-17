@@ -15,15 +15,15 @@ static const uint8_t rg_crc8_inits[] = {0x00, 0xFF};
 
 #define RG_CHECKSUM_MAX_END_SKIP 2u
 
-void rg_checksum_set_init(RgChecksumSet* set) {
+RG_TOOL_TEXT void rg_checksum_set_init(RgChecksumSet* set) {
     memset(set, 0, sizeof(*set));
 }
 
-static bool rg_bit(const uint8_t* frame, size_t i) {
+static RG_TOOL_TEXT bool rg_bit(const uint8_t* frame, size_t i) {
     return (frame[i / 8] >> (7 - i % 8)) & 1u;
 }
 
-bool rg_checksum_set_add(RgChecksumSet* set, const char* bits, size_t n) {
+RG_TOOL_TEXT bool rg_checksum_set_add(RgChecksumSet* set, const char* bits, size_t n) {
     if(n == 0 || n > RG_CHECKSUM_MAX_BITS || set->count >= RG_CHECKSUM_MAX_FRAMES) return false;
     if(set->count > 0 && n != set->bit_count) return false;
     uint8_t packed[RG_CHECKSUM_MAX_BITS / 8];
@@ -40,7 +40,7 @@ bool rg_checksum_set_add(RgChecksumSet* set, const char* bits, size_t n) {
     return true;
 }
 
-uint8_t rg_checksum_crc8(const uint8_t* data, size_t len, uint8_t poly, uint8_t init) {
+RG_TOOL_TEXT uint8_t rg_checksum_crc8(const uint8_t* data, size_t len, uint8_t poly, uint8_t init) {
     uint8_t crc = init;
     for(size_t i = 0; i < len; i++) {
         crc ^= data[i];
@@ -51,7 +51,7 @@ uint8_t rg_checksum_crc8(const uint8_t* data, size_t len, uint8_t poly, uint8_t 
     return crc;
 }
 
-static uint32_t rg_word(const uint8_t* frame, size_t start, size_t width) {
+static RG_TOOL_TEXT uint32_t rg_word(const uint8_t* frame, size_t start, size_t width) {
     uint32_t v = 0;
     for(size_t i = 0; i < width; i++)
         v = (v << 1) | (rg_bit(frame, start + i) ? 1u : 0u);
@@ -59,7 +59,7 @@ static uint32_t rg_word(const uint8_t* frame, size_t start, size_t width) {
 }
 
 /* Distinct values of bits [from, to) across the set. */
-static size_t rg_distinct(const RgChecksumSet* set, size_t from, size_t to) {
+static RG_TOOL_TEXT size_t rg_distinct(const RgChecksumSet* set, size_t from, size_t to) {
     size_t distinct = 0;
     for(size_t f = 0; f < set->count; f++) {
         bool seen = false;
@@ -83,7 +83,7 @@ static size_t rg_distinct(const RgChecksumSet* set, size_t from, size_t to) {
  * number of others adds nothing (it satisfies the hypothesis whenever they
  * do), so distinct frames can overstate the evidence; their rank cannot.
  */
-static size_t rg_independent(const RgChecksumSet* set, size_t from, size_t to) {
+static RG_TOOL_TEXT size_t rg_independent(const RgChecksumSet* set, size_t from, size_t to) {
     enum {
         W = RG_CHECKSUM_MAX_BITS / 8 + 1
     };
@@ -122,7 +122,7 @@ static size_t rg_independent(const RgChecksumSet* set, size_t from, size_t to) {
     return rank;
 }
 
-static uint32_t rg_expected(
+static RG_TOOL_TEXT uint32_t rg_expected(
     const uint8_t* frame,
     RgChecksumKind kind,
     size_t width,
@@ -159,11 +159,11 @@ static uint32_t rg_expected(
     }
 }
 
-static void rg_add_hit(RgChecksumResult* out, const RgChecksumHit* hit) {
+static RG_TOOL_TEXT void rg_add_hit(RgChecksumResult* out, const RgChecksumHit* hit) {
     if(out->hit_count < RG_CHECKSUM_MAX_HITS) out->hit[out->hit_count++] = *hit;
 }
 
-static void
+static RG_TOOL_TEXT void
     rg_test_words(const RgChecksumSet* set, size_t width, size_t end_skip, RgChecksumResult* out) {
     size_t n = set->bit_count;
     if(n < end_skip + width) return;
@@ -213,7 +213,8 @@ static void
     }
 }
 
-static void rg_test_parity(const RgChecksumSet* set, size_t end_skip, RgChecksumResult* out) {
+static RG_TOOL_TEXT void
+    rg_test_parity(const RgChecksumSet* set, size_t end_skip, RgChecksumResult* out) {
     size_t n = set->bit_count;
     if(n < end_skip + 9) return;
     size_t pbit = n - end_skip - 1;
@@ -238,7 +239,7 @@ static void rg_test_parity(const RgChecksumSet* set, size_t end_skip, RgChecksum
     }
 }
 
-void rg_checksum_analyze(const RgChecksumSet* set, RgChecksumResult* out) {
+RG_TOOL_TEXT void rg_checksum_analyze(const RgChecksumSet* set, RgChecksumResult* out) {
     memset(out, 0, sizeof(*out));
     out->frames = set->count;
     out->bit_count = set->bit_count;
@@ -251,7 +252,7 @@ void rg_checksum_analyze(const RgChecksumSet* set, RgChecksumResult* out) {
     }
 }
 
-void rg_checksum_describe(const RgChecksumHit* hit, char* out, size_t out_size) {
+RG_TOOL_TEXT void rg_checksum_describe(const RgChecksumHit* hit, char* out, size_t out_size) {
     if(!out || out_size == 0) return;
     char tail[24] = "";
     if(hit->end_skip) {

@@ -3,13 +3,14 @@
 # builds the app. The Full edition (RogueMaster, Momentum, Unleashed) is built
 # from a copy written by scripts/stage_edition.py, which changes only the
 # appid, name, description and edition define below (see radiogeddon_edition.h).
+# RG_SECTIONED cuts the app's code into five sections (radiogeddon_edition.h).
 App(
     appid="radiogeddon",
     name="RadioGeddon",
     apptype=FlipperAppType.EXTERNAL,
     entry_point="radiogeddon_app",
     stack_size=4 * 1024,
-    cdefines=["RADIOGEDDON_EDITION_CATALOG"],
+    cdefines=["RADIOGEDDON_EDITION_CATALOG", "RG_SECTIONED"],
     fap_category="Sub-GHz",
     fap_author="Georgii",
     fap_version="1.0",

@@ -78,7 +78,8 @@ DEC_STUB_HDRS := $(STUB_HDRS) stubs/furi_hal.h
 # custom preset check (test_fwpreset; also run by `make decoders`).
 FWPRESET_SRC := test_fwpreset.c ../helpers/rg_preset.c
 FWDECODE_SRC := test_fwdecode.c stubs/furi_stub.c stubs/subghz_stub.c ../helpers/rg_decode.c \
-		../helpers/rg_raw.c ../helpers/radiogeddon_decode_text.c ../helpers/radiogeddon_bands.c
+		../helpers/rg_raw.c ../helpers/radiogeddon_decode_text.c ../helpers/radiogeddon_bands.c \
+		../helpers/radiogeddon_decoders.c
 
 # Analyzer tests on real captures: rg_analyzer over the firmware's RAW test
 # captures, scored against each protocol's timing in its decoder source
@@ -256,12 +257,25 @@ benchmodules: $(BUILD)/bench_modules
 	$(BUILD)/bench_modules $(FAL_DIR)
 
 # The app's own launch replayed on fragmented heaps (bench_launch.c): the
-# loader's per-section blocks for two builds of the .fap on the same heaps.
+# loader's per-section blocks for several builds of the .fap on the same heaps.
 $(BUILD)/bench_launch: bench_launch.c stubs/heap4.c stubs/heap4.h | $(BUILD)
 	$(CC) $(CFLAGS) -o $@ bench_launch.c stubs/heap4.c
 
+# FAPS: up to eight [LABEL=]file.fap, all on the same heaps; or FAP_A/FAP_B.
+FAPS ?= $(FAP_A) $(FAP_B)
 benchlaunch: $(BUILD)/bench_launch
-	$(BUILD)/bench_launch $(FAP_A) $(FAP_B)
+	$(BUILD)/bench_launch $(FAPS)
+
+# The memory-critical flows on the heap model with the built files
+# (bench_flows.c): the Logger after the Adaptive Scanner, a receive session,
+# repeated launches. FLOWS_NEW (and FLOWS_OLD to compare): "<.fap> <.fal folder>".
+$(BUILD)/bench_flows: bench_flows.c stubs/heap4.c stubs/heap4.h ../helpers/rg_elf.c \
+		../helpers/rg_elf.h | $(BUILD)
+	$(CC) $(CFLAGS) $(SAN) -DRADIOGEDDON_EDITION_FULL -o $@ bench_flows.c stubs/heap4.c \
+		../helpers/rg_elf.c
+
+benchflows: $(BUILD)/bench_flows
+	$(BUILD)/bench_flows $(FLOWS_NEW) $(FLOWS_OLD)
 
 # The load-cost model on built modules (scripts/module_cost.py --check).
 $(BUILD)/elf_cost: elf_cost.c ../helpers/rg_elf.c ../helpers/rg_elf.h | $(BUILD)
@@ -488,7 +502,7 @@ $(BUILD)/fwdec/%.o: $(FW)/%.c $(DEC_STUB_HDRS)
 
 $(BUILD)/test_fwdecode: $(FWDECODE_SRC) $(DEC_STUB_HDRS) ../helpers/rg_decode.h ../helpers/rg_raw.h \
 		../helpers/radiogeddon_decode_text.h ../helpers/radiogeddon_bands.h \
-		$(DEC_FW_OBJ) | $(BUILD)
+		../helpers/radiogeddon_decoders.h $(DEC_FW_OBJ) | $(BUILD)
 	$(CC) $(CFLAGS) $(SAN) -D_GNU_SOURCE $(DEC_INC) -pthread \
 		-o $@ $(FWDECODE_SRC) $(DEC_FW_OBJ) -lm
 

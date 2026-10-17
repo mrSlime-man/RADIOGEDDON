@@ -1,14 +1,15 @@
 #include "rg_decode.h"
+#include "../radiogeddon_edition.h" /* RG_CORE_TEXT */
 
 #include <string.h>
 
 #define RG_DECODE_CHUNK 64u
 
-void rg_decode_log_init(RgDecodeLog* log) {
+RG_CORE_TEXT void rg_decode_log_init(RgDecodeLog* log) {
     memset(log, 0, sizeof(*log));
 }
 
-bool rg_decode_level(int32_t sample, bool* level, uint32_t* duration) {
+RG_CORE_TEXT bool rg_decode_level(int32_t sample, bool* level, uint32_t* duration) {
     if(sample == 0) return false;
     *level = sample > 0;
     /* -INT32_MIN does not fit an int32_t; the magnitude does fit a uint32_t. */
@@ -17,7 +18,7 @@ bool rg_decode_level(int32_t sample, bool* level, uint32_t* duration) {
 }
 
 /* Copy @p text without '\r' into @p out (size RG_DECODE_TEXT); true if cut. */
-static bool rg_decode_copy_text(char* out, const char* text) {
+static RG_CORE_TEXT bool rg_decode_copy_text(char* out, const char* text) {
     size_t n = 0;
     for(; *text; text++) {
         if(*text == '\r') continue;
@@ -31,7 +32,8 @@ static bool rg_decode_copy_text(char* out, const char* text) {
     return false;
 }
 
-void rg_decode_log_add(RgDecodeLog* log, const char* protocol, const char* text, uint8_t hash) {
+RG_CORE_TEXT void
+    rg_decode_log_add(RgDecodeLog* log, const char* protocol, const char* text, uint8_t hash) {
     char name[RG_DECODE_NAME];
     char clean[RG_DECODE_TEXT];
     if(!protocol) protocol = "";
@@ -62,7 +64,7 @@ void rg_decode_log_add(RgDecodeLog* log, const char* protocol, const char* text,
     h->last_us = log->time_us;
 }
 
-uint32_t rg_decode_run(
+RG_CORE_TEXT uint32_t rg_decode_run(
     RgRawReader* reader,
     RgDecodeLog* log,
     RgDecodeFeed feed,

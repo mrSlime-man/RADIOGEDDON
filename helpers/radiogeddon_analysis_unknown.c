@@ -11,14 +11,14 @@
  * the analysis runs, with the checksum tests it alone uses.
  */
 
-static void radiogeddon_cat_time(FuriString* out, uint64_t us) {
+static RG_TOOL_TEXT void radiogeddon_cat_time(FuriString* out, uint64_t us) {
     uint32_t ms = rg_div_u64_u32(us, 1000u); // saturates past 49 days
     furi_string_cat_printf(
         out, "%lu.%03lus", (unsigned long)(ms / 1000u), (unsigned long)(ms % 1000u));
 }
 
 /* Hex of a '0'/'1' string, zero-padded at the front to whole nibbles. */
-static void radiogeddon_cat_hex(FuriString* out, const char* bits, size_t n) {
+static RG_TOOL_TEXT void radiogeddon_cat_hex(FuriString* out, const char* bits, size_t n) {
     size_t pad = (4 - n % 4) % 4;
     unsigned nibble = 0;
     for(size_t i = 0; i < n + pad; i++) {
@@ -30,7 +30,7 @@ static void radiogeddon_cat_hex(FuriString* out, const char* bits, size_t n) {
     }
 }
 
-static void radiogeddon_cat_peaks(FuriString* out, const RgPeak* p, size_t n) {
+static RG_TOOL_TEXT void radiogeddon_cat_peaks(FuriString* out, const RgPeak* p, size_t n) {
     if(n == 0) {
         furi_string_cat_str(out, " none\n");
         return;
@@ -46,11 +46,11 @@ static void radiogeddon_cat_peaks(FuriString* out, const RgPeak* p, size_t n) {
     }
 }
 
-static char radiogeddon_group_letter(uint8_t group) {
+static RG_TOOL_TEXT char radiogeddon_group_letter(uint8_t group) {
     return group < RG_ANALYZER_MAX_GROUPS ? (char)('A' + group) : '?';
 }
 
-static void radiogeddon_report_observed(const RgAnalysis* r, FuriString* out) {
+static RG_TOOL_TEXT void radiogeddon_report_observed(const RgAnalysis* r, FuriString* out) {
     furi_string_cat_str(out, "[OBSERVED] timing\n");
     furi_string_cat_printf(out, "Samples: %u, ", (unsigned)r->sample_count);
     radiogeddon_cat_time(out, r->duration_us);
@@ -79,7 +79,7 @@ static void radiogeddon_report_observed(const RgAnalysis* r, FuriString* out) {
     }
 }
 
-static void radiogeddon_report_fields(const RgAnalysis* r, FuriString* out) {
+static RG_TOOL_TEXT void radiogeddon_report_fields(const RgAnalysis* r, FuriString* out) {
     if(!r->have_field_diff) {
         if(r->signal_frames < 2)
             furi_string_cat_str(
@@ -112,7 +112,7 @@ static void radiogeddon_report_fields(const RgAnalysis* r, FuriString* out) {
     furi_string_cat_str(out, "Not verified; nothing is\ndecrypted or predicted.\n");
 }
 
-static void radiogeddon_report_hypothesis(const RgAnalysis* r, FuriString* out) {
+static RG_TOOL_TEXT void radiogeddon_report_hypothesis(const RgAnalysis* r, FuriString* out) {
     furi_string_cat_str(out, "[HYPOTHESIS] structure\n");
     if(r->encoding == RgEncodingUnknown) {
         furi_string_cat_str(
@@ -195,7 +195,8 @@ static void radiogeddon_report_hypothesis(const RgAnalysis* r, FuriString* out) 
 }
 
 /* Evidence flags as short lines, "+ " for, "- " against. */
-static void radiogeddon_cat_evidence(FuriString* out, uint16_t flags, const char* sign) {
+static RG_TOOL_TEXT void
+    radiogeddon_cat_evidence(FuriString* out, uint16_t flags, const char* sign) {
     for(size_t b = 0; b < RG_HYP_EVIDENCE_COUNT; b++) {
         if(flags & (1u << b))
             furi_string_cat_printf(
@@ -204,7 +205,7 @@ static void radiogeddon_cat_evidence(FuriString* out, uint16_t flags, const char
 }
 
 /* Smart Protocol Discovery: every reading that fits, best first. */
-static void radiogeddon_report_readings(const RgAnalysis* r, FuriString* out) {
+static RG_TOOL_TEXT void radiogeddon_report_readings(const RgAnalysis* r, FuriString* out) {
     if(r->hypothesis_count == 0) return;
     furi_string_cat_str(out, "Readings [HYPOTHESIS]\n");
     for(size_t i = 0; i < r->hypothesis_count; i++) {
@@ -234,7 +235,7 @@ static void radiogeddon_report_readings(const RgAnalysis* r, FuriString* out) {
     }
 }
 
-static void radiogeddon_report_frames(const RgAnalysis* r, FuriString* out) {
+static RG_TOOL_TEXT void radiogeddon_report_frames(const RgAnalysis* r, FuriString* out) {
     if(r->frames_kept == 0) return;
     // How the main patterns repeat within a press (measured start times).
     for(uint8_t g = 0; g < r->group_count && g < 2; g++) {
@@ -288,7 +289,7 @@ static void radiogeddon_report_frames(const RgAnalysis* r, FuriString* out) {
 
 #if RG_FEATURE_CHECKSUM_HINTS
 /* Checksum structure over the distinct frames of the modal length. */
-static void radiogeddon_report_checksums(const RgAnalysis* r, FuriString* out) {
+static RG_TOOL_TEXT void radiogeddon_report_checksums(const RgAnalysis* r, FuriString* out) {
     furi_string_cat_str(out, "----------------\nChecksum structure\n[HYPOTHESIS]\n");
     if(r->bit_count < 12) {
         furi_string_cat_str(out, "Frames too short.\n");
@@ -357,7 +358,8 @@ static void radiogeddon_report_checksums(const RgAnalysis* r, FuriString* out) {
 }
 #endif
 
-int radiogeddon_analysis_unknown(Storage* storage, const char* path, FuriString* out) {
+RG_TOOL_TEXT int
+    radiogeddon_analysis_unknown(Storage* storage, const char* path, FuriString* out) {
     RadioGeddonAnalysisStatus status;
     // The hypotheses are filled before the working state goes: the report
     // then holds only the result.

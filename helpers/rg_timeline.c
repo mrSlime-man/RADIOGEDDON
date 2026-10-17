@@ -1,14 +1,15 @@
 #include "rg_timeline.h"
+#include "../radiogeddon_edition.h" /* RG_TOOL_TEXT */
 #include "rg_div.h"
 
 const uint32_t rg_timeline_zoom_us[RG_TL_ZOOM_COUNT] =
     {5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000};
 
-static uint32_t rg_tl_abs(int32_t v) {
+static RG_TOOL_TEXT uint32_t rg_tl_abs(int32_t v) {
     return (uint32_t)(v < 0 ? -(int64_t)v : v);
 }
 
-void rg_timeline_raster(
+RG_TOOL_TEXT void rg_timeline_raster(
     const int32_t* samples,
     size_t count,
     uint64_t first_us,
@@ -37,7 +38,7 @@ void rg_timeline_raster(
     }
 }
 
-size_t rg_timeline_labels(
+RG_TOOL_TEXT size_t rg_timeline_labels(
     const int32_t* samples,
     size_t count,
     uint64_t first_us,
@@ -64,13 +65,17 @@ size_t rg_timeline_labels(
     return n;
 }
 
-uint64_t rg_timeline_clamp(uint64_t left_us, uint64_t span_us, uint64_t total_us) {
+RG_TOOL_TEXT uint64_t rg_timeline_clamp(uint64_t left_us, uint64_t span_us, uint64_t total_us) {
     if(total_us <= span_us) return 0;
     return left_us > total_us - span_us ? total_us - span_us : left_us;
 }
 
-uint64_t
-    rg_timeline_pan(uint64_t left_us, int dir, uint32_t us_per_px, size_t width, uint64_t total_us) {
+RG_TOOL_TEXT uint64_t rg_timeline_pan(
+    uint64_t left_us,
+    int dir,
+    uint32_t us_per_px,
+    size_t width,
+    uint64_t total_us) {
     uint64_t span = (uint64_t)us_per_px * width;
     uint64_t step = span / 4;
     if(dir < 0) {
@@ -81,7 +86,8 @@ uint64_t
     return rg_timeline_clamp(left_us, span, total_us);
 }
 
-bool rg_timeline_zoom(int* zoom, int dir, uint64_t* left_us, size_t width, uint64_t total_us) {
+RG_TOOL_TEXT bool
+    rg_timeline_zoom(int* zoom, int dir, uint64_t* left_us, size_t width, uint64_t total_us) {
     int next = *zoom + dir;
     if(next < 0 || next >= RG_TL_ZOOM_COUNT) return false;
     uint64_t old_span = (uint64_t)rg_timeline_zoom_us[*zoom] * width;
@@ -93,14 +99,14 @@ bool rg_timeline_zoom(int* zoom, int dir, uint64_t* left_us, size_t width, uint6
     return true;
 }
 
-int rg_timeline_zoom_for(uint64_t detail_us, size_t width) {
+RG_TOOL_TEXT int rg_timeline_zoom_for(uint64_t detail_us, size_t width) {
     for(int z = 0; z < RG_TL_ZOOM_COUNT; z++) {
         if((uint64_t)rg_timeline_zoom_us[z] * width >= detail_us) return z;
     }
     return RG_TL_ZOOM_COUNT - 1;
 }
 
-bool rg_timeline_covered(
+RG_TOOL_TEXT bool rg_timeline_covered(
     uint64_t win_first_us,
     uint64_t win_end_us,
     bool at_end,
@@ -111,7 +117,7 @@ bool rg_timeline_covered(
     return start_ok && end_ok;
 }
 
-size_t
+RG_TOOL_TEXT size_t
     rg_timeline_frame_at(const uint64_t* starts, size_t count, uint64_t left_us, uint64_t span_us) {
     uint64_t marker = left_us + span_us / 8;
     size_t at = count;
@@ -121,7 +127,7 @@ size_t
     return at;
 }
 
-size_t rg_timeline_frame_step(
+RG_TOOL_TEXT size_t rg_timeline_frame_step(
     const uint64_t* starts,
     size_t count,
     uint64_t left_us,

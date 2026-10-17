@@ -167,6 +167,13 @@ void radiogeddon_scene_sessions_release(RadioGeddonApp* app);
  * no module code is running, to unload the ones no longer shown.
  */
 void radiogeddon_scene_tools_tick(RadioGeddonApp* app);
+/**
+ * False while a tool module whose screens all closed is still loaded (it is
+ * unloaded by radiogeddon_scene_tools_tick). A screen that makes objects
+ * kept beyond itself waits for that, so they are not placed above the
+ * module's blocks, where they would split the heap once it is unloaded.
+ */
+bool radiogeddon_scene_tools_settled(RadioGeddonApp* app);
 /** Unload them all (app exit). */
 void radiogeddon_scene_tools_release(RadioGeddonApp* app);
 #endif
@@ -196,4 +203,6 @@ size_t radiogeddon_scene_build_list(
 #if RG_EDITION_FULL
 /* In a module build, the helpers above come from the app's table. */
 #include "../helpers/radiogeddon_host_map.h"
+#else
+#define RADIOGEDDON_PRESET_LABEL(index) (radiogeddon_presets[(index)].label)
 #endif

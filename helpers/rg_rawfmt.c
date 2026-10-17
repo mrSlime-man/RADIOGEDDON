@@ -1,16 +1,18 @@
 #include "rg_rawfmt.h"
+#include "../radiogeddon_edition.h" /* RG_CORE_TEXT */
 
 #include <stdio.h>
 #include <string.h>
 
 static const char rg_rawfmt_key[] = "RAW_Data:";
 
-void rg_rawfmt_init(RgRawFmt* f, uint32_t per_line) {
+RG_CORE_TEXT void rg_rawfmt_init(RgRawFmt* f, uint32_t per_line) {
     f->per_line = per_line ? per_line : RG_RAWFMT_LINE_VALUES;
     f->in_line = 0;
 }
 
-size_t rg_rawfmt_header(char* out, size_t cap, uint32_t frequency, const char* preset) {
+RG_CORE_TEXT size_t
+    rg_rawfmt_header(char* out, size_t cap, uint32_t frequency, const char* preset) {
     int n = snprintf(
         out,
         cap,
@@ -26,7 +28,7 @@ size_t rg_rawfmt_header(char* out, size_t cap, uint32_t frequency, const char* p
 }
 
 /* Decimal text of a signed value, without snprintf. Returns its length. */
-static size_t rg_rawfmt_int(char* out, int32_t v) {
+static RG_CORE_TEXT size_t rg_rawfmt_int(char* out, int32_t v) {
     char tmp[11];
     size_t n = 0;
     uint32_t mag = v < 0 ? (uint32_t)(-(int64_t)v) : (uint32_t)v;
@@ -41,7 +43,7 @@ static size_t rg_rawfmt_int(char* out, int32_t v) {
     return len;
 }
 
-size_t rg_rawfmt_values(
+RG_CORE_TEXT size_t rg_rawfmt_values(
     RgRawFmt* f,
     const int32_t* values,
     size_t count,
@@ -66,7 +68,7 @@ size_t rg_rawfmt_values(
     return used;
 }
 
-bool rg_rawfmt_end_line(RgRawFmt* f, char* out, size_t cap, size_t* len) {
+RG_CORE_TEXT bool rg_rawfmt_end_line(RgRawFmt* f, char* out, size_t cap, size_t* len) {
     if(f->in_line == 0) return true;
     if(cap - *len < 1) return false;
     out[(*len)++] = '\n';
@@ -74,7 +76,8 @@ bool rg_rawfmt_end_line(RgRawFmt* f, char* out, size_t cap, size_t* len) {
     return true;
 }
 
-size_t rg_rawfmt_lost(char* out, size_t cap, uint32_t lost, uint32_t gaps, uint32_t first_gap) {
+RG_CORE_TEXT size_t
+    rg_rawfmt_lost(char* out, size_t cap, uint32_t lost, uint32_t gaps, uint32_t first_gap) {
     if(lost == 0) return 0;
     int n = snprintf(
         out,

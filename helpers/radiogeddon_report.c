@@ -1,16 +1,18 @@
 #include "radiogeddon_report.h"
+#include "../radiogeddon_edition.h" /* RG_TOOL_TEXT */
 #include "radiogeddon_analysis.h"
 #include "../radiogeddon_version.h"
 
 #include <datetime/datetime.h>
 #include <furi_hal_rtc.h>
 
-static bool radiogeddon_report_write(File* file, FuriString* text) {
+static RG_TOOL_TEXT bool radiogeddon_report_write(File* file, FuriString* text) {
     size_t len = furi_string_size(text);
     return storage_file_write(file, furi_string_get_cstr(text), len) == len;
 }
 
-static void radiogeddon_report_header(FuriString* out, const RadioGeddonLoadedSignal* sig) {
+static RG_TOOL_TEXT void
+    radiogeddon_report_header(FuriString* out, const RadioGeddonLoadedSignal* sig) {
     DateTime dt;
     furi_hal_rtc_get_datetime(&dt);
     furi_string_printf(
@@ -33,7 +35,7 @@ static void radiogeddon_report_header(FuriString* out, const RadioGeddonLoadedSi
         dt.minute);
 }
 
-RadioGeddonReportResult radiogeddon_report_save(
+RG_TOOL_TEXT RadioGeddonReportResult radiogeddon_report_save(
     Storage* storage,
     RadioGeddonSubGhz* subghz,
     RadioGeddonDecodeFn decode,
@@ -104,7 +106,7 @@ RadioGeddonReportResult radiogeddon_report_save(
     return RadioGeddonReportOk;
 }
 
-const char* radiogeddon_report_result_text(RadioGeddonReportResult result) {
+RG_TOOL_TEXT const char* radiogeddon_report_result_text(RadioGeddonReportResult result) {
     switch(result) {
     case RadioGeddonReportOk:
         return "Saved";

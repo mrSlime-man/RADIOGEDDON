@@ -1,6 +1,7 @@
 #include "rg_preset.h"
+#include "../radiogeddon_edition.h" /* RG_CORE_TEXT */
 
-RgPresetResult rg_preset_check(const uint8_t* data, size_t size, uint8_t* bad) {
+RG_CORE_TEXT RgPresetResult rg_preset_check(const uint8_t* data, size_t size, uint8_t* bad) {
     if(!data || size == 0) return RgPresetEmpty;
     // Walk the pairs as the firmware does: a 00 register ends them, whatever
     // byte follows it, and the PA table starts two bytes later.
@@ -19,7 +20,7 @@ RgPresetResult rg_preset_check(const uint8_t* data, size_t size, uint8_t* bad) {
     return RgPresetNoEnd;
 }
 
-const char* rg_preset_result_text(RgPresetResult result) {
+RG_CORE_TEXT const char* rg_preset_result_text(RgPresetResult result) {
     switch(result) {
     case RgPresetOk:
         return "OK";

@@ -1,4 +1,5 @@
 #include "radiogeddon_analysis.h"
+#include "../radiogeddon_edition.h" /* RG_TOOL_TEXT */
 
 /*
  * The analyzer over a RAW file (radiogeddon_analysis_run_*), apart from the
@@ -18,7 +19,7 @@
 #define RG_ANALYSIS_PASSES          3u
 
 /* Progress in kilobytes over all passes; passes the engine skips just jump. */
-static void radiogeddon_analysis_progress(RadioGeddonRawFile* file, int pass) {
+static RG_TOOL_TEXT void radiogeddon_analysis_progress(RadioGeddonRawFile* file, int pass) {
     if(!radiogeddon_analysis_progress_wanted()) return;
     uint64_t size = stream_size(file->stream);
     uint64_t pos = stream_tell(file->stream);
@@ -33,7 +34,7 @@ static void radiogeddon_analysis_progress(RadioGeddonRawFile* file, int pass) {
  * working state above it: when those are freed their blocks join the free
  * space after the result instead of leaving a hole under it. The working
  * state lives only for the passes. */
-static RgAnalysis* radiogeddon_analysis_run(
+static RG_TOOL_TEXT RgAnalysis* radiogeddon_analysis_run(
     RadioGeddonRawFile* file,
     Storage* storage,
     const char* path,
@@ -82,7 +83,7 @@ static RgAnalysis* radiogeddon_analysis_run(
     return out;
 }
 
-RgAnalysis* radiogeddon_analysis_run_raw(
+RG_TOOL_TEXT RgAnalysis* radiogeddon_analysis_run_raw(
     RadioGeddonRawFile* file,
     RadioGeddonAnalysisFinish finish,
     const RadioGeddonAnalysisTap* tap,
@@ -90,7 +91,7 @@ RgAnalysis* radiogeddon_analysis_run_raw(
     return radiogeddon_analysis_run(file, NULL, NULL, finish, tap, status);
 }
 
-RgAnalysis* radiogeddon_analysis_run_file(
+RG_TOOL_TEXT RgAnalysis* radiogeddon_analysis_run_file(
     Storage* storage,
     const char* path,
     RadioGeddonAnalysisFinish finish,

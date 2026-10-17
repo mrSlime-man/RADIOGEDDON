@@ -9,13 +9,14 @@
 #include <lib/subghz/types.h>
 #include <stdlib.h>
 
-static void radiogeddon_format_freq(FuriString* out, uint32_t hz) {
+static RG_TOOL_TEXT void radiogeddon_format_freq(FuriString* out, uint32_t hz) {
     uint32_t mhz = hz / 1000000;
     uint32_t khz = (hz % 1000000) / 1000;
     furi_string_cat_printf(out, "%lu.%03lu MHz", (unsigned long)mhz, (unsigned long)khz);
 }
 
-void radiogeddon_analysis_describe(const RadioGeddonLoadedSignal* sig, FuriString* out) {
+RG_TOOL_TEXT void
+    radiogeddon_analysis_describe(const RadioGeddonLoadedSignal* sig, FuriString* out) {
     furi_string_cat_printf(out, "Name: %s\n", furi_string_get_cstr(sig->name));
     furi_string_cat_printf(out, "Protocol: %s\n", furi_string_get_cstr(sig->protocol));
     furi_string_cat_str(out, "Freq: ");
@@ -50,7 +51,8 @@ void radiogeddon_analysis_describe(const RadioGeddonLoadedSignal* sig, FuriStrin
 
 /* ---- RAW pulse-timing clustering --------------------------------------- */
 
-static void radiogeddon_analysis_analyze_raw(Storage* storage, const char* path, FuriString* out) {
+static RG_TOOL_TEXT void
+    radiogeddon_analysis_analyze_raw(Storage* storage, const char* path, FuriString* out) {
     FlipperFormat* ff = flipper_format_file_alloc(storage);
     FuriString* value = furi_string_alloc();
     FuriString* type = furi_string_alloc();
@@ -99,7 +101,7 @@ static void radiogeddon_analysis_analyze_raw(Storage* storage, const char* path,
     flipper_format_free(ff);
 }
 
-void radiogeddon_analysis_analyze(
+RG_TOOL_TEXT void radiogeddon_analysis_analyze(
     Storage* storage,
     const char* path,
     const RadioGeddonLoadedSignal* sig,
@@ -137,7 +139,8 @@ void radiogeddon_analysis_analyze(
 
 /* ---- Crypto characteristics -------------------------------------------- */
 
-void radiogeddon_analysis_crypto(const RadioGeddonLoadedSignal* sig, FuriString* out) {
+RG_TOOL_TEXT void
+    radiogeddon_analysis_crypto(const RadioGeddonLoadedSignal* sig, FuriString* out) {
     if(sig->kind != RadioGeddonSignalKindProtocol) {
         furi_string_cat_str(
             out,
@@ -190,7 +193,7 @@ void radiogeddon_analysis_crypto(const RadioGeddonLoadedSignal* sig, FuriString*
 
 /* ---- Comparison -------------------------------------------------------- */
 
-static void radiogeddon_compare_line(
+static RG_TOOL_TEXT void radiogeddon_compare_line(
     FuriString* out,
     const char* label,
     bool equal,
@@ -203,7 +206,7 @@ static void radiogeddon_compare_line(
     }
 }
 
-void radiogeddon_analysis_compare(
+RG_TOOL_TEXT void radiogeddon_analysis_compare(
     const RadioGeddonLoadedSignal* a,
     const RadioGeddonLoadedSignal* b,
     FuriString* out) {
@@ -268,7 +271,7 @@ typedef struct {
     char bits[RG_ANALYZER_MAX_BITS + 1];
 } RadioGeddonPattern;
 
-static bool
+static RG_TOOL_TEXT bool
     radiogeddon_dominant_pattern(Storage* storage, const char* path, RadioGeddonPattern* p) {
     RadioGeddonAnalysisStatus status;
     RgAnalysis* r = radiogeddon_analysis_run_file(storage, path, NULL, &status);
@@ -284,7 +287,7 @@ static bool
     return ok;
 }
 
-static void radiogeddon_compare_patterns(
+static RG_TOOL_TEXT void radiogeddon_compare_patterns(
     Storage* storage,
     const char* path_a,
     const char* path_b,
@@ -329,7 +332,7 @@ static void radiogeddon_compare_patterns(
     free(pb);
 }
 
-int radiogeddon_analysis_raw_similarity(
+RG_TOOL_TEXT int radiogeddon_analysis_raw_similarity(
     Storage* storage,
     const char* path_a,
     const char* path_b,

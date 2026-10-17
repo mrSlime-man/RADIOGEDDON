@@ -1,4 +1,5 @@
 #include "rg_scan.h"
+#include "../radiogeddon_edition.h" /* RG_LAB_TEXT */
 
 #include <stdio.h>
 
@@ -6,13 +7,13 @@
 #define RG_SCAN_FLOOR_FALL 0.5f
 #define RG_SCAN_FLOOR_RISE 0.05f
 
-void rg_scan_params_default(RgScanParams* params) {
+RG_LAB_TEXT void rg_scan_params_default(RgScanParams* params) {
     params->threshold_db = 10.0f;
     params->hysteresis_db = 3.0f;
     params->abs_min_dbm = -100.0f;
 }
 
-void rg_scan_channel_reset(RgScanChannel* ch) {
+RG_LAB_TEXT void rg_scan_channel_reset(RgScanChannel* ch) {
     ch->last = RG_SCAN_RSSI_NONE;
     ch->peak = RG_SCAN_RSSI_NONE;
     ch->floor = RG_SCAN_RSSI_NONE;
@@ -22,13 +23,13 @@ void rg_scan_channel_reset(RgScanChannel* ch) {
     ch->active = false;
 }
 
-void rg_scan_channel_reset_peak(RgScanChannel* ch) {
+RG_LAB_TEXT void rg_scan_channel_reset_peak(RgScanChannel* ch) {
     ch->peak = ch->last;
     ch->hits = 0;
     ch->last_hit_ms = 0;
 }
 
-bool rg_scan_channel_update(
+RG_LAB_TEXT bool rg_scan_channel_update(
     RgScanChannel* ch,
     float rssi,
     const RgScanParams* params,
@@ -64,7 +65,7 @@ bool rg_scan_channel_update(
     return started;
 }
 
-float rg_scan_global_floor(const RgScanChannel* channels, size_t count) {
+RG_LAB_TEXT float rg_scan_global_floor(const RgScanChannel* channels, size_t count) {
     float floors[32];
     size_t n = 0;
     for(size_t i = 0; i < count && n < 32; i++) {
@@ -83,11 +84,11 @@ float rg_scan_global_floor(const RgScanChannel* channels, size_t count) {
     return (floors[n / 2 - 1] + floors[n / 2]) / 2.0f;
 }
 
-bool rg_scan_in_band(uint32_t frequency_hz, uint32_t lo_hz, uint32_t hi_hz) {
+RG_LAB_TEXT bool rg_scan_in_band(uint32_t frequency_hz, uint32_t lo_hz, uint32_t hi_hz) {
     return frequency_hz >= lo_hz && frequency_hz <= hi_hz;
 }
 
-uint32_t
+RG_LAB_TEXT uint32_t
     rg_scan_band_mask(const uint32_t* frequencies, size_t count, uint32_t lo_hz, uint32_t hi_hz) {
     uint32_t mask = 0;
     for(size_t i = 0; i < count && i < 32; i++) {
@@ -97,7 +98,7 @@ uint32_t
 }
 
 // Render a dBm value with one decimal without relying on printf %f support.
-static int rg_scan_fmt_dbm(char* out, size_t size, float dbm) {
+static RG_LAB_TEXT int rg_scan_fmt_dbm(char* out, size_t size, float dbm) {
     if(dbm < -999.0f) dbm = -999.0f;
     if(dbm > 999.0f) dbm = 999.0f;
     int tenths = (int)(dbm * 10.0f + (dbm < 0 ? -0.5f : 0.5f));
@@ -106,7 +107,8 @@ static int rg_scan_fmt_dbm(char* out, size_t size, float dbm) {
     return snprintf(out, size, "%s%d.%d", sign, tenths / 10, tenths % 10);
 }
 
-size_t rg_scan_format_row(char* out, size_t size, uint32_t frequency_hz, const RgScanChannel* ch) {
+RG_LAB_TEXT size_t
+    rg_scan_format_row(char* out, size_t size, uint32_t frequency_hz, const RgScanChannel* ch) {
     char last[16], peak[16], floor_s[16];
     rg_scan_fmt_dbm(last, sizeof(last), ch->last);
     rg_scan_fmt_dbm(peak, sizeof(peak), ch->peak);

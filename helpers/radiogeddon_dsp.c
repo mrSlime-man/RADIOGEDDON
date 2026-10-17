@@ -1,8 +1,9 @@
 #include "radiogeddon_dsp.h"
+#include "../radiogeddon_edition.h" /* RG_CORE_TEXT */
 #include "rg_div.h"
 #include <stdlib.h>
 
-void radiogeddon_dsp_cluster_add(
+RG_CORE_TEXT void radiogeddon_dsp_cluster_add(
     RadioGeddonCluster* clusters,
     size_t* n,
     size_t max_clusters,
@@ -28,7 +29,7 @@ void radiogeddon_dsp_cluster_add(
     }
 }
 
-size_t radiogeddon_dsp_parse_line(
+RG_CORE_TEXT size_t radiogeddon_dsp_parse_line(
     const char* line,
     size_t* count,
     uint32_t* min_us,
@@ -62,7 +63,7 @@ size_t radiogeddon_dsp_parse_line(
     return parsed;
 }
 
-void radiogeddon_dsp_sort_clusters(RadioGeddonCluster* clusters, size_t n) {
+RG_CORE_TEXT void radiogeddon_dsp_sort_clusters(RadioGeddonCluster* clusters, size_t n) {
     for(size_t i = 1; i < n; i++) {
         RadioGeddonCluster key = clusters[i];
         size_t j = i;
@@ -74,7 +75,7 @@ void radiogeddon_dsp_sort_clusters(RadioGeddonCluster* clusters, size_t n) {
     }
 }
 
-void radiogeddon_dsp_key_stats(uint64_t key, int* nonzero, int* distinct) {
+RG_CORE_TEXT void radiogeddon_dsp_key_stats(uint64_t key, int* nonzero, int* distinct) {
     uint8_t bytes[8];
     for(size_t i = 0; i < 8; i++)
         bytes[i] = (uint8_t)(key >> (8 * (7 - i)));

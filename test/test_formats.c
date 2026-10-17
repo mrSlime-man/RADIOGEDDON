@@ -391,8 +391,9 @@ static bool same_settings(const RadioGeddonSettings* a, const RadioGeddonSetting
            a->hop_auto_record == b->hop_auto_record && a->db_sort == b->db_sort &&
            a->radio_external == b->radio_external && a->ext_power == b->ext_power &&
            a->radio_heap == b->radio_heap && a->radio_heap_fw == b->radio_heap_fw &&
-           a->range_start_hz == b->range_start_hz && a->range_end_hz == b->range_end_hz &&
-           a->range_step_hz == b->range_step_hz && a->range_dwell_ms == b->range_dwell_ms &&
+           a->radio_heap_model == b->radio_heap_model && a->range_start_hz == b->range_start_hz &&
+           a->range_end_hz == b->range_end_hz && a->range_step_hz == b->range_step_hz &&
+           a->range_dwell_ms == b->range_dwell_ms &&
            a->range_hold_on_hit == b->range_hold_on_hit && a->scan_source == b->scan_source &&
            a->hop_source == b->hop_source && a->freq_step_hz == b->freq_step_hz &&
            a->ui_style == b->ui_style && a->ui_feedback == b->ui_feedback &&
@@ -421,6 +422,7 @@ static RadioGeddonSettings custom_settings(void) {
     s.ext_power = false;
     s.radio_heap = 27000;
     s.radio_heap_fw = 0x1234ABCDu;
+    s.radio_heap_model = 1;
     s.range_start_hz = 300000000;
     s.range_end_hz = 928000000;
     s.range_step_hz = 2500000;
@@ -786,6 +788,7 @@ static void test_settings_malformed(void) {
             got.radio_heap_fw == 99,
         "keys in any order; missing keys keep defaults");
     CHECK(got.hop_hold_ms == def.hop_hold_ms, "an absent key keeps its default");
+    CHECK(got.radio_heap_model == 0, "a beta 12 file's session cost is model 0");
 
     /* A custom frequency (not in the app's list) is kept if some firmware can
      * tune it; the radio in use is asked again at startup. */

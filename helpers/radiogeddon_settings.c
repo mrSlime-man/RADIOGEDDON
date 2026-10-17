@@ -37,6 +37,7 @@ void radiogeddon_settings_default(RadioGeddonSettings* settings) {
     settings->ext_power = true; // as the firmware's Sub-GHz app does
     settings->radio_heap = 0; // not measured yet
     settings->radio_heap_fw = 0;
+    settings->radio_heap_model = 0; // a file without the key was written by beta 12 or older
     settings->range_start_hz = RADIOGEDDON_RANGE_DEFAULT_START;
     settings->range_end_hz = RADIOGEDDON_RANGE_DEFAULT_END;
     settings->range_step_hz = RADIOGEDDON_RANGE_DEFAULT_STEP;
@@ -114,6 +115,7 @@ static const SettingsField settings_fields[] = {
     F("Ext_5V", ext_power, FieldBool, 0, 1),
     F("Radio_heap", radio_heap, FieldSpecial, 0, 0),
     F("Radio_heap_fw", radio_heap_fw, FieldSpecial, 0, 0),
+    F("Radio_heap_model", radio_heap_model, FieldU8, 0, 255),
     F("Range_start", range_start_hz, FieldSpecial, 0, 0),
     F("Range_end", range_end_hz, FieldSpecial, 0, 0),
     F("Range_step", range_step_hz, FieldU32, RG_RANGE_MIN_STEP_HZ, RG_RANGE_MAX_STEP_HZ),

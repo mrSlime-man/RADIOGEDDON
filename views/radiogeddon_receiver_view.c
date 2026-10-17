@@ -1,5 +1,5 @@
 #include "radiogeddon_receiver_view.h"
-#include "../radiogeddon_edition.h" /* RG_UI_TEXT */
+#include "../radiogeddon_edition.h" /* RG_VIEW_TEXT */
 #include "../helpers/rg_freq.h"
 #include <gui/elements.h>
 #include <furi.h>
@@ -40,7 +40,7 @@ typedef struct {
 } RadioGeddonReceiverModel;
 
 /* "12345", or "123k" from 100000 up, so the REC line stays short. */
-static RG_UI_TEXT void radiogeddon_receiver_view_compact(char* out, size_t size, uint32_t v) {
+static RG_VIEW_TEXT void radiogeddon_receiver_view_compact(char* out, size_t size, uint32_t v) {
     if(v < 100000u) {
         snprintf(out, size, "%lu", (unsigned long)v);
     } else {
@@ -48,7 +48,7 @@ static RG_UI_TEXT void radiogeddon_receiver_view_compact(char* out, size_t size,
     }
 }
 
-static RG_UI_TEXT void radiogeddon_receiver_view_draw(Canvas* canvas, void* model) {
+static RG_VIEW_TEXT void radiogeddon_receiver_view_draw(Canvas* canvas, void* model) {
     RadioGeddonReceiverModel* m = model;
     canvas_clear(canvas);
 
@@ -149,7 +149,7 @@ static RG_UI_TEXT void radiogeddon_receiver_view_draw(Canvas* canvas, void* mode
     }
 }
 
-static RG_UI_TEXT bool radiogeddon_receiver_view_input(InputEvent* event, void* context) {
+static RG_VIEW_TEXT bool radiogeddon_receiver_view_input(InputEvent* event, void* context) {
     RadioGeddonReceiverView* instance = context;
     bool consumed = false;
 
@@ -200,7 +200,7 @@ static RG_UI_TEXT bool radiogeddon_receiver_view_input(InputEvent* event, void* 
     return consumed;
 }
 
-RG_UI_TEXT RadioGeddonReceiverView* radiogeddon_receiver_view_alloc(void) {
+RG_VIEW_TEXT RadioGeddonReceiverView* radiogeddon_receiver_view_alloc(void) {
     RadioGeddonReceiverView* instance = malloc(sizeof(RadioGeddonReceiverView));
     instance->view = view_alloc();
     instance->callback = NULL;
@@ -234,17 +234,17 @@ RG_UI_TEXT RadioGeddonReceiverView* radiogeddon_receiver_view_alloc(void) {
     return instance;
 }
 
-RG_UI_TEXT void radiogeddon_receiver_view_free(RadioGeddonReceiverView* instance) {
+RG_VIEW_TEXT void radiogeddon_receiver_view_free(RadioGeddonReceiverView* instance) {
     furi_assert(instance);
     view_free(instance->view);
     free(instance);
 }
 
-RG_UI_TEXT View* radiogeddon_receiver_view_get_view(RadioGeddonReceiverView* instance) {
+RG_VIEW_TEXT View* radiogeddon_receiver_view_get_view(RadioGeddonReceiverView* instance) {
     return instance->view;
 }
 
-RG_UI_TEXT void radiogeddon_receiver_view_set_callback(
+RG_VIEW_TEXT void radiogeddon_receiver_view_set_callback(
     RadioGeddonReceiverView* instance,
     RadioGeddonReceiverCallback callback,
     void* context) {
@@ -252,7 +252,7 @@ RG_UI_TEXT void radiogeddon_receiver_view_set_callback(
     instance->context = context;
 }
 
-RG_UI_TEXT void radiogeddon_receiver_view_set_config(
+RG_VIEW_TEXT void radiogeddon_receiver_view_set_config(
     RadioGeddonReceiverView* instance,
     uint32_t frequency,
     const char* preset_label) {
@@ -267,22 +267,23 @@ RG_UI_TEXT void radiogeddon_receiver_view_set_config(
         true);
 }
 
-RG_UI_TEXT void radiogeddon_receiver_view_set_rssi(RadioGeddonReceiverView* instance, float rssi) {
+RG_VIEW_TEXT void
+    radiogeddon_receiver_view_set_rssi(RadioGeddonReceiverView* instance, float rssi) {
     with_view_model(instance->view, RadioGeddonReceiverModel * m, { m->rssi = rssi; }, true);
 }
 
-RG_UI_TEXT void
+RG_VIEW_TEXT void
     radiogeddon_receiver_view_set_hopping(RadioGeddonReceiverView* instance, bool hopping) {
     with_view_model(instance->view, RadioGeddonReceiverModel * m, { m->hopping = hopping; }, true);
 }
 
-RG_UI_TEXT void
+RG_VIEW_TEXT void
     radiogeddon_receiver_view_set_external(RadioGeddonReceiverView* instance, bool external) {
     with_view_model(
         instance->view, RadioGeddonReceiverModel * m, { m->external = external; }, true);
 }
 
-RG_UI_TEXT void radiogeddon_receiver_view_set_recording(
+RG_VIEW_TEXT void radiogeddon_receiver_view_set_recording(
     RadioGeddonReceiverView* instance,
     bool recording,
     const RadioGeddonRecordStats* stats) {
@@ -299,7 +300,7 @@ RG_UI_TEXT void radiogeddon_receiver_view_set_recording(
         true);
 }
 
-RG_UI_TEXT void radiogeddon_receiver_view_set_history(
+RG_VIEW_TEXT void radiogeddon_receiver_view_set_history(
     RadioGeddonReceiverView* instance,
     size_t count,
     const char* latest_label) {
@@ -320,18 +321,18 @@ RG_UI_TEXT void radiogeddon_receiver_view_set_history(
         true);
 }
 
-RG_UI_TEXT size_t radiogeddon_receiver_view_get_selected(RadioGeddonReceiverView* instance) {
+RG_VIEW_TEXT size_t radiogeddon_receiver_view_get_selected(RadioGeddonReceiverView* instance) {
     size_t sel = 0;
     with_view_model(instance->view, RadioGeddonReceiverModel * m, { sel = m->selected; }, false);
     return sel;
 }
 
-RG_UI_TEXT void
+RG_VIEW_TEXT void
     radiogeddon_receiver_view_set_threshold(RadioGeddonReceiverView* instance, float dbm) {
     with_view_model(instance->view, RadioGeddonReceiverModel * m, { m->threshold = dbm; }, true);
 }
 
-RG_UI_TEXT void
+RG_VIEW_TEXT void
     radiogeddon_receiver_view_set_status(RadioGeddonReceiverView* instance, const char* text) {
     with_view_model(
         instance->view,
@@ -344,7 +345,7 @@ RG_UI_TEXT void
 }
 
 #if RG_FEATURE_DOLPHIN_LAB
-RG_UI_TEXT void radiogeddon_receiver_view_set_badge(
+RG_VIEW_TEXT void radiogeddon_receiver_view_set_badge(
     RadioGeddonReceiverView* instance,
     const RgMascotFrame* frame,
     bool cyber) {

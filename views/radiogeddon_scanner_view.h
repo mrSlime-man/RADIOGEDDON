@@ -55,3 +55,14 @@ void radiogeddon_scanner_view_set_badge(
 
 /** Index currently highlighted by the user. */
 size_t radiogeddon_scanner_view_get_selected(RadioGeddonScannerView* instance);
+
+/** The highlighted row and the first row shown, to restore them later. */
+void radiogeddon_scanner_view_get_place(
+    RadioGeddonScannerView* instance,
+    uint16_t* selected,
+    uint16_t* top);
+/** Restore a place from get_place, after an update (rows past the list are ignored). */
+void radiogeddon_scanner_view_set_place(
+    RadioGeddonScannerView* instance,
+    uint16_t selected,
+    uint16_t top);

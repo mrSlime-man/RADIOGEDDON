@@ -46,6 +46,8 @@ typedef struct {
 } RadioGeddonHopperStatus;
 
 RadioGeddonHopper* radiogeddon_hopper_alloc(RadioGeddonSubGhz* subghz);
+/** Heap radiogeddon_hopper_alloc() takes (the engine and its mutex), bounded. */
+size_t radiogeddon_hopper_object_cost(void);
 void radiogeddon_hopper_free(RadioGeddonHopper* instance);
 
 /**

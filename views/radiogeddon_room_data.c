@@ -3,7 +3,7 @@
  * the SD card. Only on a key press or on entry, never while drawing.
  */
 #include "radiogeddon_room_view.h"
-#include "../radiogeddon_edition.h" /* RG_UI_TEXT */
+#include "../radiogeddon_edition.h" /* RG_VIEW_TEXT */
 
 #if RG_FEATURE_DOLPHIN_LAB
 
@@ -16,7 +16,7 @@
 /* The oscilloscope's samples: the first ones of the file. */
 #define ROOM_SAMPLES 512u
 
-RG_UI_TEXT void radiogeddon_room_load_terminal(
+RG_VIEW_TEXT void radiogeddon_room_load_terminal(
     RadioGeddonRoomView* instance,
     const RgJournal* j,
     bool xp_on,
@@ -70,15 +70,15 @@ RG_UI_TEXT void radiogeddon_room_load_terminal(
         instance, (const char(*)[RADIOGEDDON_ROOM_LINE_LEN])lines, j->counters[RgJrnCapture]);
 }
 
-static RG_UI_TEXT size_t room_stream_read(void* context, uint8_t* buf, size_t size) {
+static RG_VIEW_TEXT size_t room_stream_read(void* context, uint8_t* buf, size_t size) {
     return stream_read(context, buf, size);
 }
 
-static RG_UI_TEXT bool room_stream_seek(void* context, uint32_t offset) {
+static RG_VIEW_TEXT bool room_stream_seek(void* context, uint32_t offset) {
     return stream_seek(context, (int32_t)offset, StreamOffsetFromStart);
 }
 
-RG_UI_TEXT void
+RG_VIEW_TEXT void
     radiogeddon_room_load_scope(RadioGeddonRoomView* instance, Storage* storage, const char* path) {
     RadioGeddonRoomTrace trace;
     memset(&trace, 0, sizeof(trace));

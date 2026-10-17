@@ -18,31 +18,6 @@ static RG_UI_TEXT void radiogeddon_scene_multi_cb(void* context, uint32_t index)
     view_dispatcher_send_custom_event(app->view_dispatcher, index);
 }
 
-RG_UI_TEXT size_t radiogeddon_scene_multi_memory(size_t count) {
-    if(count > RG_MULTI_MAX_CAPTURES) count = RG_MULTI_MAX_CAPTURES;
-    // Summaries, the result and one analysis at a time (rg_multi.h).
-    return count * sizeof(RgMultiCapture) + sizeof(RgMultiResult) + RADIOGEDDON_ANALYSIS_MEMORY;
-}
-
-RG_UI_TEXT bool radiogeddon_multi_add(RadioGeddonApp* app, const char* path) {
-    for(size_t i = 0; i < app->multi_count; i++)
-        if(furi_string_cmp_str(app->multi_paths[i], path) == 0) return true; // already in
-    if(app->multi_count >= RG_MULTI_MAX_CAPTURES) return false;
-    if(!app->multi_paths[app->multi_count])
-        app->multi_paths[app->multi_count] = furi_string_alloc();
-    furi_string_set_str(app->multi_paths[app->multi_count], path);
-    app->multi_count++;
-    return true;
-}
-
-RG_UI_TEXT void radiogeddon_multi_clear(RadioGeddonApp* app) {
-    for(size_t i = 0; i < RG_MULTI_MAX_CAPTURES; i++) {
-        if(app->multi_paths[i]) furi_string_free(app->multi_paths[i]);
-        app->multi_paths[i] = NULL;
-    }
-    app->multi_count = 0;
-}
-
 static RG_UI_TEXT void radiogeddon_scene_multi_show(RadioGeddonApp* app) {
     Submenu* submenu = app->submenu;
     submenu_reset(submenu);

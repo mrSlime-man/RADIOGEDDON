@@ -105,8 +105,12 @@ struct RadioGeddonApp {
     // Number keyboard: exists only while a custom frequency is typed.
     NumberInput* number_input;
 
-    // Custom live views
+    // Custom live views. The scanner's exists only while the Scanner screen
+    // is shown (in the Full edition its code is in a module); its place in
+    // the list is kept here meanwhile, with the results (until the main menu).
     RadioGeddonScannerView* scanner_view;
+    uint16_t scanner_selected;
+    uint16_t scanner_top;
     RadioGeddonReceiverView* receiver_view;
     // Pulse Timeline: view and open file exist only while that scene runs.
     RadioGeddonTimelineView* timeline_view;

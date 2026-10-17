@@ -46,3 +46,8 @@ void radiogeddon_db_view_unlock(RadioGeddonDbView* instance, bool to_top);
 /** Highlighted position in the current view (set_selected clamps to the end). */
 size_t radiogeddon_db_view_get_selected(RadioGeddonDbView* instance);
 void radiogeddon_db_view_set_selected(RadioGeddonDbView* instance, size_t position);
+
+/** The highlighted position and the first row shown, to restore them later. */
+void radiogeddon_db_view_get_place(RadioGeddonDbView* instance, size_t* selected, size_t* top);
+/** Restore a place from get_place (clamped to the current view). */
+void radiogeddon_db_view_set_place(RadioGeddonDbView* instance, size_t selected, size_t top);
