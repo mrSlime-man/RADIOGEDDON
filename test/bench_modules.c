@@ -33,12 +33,12 @@
 #include "stubs/heap4.h"
 #include "../helpers/rg_elf.h"
 
-#define MARGIN      (4u * 1024u)
-#define LOADER_B10  (6u * 1024u)
-#define LOADER_B11  (2u * 1024u)
-#define HEAPS       4000u
-#define ARENA       (180u * 1024u)
-#define MAX_BLOCKS  64u
+#define MARGIN     (4u * 1024u)
+#define LOADER_B10 (6u * 1024u)
+#define LOADER_B11 (2u * 1024u)
+#define HEAPS      4000u
+#define ARENA      (180u * 1024u)
+#define MAX_BLOCKS 64u
 
 /* Work besides the module, as scenes/radiogeddon_scene_tools.c asks. */
 static const struct {

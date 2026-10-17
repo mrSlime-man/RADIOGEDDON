@@ -50,13 +50,13 @@ static int g_failures;
 
 #define ARENA (192u * 1024u)
 
-#define CHECK(c, ...)                         \
-    do {                                      \
-        if(!(c)) {                            \
-            g_failures++;                     \
-            printf("  FAIL: " __VA_ARGS__);   \
+#define CHECK(c, ...)                                 \
+    do {                                              \
+        if(!(c)) {                                    \
+            g_failures++;                             \
+            printf("  FAIL: " __VA_ARGS__);           \
             printf(" (%s:%d)\n", __FILE__, __LINE__); \
-        }                                     \
+        }                                             \
     } while(0)
 
 /* ---- recordings ---------------------------------------------------------------- */
@@ -281,8 +281,10 @@ static void table(const char* title, int library_size) {
  * with; below it, it must refuse without a failed allocation or a leak. */
 static void sweep(int library_size) {
     library(library_size);
-    printf("\nLow memory (%s, %d recordings): smallest free block each completes with\n",
-           VERSION, library_size);
+    printf(
+        "\nLow memory (%s, %d recordings): smallest free block each completes with\n",
+        VERSION,
+        library_size);
     for(size_t i = 0; i < sizeof(k_ops) / sizeof(k_ops[0]); i++) {
         size_t smallest = 0;
         unsigned refused = 0, steps = 0;
@@ -304,18 +306,29 @@ static void sweep(int library_size) {
             op_close(k_ops[i].op, held);
             heap4_stats(&after);
             steps++;
-            CHECK(after.failures == 0, "%s with %zu B free: an allocation failed", k_ops[i].name,
-                  want);
-            CHECK(after.used_bytes == before.used_bytes, "%s with %zu B free: leaked %ld B",
-                  k_ops[i].name, want, (long)(after.used_bytes - before.used_bytes));
+            CHECK(
+                after.failures == 0,
+                "%s with %zu B free: an allocation failed",
+                k_ops[i].name,
+                want);
+            CHECK(
+                after.used_bytes == before.used_bytes,
+                "%s with %zu B free: leaked %ld B",
+                k_ops[i].name,
+                want,
+                (long)(after.used_bytes - before.used_bytes));
             if(ran)
                 smallest = want;
             else
                 refused++;
             heap4_free(pin);
         }
-        printf("  %-32s %7zu B  (%u of %u steps refused, no failed allocation)\n", k_ops[i].name,
-               smallest, refused, steps);
+        printf(
+            "  %-32s %7zu B  (%u of %u steps refused, no failed allocation)\n",
+            k_ops[i].name,
+            smallest,
+            refused,
+            steps);
     }
 }
 
@@ -387,7 +400,8 @@ static void session(int iterations) {
 int main(int argc, char** argv) {
     g_strict = argc > 1 && strcmp(argv[1], "--check") == 0;
     stub_write_fail_after = -1;
-    printf("Memory on the heap model, %s (host sizes: RgAnalysis %zu B", VERSION, sizeof(RgAnalysis));
+    printf(
+        "Memory on the heap model, %s (host sizes: RgAnalysis %zu B", VERSION, sizeof(RgAnalysis));
 #ifdef RADIOGEDDON_ANALYSIS_MEMORY
     printf(", analyzer working state %zu B)\n", sizeof(RgAnalyzer));
 #else

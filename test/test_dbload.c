@@ -170,7 +170,9 @@ static void test_index(void) {
 
     const RgDbEntry* gate = entry(db, "gate.sub");
     CHECK(gate && gate->kind == RgDbKindProtocol, "decoded file");
-    CHECK(gate && strcmp(rg_db_protocol(&db->db, gate), "Princeton") == 0 && gate->bits == 24, "protocol, bits");
+    CHECK(
+        gate && strcmp(rg_db_protocol(&db->db, gate), "Princeton") == 0 && gate->bits == 24,
+        "protocol, bits");
     CHECK(gate && gate->frequency == 433920000, "frequency");
     CHECK(gate && gate->size == strlen(k_princeton), "size from the listing");
     CHECK(gate && gate->mtime != 0, "time from the card");

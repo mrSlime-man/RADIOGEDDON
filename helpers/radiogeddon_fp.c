@@ -11,14 +11,14 @@
 /* New recordings are found a batch per folder listing (the folder is closed
  * while they are read): their names, sizes and folder positions packed into
  * a pool sized to what the heap spares, within these bounds. */
-#define FP_POOL_MIN 768u
-#define FP_POOL_MAX 4096u
+#define FP_POOL_MIN   768u
+#define FP_POOL_MAX   4096u
 /* Heap a search needs besides the tables and the pool: the analysis of one
  * recording (result and working state), its fingerprint builder, file
  * buffers. */
-#define FP_WORK     (RADIOGEDDON_ANALYSIS_MEMORY + sizeof(RgFpBuilder) + 2048u)
+#define FP_WORK       (RADIOGEDDON_ANALYSIS_MEMORY + sizeof(RgFpBuilder) + 2048u)
 /* Heap kept free beyond all of it. */
-#define FP_SPARE    2048u
+#define FP_SPARE      2048u
 /* Bitmap of the folder positions handled in one update. */
 #define FP_DONE_BYTES ((RG_FP_INDEX_MAX + 7u) / 8u)
 
@@ -333,8 +333,7 @@ static bool fp_was_kept(FpUpdate* u, const char* name, RgFpRecord* rec) {
     for(size_t i = fp_keys_find(&u->keys, h); i < u->keys.count && (u->keys.key[i] >> 16) == h;
         i++) {
         uint32_t index = u->keys.key[i] & 0xFFFFu;
-        if(fp_bit(u->kept, i) && fp_old_record(u->in, index, rec) &&
-           strcmp(rec->name, name) == 0)
+        if(fp_bit(u->kept, i) && fp_old_record(u->in, index, rec) && strcmp(rec->name, name) == 0)
             return true;
     }
     return false;

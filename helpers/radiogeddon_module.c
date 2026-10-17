@@ -98,8 +98,8 @@ static RadioGeddonModule* radiogeddon_module_load_timed(
     if(radiogeddon_module_cost(storage, path, &cost)) {
         need = radiogeddon_module_need(&cost, extra_heap);
     } else {
-        need = (size_t)info.size + RADIOGEDDON_MODULE_LOADER + extra_heap +
-               RADIOGEDDON_MODULE_MARGIN;
+        need =
+            (size_t)info.size + RADIOGEDDON_MODULE_LOADER + extra_heap + RADIOGEDDON_MODULE_MARGIN;
     }
     if(memmgr_heap_get_max_free_block() < need) {
         FURI_LOG_W(

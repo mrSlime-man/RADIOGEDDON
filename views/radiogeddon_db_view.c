@@ -22,8 +22,7 @@ struct RadioGeddonDbView {
 };
 
 /* Short type tag shown at the right of a row. */
-static void
-    radiogeddon_db_view_tag(const RgDb* db, const RgDbEntry* e, char* out, size_t size) {
+static void radiogeddon_db_view_tag(const RgDb* db, const RgDbEntry* e, char* out, size_t size) {
     const char* t;
     char proto[8];
     switch(e->kind) {

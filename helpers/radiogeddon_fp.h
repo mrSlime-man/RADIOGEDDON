@@ -65,7 +65,7 @@ typedef struct {
     bool index_failed; // the index could not be written (results from memory)
 } RadioGeddonFpResult;
 
-#define RG_FP_HAS_LIMIT 1
+#define RG_FP_HAS_LIMIT   1
 /* Heap a search needs per recording it tracks (beta 10: 8). */
 #define RG_FP_TRACK_BYTES 4u
 

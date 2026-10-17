@@ -52,8 +52,7 @@ static bool tl_need_reload(const RadioGeddonTimelineModel* m) {
 
 static void tl_cat_time(char* buf, size_t len, uint64_t us) {
     uint32_t t = rg_div_u64_u32(us, 100u); // 0.1 ms units; saturates past 119 hours
-    snprintf(
-        buf, len, "%lu.%04lus", (unsigned long)(t / 10000u), (unsigned long)(t % 10000u));
+    snprintf(buf, len, "%lu.%04lus", (unsigned long)(t / 10000u), (unsigned long)(t % 10000u));
 }
 
 /* Sample index (in the file) of the first sample visible at the left edge. */

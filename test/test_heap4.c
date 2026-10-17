@@ -5,13 +5,13 @@
 #include "stubs/heap4.h"
 
 static int checks, failures;
-#define CHECK(c, msg)                                \
-    do {                                             \
-        checks++;                                    \
-        if(!(c)) {                                   \
-            failures++;                              \
+#define CHECK(c, msg)                                           \
+    do {                                                        \
+        checks++;                                               \
+        if(!(c)) {                                              \
+            failures++;                                         \
             printf("FAIL %s:%d %s\n", __FILE__, __LINE__, msg); \
-        }                                            \
+        }                                                       \
     } while(0)
 
 static size_t block(size_t n) {

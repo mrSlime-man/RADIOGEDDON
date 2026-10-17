@@ -19,18 +19,18 @@
 #define HEAP4_POISON(p, n)   ASAN_POISON_MEMORY_REGION((p), (n))
 #define HEAP4_UNPOISON(p, n) ASAN_UNPOISON_MEMORY_REGION((p), (n))
 /* The allocator itself reads and writes headers inside poisoned memory. */
-#define HEAP4_RAW __attribute__((no_sanitize("address")))
+#define HEAP4_RAW            __attribute__((no_sanitize("address")))
 #else
 #define HEAP4_POISON(p, n)   ((void)(p), (void)(n))
 #define HEAP4_UNPOISON(p, n) ((void)(p), (void)(n))
 #define HEAP4_RAW
 #endif
 
-#define ALLOCATED   0x80000000u
-#define END         0xFFFFFFFFu
+#define ALLOCATED 0x80000000u
+#define END       0xFFFFFFFFu
 /* heapMINIMUM_BLOCK_SIZE: a block is split only if more than this remains. */
-#define MIN_SPLIT   (2u * HEAP4_HEADER)
-#define MAX_PINS    8192u
+#define MIN_SPLIT (2u * HEAP4_HEADER)
+#define MAX_PINS  8192u
 
 typedef struct {
     uint32_t size; /* block size with header; ALLOCATED bit while in use */
@@ -286,7 +286,8 @@ HEAP4_RAW bool heap4_check(void) {
     for(uint32_t o = first_free; o != END; o = hdr(o)->next) {
         Hdr* b = hdr(o);
         if((b->size & ALLOCATED) || o % HEAP4_ALIGNMENT || o + b->size > arena_size) ok = false;
-        if(prev != END && (o <= prev || prev + hdr(prev)->size >= o)) ok = false; /* order, merged */
+        if(prev != END && (o <= prev || prev + hdr(prev)->size >= o))
+            ok = false; /* order, merged */
         total += b->size;
         prev = o;
         if(!ok) break;

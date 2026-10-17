@@ -44,10 +44,22 @@ static uint64_t rnd64(void) {
 
 int main(void) {
     printf("test_div\n");
-    static const uint64_t ns[] = {0, 1, 2, 99, 100, 101, 999, 1000, 0xFFFFFFFFull, 0x100000000ull,
-                                  0x1FFFFFFFFull, 0xFFFFFFFF00000000ull, UINT64_MAX};
-    static const uint32_t ds[] = {0, 1, 2, 3, 7, 10, 100, 1000, 0x7FFFFFFFu, 0x80000000u,
-                                  0xFFFFFFFEu, 0xFFFFFFFFu};
+    static const uint64_t ns[] = {
+        0,
+        1,
+        2,
+        99,
+        100,
+        101,
+        999,
+        1000,
+        0xFFFFFFFFull,
+        0x100000000ull,
+        0x1FFFFFFFFull,
+        0xFFFFFFFF00000000ull,
+        UINT64_MAX};
+    static const uint32_t ds[] = {
+        0, 1, 2, 3, 7, 10, 100, 1000, 0x7FFFFFFFu, 0x80000000u, 0xFFFFFFFEu, 0xFFFFFFFFu};
     for(size_t i = 0; i < sizeof(ns) / sizeof(ns[0]); i++)
         for(size_t j = 0; j < sizeof(ds) / sizeof(ds[0]); j++)
             check(ns[i], ds[j]);
@@ -76,9 +88,11 @@ int main(void) {
     }
     // The app's shapes: percentages and averages.
     for(int i = 0; i < 200000; i++) {
-        uint32_t total = (uint32_t)rnd64() | 1u, done = (uint32_t)(rnd64() % ((uint64_t)total + 1));
+        uint32_t total = (uint32_t)rnd64() | 1u,
+                 done = (uint32_t)(rnd64() % ((uint64_t)total + 1));
         checks++;
-        if(rg_muldiv_u32(done, 100u, total) != (uint32_t)((uint64_t)done * 100u / total)) failures++;
+        if(rg_muldiv_u32(done, 100u, total) != (uint32_t)((uint64_t)done * 100u / total))
+            failures++;
     }
     printf("%d checks, %d failures\n", checks, failures);
     return failures ? 1 : 0;
