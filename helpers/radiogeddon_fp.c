@@ -14,7 +14,7 @@
 #define FP_BATCH_MAX 64u
 /* Heap a search needs besides the name set and the batch of names: the
  * analysis of one recording, its fingerprint builder, file buffers. */
-#define FP_WORK      (sizeof(RgAnalyzer) + sizeof(RgFpBuilder) + 2048u)
+#define FP_WORK      (RADIOGEDDON_ANALYSIS_MEMORY + sizeof(RgFpBuilder) + 2048u)
 /* Heap kept free beyond all of it. */
 #define FP_SPARE     2048u
 
@@ -116,17 +116,17 @@ static bool fp_compute(Storage* storage, const char* name, RgFingerprint* fp) {
             ok = file != NULL;
             if(file) {
                 RadioGeddonAnalysisStatus status;
-                RgAnalyzer* a = radiogeddon_analysis_run_raw(file, &status);
+                RgAnalysis* a = radiogeddon_analysis_run_raw(file, false, &status);
                 if(a) {
                     // The 4th pass: distributions, preamble and sync gap.
                     RgFpBuilder* b = malloc(sizeof(RgFpBuilder));
-                    rg_fp_builder_init(b, &a->result);
+                    rg_fp_builder_init(b, a);
                     rg_raw_reader_rewind(&file->reader);
                     int32_t chunk[64];
                     size_t n;
                     while((n = rg_raw_reader_read(&file->reader, chunk, 64)) > 0)
                         rg_fp_builder_feed(b, chunk, n);
-                    rg_fp_from_analysis(fp, &a->result, b, sig.frequency, preset);
+                    rg_fp_from_analysis(fp, a, b, sig.frequency, preset);
                     free(b);
                     free(a);
                 } else if(status == RadioGeddonAnalysisNoRaw) {

@@ -44,7 +44,9 @@ void radiogeddon_scene_studio_on_enter(void* context) {
     // This module's copy of the analysis run reports to the same screen.
     radiogeddon_analysis_set_progress(radiogeddon_scene_progress, app);
     RadioGeddonAnalysisStatus status;
-    RgAnalyzer* a = radiogeddon_analysis_run_raw(app->studio_file, &status);
+    // Only the result is kept past the passes, so the view below is
+    // allocated with the analyzer's working state already freed.
+    RgAnalysis* a = radiogeddon_analysis_run_raw(app->studio_file, false, &status);
     radiogeddon_analysis_set_progress(NULL, NULL);
     radiogeddon_scene_progress_end(app);
     if(!a ||
@@ -66,16 +68,16 @@ void radiogeddon_scene_studio_on_enter(void* context) {
         RadioGeddonViewStudio,
         radiogeddon_studio_view_get_view(app->studio_view));
     radiogeddon_studio_view_set_analysis(
-        app->studio_view, furi_string_get_cstr(app->loaded.name), &a->result);
-    // The first frame that decodes, read before the analyzer goes.
+        app->studio_view, furi_string_get_cstr(app->loaded.name), a);
+    // The first frame that decodes, read before the analysis goes.
     uint8_t first = 0;
-    for(size_t i = 0; i < a->result.frames_kept; i++) {
-        if(a->result.frames[i].fit >= RG_ANALYZER_GOOD_FIT) {
+    for(size_t i = 0; i < a->frames_kept; i++) {
+        if(a->frames[i].fit >= RG_ANALYZER_GOOD_FIT) {
             first = (uint8_t)i;
             break;
         }
     }
-    bool any = a->result.frames_kept > 0;
+    bool any = a->frames_kept > 0;
     free(a);
     if(any) radiogeddon_studio_view_load_frame(app->studio_view, &app->studio_file->reader, first);
 #if RG_FEATURE_JOURNAL

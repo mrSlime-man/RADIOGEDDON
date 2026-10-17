@@ -227,7 +227,8 @@ static void check_sub_file(const char* path, const char* name, Tally* t, bool ve
     CHECK(raw != NULL, what);
     if(!raw) return;
     static RgAnalyzer a;
-    rg_analyzer_begin(&a);
+    static RgAnalysis res;
+    rg_analyzer_begin(&a, &res);
     int32_t buf[128];
     size_t n;
     size_t count = 0;
@@ -243,7 +244,7 @@ static void check_sub_file(const char* path, const char* name, Tally* t, bool ve
     CHECK(count == e.raw_count && raw->reader.time_us == e.raw_time && !raw->reader.corrupt, what);
     radiogeddon_storage_raw_close(raw);
 
-    const RgAnalysis* r = &a.result;
+    const RgAnalysis* r = &res;
     snprintf(what, sizeof(what), "%s: analysis figures in range", name);
     CHECK(
         r->sample_count <= count && r->noise_pct <= 100 && r->encoding_confidence <= 95 &&

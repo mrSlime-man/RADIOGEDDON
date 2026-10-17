@@ -232,9 +232,9 @@ void radiogeddon_scene_show_message(RadioGeddonApp* app, const char* header, con
     scene_manager_next_scene(app->scene_manager, RadioGeddonSceneMessage);
 }
 
-/* The analysis streams the file through the analyzer (sizeof(RgAnalyzer)) and
- * grows a report text of a few kilobytes. */
-#define RADIOGEDDON_UNKNOWN_WORK (sizeof(RgAnalyzer) + 10u * 1024u)
+/* The analysis streams the file through the analyzer (its result and working
+ * state) and grows a report text of a few kilobytes. */
+#define RADIOGEDDON_UNKNOWN_WORK (RADIOGEDDON_ANALYSIS_MEMORY + 10u * 1024u)
 
 RadioGeddonUnknownFn radiogeddon_scene_unknown_begin(void* context) {
 #if RG_EDITION_FULL

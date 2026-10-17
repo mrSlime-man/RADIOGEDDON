@@ -53,17 +53,26 @@ typedef enum {
 
 /**
  * Stream a RAW .sub through the three analyzer passes without loading it.
- * Returns the finished analyzer (caller frees) or NULL with @p status saying
- * why. A non-NULL result may still carry RadioGeddonAnalysisCorrupt.
+ * Returns the analysis (caller frees) or NULL with @p status saying why. A
+ * non-NULL result may still carry RadioGeddonAnalysisCorrupt. The working
+ * state of the passes is freed before returning: only the result (about
+ * 4 KB on the device) is kept. @p hypotheses also fills its hypotheses.
  */
-RgAnalyzer* radiogeddon_analysis_run_file(
+RgAnalysis* radiogeddon_analysis_run_file(
     Storage* storage,
     const char* path,
+    bool hypotheses,
     RadioGeddonAnalysisStatus* status);
 
 /** As above on an already open file (its reader keeps the seek checkpoints). */
-RgAnalyzer*
-    radiogeddon_analysis_run_raw(RadioGeddonRawFile* file, RadioGeddonAnalysisStatus* status);
+RgAnalysis* radiogeddon_analysis_run_raw(
+    RadioGeddonRawFile* file,
+    bool hypotheses,
+    RadioGeddonAnalysisStatus* status);
+
+/** Heap the analysis takes at its peak: the result and the working state,
+ * two blocks with a heap header (8 bytes) each. */
+#define RADIOGEDDON_ANALYSIS_MEMORY (sizeof(RgAnalysis) + sizeof(RgAnalyzer) + 2u * 8u)
 
 /**
  * Report the progress of whole-file analyses (the passes of

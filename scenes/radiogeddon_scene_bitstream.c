@@ -7,10 +7,10 @@
 // Full edition: Bitstream Explorer for the open RAW capture. The scene, its
 // screen and the analyzer are a module (radiogeddon_modules.h), loaded with
 // the scene; the analyzer streams the file (three passes, never loaded
-// whole) and its result, the frames and their bits (an RgAnalysis), is kept
-// while the explorer is open. Screen and analyzer are freed on exit.
-
-_Static_assert(offsetof(RgAnalyzer, result) == 0, "bits_doc frees the analyzer");
+// whole) and only its result, the frames and their bits (an RgAnalysis), is
+// kept while the explorer is open: the passes' working state is freed when
+// they end (radiogeddon_analysis_run_file). Screen and result are freed on
+// exit.
 
 typedef enum {
     BitstreamEventFailed = 970,
@@ -32,8 +32,8 @@ static const char* radiogeddon_scene_bitstream_error(RadioGeddonAnalysisStatus s
 void radiogeddon_scene_bitstream_on_enter(void* context) {
     RadioGeddonApp* app = context;
     RadioGeddonAnalysisStatus status = RadioGeddonAnalysisOk;
-    // The analyzer, whose result the explorer keeps. The module was loaded
-    // with this much to spare (scene_tools.c).
+    // The analysis at its peak (result and working state). The module was
+    // loaded with this much to spare (scene_tools.c).
     size_t work = RADIOGEDDON_BITSTREAM_WORK;
     if(memmgr_heap_get_max_free_block() < work) {
         status = RadioGeddonAnalysisNoMemory;
@@ -41,15 +41,14 @@ void radiogeddon_scene_bitstream_on_enter(void* context) {
         radiogeddon_scene_show_progress(app, "Reading bits...");
         // This module's analyzer reports to the busy popup too.
         radiogeddon_analysis_set_progress(radiogeddon_scene_progress, app);
-        RgAnalyzer* a = radiogeddon_analysis_run_file(
-            app->storage, furi_string_get_cstr(app->file_path), &status);
+        app->bits_doc = radiogeddon_analysis_run_file(
+            app->storage, furi_string_get_cstr(app->file_path), false, &status);
         radiogeddon_analysis_set_progress(NULL, NULL);
         radiogeddon_scene_progress_end(app);
-        // The result is the analyzer's first member: keep the analyzer and
-        // point at its result rather than copying it out, so the two never
-        // exist at once (4 KB less at the peak, no hole left in the heap).
-        // Freeing bits_doc frees the analyzer.
-        if(a) app->bits_doc = &a->result;
+        // The result was allocated before the file and the working state, so
+        // freeing those left no hole under it: the explorer holds one block
+        // of sizeof(RgAnalysis) while it is open (4.6 KB less than keeping
+        // the whole analyzer, as beta 10 did), and nothing is copied.
     }
     if(!app->bits_doc) {
         app->message_header = "Cannot explore";

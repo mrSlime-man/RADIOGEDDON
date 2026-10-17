@@ -245,9 +245,14 @@ typedef struct {
     uint32_t total;
 } RgHistogram;
 
-/** Streaming analyzer state. Allocate on the heap on the device. */
+/**
+ * Streaming analyzer working state (histograms, the frame being read, the
+ * pass tallies). It writes into a result the caller owns (rg_analyzer_begin)
+ * and is needed only until the last pass and rg_analyzer_hypotheses; the
+ * result does not point back into it. Allocate on the heap on the device.
+ */
 typedef struct {
-    RgAnalysis result;
+    RgAnalysis* out; /* the result being built (caller-owned) */
     int pass; /* 1 timing, 2 encoding, 3 frames, 0 done */
     RgHistogram hist_high;
     RgHistogram hist_low;
@@ -276,8 +281,8 @@ typedef struct {
     uint16_t hyp_frames[RgEncodingCount];
 } RgAnalyzer;
 
-/** Reset @p a and start pass 1. */
-void rg_analyzer_begin(RgAnalyzer* a);
+/** Reset @p a and @p out and start pass 1; the passes fill @p out. */
+void rg_analyzer_begin(RgAnalyzer* a, RgAnalysis* out);
 
 /** Feed the next samples of the recording for the current pass. */
 void rg_analyzer_feed(RgAnalyzer* a, const int32_t* samples, size_t count);
@@ -285,18 +290,19 @@ void rg_analyzer_feed(RgAnalyzer* a, const int32_t* samples, size_t count);
 /**
  * Finish the current pass. Returns true when another pass over the SAME
  * samples, from the beginning, is required; false when the analysis is done
- * and a->result is final.
+ * and the result (a->out) is final.
  */
 bool rg_analyzer_next_pass(RgAnalyzer* a);
 
 /**
- * After the last pass: fill a->result.hypotheses, every reading that fits
+ * After the last pass: fill a->out->hypotheses, every reading that fits
  * with its evidence (only the reports need them, so it is a separate call
  * and the screens that do not show them do not carry its code).
  */
 void rg_analyzer_hypotheses(RgAnalyzer* a);
 
-/** Convenience: run every pass over an in-memory buffer (heap-allocates). */
+/** Convenience: run every pass over an in-memory buffer into @p out
+ * (heap-allocates the working state only). */
 void rg_analyzer_run(const int32_t* samples, size_t count, RgAnalysis* out);
 
 /**

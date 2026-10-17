@@ -593,7 +593,7 @@ static void rg_frame_reset(RgAnalyzer* a) {
 }
 
 static void rg_frame_end(RgAnalyzer* a) {
-    RgAnalysis* r = &a->result;
+    RgAnalysis* r = a->out;
     if(a->frame_samples == 0) return;
     if(a->frame_samples < RG_ANALYZER_MIN_FRAME_SAMPLES) {
         if(a->pass == 2) r->burst_count++;
@@ -681,7 +681,7 @@ static void rg_frame_end(RgAnalyzer* a) {
 }
 
 static void rg_process(RgAnalyzer* a, int32_t v) {
-    RgAnalysis* r = &a->result;
+    RgAnalysis* r = a->out;
     uint32_t d = rg_abs32(v);
     if(a->pass == 1) {
         r->sample_count++;
@@ -708,9 +708,11 @@ static void rg_process(RgAnalyzer* a, int32_t v) {
     a->index++;
 }
 
-void rg_analyzer_begin(RgAnalyzer* a) {
+void rg_analyzer_begin(RgAnalyzer* a, RgAnalysis* out) {
     rg_bins_init();
     memset(a, 0, sizeof(*a));
+    memset(out, 0, sizeof(*out));
+    a->out = out;
     a->pass = 1;
 }
 
@@ -736,7 +738,7 @@ void rg_analyzer_feed(RgAnalyzer* a, const int32_t* samples, size_t count) {
 
 /* Pass 1 done: derive the timing model. */
 static void rg_finish_timing(RgAnalyzer* a) {
-    RgAnalysis* r = &a->result;
+    RgAnalysis* r = a->out;
     RgPeakWork work[RG_ANALYZER_MAX_PEAKS];
     uint64_t dev = 0, weight = 0;
     uint32_t in_peaks = 0;
@@ -866,7 +868,7 @@ static void rg_finish_timing(RgAnalyzer* a) {
 
 /* Pass 2 done: pick the encoding whose grammar fits the signal frames best. */
 static void rg_finish_encoding(RgAnalyzer* a) {
-    RgAnalysis* r = &a->result;
+    RgAnalysis* r = a->out;
     r->encoding = RgEncodingUnknown;
     r->alternative = RgEncodingUnknown;
     if(a->candidates == 0) return;
@@ -942,7 +944,7 @@ static bool rg_no_rival(const RgAnalysis* r) {
 
 /* The evidence for and against reading the signal as @p e. */
 static void rg_hyp_evidence(const RgAnalyzer* a, int e, RgHypothesis* h) {
-    const RgAnalysis* r = &a->result;
+    const RgAnalysis* r = a->out;
     if(h->fit >= 80) h->support |= RgHypFitHigh;
     if(h->fit < RG_ANALYZER_GOOD_FIT) h->against |= RgHypFitLow;
     if(h->frames < 2) h->against |= RgHypFewFrames;
@@ -979,7 +981,7 @@ static void rg_hyp_evidence(const RgAnalyzer* a, int e, RgHypothesis* h) {
 }
 
 void rg_analyzer_hypotheses(RgAnalyzer* a) {
-    RgAnalysis* r = &a->result;
+    RgAnalysis* r = a->out;
     RgHypothesis* out = r->hypotheses;
     size_t n = 0;
     int chosen_score = r->encoding != RgEncodingUnknown ? r->encoding_confidence : 95;
@@ -1061,7 +1063,7 @@ const char* rg_hyp_evidence_name(RgHypEvidence ev) {
 
 /* Pass 3 done: group, align and compare the kept frames. */
 static void rg_finish_frames(RgAnalyzer* a) {
-    RgAnalysis* r = &a->result;
+    RgAnalysis* r = a->out;
     char cur[RG_ANALYZER_MAX_BITS + 1];
     char pat[RG_ANALYZER_MAX_BITS + 1];
 
@@ -1241,14 +1243,14 @@ bool rg_analyzer_next_pass(RgAnalyzer* a) {
 
     bool again = false;
     if(a->pass == 1) {
-        if(a->result.sample_count > 0) {
+        if(a->out->sample_count > 0) {
             rg_finish_timing(a);
             a->pass = 2;
             again = true;
         }
     } else if(a->pass == 2) {
         rg_finish_encoding(a);
-        if(a->result.encoding != RgEncodingUnknown) {
+        if(a->out->encoding != RgEncodingUnknown) {
             a->pass = 3;
             again = true;
         }
@@ -1263,17 +1265,17 @@ bool rg_analyzer_next_pass(RgAnalyzer* a) {
 }
 
 void rg_analyzer_run(const int32_t* samples, size_t count, RgAnalysis* out) {
+    // Only the working state is allocated: the result is written in place.
     RgAnalyzer* a = malloc(sizeof(RgAnalyzer));
     if(!a) {
         memset(out, 0, sizeof(*out));
         return;
     }
-    rg_analyzer_begin(a);
+    rg_analyzer_begin(a, out);
     do {
         rg_analyzer_feed(a, samples, count);
     } while(rg_analyzer_next_pass(a));
     rg_analyzer_hypotheses(a);
-    memcpy(out, &a->result, sizeof(*out));
     free(a);
 }
 

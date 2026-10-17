@@ -6,7 +6,7 @@
 
 size_t radiogeddon_multi_memory(size_t count) {
     if(count > RG_MULTI_MAX_CAPTURES) count = RG_MULTI_MAX_CAPTURES;
-    return count * sizeof(RgMultiCapture) + sizeof(RgMultiResult) + sizeof(RgAnalyzer);
+    return count * sizeof(RgMultiCapture) + sizeof(RgMultiResult) + RADIOGEDDON_ANALYSIS_MEMORY;
 }
 
 bool radiogeddon_multi_capture(
@@ -53,10 +53,10 @@ bool radiogeddon_multi_capture(
         return true;
     }
 
-    RgAnalyzer* a = radiogeddon_analysis_run_file(storage, path, status);
-    if(!a) return false;
-    rg_multi_capture_from_analysis(cap, &a->result);
-    free(a);
+    RgAnalysis* r = radiogeddon_analysis_run_file(storage, path, false, status);
+    if(!r) return false;
+    rg_multi_capture_from_analysis(cap, r);
+    free(r);
     return true;
 }
 

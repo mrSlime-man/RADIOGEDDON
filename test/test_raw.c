@@ -217,8 +217,9 @@ static void test_fixture_end_to_end(void) {
     MemSource m = {text, len, 0, 0, 0};
     static RgRawReader r;
     static RgAnalyzer a;
+    static RgAnalysis res;
     rg_raw_reader_init(&r, mem_source(&m));
-    rg_analyzer_begin(&a);
+    rg_analyzer_begin(&a, &res);
     int32_t chunk[32];
     do {
         rg_raw_reader_rewind(&r);
@@ -227,10 +228,10 @@ static void test_fixture_end_to_end(void) {
             rg_analyzer_feed(&a, chunk, n);
     } while(rg_analyzer_next_pass(&a));
     CHECK(r.index == 52, "52 samples in the fixture");
-    CHECK(a.result.encoding == RgEncodingPWM, "fixture reads as PWM");
-    CHECK(a.result.te_us == 400, "fixture Te 400us");
-    CHECK(a.result.frame_count == 2 && a.result.groups[0].exact == 2, "two identical frames");
-    CHECK(strcmp(a.result.bits, "001011000101") == 0, "fixture bits");
+    CHECK(res.encoding == RgEncodingPWM, "fixture reads as PWM");
+    CHECK(res.te_us == 400, "fixture Te 400us");
+    CHECK(res.frame_count == 2 && res.groups[0].exact == 2, "two identical frames");
+    CHECK(strcmp(res.bits, "001011000101") == 0, "fixture bits");
 }
 
 static void test_lost_comment(void) {
