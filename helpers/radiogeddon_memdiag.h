@@ -31,6 +31,22 @@ void radiogeddon_memdiag_report(FuriString* out, uint32_t radio_session_cost);
 /** Write a one-line summary to the log. */
 void radiogeddon_memdiag_log(void);
 
+/**
+ * A lifecycle checkpoint: one log line (tag RG.mem) with the free heap, the
+ * largest free block (what the firmware's loader needs for a section) and
+ * the lowest free heap since boot, and the checkpoint becomes the sample
+ * label. Read with the CLI's `log` command; costs one heap walk.
+ */
+void radiogeddon_memdiag_checkpoint(const char* where);
+
+/**
+ * At exit, after everything the app allocated was freed: compare with the
+ * free heap at radiogeddon_memdiag_start() and log what was not returned
+ * (an estimate: firmware services may allocate meanwhile; with Settings >
+ * System > Heap Trace on, the loader's "allocation balance" line is exact).
+ */
+void radiogeddon_memdiag_exit_check(void);
+
 /* ---- runtime diagnostics (counters only; no capture data) ---------------- */
 
 /** The app's UI tick (GUI responsiveness: gaps between ticks). */

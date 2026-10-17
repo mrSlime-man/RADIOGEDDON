@@ -244,15 +244,18 @@ void radiogeddon_app_free(RadioGeddonApp* app) {
 int32_t radiogeddon_app(void* p) {
     UNUSED(p);
     radiogeddon_memdiag_start();
+    radiogeddon_memdiag_checkpoint("launch");
     RadioGeddonApp* app = radiogeddon_app_alloc();
-    radiogeddon_memdiag_sample("app start");
+    radiogeddon_memdiag_checkpoint("app start");
     // Before any screen: a capture cut off by a restart is offered back.
     radiogeddon_app_recover(app);
 
     scene_manager_next_scene(app->scene_manager, RadioGeddonSceneStart);
     view_dispatcher_run(app->view_dispatcher);
 
+    radiogeddon_memdiag_checkpoint("closing");
     radiogeddon_app_free(app);
     radiogeddon_memdiag_log();
+    radiogeddon_memdiag_exit_check();
     return 0;
 }
