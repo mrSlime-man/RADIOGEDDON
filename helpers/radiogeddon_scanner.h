@@ -104,6 +104,14 @@ void radiogeddon_scanner_set_observer(
 void radiogeddon_scanner_lock(RadioGeddonScanner* instance);
 void radiogeddon_scanner_unlock(RadioGeddonScanner* instance);
 
+/**
+ * Heap a sweep takes to start from here: the scanner object (if @p instance
+ * is NULL), the adaptive schedule for @p mode (RgAdaptMode; Standard none),
+ * the thread's stack and records. Compare with the largest free block
+ * before starting: firmware malloc() never returns NULL, it stops the device.
+ */
+size_t radiogeddon_scanner_start_cost(RadioGeddonScanner* instance, uint8_t mode);
+
 /** Start the sweep thread (radio session is opened by the thread). */
 void radiogeddon_scanner_start(RadioGeddonScanner* instance);
 /** Stop the sweep thread and release the radio. Results are kept. */

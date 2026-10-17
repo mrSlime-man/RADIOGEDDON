@@ -93,6 +93,24 @@ RG_UI_TEXT void radiogeddon_scene_scanner_on_enter(void* context) {
         list,
         RADIOGEDDON_SCANNER_MAX_CHANNELS);
 
+#if RG_FEATURE_ADAPTIVE_SCAN
+    uint8_t mode = app->scan_mode_run;
+#else
+    uint8_t mode = 0;
+#endif
+    // Firmware malloc() stops the device when it fails: check first, with
+    // room left for the screen, the GUI and the radio driver's own work.
+    size_t need = radiogeddon_scanner_start_cost(app->scanner, mode) + 4096u;
+    if(memmgr_heap_get_max_free_block() < need) {
+        FURI_LOG_W(
+            "RadioGeddon",
+            "scanner needs %u, largest block %u",
+            (unsigned)need,
+            (unsigned)memmgr_heap_get_max_free_block());
+        radiogeddon_scene_scanner_show_message(
+            app, "Not enough memory", "Close other apps or\nrestart the Flipper.", false);
+        return;
+    }
     if(!app->scanner) app->scanner = radiogeddon_scanner_alloc(app->subghz);
 #if RG_FEATURE_ADAPTIVE_SCAN
     // Standard, or the Adaptive Scanner's schedule (chosen in its setup).
@@ -135,7 +153,12 @@ RG_UI_TEXT void radiogeddon_scene_scanner_on_enter(void* context) {
     radiogeddon_ui_set_scanning(
         app, app->scanner_running && !radiogeddon_scanner_is_paused(app->scanner));
     radiogeddon_scene_scanner_badge(app);
-    radiogeddon_memdiag_sample("Scanner");
+#if RG_FEATURE_ADAPTIVE_SCAN
+    radiogeddon_memdiag_checkpoint(
+        app->scan_mode_run == RgAdaptStandard ? "Scanner started" : "Adaptive Scanner started");
+#else
+    radiogeddon_memdiag_checkpoint("Scanner started");
+#endif
     view_dispatcher_switch_to_view(app->view_dispatcher, RadioGeddonViewScanner);
 }
 
@@ -236,4 +259,5 @@ RG_UI_TEXT void radiogeddon_scene_scanner_on_exit(void* context) {
     radiogeddon_ui_set_scanning(app, false);
     if(app->scanner) radiogeddon_scanner_stop(app->scanner);
     popup_reset(app->popup);
+    radiogeddon_memdiag_checkpoint("Scanner stopped");
 }
