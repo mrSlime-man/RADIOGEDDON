@@ -34,11 +34,12 @@ static const RgDbShow db_options_filters[] = {
 };
 #define DB_OPTIONS_FILTERS COUNT_OF(db_options_filters)
 
-static size_t radiogeddon_scene_db_options_protocols(RadioGeddonApp* app, const char** out) {
+static RG_UI_TEXT size_t
+    radiogeddon_scene_db_options_protocols(RadioGeddonApp* app, const char** out) {
     return rg_db_protocols(&app->db->db, out, DB_OPTIONS_PROTOCOLS);
 }
 
-static void radiogeddon_scene_db_options_sort_changed(VariableItem* item) {
+static RG_UI_TEXT void radiogeddon_scene_db_options_sort_changed(VariableItem* item) {
     RadioGeddonApp* app = variable_item_get_context(item);
     RgDbSort sort = (RgDbSort)variable_item_get_current_value_index(item);
     RadioGeddonDb* db = radiogeddon_db_view_lock(app->db_view);
@@ -47,7 +48,7 @@ static void radiogeddon_scene_db_options_sort_changed(VariableItem* item) {
     variable_item_set_current_value_text(item, rg_db_sort_name(sort));
 }
 
-static void radiogeddon_scene_db_options_show_changed(VariableItem* item) {
+static RG_UI_TEXT void radiogeddon_scene_db_options_show_changed(VariableItem* item) {
     RadioGeddonApp* app = variable_item_get_context(item);
     uint8_t index = variable_item_get_current_value_index(item);
     const char* protocols[DB_OPTIONS_PROTOCOLS];
@@ -67,7 +68,7 @@ static void radiogeddon_scene_db_options_show_changed(VariableItem* item) {
     radiogeddon_db_view_unlock(app->db_view, true);
 }
 
-static void radiogeddon_scene_db_options_enter(void* context, uint32_t index) {
+static RG_UI_TEXT void radiogeddon_scene_db_options_enter(void* context, uint32_t index) {
     RadioGeddonApp* app = context;
     if(index == DbOptionsRowSearch) {
         view_dispatcher_send_custom_event(app->view_dispatcher, DbOptionsEventSearch);
@@ -76,7 +77,8 @@ static void radiogeddon_scene_db_options_enter(void* context, uint32_t index) {
     }
 }
 
-static void radiogeddon_scene_db_options_show_list(RadioGeddonApp* app, uint8_t selected) {
+static RG_UI_TEXT void
+    radiogeddon_scene_db_options_show_list(RadioGeddonApp* app, uint8_t selected) {
     VariableItemList* list = app->var_item_list;
     variable_item_list_reset(list);
     const char* protocols[DB_OPTIONS_PROTOCOLS];
@@ -139,12 +141,12 @@ static void radiogeddon_scene_db_options_show_list(RadioGeddonApp* app, uint8_t 
     view_dispatcher_switch_to_view(app->view_dispatcher, RadioGeddonViewVarItemList);
 }
 
-static void radiogeddon_scene_db_options_search_done(void* context) {
+static RG_UI_TEXT void radiogeddon_scene_db_options_search_done(void* context) {
     RadioGeddonApp* app = context;
     view_dispatcher_send_custom_event(app->view_dispatcher, DbOptionsEventSearchDone);
 }
 
-static void radiogeddon_scene_db_options_show_search(RadioGeddonApp* app) {
+static RG_UI_TEXT void radiogeddon_scene_db_options_show_search(RadioGeddonApp* app) {
     scene_manager_set_scene_state(
         app->scene_manager, RadioGeddonSceneDbOptions, DbOptionsStateSearch);
     strlcpy(app->text_store, app->db->query.search, sizeof(app->text_store));
@@ -162,13 +164,13 @@ static void radiogeddon_scene_db_options_show_search(RadioGeddonApp* app) {
     view_dispatcher_switch_to_view(app->view_dispatcher, RadioGeddonViewTextInput);
 }
 
-static void radiogeddon_scene_db_options_back_to_list(RadioGeddonApp* app) {
+static RG_UI_TEXT void radiogeddon_scene_db_options_back_to_list(RadioGeddonApp* app) {
     scene_manager_set_scene_state(
         app->scene_manager, RadioGeddonSceneDbOptions, DbOptionsStateList);
     radiogeddon_scene_db_options_show_list(app, DbOptionsRowSearch);
 }
 
-void radiogeddon_scene_db_options_on_enter(void* context) {
+RG_UI_TEXT void radiogeddon_scene_db_options_on_enter(void* context) {
     RadioGeddonApp* app = context;
     // Opened from the Database list, which keeps the index for this screen.
     furi_check(app->db && app->db_view);
@@ -177,7 +179,7 @@ void radiogeddon_scene_db_options_on_enter(void* context) {
     radiogeddon_scene_db_options_show_list(app, DbOptionsRowSort);
 }
 
-bool radiogeddon_scene_db_options_on_event(void* context, SceneManagerEvent event) {
+RG_UI_TEXT bool radiogeddon_scene_db_options_on_event(void* context, SceneManagerEvent event) {
     RadioGeddonApp* app = context;
     bool consumed = false;
 
@@ -214,9 +216,8 @@ bool radiogeddon_scene_db_options_on_event(void* context, SceneManagerEvent even
     return consumed;
 }
 
-void radiogeddon_scene_db_options_on_exit(void* context) {
+RG_UI_TEXT void radiogeddon_scene_db_options_on_exit(void* context) {
     RadioGeddonApp* app = context;
-    variable_item_list_set_enter_callback(app->var_item_list, NULL, NULL);
-    variable_item_list_reset(app->var_item_list);
+    radiogeddon_scene_var_list_release(app);
     text_input_reset(app->text_input);
 }

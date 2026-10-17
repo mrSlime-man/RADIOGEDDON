@@ -8,12 +8,12 @@ typedef enum {
     MessageEventDone = 800,
 } MessageEvent;
 
-static void radiogeddon_scene_message_cb(void* context) {
+static RG_UI_TEXT void radiogeddon_scene_message_cb(void* context) {
     RadioGeddonApp* app = context;
     view_dispatcher_send_custom_event(app->view_dispatcher, MessageEventDone);
 }
 
-void radiogeddon_scene_message_on_enter(void* context) {
+RG_UI_TEXT void radiogeddon_scene_message_on_enter(void* context) {
     RadioGeddonApp* app = context;
     notification_message(app->notifications, &sequence_error);
 #if RG_FEATURE_DOLPHIN_LAB
@@ -52,7 +52,7 @@ void radiogeddon_scene_message_on_enter(void* context) {
     view_dispatcher_switch_to_view(app->view_dispatcher, RadioGeddonViewPopup);
 }
 
-bool radiogeddon_scene_message_on_event(void* context, SceneManagerEvent event) {
+RG_UI_TEXT bool radiogeddon_scene_message_on_event(void* context, SceneManagerEvent event) {
     RadioGeddonApp* app = context;
     if(event.type == SceneManagerEventTypeCustom && event.event == MessageEventDone) {
         scene_manager_previous_scene(app->scene_manager);
@@ -61,7 +61,7 @@ bool radiogeddon_scene_message_on_event(void* context, SceneManagerEvent event) 
     return false;
 }
 
-void radiogeddon_scene_message_on_exit(void* context) {
+RG_UI_TEXT void radiogeddon_scene_message_on_exit(void* context) {
     RadioGeddonApp* app = context;
     radiogeddon_ui_cancel(app);
     popup_reset(app->popup);

@@ -58,49 +58,49 @@ static const uint16_t actlog_sizes[] = {64, 256, 1024};
 static const char* const actlog_sizes_text[] = {"64 KB", "256 KB", "1 MB"};
 static const RgAdaptMode actlog_modes[] = {RgAdaptStandard, RgAdaptBalanced, RgAdaptFocused};
 
-static ActlogRun* actlog_run(RadioGeddonApp* app) {
+static RG_UI_TEXT ActlogRun* actlog_run(RadioGeddonApp* app) {
     return app->actlog;
 }
 
-static uint8_t actlog_find16(const uint16_t* v, size_t n, uint16_t x) {
+static RG_UI_TEXT uint8_t actlog_find16(const uint16_t* v, size_t n, uint16_t x) {
     for(size_t i = 0; i < n; i++)
         if(v[i] == x) return (uint8_t)i;
     return 0;
 }
 
-static void actlog_set(VariableItem* item, const char* text) {
+static RG_UI_TEXT void actlog_set(VariableItem* item, const char* text) {
     variable_item_set_current_value_text(item, text);
 }
 
-static void actlog_mode_changed(VariableItem* item) {
+static RG_UI_TEXT void actlog_mode_changed(VariableItem* item) {
     RadioGeddonApp* app = variable_item_get_context(item);
     uint8_t i = variable_item_get_current_value_index(item);
     app->settings.scan_mode = (uint8_t)actlog_modes[i];
     actlog_set(item, rg_adapt_mode_name(actlog_modes[i]));
 }
 
-static void actlog_duration_changed(VariableItem* item) {
+static RG_UI_TEXT void actlog_duration_changed(VariableItem* item) {
     RadioGeddonApp* app = variable_item_get_context(item);
     uint8_t i = variable_item_get_current_value_index(item);
     app->settings.log_minutes = actlog_minutes[i];
     actlog_set(item, actlog_minutes_text[i]);
 }
 
-static void actlog_interval_changed(VariableItem* item) {
+static RG_UI_TEXT void actlog_interval_changed(VariableItem* item) {
     RadioGeddonApp* app = variable_item_get_context(item);
     uint8_t i = variable_item_get_current_value_index(item);
     app->settings.log_interval_s = actlog_intervals[i];
     actlog_set(item, actlog_intervals_text[i]);
 }
 
-static void actlog_size_changed(VariableItem* item) {
+static RG_UI_TEXT void actlog_size_changed(VariableItem* item) {
     RadioGeddonApp* app = variable_item_get_context(item);
     uint8_t i = variable_item_get_current_value_index(item);
     app->settings.log_max_kb = actlog_sizes[i];
     actlog_set(item, actlog_sizes_text[i]);
 }
 
-static void actlog_threshold_changed(VariableItem* item) {
+static RG_UI_TEXT void actlog_threshold_changed(VariableItem* item) {
     RadioGeddonApp* app = variable_item_get_context(item);
     uint8_t i = variable_item_get_current_value_index(item);
     app->settings.scan_threshold_db = (uint8_t)(6u + 2u * i);
@@ -109,13 +109,13 @@ static void actlog_threshold_changed(VariableItem* item) {
     actlog_set(item, text);
 }
 
-static void actlog_enter(void* context, uint32_t index) {
+static RG_UI_TEXT void actlog_enter(void* context, uint32_t index) {
     RadioGeddonApp* app = context;
     if(index == ActlogRowStart)
         view_dispatcher_send_custom_event(app->view_dispatcher, ActlogEventStart);
 }
 
-static size_t actlog_list(RadioGeddonApp* app, uint32_t* list) {
+static RG_UI_TEXT size_t actlog_list(RadioGeddonApp* app, uint32_t* list) {
     return radiogeddon_scene_build_list(
         app,
         app->settings.scan_source,
@@ -124,7 +124,7 @@ static size_t actlog_list(RadioGeddonApp* app, uint32_t* list) {
         RADIOGEDDON_SCANNER_MAX_CHANNELS);
 }
 
-static void actlog_show_setup(RadioGeddonApp* app) {
+static RG_UI_TEXT void actlog_show_setup(RadioGeddonApp* app) {
     VariableItemList* list = app->var_item_list;
     variable_item_list_reset(list);
     RadioGeddonSettings* s = &app->settings;
@@ -176,7 +176,7 @@ static void actlog_show_setup(RadioGeddonApp* app) {
     view_dispatcher_switch_to_view(app->view_dispatcher, RadioGeddonViewVarItemList);
 }
 
-static void actlog_fmt_time(char* out, size_t size, uint32_t s) {
+static RG_UI_TEXT void actlog_fmt_time(char* out, size_t size, uint32_t s) {
     snprintf(
         out,
         size,
@@ -186,7 +186,7 @@ static void actlog_fmt_time(char* out, size_t size, uint32_t s) {
         (unsigned long)(s % 60u));
 }
 
-static void actlog_draw_running(RadioGeddonApp* app) {
+static RG_UI_TEXT void actlog_draw_running(RadioGeddonApp* app) {
     ActlogRun* run = actlog_run(app);
     RadioGeddonActlogStatus st;
     radiogeddon_scanner_lock(app->scanner);
@@ -219,7 +219,7 @@ static void actlog_draw_running(RadioGeddonApp* app) {
         app->widget, 0, 0, 128, 64, AlignLeft, AlignTop, furi_string_get_cstr(app->temp_str), false);
 }
 
-static void actlog_free_run(RadioGeddonApp* app) {
+static RG_UI_TEXT void actlog_free_run(RadioGeddonApp* app) {
     ActlogRun* run = actlog_run(app);
     if(!run) return;
     free(run->rows);
@@ -229,7 +229,7 @@ static void actlog_free_run(RadioGeddonApp* app) {
 }
 
 /* Stop listening and close the log; the summary is then shown. */
-static void actlog_stop(RadioGeddonApp* app, const char* reason) {
+static RG_UI_TEXT void actlog_stop(RadioGeddonApp* app, const char* reason) {
     ActlogRun* run = actlog_run(app);
     if(!run || !run->log) return;
     radiogeddon_scanner_stop(app->scanner);
@@ -245,7 +245,7 @@ static void actlog_stop(RadioGeddonApp* app, const char* reason) {
     notification_message(app->notifications, &sequence_success);
 }
 
-static void actlog_show_summary(RadioGeddonApp* app) {
+static RG_UI_TEXT void actlog_show_summary(RadioGeddonApp* app) {
     scene_manager_set_scene_state(app->scene_manager, RadioGeddonSceneActlog, ActlogModeSummary);
     text_box_reset(app->text_box);
     text_box_set_font(app->text_box, TextBoxFontText);
@@ -253,7 +253,7 @@ static void actlog_show_summary(RadioGeddonApp* app) {
     view_dispatcher_switch_to_view(app->view_dispatcher, RadioGeddonViewTextBox);
 }
 
-static bool actlog_start(RadioGeddonApp* app) {
+static RG_UI_TEXT bool actlog_start(RadioGeddonApp* app) {
     radiogeddon_app_save_settings(app);
     if(!radiogeddon_subghz_is_device_present(app->subghz)) {
         app->message_header = "No radio";
@@ -320,14 +320,14 @@ static bool actlog_start(RadioGeddonApp* app) {
     return true;
 }
 
-void radiogeddon_scene_actlog_on_enter(void* context) {
+RG_UI_TEXT void radiogeddon_scene_actlog_on_enter(void* context) {
     RadioGeddonApp* app = context;
     scene_manager_set_scene_state(app->scene_manager, RadioGeddonSceneActlog, ActlogModeSetup);
     actlog_show_setup(app);
 }
 
 /* The tick while logging: rows due, the screen once a second, the end. */
-static void actlog_tick(RadioGeddonApp* app) {
+static RG_UI_TEXT void actlog_tick(RadioGeddonApp* app) {
     ActlogRun* run = actlog_run(app);
     if(!run || !run->log) return;
     uint32_t now = furi_get_tick();
@@ -353,7 +353,7 @@ static void actlog_tick(RadioGeddonApp* app) {
     }
 }
 
-bool radiogeddon_scene_actlog_on_event(void* context, SceneManagerEvent event) {
+RG_UI_TEXT bool radiogeddon_scene_actlog_on_event(void* context, SceneManagerEvent event) {
     RadioGeddonApp* app = context;
     uint32_t mode = scene_manager_get_scene_state(app->scene_manager, RadioGeddonSceneActlog);
     if(event.type == SceneManagerEventTypeTick) {
@@ -377,15 +377,14 @@ bool radiogeddon_scene_actlog_on_event(void* context, SceneManagerEvent event) {
     return false;
 }
 
-void radiogeddon_scene_actlog_on_exit(void* context) {
+RG_UI_TEXT void radiogeddon_scene_actlog_on_exit(void* context) {
     RadioGeddonApp* app = context;
     // Whatever closes this screen ends the observation.
     actlog_stop(app, "screen closed");
     actlog_free_run(app);
     if(app->scanner) radiogeddon_scanner_set_observer(app->scanner, NULL, NULL);
     radiogeddon_app_save_settings(app);
-    variable_item_list_set_enter_callback(app->var_item_list, NULL, NULL);
-    variable_item_list_reset(app->var_item_list);
+    radiogeddon_scene_var_list_release(app);
     widget_reset(app->widget);
     text_box_reset(app->text_box);
 }

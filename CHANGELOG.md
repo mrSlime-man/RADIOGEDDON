@@ -7,6 +7,42 @@ to follow [Semantic Versioning](https://semver.org/) (pre-1.0.0 releases use
 
 ## [Unreleased]
 
+Beta 12 stability pass (to be released together with the beta 12 features).
+**Not hardware tested**; the device checks are X1–X10 of the
+[hardware checklist](docs/HARDWARE_CHECKLIST.md#crash-and-relaunch-fixes-beta-12),
+the analysis is in [STABILITY_BETA12.md](docs/STABILITY_BETA12.md).
+
+### Fixed
+- **Adaptive Scanner → Start scanner stopped the device (`furi_check
+  failed`)**, reported on RogueMaster. Its setup screen cleared the list's
+  enter callback with NULL when closing, which every firmware forbids
+  (`furi_check(callback)` in `variable_item_list_set_enter_callback`). The
+  same bug was in the RF Activity Logger and Database options (Catalog
+  edition too). The shared list now always holds the app's own resident
+  do-nothing callback, so no screen can inherit a callback from an unloaded
+  module either. Module API 6.
+- **Reopening the app right after closing it could fail for lack of RAM.**
+  The firmware loads each code section into a heap block of its own, and the
+  app's code was one 70.9 KB section. The screens' code is now a second
+  section (`.rgtext`): the largest block a launch needs is 39.8 KB instead of
+  70.9 KB (Unleashed Full), and every module splits the same way.
+- The Hopper's engine no longer keeps a pointer to its unloaded screen's code.
+
+### Added
+- The Scanner checks memory before starting (firmware `malloc` cannot fail
+  softly) and says `Not enough memory` instead of stopping the device.
+- `RG.mem` log lines at launch, start, module load/unload, scanner start/stop
+  and exit (free heap, largest free block, lowest free heap), and a heap
+  balance at exit.
+- `scripts/check_fw_contracts.py` (in CI): every call checked against the
+  arguments the firmware `furi_check()`s, derived from the five pinned
+  firmware trees; it finds the three beta 11 calls above.
+- `RM_REF`/`RM_API` for `scripts/build_target.sh full-roguemaster`: build in
+  the tree of the RogueMaster commit a device runs (API asserted).
+- Tests: the Adaptive Scanner driven 1,200 times as its screens do (all
+  modes, pause, reset, free/realloc; ASan and TSan); a replay of the app's
+  launch on fragmented heaps (`make -C test benchlaunch`).
+
 ## [1.0.0-beta.11] - 2026-10-17
 
 Memory and performance release: the same features using less heap while

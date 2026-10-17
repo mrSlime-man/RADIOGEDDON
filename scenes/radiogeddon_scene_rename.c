@@ -11,7 +11,7 @@ typedef enum {
 } RenameEvent;
 
 /* The entered name without a typed ".sub"; false if it is not usable. */
-static bool radiogeddon_scene_rename_target(
+static RG_UI_TEXT bool radiogeddon_scene_rename_target(
     RadioGeddonApp* app,
     const char* text,
     FuriString* path,
@@ -34,7 +34,7 @@ static bool radiogeddon_scene_rename_target(
     return true;
 }
 
-static bool
+static RG_UI_TEXT bool
     radiogeddon_scene_rename_validator(const char* text, FuriString* error, void* context) {
     RadioGeddonApp* app = context;
     FuriString* path = furi_string_alloc();
@@ -43,17 +43,18 @@ static bool
     return ok;
 }
 
-static void radiogeddon_scene_rename_entered(void* context) {
+static RG_UI_TEXT void radiogeddon_scene_rename_entered(void* context) {
     RadioGeddonApp* app = context;
     view_dispatcher_send_custom_event(app->view_dispatcher, RenameEventEntered);
 }
 
-static void radiogeddon_scene_rename_popup_cb(void* context) {
+static RG_UI_TEXT void radiogeddon_scene_rename_popup_cb(void* context) {
     RadioGeddonApp* app = context;
     view_dispatcher_send_custom_event(app->view_dispatcher, RenameEventDone);
 }
 
-static void radiogeddon_scene_rename_result(RadioGeddonApp* app, bool ok, const char* text) {
+static RG_UI_TEXT void
+    radiogeddon_scene_rename_result(RadioGeddonApp* app, bool ok, const char* text) {
     if(ok) {
         notification_message(app->notifications, &sequence_success);
     } else {
@@ -70,7 +71,7 @@ static void radiogeddon_scene_rename_result(RadioGeddonApp* app, bool ok, const 
     view_dispatcher_switch_to_view(app->view_dispatcher, RadioGeddonViewPopup);
 }
 
-void radiogeddon_scene_rename_on_enter(void* context) {
+RG_UI_TEXT void radiogeddon_scene_rename_on_enter(void* context) {
     RadioGeddonApp* app = context;
     strlcpy(app->text_store, furi_string_get_cstr(app->loaded.name), RG_DB_NAME_MAX + 1);
     TextInput* text_input = app->text_input;
@@ -88,7 +89,7 @@ void radiogeddon_scene_rename_on_enter(void* context) {
     view_dispatcher_switch_to_view(app->view_dispatcher, RadioGeddonViewTextInput);
 }
 
-static void radiogeddon_scene_rename_apply(RadioGeddonApp* app) {
+static RG_UI_TEXT void radiogeddon_scene_rename_apply(RadioGeddonApp* app) {
     FuriString* path = furi_string_alloc();
     FuriString* error = app->temp_str; // stays valid while the popup shows it
     furi_string_reset(error);
@@ -119,7 +120,7 @@ static void radiogeddon_scene_rename_apply(RadioGeddonApp* app) {
     furi_string_free(path);
 }
 
-bool radiogeddon_scene_rename_on_event(void* context, SceneManagerEvent event) {
+RG_UI_TEXT bool radiogeddon_scene_rename_on_event(void* context, SceneManagerEvent event) {
     RadioGeddonApp* app = context;
     bool consumed = false;
     if(event.type == SceneManagerEventTypeCustom) {
@@ -134,7 +135,7 @@ bool radiogeddon_scene_rename_on_event(void* context, SceneManagerEvent event) {
     return consumed;
 }
 
-void radiogeddon_scene_rename_on_exit(void* context) {
+RG_UI_TEXT void radiogeddon_scene_rename_on_exit(void* context) {
     RadioGeddonApp* app = context;
     text_input_set_validator(app->text_input, NULL, NULL);
     text_input_reset(app->text_input);

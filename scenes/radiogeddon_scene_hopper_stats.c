@@ -5,7 +5,7 @@
 
 static FuriString* hopper_stats_text = NULL;
 
-void radiogeddon_scene_hopper_stats_on_enter(void* context) {
+RG_UI_TEXT void radiogeddon_scene_hopper_stats_on_enter(void* context) {
     RadioGeddonApp* app = context;
     hopper_stats_text = furi_string_alloc();
     if(app->hopper) {
@@ -19,13 +19,13 @@ void radiogeddon_scene_hopper_stats_on_enter(void* context) {
     view_dispatcher_switch_to_view(app->view_dispatcher, RadioGeddonViewTextBox);
 }
 
-bool radiogeddon_scene_hopper_stats_on_event(void* context, SceneManagerEvent event) {
+RG_UI_TEXT bool radiogeddon_scene_hopper_stats_on_event(void* context, SceneManagerEvent event) {
     UNUSED(context);
     UNUSED(event);
     return false;
 }
 
-void radiogeddon_scene_hopper_stats_on_exit(void* context) {
+RG_UI_TEXT void radiogeddon_scene_hopper_stats_on_exit(void* context) {
     RadioGeddonApp* app = context;
     text_box_reset(app->text_box);
     if(hopper_stats_text) {

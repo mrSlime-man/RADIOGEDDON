@@ -21,18 +21,18 @@ typedef enum {
 
 #define STUDIO_HEAP_SPARE (6u * 1024u)
 
-static void studio_cb(uint8_t frame, void* context) {
+static RG_UI_TEXT void studio_cb(uint8_t frame, void* context) {
     RadioGeddonApp* app = context;
     view_dispatcher_send_custom_event(app->view_dispatcher, StudioEventLoadBase + frame);
 }
 
-static void studio_fail(RadioGeddonApp* app, const char* text) {
+static RG_UI_TEXT void studio_fail(RadioGeddonApp* app, const char* text) {
     app->message_header = "Cannot open Studio";
     app->message_text = text;
     view_dispatcher_send_custom_event(app->view_dispatcher, StudioEventFailed);
 }
 
-void radiogeddon_scene_studio_on_enter(void* context) {
+RG_UI_TEXT void radiogeddon_scene_studio_on_enter(void* context) {
     RadioGeddonApp* app = context;
     app->studio_file =
         radiogeddon_storage_raw_open(app->storage, furi_string_get_cstr(app->file_path));
@@ -88,7 +88,7 @@ void radiogeddon_scene_studio_on_enter(void* context) {
     view_dispatcher_switch_to_view(app->view_dispatcher, RadioGeddonViewStudio);
 }
 
-bool radiogeddon_scene_studio_on_event(void* context, SceneManagerEvent event) {
+RG_UI_TEXT bool radiogeddon_scene_studio_on_event(void* context, SceneManagerEvent event) {
     RadioGeddonApp* app = context;
     if(event.type != SceneManagerEventTypeCustom) return false;
     if(!app->studio_view) {
@@ -111,7 +111,7 @@ bool radiogeddon_scene_studio_on_event(void* context, SceneManagerEvent event) {
     return false;
 }
 
-void radiogeddon_scene_studio_on_exit(void* context) {
+RG_UI_TEXT void radiogeddon_scene_studio_on_exit(void* context) {
     RadioGeddonApp* app = context;
     if(app->studio_view) {
         view_dispatcher_remove_view(app->view_dispatcher, RadioGeddonViewStudio);

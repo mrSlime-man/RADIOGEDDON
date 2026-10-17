@@ -1,4 +1,5 @@
 #include "radiogeddon_mascot_draw.h"
+#include "../radiogeddon_edition.h" /* RG_UI_TEXT */
 
 #if RG_FEATURE_DOLPHIN_LAB
 
@@ -42,7 +43,7 @@ static const uint8_t rg_fin_sprite[RgMascotFinCount] = {
 
 /* The first @p rows rows of sprite @p id (rows are whole bytes, so a prefix
  * of the data is a smaller bitmap). */
-static void
+static RG_UI_TEXT void
     rg_draw_sprite_rows(Canvas* canvas, int32_t x, int32_t y, RgSpriteId id, int32_t rows) {
     if((unsigned)id >= RgSpriteCount) return;
     const RgSprite* s = &rg_sprites[id];
@@ -53,17 +54,18 @@ static void
     canvas_set_bitmap_mode(canvas, false);
 }
 
-void rg_draw_sprite(Canvas* canvas, int32_t x, int32_t y, RgSpriteId id) {
+RG_UI_TEXT void rg_draw_sprite(Canvas* canvas, int32_t x, int32_t y, RgSpriteId id) {
     if((unsigned)id >= RgSpriteCount) return;
     rg_draw_sprite_rows(canvas, x, y, id, rg_sprites[id].h);
 }
 
 /* A sprite clipped to the rows above @p clip_y. */
-static void rg_draw_clipped(Canvas* canvas, int32_t x, int32_t y, RgSpriteId id, int32_t clip_y) {
+static RG_UI_TEXT void
+    rg_draw_clipped(Canvas* canvas, int32_t x, int32_t y, RgSpriteId id, int32_t clip_y) {
     rg_draw_sprite_rows(canvas, x, y, id, clip_y - y);
 }
 
-static void rg_draw_bubble(Canvas* canvas, int32_t x, int32_t y, const char* mark) {
+static RG_UI_TEXT void rg_draw_bubble(Canvas* canvas, int32_t x, int32_t y, const char* mark) {
     // A white bubble with a tail towards the dolphin, the mark inside.
     canvas_set_color(canvas, ColorWhite);
     canvas_draw_box(canvas, x, y, 9, 11);
@@ -74,7 +76,7 @@ static void rg_draw_bubble(Canvas* canvas, int32_t x, int32_t y, const char* mar
     canvas_draw_str_aligned(canvas, x + 5, y + 10, AlignCenter, AlignBottom, mark);
 }
 
-static void rg_draw_fx(
+static RG_UI_TEXT void rg_draw_fx(
     Canvas* canvas,
     int32_t x,
     int32_t y,
@@ -137,7 +139,7 @@ static void rg_draw_fx(
     }
 }
 
-void rg_draw_mascot(
+RG_UI_TEXT void rg_draw_mascot(
     Canvas* canvas,
     int32_t x,
     int32_t y,
@@ -217,7 +219,7 @@ void rg_draw_mascot(
     if(fx) rg_draw_fx(canvas, x, y, f, ax, ay - 2);
 }
 
-void rg_draw_mascot_fx(Canvas* canvas, int32_t x, int32_t y, const RgMascotFrame* f) {
+RG_UI_TEXT void rg_draw_mascot_fx(Canvas* canvas, int32_t x, int32_t y, const RgMascotFrame* f) {
     y += f->body_dy;
     int32_t lift = f->phones ? (f->phones_lift > 4 ? 4 : f->phones_lift) : -1;
     int32_t len = f->antenna < 3 ? 3 : (f->antenna > 7 ? 7 : f->antenna);
@@ -225,7 +227,7 @@ void rg_draw_mascot_fx(Canvas* canvas, int32_t x, int32_t y, const RgMascotFrame
     rg_draw_fx(canvas, x, y, f, x + ANTENNA_X - len / 2, y + ANTENNA_Y - lift - len - 2);
 }
 
-void rg_draw_radar(Canvas* canvas, int32_t cx, int32_t cy, int32_t r, uint8_t phase) {
+RG_UI_TEXT void rg_draw_radar(Canvas* canvas, int32_t cx, int32_t cy, int32_t r, uint8_t phase) {
     canvas_draw_circle(canvas, cx, cy, (size_t)r);
     canvas_draw_dot(canvas, cx, cy);
     uint8_t k = phase & 15u;
@@ -236,7 +238,7 @@ void rg_draw_radar(Canvas* canvas, int32_t cx, int32_t cy, int32_t r, uint8_t ph
     canvas_draw_dot(canvas, cx + rg_dir_x[k1] * (r - 2) / 64, cy + rg_dir_y[k1] * (r - 2) / 64);
 }
 
-void rg_draw_prop(
+RG_UI_TEXT void rg_draw_prop(
     Canvas* canvas,
     int32_t x,
     int32_t desk_y,
@@ -298,7 +300,7 @@ void rg_draw_prop(
     }
 }
 
-void rg_draw_decoration(Canvas* canvas, int32_t x, int32_t y, uint8_t decoration) {
+RG_UI_TEXT void rg_draw_decoration(Canvas* canvas, int32_t x, int32_t y, uint8_t decoration) {
     static const uint8_t sprites[] = {
         0,
         RgSpriteDecoPlant,
@@ -312,7 +314,8 @@ void rg_draw_decoration(Canvas* canvas, int32_t x, int32_t y, uint8_t decoration
     rg_draw_sprite(canvas, x, y, (RgSpriteId)sprites[decoration]);
 }
 
-void rg_draw_badge(Canvas* canvas, int32_t x, int32_t y, bool cyber, const RgMascotFrame* f) {
+RG_UI_TEXT void
+    rg_draw_badge(Canvas* canvas, int32_t x, int32_t y, bool cyber, const RgMascotFrame* f) {
     canvas_set_color(canvas, ColorBlack);
     if(cyber) {
         rg_draw_radar(canvas, x + 4, y + 4, 4, f->prop_phase);

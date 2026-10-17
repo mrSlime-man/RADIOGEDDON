@@ -1,6 +1,6 @@
 #include "radiogeddon_scene.h"
 
-void radiogeddon_scene_analyze_on_enter(void* context) {
+RG_UI_TEXT void radiogeddon_scene_analyze_on_enter(void* context) {
     RadioGeddonApp* app = context;
 
     furi_string_reset(app->temp_str);
@@ -18,13 +18,13 @@ void radiogeddon_scene_analyze_on_enter(void* context) {
     radiogeddon_scene_show_report(app, "Signal analysis", furi_string_get_cstr(app->temp_str));
 }
 
-bool radiogeddon_scene_analyze_on_event(void* context, SceneManagerEvent event) {
+RG_UI_TEXT bool radiogeddon_scene_analyze_on_event(void* context, SceneManagerEvent event) {
     UNUSED(context);
     UNUSED(event);
     return false;
 }
 
-void radiogeddon_scene_analyze_on_exit(void* context) {
+RG_UI_TEXT void radiogeddon_scene_analyze_on_exit(void* context) {
     RadioGeddonApp* app = context;
     radiogeddon_ui_cancel(app);
     text_box_reset(app->text_box);

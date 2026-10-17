@@ -6,7 +6,7 @@
  * each with how often and when (helpers/rg_decode.h). The radio is not used:
  * nothing is received or transmitted, and nothing is saved.
  */
-void radiogeddon_scene_decode_on_enter(void* context) {
+RG_UI_TEXT void radiogeddon_scene_decode_on_enter(void* context) {
     RadioGeddonApp* app = context;
 
     // The decoders and keystore are most of a receive session: same check.
@@ -29,13 +29,13 @@ void radiogeddon_scene_decode_on_enter(void* context) {
     radiogeddon_scene_show_report(app, "Firmware decode", furi_string_get_cstr(app->temp_str));
 }
 
-bool radiogeddon_scene_decode_on_event(void* context, SceneManagerEvent event) {
+RG_UI_TEXT bool radiogeddon_scene_decode_on_event(void* context, SceneManagerEvent event) {
     UNUSED(context);
     UNUSED(event);
     return false;
 }
 
-void radiogeddon_scene_decode_on_exit(void* context) {
+RG_UI_TEXT void radiogeddon_scene_decode_on_exit(void* context) {
     RadioGeddonApp* app = context;
     radiogeddon_ui_cancel(app);
     text_box_reset(app->text_box);

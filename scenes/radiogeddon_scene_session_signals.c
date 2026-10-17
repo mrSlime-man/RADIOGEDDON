@@ -8,12 +8,13 @@
 
 #define SESSION_SIGNALS_BUSY_BYTES 32768u
 
-static void radiogeddon_scene_session_signals_cb(void* context, uint32_t index) {
+static RG_UI_TEXT void radiogeddon_scene_session_signals_cb(void* context, uint32_t index) {
     RadioGeddonApp* app = context;
     view_dispatcher_send_custom_event(app->view_dispatcher, index);
 }
 
-static void radiogeddon_scene_session_signals_show(RadioGeddonApp* app, uint32_t selected) {
+static RG_UI_TEXT void
+    radiogeddon_scene_session_signals_show(RadioGeddonApp* app, uint32_t selected) {
     bool remove =
         scene_manager_get_scene_state(app->scene_manager, RadioGeddonSceneSessionSignals);
     Submenu* submenu = app->submenu;
@@ -30,13 +31,14 @@ static void radiogeddon_scene_session_signals_show(RadioGeddonApp* app, uint32_t
     view_dispatcher_switch_to_view(app->view_dispatcher, RadioGeddonViewSubmenu);
 }
 
-void radiogeddon_scene_session_signals_on_enter(void* context) {
+RG_UI_TEXT void radiogeddon_scene_session_signals_on_enter(void* context) {
     RadioGeddonApp* app = context;
     furi_check(app->session);
     radiogeddon_scene_session_signals_show(app, 0);
 }
 
-static void radiogeddon_scene_session_signals_open(RadioGeddonApp* app, const char* file) {
+static RG_UI_TEXT void
+    radiogeddon_scene_session_signals_open(RadioGeddonApp* app, const char* file) {
     furi_string_printf(app->file_path, "%s/%s", RADIOGEDDON_SIGNALS_FOLDER, file);
     if(!radiogeddon_session_signal_exists(app->storage, file)) {
         radiogeddon_scene_show_message(
@@ -59,7 +61,8 @@ static void radiogeddon_scene_session_signals_open(RadioGeddonApp* app, const ch
     scene_manager_next_scene(app->scene_manager, RadioGeddonSceneSavedInfo);
 }
 
-bool radiogeddon_scene_session_signals_on_event(void* context, SceneManagerEvent event) {
+RG_UI_TEXT bool
+    radiogeddon_scene_session_signals_on_event(void* context, SceneManagerEvent event) {
     RadioGeddonApp* app = context;
     if(event.type != SceneManagerEventTypeCustom || !app->session ||
        event.event >= app->session->count)
@@ -86,7 +89,7 @@ bool radiogeddon_scene_session_signals_on_event(void* context, SceneManagerEvent
     return true;
 }
 
-void radiogeddon_scene_session_signals_on_exit(void* context) {
+RG_UI_TEXT void radiogeddon_scene_session_signals_on_exit(void* context) {
     RadioGeddonApp* app = context;
     submenu_reset(app->submenu);
 }

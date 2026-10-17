@@ -236,6 +236,21 @@ static int32_t radiogeddon_scanner_thread(void* context) {
     return 0;
 }
 
+/* A FuriThread record and the FreeRTOS task control block, generously. */
+#define SCANNER_THREAD_RECORDS 512u
+
+size_t radiogeddon_scanner_start_cost(RadioGeddonScanner* instance, uint8_t mode) {
+    size_t cost = SCANNER_THREAD_STACK + SCANNER_THREAD_RECORDS;
+    if(!instance) cost += sizeof(RadioGeddonScanner) + 64u; // and its mutex
+#if RG_FEATURE_ADAPTIVE_SCAN
+    if(mode != RgAdaptStandard && mode < RgAdaptModeCount && !(instance && instance->adapt))
+        cost += sizeof(RgAdapt);
+#else
+    UNUSED(mode);
+#endif
+    return cost;
+}
+
 void radiogeddon_scanner_start(RadioGeddonScanner* instance) {
     if(instance->thread) return;
     instance->stop_requested = false;

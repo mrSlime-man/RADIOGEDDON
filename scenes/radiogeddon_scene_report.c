@@ -8,12 +8,12 @@ typedef enum {
     ReportEventDone = 700,
 } ReportEvent;
 
-static void radiogeddon_scene_report_popup_cb(void* context) {
+static RG_UI_TEXT void radiogeddon_scene_report_popup_cb(void* context) {
     RadioGeddonApp* app = context;
     view_dispatcher_send_custom_event(app->view_dispatcher, ReportEventDone);
 }
 
-void radiogeddon_scene_report_on_enter(void* context) {
+RG_UI_TEXT void radiogeddon_scene_report_on_enter(void* context) {
     RadioGeddonApp* app = context;
     radiogeddon_scene_show_progress(app, "Writing report...");
 
@@ -70,7 +70,7 @@ void radiogeddon_scene_report_on_enter(void* context) {
     view_dispatcher_switch_to_view(app->view_dispatcher, RadioGeddonViewPopup);
 }
 
-bool radiogeddon_scene_report_on_event(void* context, SceneManagerEvent event) {
+RG_UI_TEXT bool radiogeddon_scene_report_on_event(void* context, SceneManagerEvent event) {
     RadioGeddonApp* app = context;
     if(event.type == SceneManagerEventTypeCustom && event.event == ReportEventDone) {
         scene_manager_previous_scene(app->scene_manager);
@@ -79,7 +79,7 @@ bool radiogeddon_scene_report_on_event(void* context, SceneManagerEvent event) {
     return false;
 }
 
-void radiogeddon_scene_report_on_exit(void* context) {
+RG_UI_TEXT void radiogeddon_scene_report_on_exit(void* context) {
     RadioGeddonApp* app = context;
     popup_reset(app->popup);
     furi_string_reset(app->temp_str);

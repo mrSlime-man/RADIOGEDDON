@@ -22,3 +22,8 @@ dist/
 /build/
 .stage/
 /out/
+
+# local build_target.sh output
+out/
+.stage/
+.ufbt-cache/

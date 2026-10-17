@@ -1,4 +1,5 @@
 #include "radiogeddon_waterfall_view.h"
+#include "../radiogeddon_edition.h" /* RG_UI_TEXT */
 
 #if RG_FEATURE_WATERFALL
 
@@ -45,7 +46,7 @@ typedef enum {
     WfMenuCount,
 } WfMenuItem;
 
-static void
+static RG_UI_TEXT void
     radiogeddon_waterfall_seconds(char* out, size_t size, uint32_t ms, const char* prefix) {
     if(ms >= 10000) {
         snprintf(out, size, "%s%lus", prefix, (unsigned long)(ms / 1000));
@@ -60,7 +61,8 @@ static void
     }
 }
 
-static void radiogeddon_waterfall_dbm(char* out, size_t size, const char* prefix, int16_t dbm) {
+static RG_UI_TEXT void
+    radiogeddon_waterfall_dbm(char* out, size_t size, const char* prefix, int16_t dbm) {
     if(dbm == RG_WF_NO_DATA) {
         snprintf(out, size, "%s--", prefix);
     } else {
@@ -68,7 +70,7 @@ static void radiogeddon_waterfall_dbm(char* out, size_t size, const char* prefix
     }
 }
 
-static void radiogeddon_waterfall_view_draw(Canvas* canvas, void* model) {
+static RG_UI_TEXT void radiogeddon_waterfall_view_draw(Canvas* canvas, void* model) {
     RadioGeddonWaterfallModel* m = model;
     const RadioGeddonWaterfallFrame* f = &m->frame;
     canvas_clear(canvas);
@@ -223,14 +225,14 @@ static void radiogeddon_waterfall_view_draw(Canvas* canvas, void* model) {
     }
 }
 
-static void radiogeddon_waterfall_view_send(
+static RG_UI_TEXT void radiogeddon_waterfall_view_send(
     RadioGeddonWaterfallView* instance,
     RadioGeddonWaterfallEvent e) {
     if(instance->callback) instance->callback(e, instance->context);
 }
 
 /* Menu action on the model; returns the event to send, or -1. */
-static int radiogeddon_waterfall_menu_act(RadioGeddonWaterfallModel* m, InputKey key) {
+static RG_UI_TEXT int radiogeddon_waterfall_menu_act(RadioGeddonWaterfallModel* m, InputKey key) {
     switch(m->menu_index) {
     case WfMenuReceive:
         if(key != InputKeyOk) return -1;
@@ -274,7 +276,8 @@ static int radiogeddon_waterfall_menu_act(RadioGeddonWaterfallModel* m, InputKey
 /* Keys on the model; returns the event to send, or -1. A held key gives a
  * long press and then repeats, so no key has both a "fast" and a separate
  * long-press meaning. */
-static int radiogeddon_waterfall_input_model(RadioGeddonWaterfallModel* m, InputEvent* event) {
+static RG_UI_TEXT int
+    radiogeddon_waterfall_input_model(RadioGeddonWaterfallModel* m, InputEvent* event) {
     bool any = event->type == InputTypeShort || event->type == InputTypeLong ||
                event->type == InputTypeRepeat;
     if(m->menu_open) {
@@ -325,7 +328,7 @@ static int radiogeddon_waterfall_input_model(RadioGeddonWaterfallModel* m, Input
     return -1;
 }
 
-static bool radiogeddon_waterfall_view_input(InputEvent* event, void* context) {
+static RG_UI_TEXT bool radiogeddon_waterfall_view_input(InputEvent* event, void* context) {
     RadioGeddonWaterfallView* instance = context;
     int send = -1;
     bool consumed = true;
@@ -343,7 +346,7 @@ static bool radiogeddon_waterfall_view_input(InputEvent* event, void* context) {
     return consumed;
 }
 
-RadioGeddonWaterfallView* radiogeddon_waterfall_view_alloc(void) {
+RG_UI_TEXT RadioGeddonWaterfallView* radiogeddon_waterfall_view_alloc(void) {
     RadioGeddonWaterfallView* instance = malloc(sizeof(RadioGeddonWaterfallView));
     instance->view = view_alloc();
     instance->callback = NULL;
@@ -367,17 +370,17 @@ RadioGeddonWaterfallView* radiogeddon_waterfall_view_alloc(void) {
     return instance;
 }
 
-void radiogeddon_waterfall_view_free(RadioGeddonWaterfallView* instance) {
+RG_UI_TEXT void radiogeddon_waterfall_view_free(RadioGeddonWaterfallView* instance) {
     furi_assert(instance);
     view_free(instance->view);
     free(instance);
 }
 
-View* radiogeddon_waterfall_view_get_view(RadioGeddonWaterfallView* instance) {
+RG_UI_TEXT View* radiogeddon_waterfall_view_get_view(RadioGeddonWaterfallView* instance) {
     return instance->view;
 }
 
-void radiogeddon_waterfall_view_set_callback(
+RG_UI_TEXT void radiogeddon_waterfall_view_set_callback(
     RadioGeddonWaterfallView* instance,
     RadioGeddonWaterfallCallback callback,
     void* context) {
@@ -386,7 +389,7 @@ void radiogeddon_waterfall_view_set_callback(
 }
 
 /* One update of the model (its lock held). */
-static void radiogeddon_waterfall_view_refresh(
+static RG_UI_TEXT void radiogeddon_waterfall_view_refresh(
     RadioGeddonWaterfallModel* m,
     RadioGeddonWaterfallFrameFn frame,
     void* scan) {
@@ -408,7 +411,7 @@ static void radiogeddon_waterfall_view_refresh(
     m->have_frame = true;
 }
 
-void radiogeddon_waterfall_view_update(
+RG_UI_TEXT void radiogeddon_waterfall_view_update(
     RadioGeddonWaterfallView* instance,
     RadioGeddonWaterfallFrameFn frame,
     void* engine) {
@@ -419,7 +422,7 @@ void radiogeddon_waterfall_view_update(
         true);
 }
 
-void radiogeddon_waterfall_view_set_style(
+RG_UI_TEXT void radiogeddon_waterfall_view_set_style(
     RadioGeddonWaterfallView* instance,
     uint8_t span_index,
     bool noise_comp) {
@@ -433,7 +436,7 @@ void radiogeddon_waterfall_view_set_style(
         true);
 }
 
-void radiogeddon_waterfall_view_get_style(
+RG_UI_TEXT void radiogeddon_waterfall_view_get_style(
     RadioGeddonWaterfallView* instance,
     uint8_t* span_index,
     bool* noise_comp) {
@@ -447,12 +450,13 @@ void radiogeddon_waterfall_view_get_style(
         false);
 }
 
-void radiogeddon_waterfall_view_set_external(RadioGeddonWaterfallView* instance, bool external) {
+RG_UI_TEXT void
+    radiogeddon_waterfall_view_set_external(RadioGeddonWaterfallView* instance, bool external) {
     with_view_model(
         instance->view, RadioGeddonWaterfallModel * m, { m->external = external; }, true);
 }
 
-uint32_t radiogeddon_waterfall_view_get_cursor_hz(RadioGeddonWaterfallView* instance) {
+RG_UI_TEXT uint32_t radiogeddon_waterfall_view_get_cursor_hz(RadioGeddonWaterfallView* instance) {
     uint32_t hz = 0;
     with_view_model(
         instance->view,
@@ -462,21 +466,23 @@ uint32_t radiogeddon_waterfall_view_get_cursor_hz(RadioGeddonWaterfallView* inst
     return hz;
 }
 
-uint16_t radiogeddon_waterfall_view_get_cursor(RadioGeddonWaterfallView* instance) {
+RG_UI_TEXT uint16_t radiogeddon_waterfall_view_get_cursor(RadioGeddonWaterfallView* instance) {
     uint16_t c = 0;
     with_view_model(instance->view, RadioGeddonWaterfallModel * m, { c = m->cursor; }, false);
     return c;
 }
 
-void radiogeddon_waterfall_view_set_cursor(RadioGeddonWaterfallView* instance, uint16_t column) {
+RG_UI_TEXT void
+    radiogeddon_waterfall_view_set_cursor(RadioGeddonWaterfallView* instance, uint16_t column) {
     with_view_model(instance->view, RadioGeddonWaterfallModel * m, { m->cursor = column; }, true);
 }
 
-void radiogeddon_waterfall_view_set_reveal(RadioGeddonWaterfallView* instance, uint8_t level) {
+RG_UI_TEXT void
+    radiogeddon_waterfall_view_set_reveal(RadioGeddonWaterfallView* instance, uint8_t level) {
     with_view_model(instance->view, RadioGeddonWaterfallModel * m, { m->reveal = level; }, true);
 }
 
-void radiogeddon_waterfall_view_set_badge(
+RG_UI_TEXT void radiogeddon_waterfall_view_set_badge(
     RadioGeddonWaterfallView* instance,
     const RgMascotFrame* frame,
     bool cyber) {

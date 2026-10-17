@@ -51,6 +51,10 @@ jobs:
         run: python3 scripts/check_links.py
       - name: Check version, release notes and download links agree
         run: python3 scripts/release_meta.py
+      # Every NULL the firmware would furi_check() (the beta 11 Adaptive
+      # Scanner crash): the contracts of the pinned firmware trees.
+      - name: Check calls against the firmware's furi_check contracts
+        run: python3 scripts/check_fw_contracts.py --self-test && python3 scripts/check_fw_contracts.py
 
   host-tests:
     name: host tests (ASan/UBSan)

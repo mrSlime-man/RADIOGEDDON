@@ -83,6 +83,17 @@ void radiogeddon_scene_show_report(RadioGeddonApp* app, const char* title, const
 bool radiogeddon_scene_redraw_due(RadioGeddonApp* app);
 #define RADIOGEDDON_SAVER_REDRAW_MS 500u
 
+/**
+ * Empty the shared VariableItemList and give it the app's own do-nothing
+ * enter callback. Every firmware checks that callback is not NULL
+ * (furi_check in variable_item_list_set_enter_callback), so a scene can
+ * never clear it with NULL; and the list keeps whatever callback it was
+ * given last, so a scene that sets none would otherwise inherit one from a
+ * screen module that may already be unloaded. Call it when a list screen
+ * opens without an enter callback of its own and whenever one closes.
+ */
+void radiogeddon_scene_var_list_release(RadioGeddonApp* app);
+
 /** Dolphin Lab: refresh the receiver view's header badge (none in Classic). */
 void radiogeddon_scene_receiver_badge(RadioGeddonApp* app);
 

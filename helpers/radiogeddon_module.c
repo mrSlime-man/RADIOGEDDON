@@ -124,6 +124,7 @@ static RadioGeddonModule* radiogeddon_module_load_timed(
     }
     *ep = plugin_manager_get_ep(module->manager, 0);
     *status = RadioGeddonModuleOk;
+    radiogeddon_memdiag_checkpoint(file);
     return module;
 }
 
@@ -131,6 +132,7 @@ void radiogeddon_module_unload(RadioGeddonModule* module) {
     if(!module) return;
     plugin_manager_free(module->manager);
     free(module);
+    radiogeddon_memdiag_checkpoint("module unloaded");
 }
 
 void radiogeddon_module_error(

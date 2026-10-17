@@ -23,16 +23,17 @@ typedef enum {
 /* Kept free beyond the engine, the history and the screen. */
 #define WATERFALL_HEAP_MARGIN (12u * 1024u)
 
-size_t radiogeddon_scene_waterfall_min_bytes(uint32_t points) {
+RG_UI_TEXT size_t radiogeddon_scene_waterfall_min_bytes(uint32_t points) {
     return rg_waterfall_bytes(points, RADIOGEDDON_WF_VIEW_H);
 }
 
-size_t radiogeddon_scene_waterfall_fixed_bytes(uint32_t points) {
+RG_UI_TEXT size_t radiogeddon_scene_waterfall_fixed_bytes(uint32_t points) {
     // Engine, screen (object, view and its model) besides the history.
     return radiogeddon_rangescan_memory(points) + sizeof(RadioGeddonWaterfallFrame) + 512u;
 }
 
-static void radiogeddon_scene_waterfall_view_cb(RadioGeddonWaterfallEvent event, void* context) {
+static RG_UI_TEXT void
+    radiogeddon_scene_waterfall_view_cb(RadioGeddonWaterfallEvent event, void* context) {
     RadioGeddonApp* app = context;
     static const uint32_t map[] = {
         [RadioGeddonWaterfallEventTogglePause] = WaterfallEventPause,
@@ -43,7 +44,7 @@ static void radiogeddon_scene_waterfall_view_cb(RadioGeddonWaterfallEvent event,
     view_dispatcher_send_custom_event(app->view_dispatcher, map[event]);
 }
 
-static void radiogeddon_scene_waterfall_popup_cb(void* context) {
+static RG_UI_TEXT void radiogeddon_scene_waterfall_popup_cb(void* context) {
     RadioGeddonApp* app = context;
     view_dispatcher_send_custom_event(app->view_dispatcher, WaterfallEventPopupDone);
 }
@@ -57,12 +58,12 @@ static RgTransition radiogeddon_waterfall_intro;
 #define WATERFALL_EVENT_HIT_BASE 20000u
 
 // Scan thread -> GUI thread: a point became active.
-static void radiogeddon_scene_waterfall_hit_cb(uint32_t index, void* context) {
+static RG_UI_TEXT void radiogeddon_scene_waterfall_hit_cb(uint32_t index, void* context) {
     RadioGeddonApp* app = context;
     view_dispatcher_send_custom_event(app->view_dispatcher, WATERFALL_EVENT_HIT_BASE + index);
 }
 
-static void radiogeddon_scene_waterfall_lab(RadioGeddonApp* app) {
+static RG_UI_TEXT void radiogeddon_scene_waterfall_lab(RadioGeddonApp* app) {
     const RadioGeddonWaterfallModule* api = WF_API(app);
     RgMascotFrame f;
     bool cyber = false;
@@ -72,7 +73,7 @@ static void radiogeddon_scene_waterfall_lab(RadioGeddonApp* app) {
         app->waterfall_view, rg_transition_level(&radiogeddon_waterfall_intro, furi_get_tick()));
 }
 
-static void radiogeddon_scene_waterfall_release(RadioGeddonApp* app) {
+static RG_UI_TEXT void radiogeddon_scene_waterfall_release(RadioGeddonApp* app) {
     // Screen first (nothing asks the engine for frames after it), then the
     // engine (stops its thread), its history, and the screen's code last.
     if(app->waterfall_view) {
@@ -90,7 +91,7 @@ static void radiogeddon_scene_waterfall_release(RadioGeddonApp* app) {
     if(app->module) radiogeddon_scene_module_unload(app);
 }
 
-void radiogeddon_scene_waterfall_on_enter(void* context) {
+RG_UI_TEXT void radiogeddon_scene_waterfall_on_enter(void* context) {
     RadioGeddonApp* app = context;
     // Setup checked the plan and the memory; the radio may have changed since.
     radiogeddon_scene_probe_bands(app);
@@ -155,7 +156,7 @@ void radiogeddon_scene_waterfall_on_enter(void* context) {
     view_dispatcher_switch_to_view(app->view_dispatcher, RadioGeddonViewWaterfall);
 }
 
-static void
+static RG_UI_TEXT void
     radiogeddon_scene_waterfall_popup(RadioGeddonApp* app, const char* header, const char* text) {
     popup_reset(app->popup);
     popup_set_header(app->popup, header, 64, 18, AlignCenter, AlignCenter);
@@ -167,7 +168,7 @@ static void
     view_dispatcher_switch_to_view(app->view_dispatcher, RadioGeddonViewPopup);
 }
 
-static void radiogeddon_scene_waterfall_save(RadioGeddonApp* app) {
+static RG_UI_TEXT void radiogeddon_scene_waterfall_save(RadioGeddonApp* app) {
     FuriString* path = furi_string_alloc();
     radiogeddon_storage_ensure_paths(app->storage);
     radiogeddon_storage_make_scan_path_prefix(path, "WF");
@@ -191,7 +192,7 @@ static void radiogeddon_scene_waterfall_save(RadioGeddonApp* app) {
     furi_string_free(path);
 }
 
-bool radiogeddon_scene_waterfall_on_event(void* context, SceneManagerEvent event) {
+RG_UI_TEXT bool radiogeddon_scene_waterfall_on_event(void* context, SceneManagerEvent event) {
     RadioGeddonApp* app = context;
     if(!app->rangescan) {
         // Not started: go back to setup and say why there (never back here,
@@ -254,7 +255,7 @@ bool radiogeddon_scene_waterfall_on_event(void* context, SceneManagerEvent event
     return true;
 }
 
-void radiogeddon_scene_waterfall_on_exit(void* context) {
+RG_UI_TEXT void radiogeddon_scene_waterfall_on_exit(void* context) {
     RadioGeddonApp* app = context;
     radiogeddon_ui_set_scanning(app, false);
     rg_transition_finish(&radiogeddon_waterfall_intro);

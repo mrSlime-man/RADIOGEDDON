@@ -19,6 +19,22 @@
  * (test/test_edition.c).
  */
 
+/*
+ * RG_UI_TEXT: the code of the screens (scenes/ and views/) goes into a code
+ * section of its own, ".rgtext". The firmware's ELF loader gives every
+ * allocatable section its own heap block (lib/flipper_application/elf), so
+ * the app then needs two code blocks of about half the size instead of one
+ * of ~71 KB. A launch fails when no free block is large enough, and after
+ * another app (or this one) ran the heap is fragmented: halving the largest
+ * block the loader asks for is what lets the app start again right after it
+ * closed. Only on the device (ARM); host builds keep the default section.
+ */
+#if defined(__arm__) && !defined(RG_NO_UI_SECTION)
+#define RG_UI_TEXT __attribute__((section(".rgtext")))
+#else
+#define RG_UI_TEXT
+#endif
+
 #if defined(RADIOGEDDON_EDITION_FULL) && defined(RADIOGEDDON_EDITION_CATALOG)
 #error "Define only one of RADIOGEDDON_EDITION_FULL and RADIOGEDDON_EDITION_CATALOG"
 #endif

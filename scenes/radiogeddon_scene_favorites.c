@@ -13,12 +13,12 @@ typedef enum {
     FavoritesIndexFirst, // + favorite index
 } FavoritesIndex;
 
-static void radiogeddon_scene_favorites_cb(void* context, uint32_t index) {
+static RG_UI_TEXT void radiogeddon_scene_favorites_cb(void* context, uint32_t index) {
     RadioGeddonApp* app = context;
     view_dispatcher_send_custom_event(app->view_dispatcher, index);
 }
 
-void radiogeddon_scene_favorites_on_enter(void* context) {
+RG_UI_TEXT void radiogeddon_scene_favorites_on_enter(void* context) {
     RadioGeddonApp* app = context;
     RadioGeddonFavorites* fav = radiogeddon_scene_favorites(app);
     Submenu* submenu = app->submenu;
@@ -52,7 +52,7 @@ void radiogeddon_scene_favorites_on_enter(void* context) {
     view_dispatcher_switch_to_view(app->view_dispatcher, RadioGeddonViewSubmenu);
 }
 
-static void radiogeddon_scene_favorites_add(RadioGeddonApp* app, uint32_t hz) {
+static RG_UI_TEXT void radiogeddon_scene_favorites_add(RadioGeddonApp* app, uint32_t hz) {
     RadioGeddonFavorites* fav = radiogeddon_scene_favorites(app);
     switch(radiogeddon_favorites_add(fav, hz)) {
     case RadioGeddonFavoriteAdded:
@@ -80,7 +80,7 @@ static void radiogeddon_scene_favorites_add(RadioGeddonApp* app, uint32_t hz) {
     radiogeddon_scene_favorites_on_enter(app);
 }
 
-bool radiogeddon_scene_favorites_on_event(void* context, SceneManagerEvent event) {
+RG_UI_TEXT bool radiogeddon_scene_favorites_on_event(void* context, SceneManagerEvent event) {
     RadioGeddonApp* app = context;
     if(event.type != SceneManagerEventTypeCustom) return false;
     RadioGeddonFavorites* fav = radiogeddon_scene_favorites(app);
@@ -100,7 +100,7 @@ bool radiogeddon_scene_favorites_on_event(void* context, SceneManagerEvent event
     return true;
 }
 
-void radiogeddon_scene_favorites_on_exit(void* context) {
+RG_UI_TEXT void radiogeddon_scene_favorites_on_exit(void* context) {
     RadioGeddonApp* app = context;
     submenu_reset(app->submenu);
 }

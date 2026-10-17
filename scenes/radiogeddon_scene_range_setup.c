@@ -66,7 +66,7 @@ _Static_assert(
     "RADIOGEDDON_RANGE_ITEM_WATERFALL must be the Waterfall row");
 #endif
 
-static void radiogeddon_range_step_text(uint32_t hz, char* out, size_t size) {
+static RG_UI_TEXT void radiogeddon_range_step_text(uint32_t hz, char* out, size_t size) {
     if(hz >= 1000000 && hz % 1000000 == 0) {
         snprintf(out, size, "%lu MHz", (unsigned long)(hz / 1000000));
     } else if(hz % 1000 == 0) {
@@ -77,7 +77,7 @@ static void radiogeddon_range_step_text(uint32_t hz, char* out, size_t size) {
     }
 }
 
-static void radiogeddon_scene_range_setup_update_plan(RadioGeddonApp* app) {
+static RG_UI_TEXT void radiogeddon_scene_range_setup_update_plan(RadioGeddonApp* app) {
     if(!range_plan_item) return;
     RgRangeResult r = radiogeddon_scene_plan_range(app);
     char text[24];
@@ -112,7 +112,7 @@ static void radiogeddon_scene_range_setup_update_plan(RadioGeddonApp* app) {
     variable_item_set_current_value_text(range_plan_item, text);
 }
 
-static void radiogeddon_scene_range_step_changed(VariableItem* item) {
+static RG_UI_TEXT void radiogeddon_scene_range_step_changed(VariableItem* item) {
     RadioGeddonApp* app = variable_item_get_context(item);
     uint8_t index = variable_item_get_current_value_index(item);
     app->settings.range_step_hz = range_steps_hz[index];
@@ -122,7 +122,7 @@ static void radiogeddon_scene_range_step_changed(VariableItem* item) {
     radiogeddon_scene_range_setup_update_plan(app);
 }
 
-static void radiogeddon_scene_range_dwell_changed(VariableItem* item) {
+static RG_UI_TEXT void radiogeddon_scene_range_dwell_changed(VariableItem* item) {
     RadioGeddonApp* app = variable_item_get_context(item);
     uint8_t index = variable_item_get_current_value_index(item);
     app->settings.range_dwell_ms = range_dwell_ms[index];
@@ -132,7 +132,7 @@ static void radiogeddon_scene_range_dwell_changed(VariableItem* item) {
     radiogeddon_scene_range_setup_update_plan(app);
 }
 
-static void radiogeddon_scene_range_threshold_changed(VariableItem* item) {
+static RG_UI_TEXT void radiogeddon_scene_range_threshold_changed(VariableItem* item) {
     RadioGeddonApp* app = variable_item_get_context(item);
     uint8_t index = variable_item_get_current_value_index(item);
     app->settings.scan_threshold_db = range_threshold_db[index];
@@ -141,21 +141,21 @@ static void radiogeddon_scene_range_threshold_changed(VariableItem* item) {
     variable_item_set_current_value_text(item, text);
 }
 
-static void radiogeddon_scene_range_hold_changed(VariableItem* item) {
+static RG_UI_TEXT void radiogeddon_scene_range_hold_changed(VariableItem* item) {
     RadioGeddonApp* app = variable_item_get_context(item);
     uint8_t index = variable_item_get_current_value_index(item);
     app->settings.range_hold_on_hit = (index == 1);
     variable_item_set_current_value_text(item, index ? "On" : "Off");
 }
 
-static void radiogeddon_scene_range_preset_changed(VariableItem* item) {
+static RG_UI_TEXT void radiogeddon_scene_range_preset_changed(VariableItem* item) {
     RadioGeddonApp* app = variable_item_get_context(item);
     uint8_t index = variable_item_get_current_value_index(item);
     app->preset_index = index;
     variable_item_set_current_value_text(item, radiogeddon_presets[index].label);
 }
 
-static void radiogeddon_scene_range_enter_cb(void* context, uint32_t index) {
+static RG_UI_TEXT void radiogeddon_scene_range_enter_cb(void* context, uint32_t index) {
     RadioGeddonApp* app = context;
     static const uint32_t events[] = {
         [RangeItemStart] = RangeEventStart,
@@ -173,7 +173,8 @@ static void radiogeddon_scene_range_enter_cb(void* context, uint32_t index) {
     }
 }
 
-static uint8_t radiogeddon_range_index_u32(const uint32_t* values, size_t n, uint32_t v) {
+static RG_UI_TEXT uint8_t
+    radiogeddon_range_index_u32(const uint32_t* values, size_t n, uint32_t v) {
     uint8_t best = 0;
     for(size_t i = 0; i < n; i++) {
         if(values[i] <= v) best = (uint8_t)i;
@@ -181,7 +182,8 @@ static uint8_t radiogeddon_range_index_u32(const uint32_t* values, size_t n, uin
     return best;
 }
 
-static uint8_t radiogeddon_range_index_u16(const uint16_t* values, size_t n, uint16_t v) {
+static RG_UI_TEXT uint8_t
+    radiogeddon_range_index_u16(const uint16_t* values, size_t n, uint16_t v) {
     uint8_t best = 0;
     for(size_t i = 0; i < n; i++) {
         if(values[i] <= v) best = (uint8_t)i;
@@ -189,7 +191,7 @@ static uint8_t radiogeddon_range_index_u16(const uint16_t* values, size_t n, uin
     return best;
 }
 
-static uint8_t radiogeddon_range_index_u8(const uint8_t* values, size_t n, uint8_t v) {
+static RG_UI_TEXT uint8_t radiogeddon_range_index_u8(const uint8_t* values, size_t n, uint8_t v) {
     uint8_t best = 0;
     for(size_t i = 0; i < n; i++) {
         if(values[i] <= v) best = (uint8_t)i;
@@ -197,7 +199,7 @@ static uint8_t radiogeddon_range_index_u8(const uint8_t* values, size_t n, uint8
     return best;
 }
 
-void radiogeddon_scene_range_setup_on_enter(void* context) {
+RG_UI_TEXT void radiogeddon_scene_range_setup_on_enter(void* context) {
     RadioGeddonApp* app = context;
     // Back from the scan screen: its engine is gone already (freed on exit).
     radiogeddon_scene_probe_bands(app);
@@ -278,7 +280,7 @@ void radiogeddon_scene_range_setup_on_enter(void* context) {
 }
 
 /* Check the radio, the plan and the memory before the scan or the waterfall. */
-static bool radiogeddon_scene_range_setup_check(RadioGeddonApp* app, bool waterfall) {
+static RG_UI_TEXT bool radiogeddon_scene_range_setup_check(RadioGeddonApp* app, bool waterfall) {
     if(!radiogeddon_subghz_is_device_present(app->subghz)) {
         radiogeddon_scene_show_message(
             app, "No radio", "Sub-GHz device not\nfound or not responding.");
@@ -323,7 +325,7 @@ static bool radiogeddon_scene_range_setup_check(RadioGeddonApp* app, bool waterf
     return true;
 }
 
-bool radiogeddon_scene_range_setup_on_event(void* context, SceneManagerEvent event) {
+RG_UI_TEXT bool radiogeddon_scene_range_setup_on_event(void* context, SceneManagerEvent event) {
     RadioGeddonApp* app = context;
     if(event.type != SceneManagerEventTypeCustom) return false;
     RangeItem item;
@@ -378,11 +380,11 @@ bool radiogeddon_scene_range_setup_on_event(void* context, SceneManagerEvent eve
     }
 }
 
-void radiogeddon_scene_range_setup_on_exit(void* context) {
+RG_UI_TEXT void radiogeddon_scene_range_setup_on_exit(void* context) {
     RadioGeddonApp* app = context;
     range_plan_item = NULL;
     radiogeddon_app_save_settings(app);
-    variable_item_list_reset(app->var_item_list);
+    radiogeddon_scene_var_list_release(app);
 }
 
 #endif

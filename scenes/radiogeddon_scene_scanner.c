@@ -12,7 +12,7 @@ typedef enum {
     ScannerCustomHitBase = 1000,
 } ScannerCustomEvent;
 
-static void radiogeddon_scanner_view_cb(RadioGeddonScannerEvent event, void* context) {
+static RG_UI_TEXT void radiogeddon_scanner_view_cb(RadioGeddonScannerEvent event, void* context) {
     RadioGeddonApp* app = context;
     uint32_t custom = ScannerCustomSelect;
     switch(event) {
@@ -36,17 +36,17 @@ static void radiogeddon_scanner_view_cb(RadioGeddonScannerEvent event, void* con
 }
 
 // Scanner thread -> GUI thread.
-static void radiogeddon_scanner_hit_cb(size_t index, void* context) {
+static RG_UI_TEXT void radiogeddon_scanner_hit_cb(size_t index, void* context) {
     RadioGeddonApp* app = context;
     view_dispatcher_send_custom_event(app->view_dispatcher, ScannerCustomHitBase + index);
 }
 
-static void radiogeddon_scanner_popup_cb(void* context) {
+static RG_UI_TEXT void radiogeddon_scanner_popup_cb(void* context) {
     RadioGeddonApp* app = context;
     view_dispatcher_send_custom_event(app->view_dispatcher, ScannerCustomPopupDone);
 }
 
-static void radiogeddon_scene_scanner_show_message(
+static RG_UI_TEXT void radiogeddon_scene_scanner_show_message(
     RadioGeddonApp* app,
     const char* header,
     const char* text,
@@ -64,7 +64,7 @@ static void radiogeddon_scene_scanner_show_message(
 }
 
 // Dolphin Lab: the header badge follows the mascot (nothing in Classic).
-static void radiogeddon_scene_scanner_badge(RadioGeddonApp* app) {
+static RG_UI_TEXT void radiogeddon_scene_scanner_badge(RadioGeddonApp* app) {
 #if RG_FEATURE_DOLPHIN_LAB
     RgMascotFrame f;
     bool cyber = false;
@@ -75,7 +75,7 @@ static void radiogeddon_scene_scanner_badge(RadioGeddonApp* app) {
 #endif
 }
 
-void radiogeddon_scene_scanner_on_enter(void* context) {
+RG_UI_TEXT void radiogeddon_scene_scanner_on_enter(void* context) {
     RadioGeddonApp* app = context;
     app->scanner_running = false;
 
@@ -93,6 +93,24 @@ void radiogeddon_scene_scanner_on_enter(void* context) {
         list,
         RADIOGEDDON_SCANNER_MAX_CHANNELS);
 
+#if RG_FEATURE_ADAPTIVE_SCAN
+    uint8_t mode = app->scan_mode_run;
+#else
+    uint8_t mode = 0;
+#endif
+    // Firmware malloc() stops the device when it fails: check first, with
+    // room left for the screen, the GUI and the radio driver's own work.
+    size_t need = radiogeddon_scanner_start_cost(app->scanner, mode) + 4096u;
+    if(memmgr_heap_get_max_free_block() < need) {
+        FURI_LOG_W(
+            "RadioGeddon",
+            "scanner needs %u, largest block %u",
+            (unsigned)need,
+            (unsigned)memmgr_heap_get_max_free_block());
+        radiogeddon_scene_scanner_show_message(
+            app, "Not enough memory", "Close other apps or\nrestart the Flipper.", false);
+        return;
+    }
     if(!app->scanner) app->scanner = radiogeddon_scanner_alloc(app->subghz);
 #if RG_FEATURE_ADAPTIVE_SCAN
     // Standard, or the Adaptive Scanner's schedule (chosen in its setup).
@@ -135,11 +153,16 @@ void radiogeddon_scene_scanner_on_enter(void* context) {
     radiogeddon_ui_set_scanning(
         app, app->scanner_running && !radiogeddon_scanner_is_paused(app->scanner));
     radiogeddon_scene_scanner_badge(app);
-    radiogeddon_memdiag_sample("Scanner");
+#if RG_FEATURE_ADAPTIVE_SCAN
+    radiogeddon_memdiag_checkpoint(
+        app->scan_mode_run == RgAdaptStandard ? "Scanner started" : "Adaptive Scanner started");
+#else
+    radiogeddon_memdiag_checkpoint("Scanner started");
+#endif
     view_dispatcher_switch_to_view(app->view_dispatcher, RadioGeddonViewScanner);
 }
 
-static void radiogeddon_scene_scanner_save(RadioGeddonApp* app) {
+static RG_UI_TEXT void radiogeddon_scene_scanner_save(RadioGeddonApp* app) {
     FuriString* path = furi_string_alloc();
     radiogeddon_storage_ensure_paths(app->storage);
     radiogeddon_storage_make_scan_path(path);
@@ -164,7 +187,7 @@ static void radiogeddon_scene_scanner_save(RadioGeddonApp* app) {
     furi_string_free(path);
 }
 
-bool radiogeddon_scene_scanner_on_event(void* context, SceneManagerEvent event) {
+RG_UI_TEXT bool radiogeddon_scene_scanner_on_event(void* context, SceneManagerEvent event) {
     RadioGeddonApp* app = context;
     bool consumed = false;
 
@@ -230,10 +253,11 @@ bool radiogeddon_scene_scanner_on_event(void* context, SceneManagerEvent event) 
     return consumed;
 }
 
-void radiogeddon_scene_scanner_on_exit(void* context) {
+RG_UI_TEXT void radiogeddon_scene_scanner_on_exit(void* context) {
     RadioGeddonApp* app = context;
     app->scanner_running = false;
     radiogeddon_ui_set_scanning(app, false);
     if(app->scanner) radiogeddon_scanner_stop(app->scanner);
     popup_reset(app->popup);
+    radiogeddon_memdiag_checkpoint("Scanner stopped");
 }

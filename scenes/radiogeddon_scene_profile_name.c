@@ -11,7 +11,7 @@ typedef enum {
     ProfileNameEventKeep,
 } ProfileNameEvent;
 
-static bool
+static RG_UI_TEXT bool
     radiogeddon_scene_profile_name_validator(const char* text, FuriString* error, void* context) {
     UNUSED(context);
     RgDbNameError check = rg_db_check_name(text);
@@ -24,12 +24,12 @@ static bool
     return true;
 }
 
-static void radiogeddon_scene_profile_name_entered(void* context) {
+static RG_UI_TEXT void radiogeddon_scene_profile_name_entered(void* context) {
     RadioGeddonApp* app = context;
     view_dispatcher_send_custom_event(app->view_dispatcher, ProfileNameEventEntered);
 }
 
-static void radiogeddon_scene_profile_name_keyboard(RadioGeddonApp* app) {
+static RG_UI_TEXT void radiogeddon_scene_profile_name_keyboard(RadioGeddonApp* app) {
     TextInput* text_input = app->text_input;
     text_input_reset(text_input);
     text_input_set_header_text(text_input, "Profile name");
@@ -45,7 +45,7 @@ static void radiogeddon_scene_profile_name_keyboard(RadioGeddonApp* app) {
     view_dispatcher_switch_to_view(app->view_dispatcher, RadioGeddonViewTextInput);
 }
 
-void radiogeddon_scene_profile_name_on_enter(void* context) {
+RG_UI_TEXT void radiogeddon_scene_profile_name_on_enter(void* context) {
     RadioGeddonApp* app = context;
     if(app->profile_name[0] == '\0') {
         // Suggest the range itself, e.g. "433.00-435.00".
@@ -57,7 +57,7 @@ void radiogeddon_scene_profile_name_on_enter(void* context) {
     radiogeddon_scene_profile_name_keyboard(app);
 }
 
-static void radiogeddon_scene_profile_name_save(RadioGeddonApp* app, bool overwrite) {
+static RG_UI_TEXT void radiogeddon_scene_profile_name_save(RadioGeddonApp* app, bool overwrite) {
     RadioGeddonScanProfile p = {
         .start_hz = app->settings.range_start_hz,
         .end_hz = app->settings.range_end_hz,
@@ -76,7 +76,7 @@ static void radiogeddon_scene_profile_name_save(RadioGeddonApp* app, bool overwr
     }
 }
 
-bool radiogeddon_scene_profile_name_on_event(void* context, SceneManagerEvent event) {
+RG_UI_TEXT bool radiogeddon_scene_profile_name_on_event(void* context, SceneManagerEvent event) {
     RadioGeddonApp* app = context;
     if(event.type != SceneManagerEventTypeCustom) return false;
     switch(event.event) {
@@ -105,7 +105,7 @@ bool radiogeddon_scene_profile_name_on_event(void* context, SceneManagerEvent ev
     }
 }
 
-void radiogeddon_scene_profile_name_on_exit(void* context) {
+RG_UI_TEXT void radiogeddon_scene_profile_name_on_exit(void* context) {
     RadioGeddonApp* app = context;
     text_input_reset(app->text_input);
     widget_reset(app->widget);

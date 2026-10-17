@@ -14,7 +14,7 @@ typedef enum {
     HopperCustomRecordFailed,
 } HopperCustomEvent;
 
-static void radiogeddon_scene_hopper_decode_cb(
+static RG_UI_TEXT void radiogeddon_scene_hopper_decode_cb(
     const char* protocol_name,
     uint8_t hash,
     FuriString* text,
@@ -30,7 +30,8 @@ static void radiogeddon_scene_hopper_decode_cb(
 }
 
 // Hopper thread -> GUI thread.
-static void radiogeddon_scene_hopper_engine_cb(RadioGeddonHopperEvent event, void* context) {
+static RG_UI_TEXT void
+    radiogeddon_scene_hopper_engine_cb(RadioGeddonHopperEvent event, void* context) {
     RadioGeddonApp* app = context;
     uint32_t custom = HopperCustomRetuned;
     switch(event) {
@@ -50,7 +51,7 @@ static void radiogeddon_scene_hopper_engine_cb(RadioGeddonHopperEvent event, voi
     view_dispatcher_send_custom_event(app->view_dispatcher, custom);
 }
 
-static void radiogeddon_scene_hopper_refresh_history(RadioGeddonApp* app) {
+static RG_UI_TEXT void radiogeddon_scene_hopper_refresh_history(RadioGeddonApp* app) {
     furi_mutex_acquire(app->history_mutex, FuriWaitForever);
     size_t count = radiogeddon_history_count(app->history);
     const char* latest = count ? radiogeddon_history_get_name(app->history, count - 1) : "";
@@ -59,7 +60,7 @@ static void radiogeddon_scene_hopper_refresh_history(RadioGeddonApp* app) {
 }
 
 // Keep the displayed name in step with the highlighted entry (see receiver).
-static void radiogeddon_scene_hopper_show_selected(RadioGeddonApp* app) {
+static RG_UI_TEXT void radiogeddon_scene_hopper_show_selected(RadioGeddonApp* app) {
     size_t sel = radiogeddon_receiver_view_get_selected(app->receiver_view);
     furi_mutex_acquire(app->history_mutex, FuriWaitForever);
     size_t count = radiogeddon_history_count(app->history);
@@ -69,7 +70,8 @@ static void radiogeddon_scene_hopper_show_selected(RadioGeddonApp* app) {
     furi_mutex_release(app->history_mutex);
 }
 
-static void radiogeddon_scene_hopper_view_cb(RadioGeddonReceiverEvent event, void* context) {
+static RG_UI_TEXT void
+    radiogeddon_scene_hopper_view_cb(RadioGeddonReceiverEvent event, void* context) {
     RadioGeddonApp* app = context;
     uint32_t custom = HopperCustomSave;
     switch(event) {
@@ -89,7 +91,7 @@ static void radiogeddon_scene_hopper_view_cb(RadioGeddonReceiverEvent event, voi
     view_dispatcher_send_custom_event(app->view_dispatcher, custom);
 }
 
-static void
+static RG_UI_TEXT void
     radiogeddon_scene_hopper_show_popup(RadioGeddonApp* app, const char* h, const char* t) {
     popup_reset(app->popup);
     popup_set_header(app->popup, h, 64, 20, AlignCenter, AlignCenter);
@@ -98,7 +100,7 @@ static void
 }
 
 // Refresh header, RSSI, threshold mark and status line from the engine.
-static void radiogeddon_scene_hopper_refresh_status(RadioGeddonApp* app) {
+static RG_UI_TEXT void radiogeddon_scene_hopper_refresh_status(RadioGeddonApp* app) {
     RadioGeddonHopperStatus st;
     radiogeddon_hopper_status(app->hopper, &st);
     radiogeddon_receiver_view_set_config(
@@ -130,7 +132,7 @@ static void radiogeddon_scene_hopper_refresh_status(RadioGeddonApp* app) {
     radiogeddon_receiver_view_set_status(app->receiver_view, status);
 }
 
-void radiogeddon_scene_hopper_on_enter(void* context) {
+RG_UI_TEXT void radiogeddon_scene_hopper_on_enter(void* context) {
     RadioGeddonApp* app = context;
     FURI_LOG_I(TAG, "enter, free heap %u", (unsigned)memmgr_get_free_heap());
 
@@ -190,7 +192,7 @@ void radiogeddon_scene_hopper_on_enter(void* context) {
     view_dispatcher_switch_to_view(app->view_dispatcher, RadioGeddonViewReceiver);
 }
 
-bool radiogeddon_scene_hopper_on_event(void* context, SceneManagerEvent event) {
+RG_UI_TEXT bool radiogeddon_scene_hopper_on_event(void* context, SceneManagerEvent event) {
     RadioGeddonApp* app = context;
     bool consumed = false;
 
@@ -263,12 +265,16 @@ bool radiogeddon_scene_hopper_on_event(void* context, SceneManagerEvent event) {
     return consumed;
 }
 
-void radiogeddon_scene_hopper_on_exit(void* context) {
+RG_UI_TEXT void radiogeddon_scene_hopper_on_exit(void* context) {
     RadioGeddonApp* app = context;
     app->scanner_running = false;
     // Stop the engine (it saves an automatic capture in progress) before the
     // radio session it drives.
-    if(app->hopper) radiogeddon_hopper_stop(app->hopper);
+    if(app->hopper) {
+        radiogeddon_hopper_stop(app->hopper);
+        // The engine outlives this screen; its callback is this module's code.
+        radiogeddon_hopper_set_callback(app->hopper, NULL, NULL);
+    }
     radiogeddon_receiver_view_set_hopping(app->receiver_view, false);
     radiogeddon_receiver_view_set_threshold(app->receiver_view, -127.0f);
     // This scene's code may be unloaded next (a module in the Full edition).

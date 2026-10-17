@@ -20,7 +20,8 @@ typedef enum {
     RangeScanEventHitBase = 10000,
 } RangeScanEvent;
 
-static void radiogeddon_scene_range_scan_view_cb(RadioGeddonSpectrumEvent event, void* context) {
+static RG_UI_TEXT void
+    radiogeddon_scene_range_scan_view_cb(RadioGeddonSpectrumEvent event, void* context) {
     RadioGeddonApp* app = context;
     static const uint32_t map[] = {
         [RadioGeddonSpectrumEventReceive] = RangeScanEventReceive,
@@ -34,17 +35,17 @@ static void radiogeddon_scene_range_scan_view_cb(RadioGeddonSpectrumEvent event,
 }
 
 // Scan thread -> GUI thread.
-static void radiogeddon_scene_range_scan_hit_cb(uint32_t index, void* context) {
+static RG_UI_TEXT void radiogeddon_scene_range_scan_hit_cb(uint32_t index, void* context) {
     RadioGeddonApp* app = context;
     view_dispatcher_send_custom_event(app->view_dispatcher, RangeScanEventHitBase + index);
 }
 
-static void radiogeddon_scene_range_scan_popup_cb(void* context) {
+static RG_UI_TEXT void radiogeddon_scene_range_scan_popup_cb(void* context) {
     RadioGeddonApp* app = context;
     view_dispatcher_send_custom_event(app->view_dispatcher, RangeScanEventPopupDone);
 }
 
-void radiogeddon_scene_range_scan_on_enter(void* context) {
+RG_UI_TEXT void radiogeddon_scene_range_scan_on_enter(void* context) {
     RadioGeddonApp* app = context;
     // The plan was checked (points, memory) by the setup screen; check the
     // bands again in case the radio changed meanwhile.
@@ -82,7 +83,7 @@ void radiogeddon_scene_range_scan_on_enter(void* context) {
     view_dispatcher_switch_to_view(app->view_dispatcher, RadioGeddonViewSpectrum);
 }
 
-static void
+static RG_UI_TEXT void
     radiogeddon_scene_range_scan_popup(RadioGeddonApp* app, const char* header, const char* text) {
     popup_reset(app->popup);
     popup_set_header(app->popup, header, 64, 18, AlignCenter, AlignCenter);
@@ -94,7 +95,7 @@ static void
     view_dispatcher_switch_to_view(app->view_dispatcher, RadioGeddonViewPopup);
 }
 
-static void radiogeddon_scene_range_scan_save(RadioGeddonApp* app) {
+static RG_UI_TEXT void radiogeddon_scene_range_scan_save(RadioGeddonApp* app) {
     FuriString* path = furi_string_alloc();
     radiogeddon_storage_ensure_paths(app->storage);
     radiogeddon_storage_make_scan_path(path);
@@ -118,7 +119,7 @@ static void radiogeddon_scene_range_scan_save(RadioGeddonApp* app) {
     furi_string_free(path);
 }
 
-bool radiogeddon_scene_range_scan_on_event(void* context, SceneManagerEvent event) {
+RG_UI_TEXT bool radiogeddon_scene_range_scan_on_event(void* context, SceneManagerEvent event) {
     RadioGeddonApp* app = context;
     if(!app->rangescan) {
         if(event.type == SceneManagerEventTypeCustom && event.event == RangeScanEventFailed) {
@@ -193,7 +194,7 @@ bool radiogeddon_scene_range_scan_on_event(void* context, SceneManagerEvent even
     return true;
 }
 
-void radiogeddon_scene_range_scan_on_exit(void* context) {
+RG_UI_TEXT void radiogeddon_scene_range_scan_on_exit(void* context) {
     RadioGeddonApp* app = context;
     radiogeddon_ui_set_scanning(app, false);
     popup_reset(app->popup);

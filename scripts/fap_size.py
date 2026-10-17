@@ -14,6 +14,7 @@ import struct
 import sys
 
 SHF_ALLOC = 0x2
+SHF_EXECINSTR = 0x4
 SHT_NOBITS = 8
 
 
@@ -43,13 +44,25 @@ def resident(path):
             continue
         if typ == SHT_NOBITS:
             groups["bss"] += size
-        elif name.startswith(".text"):
+        elif flags & SHF_EXECINSTR:
+            # .text and beta 12's .rgtext (RG_UI_TEXT): code, each its own block
             groups["text"] += size
         elif name.startswith(".rodata"):
             groups["rodata"] += size
         else:
             groups["data"] += size
     return groups
+
+
+def largest_block(path):
+    """The largest allocatable section: the loader maps each into a heap
+    block of its own, so this is the largest free block a launch needs
+    (plus the loader's 1 KB check)."""
+    best = ("", 0)
+    for name, _typ, flags, size in sections(path):
+        if flags & SHF_ALLOC and size > best[1]:
+            best = (name, size)
+    return best
 
 
 def main():
@@ -61,7 +74,8 @@ def main():
     for f, g in results:
         total = sum(g.values())
         parts = " ".join(f"{k}={v}" for k, v in g.items())
-        print(f"{f}: {total} B ({total / 1024:.1f} KB) {parts}")
+        lname, lsize = largest_block(f)
+        print(f"{f}: {total} B ({total / 1024:.1f} KB) {parts} largest={lsize} ({lname})")
     if args.compare:
         if len(results) != 2:
             sys.exit("--compare takes exactly two files")

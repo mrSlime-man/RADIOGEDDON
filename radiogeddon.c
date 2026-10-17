@@ -127,6 +127,8 @@ RadioGeddonApp* radiogeddon_app_alloc(void) {
     app->popup = popup_alloc();
     app->text_input = text_input_alloc();
     app->text_box = text_box_alloc();
+    // Never without an enter callback: firmware forbids NULL (see the helper).
+    radiogeddon_scene_var_list_release(app);
     app->scanner_view = radiogeddon_scanner_view_alloc();
     app->receiver_view = radiogeddon_receiver_view_alloc();
 
@@ -242,15 +244,18 @@ void radiogeddon_app_free(RadioGeddonApp* app) {
 int32_t radiogeddon_app(void* p) {
     UNUSED(p);
     radiogeddon_memdiag_start();
+    radiogeddon_memdiag_checkpoint("launch");
     RadioGeddonApp* app = radiogeddon_app_alloc();
-    radiogeddon_memdiag_sample("app start");
+    radiogeddon_memdiag_checkpoint("app start");
     // Before any screen: a capture cut off by a restart is offered back.
     radiogeddon_app_recover(app);
 
     scene_manager_next_scene(app->scene_manager, RadioGeddonSceneStart);
     view_dispatcher_run(app->view_dispatcher);
 
+    radiogeddon_memdiag_checkpoint("closing");
     radiogeddon_app_free(app);
     radiogeddon_memdiag_log();
+    radiogeddon_memdiag_exit_check();
     return 0;
 }

@@ -71,9 +71,15 @@ firmware family ships updates within the same major API version:
 | Artifact | Built with | Expected to load on |
 |----------|------------|---------------------|
 | `radiogeddon-catalog-official.fap` | 87.1 | Official firmware with API 87.x, x ≥ 1 |
-| `radiogeddon-full-roguemaster.fap` | 88.16 | RogueMaster with API 88.x, x ≥ 16 |
+| `radiogeddon-full-roguemaster.fap` | 88.16 | RogueMaster with API 88.x whose firmware exports every function the app imports (see below) |
 | `radiogeddon-full-momentum.fap` | 87.1 | Momentum with API 87.x, x ≥ 1 |
 | `radiogeddon-full-unleashed.fap` | 88.9 | Unleashed with API 88.x, x ≥ 9 |
+
+RogueMaster changes its API minor with almost every build and its loader
+compares only the major version, so a RogueMaster build also opens on older
+88.x RogueMaster builds as long as every imported function exists there (the
+beta 11 build, made at 88.16, opened on a device at 88.4). For an exact
+match, build for the commit your device runs (next section).
 
 Momentum and Official share API 87.1, so the firmware's version check alone
 would not stop the wrong one from loading — **install the file named for your
@@ -149,8 +155,16 @@ The SDK's API version is the `Version` row in
 `$UFBT_HOME/current/sdk_headers/f7_sdk/targets/f7/api_symbols.csv`. For
 RogueMaster, `scripts/build_target.sh full-roguemaster` stages the Full edition
 into `applications_user/radiogeddon` of a RogueMaster checkout and runs
-`./fbt fap_radiogeddon_full`; set `ROGUEMASTER_REF` in `firmware_pins.sh` to
-build against a different commit.
+`./fbt fap_radiogeddon_full`. To build for the RogueMaster commit your
+device runs, read it on the device (*Settings → About → Firmware Info*, the
+second line: `<commit> [<API>]`, for example `4f2e0620 [88.4]`) and run
+
+```bash
+RM_REF=4f2e0620 RM_API=88.4 scripts/build_target.sh full-roguemaster
+```
+
+The API is still asserted against that tree; the build record marks it as a
+device build. Release artifacts always use the pins in `firmware_pins.sh`.
 
 ## Radio-layer differences that were checked
 

@@ -24,6 +24,28 @@ uint32_t radiogeddon_memdiag_free(void) {
     return memmgr_get_free_heap();
 }
 
+void radiogeddon_memdiag_checkpoint(const char* where) {
+    radiogeddon_memdiag_sample(where);
+    FURI_LOG_I(
+        "RG.mem",
+        "%s: free %lu, max block %lu, min free %lu",
+        where,
+        (unsigned long)memmgr_get_free_heap(),
+        (unsigned long)memmgr_heap_get_max_free_block(),
+        (unsigned long)memmgr_get_minimum_free_heap());
+}
+
+void radiogeddon_memdiag_exit_check(void) {
+    uint32_t start = radiogeddon_memdiag_stat.start_free;
+    uint32_t now = memmgr_get_free_heap();
+    radiogeddon_memdiag_checkpoint("exit");
+    if(now < start) {
+        FURI_LOG_W("RG.mem", "%lu bytes not returned since start", (unsigned long)(start - now));
+    } else {
+        FURI_LOG_I("RG.mem", "heap returned (%lu bytes over start)", (unsigned long)(now - start));
+    }
+}
+
 void radiogeddon_memdiag_log(void) {
     const RgMemStat* s = &radiogeddon_memdiag_stat;
     FURI_LOG_I(

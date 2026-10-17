@@ -1,4 +1,5 @@
 #include "radiogeddon_receiver_view.h"
+#include "../radiogeddon_edition.h" /* RG_UI_TEXT */
 #include "../helpers/rg_freq.h"
 #include <gui/elements.h>
 #include <furi.h>
@@ -39,7 +40,7 @@ typedef struct {
 } RadioGeddonReceiverModel;
 
 /* "12345", or "123k" from 100000 up, so the REC line stays short. */
-static void radiogeddon_receiver_view_compact(char* out, size_t size, uint32_t v) {
+static RG_UI_TEXT void radiogeddon_receiver_view_compact(char* out, size_t size, uint32_t v) {
     if(v < 100000u) {
         snprintf(out, size, "%lu", (unsigned long)v);
     } else {
@@ -47,7 +48,7 @@ static void radiogeddon_receiver_view_compact(char* out, size_t size, uint32_t v
     }
 }
 
-static void radiogeddon_receiver_view_draw(Canvas* canvas, void* model) {
+static RG_UI_TEXT void radiogeddon_receiver_view_draw(Canvas* canvas, void* model) {
     RadioGeddonReceiverModel* m = model;
     canvas_clear(canvas);
 
@@ -148,7 +149,7 @@ static void radiogeddon_receiver_view_draw(Canvas* canvas, void* model) {
     }
 }
 
-static bool radiogeddon_receiver_view_input(InputEvent* event, void* context) {
+static RG_UI_TEXT bool radiogeddon_receiver_view_input(InputEvent* event, void* context) {
     RadioGeddonReceiverView* instance = context;
     bool consumed = false;
 
@@ -199,7 +200,7 @@ static bool radiogeddon_receiver_view_input(InputEvent* event, void* context) {
     return consumed;
 }
 
-RadioGeddonReceiverView* radiogeddon_receiver_view_alloc(void) {
+RG_UI_TEXT RadioGeddonReceiverView* radiogeddon_receiver_view_alloc(void) {
     RadioGeddonReceiverView* instance = malloc(sizeof(RadioGeddonReceiverView));
     instance->view = view_alloc();
     instance->callback = NULL;
@@ -233,17 +234,17 @@ RadioGeddonReceiverView* radiogeddon_receiver_view_alloc(void) {
     return instance;
 }
 
-void radiogeddon_receiver_view_free(RadioGeddonReceiverView* instance) {
+RG_UI_TEXT void radiogeddon_receiver_view_free(RadioGeddonReceiverView* instance) {
     furi_assert(instance);
     view_free(instance->view);
     free(instance);
 }
 
-View* radiogeddon_receiver_view_get_view(RadioGeddonReceiverView* instance) {
+RG_UI_TEXT View* radiogeddon_receiver_view_get_view(RadioGeddonReceiverView* instance) {
     return instance->view;
 }
 
-void radiogeddon_receiver_view_set_callback(
+RG_UI_TEXT void radiogeddon_receiver_view_set_callback(
     RadioGeddonReceiverView* instance,
     RadioGeddonReceiverCallback callback,
     void* context) {
@@ -251,7 +252,7 @@ void radiogeddon_receiver_view_set_callback(
     instance->context = context;
 }
 
-void radiogeddon_receiver_view_set_config(
+RG_UI_TEXT void radiogeddon_receiver_view_set_config(
     RadioGeddonReceiverView* instance,
     uint32_t frequency,
     const char* preset_label) {
@@ -266,20 +267,22 @@ void radiogeddon_receiver_view_set_config(
         true);
 }
 
-void radiogeddon_receiver_view_set_rssi(RadioGeddonReceiverView* instance, float rssi) {
+RG_UI_TEXT void radiogeddon_receiver_view_set_rssi(RadioGeddonReceiverView* instance, float rssi) {
     with_view_model(instance->view, RadioGeddonReceiverModel * m, { m->rssi = rssi; }, true);
 }
 
-void radiogeddon_receiver_view_set_hopping(RadioGeddonReceiverView* instance, bool hopping) {
+RG_UI_TEXT void
+    radiogeddon_receiver_view_set_hopping(RadioGeddonReceiverView* instance, bool hopping) {
     with_view_model(instance->view, RadioGeddonReceiverModel * m, { m->hopping = hopping; }, true);
 }
 
-void radiogeddon_receiver_view_set_external(RadioGeddonReceiverView* instance, bool external) {
+RG_UI_TEXT void
+    radiogeddon_receiver_view_set_external(RadioGeddonReceiverView* instance, bool external) {
     with_view_model(
         instance->view, RadioGeddonReceiverModel * m, { m->external = external; }, true);
 }
 
-void radiogeddon_receiver_view_set_recording(
+RG_UI_TEXT void radiogeddon_receiver_view_set_recording(
     RadioGeddonReceiverView* instance,
     bool recording,
     const RadioGeddonRecordStats* stats) {
@@ -296,7 +299,7 @@ void radiogeddon_receiver_view_set_recording(
         true);
 }
 
-void radiogeddon_receiver_view_set_history(
+RG_UI_TEXT void radiogeddon_receiver_view_set_history(
     RadioGeddonReceiverView* instance,
     size_t count,
     const char* latest_label) {
@@ -317,17 +320,19 @@ void radiogeddon_receiver_view_set_history(
         true);
 }
 
-size_t radiogeddon_receiver_view_get_selected(RadioGeddonReceiverView* instance) {
+RG_UI_TEXT size_t radiogeddon_receiver_view_get_selected(RadioGeddonReceiverView* instance) {
     size_t sel = 0;
     with_view_model(instance->view, RadioGeddonReceiverModel * m, { sel = m->selected; }, false);
     return sel;
 }
 
-void radiogeddon_receiver_view_set_threshold(RadioGeddonReceiverView* instance, float dbm) {
+RG_UI_TEXT void
+    radiogeddon_receiver_view_set_threshold(RadioGeddonReceiverView* instance, float dbm) {
     with_view_model(instance->view, RadioGeddonReceiverModel * m, { m->threshold = dbm; }, true);
 }
 
-void radiogeddon_receiver_view_set_status(RadioGeddonReceiverView* instance, const char* text) {
+RG_UI_TEXT void
+    radiogeddon_receiver_view_set_status(RadioGeddonReceiverView* instance, const char* text) {
     with_view_model(
         instance->view,
         RadioGeddonReceiverModel * m,
@@ -339,7 +344,7 @@ void radiogeddon_receiver_view_set_status(RadioGeddonReceiverView* instance, con
 }
 
 #if RG_FEATURE_DOLPHIN_LAB
-void radiogeddon_receiver_view_set_badge(
+RG_UI_TEXT void radiogeddon_receiver_view_set_badge(
     RadioGeddonReceiverView* instance,
     const RgMascotFrame* frame,
     bool cyber) {
