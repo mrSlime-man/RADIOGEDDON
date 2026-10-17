@@ -1,4 +1,5 @@
 #include "rg_analyzer.h"
+#include "rg_div.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -13,7 +14,10 @@ static uint32_t rg_abs32(int32_t v) {
 static bool rg_near(uint32_t value, uint32_t center, uint32_t pct) {
     if(center == 0) return false;
     uint32_t diff = value > center ? value - center : center - value;
-    return diff <= (uint32_t)(((uint64_t)center * pct) / 100u) + 10u;
+    // floor(center * pct / 100) in 32 bits, exactly: with pct <= 100 (the
+    // callers use 25 and 30), center / 100 * pct stays below 2^32.
+    uint32_t tol = center / 100u * pct + center % 100u * pct / 100u;
+    return diff <= tol + 10u;
 }
 
 static void rg_pack_bits(const char* bits, size_t n, uint8_t* out) {
@@ -141,13 +145,13 @@ static size_t rg_find_peaks(const RgHistogram* h, RgPeakWork* out, size_t max) {
             continue;
 
         RgPeakWork* w = &out[n++];
-        w->peak.center_us = (uint32_t)(sum / count);
+        w->peak.center_us = rg_div_u64_u32(sum, count);
         w->peak.count = count;
         w->peak.width_bins = (uint8_t)width;
         w->deviation = 0;
         for(size_t i = lo; i <= hi; i++) {
             if(h->count[i] == 0) continue;
-            uint32_t mean = (uint32_t)(h->sum[i] / h->count[i]);
+            uint32_t mean = rg_div_u64_u32(h->sum[i], h->count[i]);
             uint32_t d = mean > w->peak.center_us ? mean - w->peak.center_us :
                                                     w->peak.center_us - mean;
             w->deviation += (uint64_t)d * h->count[i];
@@ -593,7 +597,7 @@ static void rg_frame_reset(RgAnalyzer* a) {
 }
 
 static void rg_frame_end(RgAnalyzer* a) {
-    RgAnalysis* r = &a->result;
+    RgAnalysis* r = a->out;
     if(a->frame_samples == 0) return;
     if(a->frame_samples < RG_ANALYZER_MIN_FRAME_SAMPLES) {
         if(a->pass == 2) r->burst_count++;
@@ -681,7 +685,7 @@ static void rg_frame_end(RgAnalyzer* a) {
 }
 
 static void rg_process(RgAnalyzer* a, int32_t v) {
-    RgAnalysis* r = &a->result;
+    RgAnalysis* r = a->out;
     uint32_t d = rg_abs32(v);
     if(a->pass == 1) {
         r->sample_count++;
@@ -708,9 +712,11 @@ static void rg_process(RgAnalyzer* a, int32_t v) {
     a->index++;
 }
 
-void rg_analyzer_begin(RgAnalyzer* a) {
+void rg_analyzer_begin(RgAnalyzer* a, RgAnalysis* out) {
     rg_bins_init();
     memset(a, 0, sizeof(*a));
+    memset(out, 0, sizeof(*out));
+    a->out = out;
     a->pass = 1;
 }
 
@@ -736,7 +742,7 @@ void rg_analyzer_feed(RgAnalyzer* a, const int32_t* samples, size_t count) {
 
 /* Pass 1 done: derive the timing model. */
 static void rg_finish_timing(RgAnalyzer* a) {
-    RgAnalysis* r = &a->result;
+    RgAnalysis* r = a->out;
     RgPeakWork work[RG_ANALYZER_MAX_PEAKS];
     uint64_t dev = 0, weight = 0;
     uint32_t in_peaks = 0;
@@ -759,8 +765,8 @@ static void rg_finish_timing(RgAnalyzer* a) {
     r->low_peak_count = nl;
 
     uint32_t total = a->hist_high.total + a->hist_low.total;
-    r->noise_pct = total ? (uint8_t)(((uint64_t)(total - in_peaks) * 100u) / total) : 0;
-    r->jitter_pct = weight ? (uint8_t)((dev * 100u) / weight) : 0;
+    r->noise_pct = total ? (uint8_t)rg_muldiv_u32(total - in_peaks, 100u, total) : 0;
+    r->jitter_pct = weight ? (uint8_t)rg_div_u64(dev * 100u, weight) : 0;
 
     /* Te: the shortest well-populated high and low peaks. Receivers widen
      * highs and shorten lows by about the same amount, so averaging the two
@@ -866,7 +872,7 @@ static void rg_finish_timing(RgAnalyzer* a) {
 
 /* Pass 2 done: pick the encoding whose grammar fits the signal frames best. */
 static void rg_finish_encoding(RgAnalyzer* a) {
-    RgAnalysis* r = &a->result;
+    RgAnalysis* r = a->out;
     r->encoding = RgEncodingUnknown;
     r->alternative = RgEncodingUnknown;
     if(a->candidates == 0) return;
@@ -874,7 +880,7 @@ static void rg_finish_encoding(RgAnalyzer* a) {
     int score[RgEncodingCount] = {0};
     int best = RgEncodingUnknown, second = RgEncodingUnknown;
     for(int e = RgEncodingPWM; e < RgEncodingCount; e++) {
-        score[e] = (int)(a->enc_fit_sum[e] / a->candidates);
+        score[e] = (int)rg_div_u64(a->enc_fit_sum[e], a->candidates);
         r->encoding_fit[e] = (uint8_t)(score[e] > 100 ? 100 : score[e]);
         if(best == RgEncodingUnknown || score[e] > score[best]) {
             second = best;
@@ -942,7 +948,7 @@ static bool rg_no_rival(const RgAnalysis* r) {
 
 /* The evidence for and against reading the signal as @p e. */
 static void rg_hyp_evidence(const RgAnalyzer* a, int e, RgHypothesis* h) {
-    const RgAnalysis* r = &a->result;
+    const RgAnalysis* r = a->out;
     if(h->fit >= 80) h->support |= RgHypFitHigh;
     if(h->fit < RG_ANALYZER_GOOD_FIT) h->against |= RgHypFitLow;
     if(h->frames < 2) h->against |= RgHypFewFrames;
@@ -979,7 +985,7 @@ static void rg_hyp_evidence(const RgAnalyzer* a, int e, RgHypothesis* h) {
 }
 
 void rg_analyzer_hypotheses(RgAnalyzer* a) {
-    RgAnalysis* r = &a->result;
+    RgAnalysis* r = a->out;
     RgHypothesis* out = r->hypotheses;
     size_t n = 0;
     int chosen_score = r->encoding != RgEncodingUnknown ? r->encoding_confidence : 95;
@@ -1061,7 +1067,7 @@ const char* rg_hyp_evidence_name(RgHypEvidence ev) {
 
 /* Pass 3 done: group, align and compare the kept frames. */
 static void rg_finish_frames(RgAnalyzer* a) {
-    RgAnalysis* r = &a->result;
+    RgAnalysis* r = a->out;
     char cur[RG_ANALYZER_MAX_BITS + 1];
     char pat[RG_ANALYZER_MAX_BITS + 1];
 
@@ -1241,14 +1247,14 @@ bool rg_analyzer_next_pass(RgAnalyzer* a) {
 
     bool again = false;
     if(a->pass == 1) {
-        if(a->result.sample_count > 0) {
+        if(a->out->sample_count > 0) {
             rg_finish_timing(a);
             a->pass = 2;
             again = true;
         }
     } else if(a->pass == 2) {
         rg_finish_encoding(a);
-        if(a->result.encoding != RgEncodingUnknown) {
+        if(a->out->encoding != RgEncodingUnknown) {
             a->pass = 3;
             again = true;
         }
@@ -1263,17 +1269,17 @@ bool rg_analyzer_next_pass(RgAnalyzer* a) {
 }
 
 void rg_analyzer_run(const int32_t* samples, size_t count, RgAnalysis* out) {
+    // Only the working state is allocated: the result is written in place.
     RgAnalyzer* a = malloc(sizeof(RgAnalyzer));
     if(!a) {
         memset(out, 0, sizeof(*out));
         return;
     }
-    rg_analyzer_begin(a);
+    rg_analyzer_begin(a, out);
     do {
         rg_analyzer_feed(a, samples, count);
     } while(rg_analyzer_next_pass(a));
     rg_analyzer_hypotheses(a);
-    memcpy(out, &a->result, sizeof(*out));
     free(a);
 }
 

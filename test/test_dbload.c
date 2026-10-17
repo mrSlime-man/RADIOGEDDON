@@ -170,7 +170,9 @@ static void test_index(void) {
 
     const RgDbEntry* gate = entry(db, "gate.sub");
     CHECK(gate && gate->kind == RgDbKindProtocol, "decoded file");
-    CHECK(gate && strcmp(gate->protocol, "Princeton") == 0 && gate->bits == 24, "protocol, bits");
+    CHECK(
+        gate && strcmp(rg_db_protocol(&db->db, gate), "Princeton") == 0 && gate->bits == 24,
+        "protocol, bits");
     CHECK(gate && gate->frequency == 433920000, "frequency");
     CHECK(gate && gate->size == strlen(k_princeton), "size from the listing");
     CHECK(gate && gate->mtime != 0, "time from the card");
@@ -283,8 +285,45 @@ static void test_repeated(void) {
     CHECK(first_peak > 0 && first_peak < 4096, "eight files index in a few KB");
 }
 
+/* More distinct protocol names than the first table holds (8 bytes an
+ * entry): the folder is read again with one that fits a name per entry, and
+ * every file keeps its own protocol; nothing is left allocated. */
+static void test_many_protocols(void) {
+    printf("test_many_protocols\n");
+    if(system("rm -rf build/ext && mkdir -p " RADIOGEDDON_SIGNALS_FOLDER) != 0) exit(2);
+    char name[32], text[256];
+    for(int i = 0; i < 24; i++) {
+        snprintf(name, sizeof(name), "p_%02d.sub", i);
+        snprintf(
+            text,
+            sizeof(text),
+            "Filetype: Flipper SubGhz Key File\nVersion: 1\nFrequency: 433920000\n"
+            "Protocol: LongProtocol%03d\nBit: 24\nKey: 00 00 00 00 00 00 00 %02X\n",
+            i,
+            i);
+        write_text(name, text);
+    }
+    stub_heap_free = 128 * 1024;
+    RadioGeddonDbStatus status;
+    RadioGeddonDb* db = radiogeddon_db_load(NULL, &status, NULL, NULL);
+    CHECK(db && db->db.count == 24 && !db->truncated, "all 24 indexed");
+    bool own = db != NULL;
+    for(int i = 0; db && i < 24; i++) {
+        snprintf(name, sizeof(name), "p_%02d.sub", i);
+        snprintf(text, sizeof(text), "LongProtocol%03d", i);
+        const RgDbEntry* e = entry(db, name);
+        if(!e || strcmp(rg_db_protocol(&db->db, e), text) != 0) own = false;
+    }
+    CHECK(own, "each its own protocol name");
+    const char* list[32];
+    CHECK(db && rg_db_protocols(&db->db, list, 32) == 24, "24 distinct protocols listed");
+    radiogeddon_db_free(db);
+    CHECK(stub_live_bytes == 0 && stub_live_blocks == 0 && stub_files_open == 0, "released");
+}
+
 int main(void) {
     test_missing_folder();
+    test_many_protocols();
     test_index();
     test_low_memory();
     test_repeated();

@@ -1,4 +1,5 @@
 #include "radiogeddon_recorder.h"
+#include "rg_div.h"
 #include "rg_ring.h"
 #include "rg_rawfmt.h"
 
@@ -45,7 +46,7 @@ struct RadioGeddonRecorder {
 };
 
 static uint32_t radiogeddon_recorder_ms(uint32_t ticks) {
-    return (uint32_t)((uint64_t)ticks * 1000u / furi_kernel_get_tick_frequency());
+    return rg_muldiv_u32(ticks, 1000u, furi_kernel_get_tick_frequency());
 }
 
 RadioGeddonRecorder* radiogeddon_recorder_alloc(void) {
@@ -167,8 +168,8 @@ void radiogeddon_recorder_stats(RadioGeddonRecorder* rec, RadioGeddonRecordStats
     out->elapsed_ms = radiogeddon_recorder_ms(end - rec->start_tick);
     out->bytes = __atomic_load_n(&rec->written, __ATOMIC_RELAXED);
     out->buffer = cap;
-    out->fill_pct = (uint8_t)((uint64_t)rs.used * 100u / cap);
-    out->peak_pct = (uint8_t)((uint64_t)rs.peak * 100u / cap);
+    out->fill_pct = (uint8_t)rg_muldiv_u32(rs.used, 100u, cap);
+    out->peak_pct = (uint8_t)rg_muldiv_u32(rs.peak, 100u, cap);
     out->error = radiogeddon_recorder_failed(rec) ? RadioGeddonRecordWriteFailed :
                                                     RadioGeddonRecordOk;
 }

@@ -11,6 +11,9 @@
 #include "storage/storage.h"
 #include "datetime/datetime.h"
 #include "furi_hal_rtc.h"
+#ifdef STUB_HEAP4
+#include "heap4.h"
+#endif
 #include <unistd.h>
 
 size_t stub_heap_free = 64 * 1024;
@@ -35,6 +38,22 @@ typedef union {
 } StubBlock;
 
 void* stub_malloc(size_t size) {
+#ifdef STUB_HEAP4
+    /* The device's allocator (stubs/heap4.h) once a test sets it up. */
+    if(heap4_active()) {
+        void* p = heap4_malloc(size);
+        if(!p) {
+            fprintf(stderr, "out of memory: %zu bytes (the firmware would stop here)\n", size);
+            abort();
+        }
+        pthread_mutex_lock(&stub_alloc_lock);
+        stub_live_bytes += size;
+        stub_live_blocks++;
+        if(stub_live_bytes > stub_peak_bytes) stub_peak_bytes = stub_live_bytes;
+        pthread_mutex_unlock(&stub_alloc_lock);
+        return p;
+    }
+#endif
     StubBlock* b = (malloc)(sizeof(StubBlock) + size);
     if(!b) abort(); /* the firmware stops on a failed allocation too */
     b->size = size;
@@ -54,6 +73,16 @@ void* stub_calloc(size_t count, size_t size) {
 
 void stub_free(void* p) {
     if(!p) return;
+#ifdef STUB_HEAP4
+    if(heap4_owns(p)) {
+        pthread_mutex_lock(&stub_alloc_lock);
+        stub_live_bytes -= heap4_requested(p);
+        stub_live_blocks--;
+        pthread_mutex_unlock(&stub_alloc_lock);
+        heap4_free(p);
+        return;
+    }
+#endif
     StubBlock* b = (StubBlock*)p - 1;
     pthread_mutex_lock(&stub_alloc_lock);
     stub_live_bytes -= b->size;
@@ -500,6 +529,9 @@ uint32_t furi_kernel_get_tick_frequency(void) {
 }
 
 size_t memmgr_heap_get_max_free_block(void) {
+#ifdef STUB_HEAP4
+    if(heap4_active()) return heap4_max_free_block();
+#endif
     return stub_heap_free;
 }
 
@@ -648,6 +680,7 @@ size_t storage_file_read(File* file, void* buf, size_t size) {
     if(!file->fp) return 0;
     size_t n = fread(buf, 1, size, file->fp);
     if(ferror(file->fp)) file->error = true;
+    stub_io.read_bytes += n;
     return n;
 }
 

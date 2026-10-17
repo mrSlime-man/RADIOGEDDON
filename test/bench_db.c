@@ -34,7 +34,7 @@ static uint32_t rnd(void) {
     return rng >> 8;
 }
 
-static const char* protos[] = {
+static const char* protos_list[] = {
     "Princeton",
     "CAME",
     "Nice FLO",
@@ -79,7 +79,12 @@ int main(int argc, char** argv) {
         uint16_t* scratch = malloc(sizeof(uint16_t) * n);
         (void)scratch;
         RgDb db;
+#ifdef RG_DB_PROTOS_MAX
+        static char proto_table[RG_DB_PROTOS_MAX];
+        rg_db_init(&db, entries, n, names, n * 24, proto_table, sizeof(proto_table));
+#else
         rg_db_init(&db, entries, n, names, n * 24);
+#endif
         rng = 12345;
         for(size_t i = 0; i < n; i++) {
             char name[24];
@@ -92,12 +97,20 @@ int main(int argc, char** argv) {
             if(r % 3 == 0) {
                 e->kind = RgDbKindRaw;
                 e->size = 2000 + rnd() % (n * 4); // some sizes collide
+#ifdef RG_DB_PROTOS_MAX
+                rg_db_set_protocol(&db, e, "RAW");
+#else
                 strcpy(e->protocol, "RAW");
+#endif
             } else if(r % 17 == 1) {
                 e->kind = RgDbKindCorrupt;
             } else {
                 e->kind = RgDbKindProtocol;
-                snprintf(e->protocol, sizeof(e->protocol), "%s", protos[rnd() % 12]);
+#ifdef RG_DB_PROTOS_MAX
+                rg_db_set_protocol(&db, e, protos_list[rnd() % 12]);
+#else
+                snprintf(e->protocol, sizeof(e->protocol), "%s", protos_list[rnd() % 12]);
+#endif
                 e->bits = 24;
                 e->flags |= RG_DB_FLAG_HAS_KEY;
                 e->hash = rnd() % (n / 2 + 1); // some keys repeat

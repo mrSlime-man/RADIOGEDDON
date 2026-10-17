@@ -1,4 +1,5 @@
 #include "rg_heatmap.h"
+#include "rg_div.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -288,7 +289,7 @@ RgHeatLevel rg_heatmap_level(const RgHeatmap* h, const RgHeatCell* c, RgHeatMetr
 
 uint8_t rg_heatmap_coverage(const RgHeatmap* h, const RgHeatCell* c) {
     if(!c || h->span_s == 0) return 0;
-    uint64_t pct = (uint64_t)c->observed_ds * 10u / h->span_s;
+    uint32_t pct = rg_muldiv_u32(c->observed_ds, 10u, h->span_s);
     return pct > 100u ? 100u : (uint8_t)pct;
 }
 

@@ -1,4 +1,5 @@
 #include "rg_waterfall.h"
+#include "rg_div.h"
 #include "../radiogeddon_edition.h"
 
 #if RG_FEATURE_WATERFALL
@@ -46,7 +47,7 @@ void rg_waterfall_clear(RgWaterfall* wf) {
 uint16_t rg_waterfall_column_of(const RgWaterfall* wf, uint32_t index) {
     if(wf->points == 0) return 0;
     if(index >= wf->points) index = wf->points - 1;
-    return (uint16_t)((uint64_t)index * wf->columns / wf->points);
+    return (uint16_t)rg_muldiv_u32(index, wf->columns, wf->points);
 }
 
 void rg_waterfall_points_of(
@@ -59,9 +60,10 @@ void rg_waterfall_points_of(
     if(wf->columns == 0) return;
     if(column >= wf->columns) column = wf->columns - 1;
     // Inverse of rg_waterfall_column_of: the points i with i * C / P == column.
-    uint32_t lo = (uint32_t)(((uint64_t)column * wf->points + wf->columns - 1) / wf->columns);
+    uint32_t lo =
+        (uint32_t)rg_div_u64((uint64_t)column * wf->points + wf->columns - 1, wf->columns);
     uint32_t hi =
-        (uint32_t)(((uint64_t)(column + 1) * wf->points + wf->columns - 1) / wf->columns);
+        (uint32_t)rg_div_u64((uint64_t)(column + 1) * wf->points + wf->columns - 1, wf->columns);
     *first = lo;
     *last = hi > lo ? hi - 1 : lo;
 }

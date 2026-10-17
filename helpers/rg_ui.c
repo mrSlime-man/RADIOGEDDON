@@ -1,4 +1,5 @@
 #include "rg_ui.h"
+#include "rg_div.h"
 #include "../radiogeddon_edition.h"
 
 #if RG_FEATURE_DOLPHIN_LAB
@@ -206,7 +207,7 @@ uint64_t rg_ui_trace(const int32_t* samples, size_t n, uint32_t cols, uint8_t* b
     size_t i = 0;
     uint64_t t_end = rg_ui_abs(samples[0]);
     for(uint32_t c = 0; c < cols; c++) {
-        uint64_t t = span * (2u * (uint64_t)c + 1u) / (2u * (uint64_t)cols);
+        uint64_t t = rg_div_u64(span * (2u * (uint64_t)c + 1u), 2u * (uint64_t)cols);
         while(t >= t_end && i + 1 < n) {
             i++;
             t_end += rg_ui_abs(samples[i]);

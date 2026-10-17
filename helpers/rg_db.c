@@ -14,13 +14,50 @@ static int rg_db_casecmp(const char* a, const char* b) {
     return (int)(unsigned char)rg_db_lower(*a) - (int)(unsigned char)rg_db_lower(*b);
 }
 
-void rg_db_init(RgDb* db, RgDbEntry* entries, size_t cap, char* names, size_t names_cap) {
+void rg_db_init(
+    RgDb* db,
+    RgDbEntry* entries,
+    size_t cap,
+    char* names,
+    size_t names_cap,
+    char* protos,
+    size_t protos_cap) {
     db->entries = entries;
     db->count = 0;
     db->cap = cap;
     db->names = names;
     db->names_len = 0;
     db->names_cap = names_cap;
+    db->protos = protos;
+    db->protos_len = 0;
+    db->protos_cap = protos_cap > RG_DB_NO_PROTO ? RG_DB_NO_PROTO : protos_cap;
+}
+
+size_t rg_db_protos_bytes(size_t cap, size_t per_entry) {
+    return cap < RG_DB_PROTOS_MAX / per_entry ? cap * per_entry : RG_DB_PROTOS_MAX;
+}
+
+bool rg_db_set_protocol(RgDb* db, RgDbEntry* e, const char* protocol) {
+    e->proto_off = RG_DB_NO_PROTO;
+    if(!protocol[0]) return true;
+    // Distinct names are few (one per protocol): a linear search is enough.
+    size_t off = 0;
+    while(off < db->protos_len && strcmp(db->protos + off, protocol) != 0)
+        off += strlen(db->protos + off) + 1;
+    if(off >= db->protos_len) {
+        size_t len = strlen(protocol);
+        if(len > RG_DB_PROTO_MAX - 1) len = RG_DB_PROTO_MAX - 1;
+        if(off + len + 1 > db->protos_cap) return false;
+        memcpy(db->protos + off, protocol, len);
+        db->protos[off + len] = '\0';
+        db->protos_len = off + len + 1;
+    }
+    e->proto_off = (uint16_t)off;
+    return true;
+}
+
+const char* rg_db_protocol(const RgDb* db, const RgDbEntry* e) {
+    return e->proto_off == RG_DB_NO_PROTO ? "" : db->protos + e->proto_off;
 }
 
 /* ---- In-place heap sort of entry indices ---------------------------------
@@ -65,6 +102,7 @@ RgDbEntry* rg_db_add(RgDb* db, const char* name) {
     if(db->names_len > UINT16_MAX) return NULL;
     RgDbEntry* e = &db->entries[db->count++];
     memset(e, 0, sizeof(*e));
+    e->proto_off = RG_DB_NO_PROTO;
     e->name_off = (uint16_t)db->names_len;
     memcpy(db->names + db->names_len, name, len);
     db->names_len += len;
@@ -105,8 +143,13 @@ static uint32_t rg_db_parse_u32(const char* v, size_t len, bool* ok) {
 }
 
 /* One "Key: value" line; returns false when the header ends (RAW data). */
-static bool
-    rg_db_parse_line(RgDbEntry* e, const char* line, size_t len, bool* typed, bool* first) {
+static bool rg_db_parse_line(
+    RgDbEntry* e,
+    char* protocol,
+    const char* line,
+    size_t len,
+    bool* typed,
+    bool* first) {
     while(len && (line[len - 1] == '\r' || line[len - 1] == ' '))
         len--;
     if(len == 0 || line[0] == '#') return true;
@@ -138,8 +181,8 @@ static bool
         e->frequency = ok ? f : 0;
     } else if(rg_db_key_is(line, key_len, "Protocol")) {
         size_t n = vlen < RG_DB_PROTO_MAX - 1 ? vlen : RG_DB_PROTO_MAX - 1;
-        memcpy(e->protocol, v, n);
-        e->protocol[n] = '\0';
+        memcpy(protocol, v, n);
+        protocol[n] = '\0';
     } else if(rg_db_key_is(line, key_len, "Bit")) {
         bool ok;
         uint32_t b = rg_db_parse_u32(v, vlen, &ok);
@@ -159,9 +202,14 @@ static bool
     return true;
 }
 
-void rg_db_parse_header(RgDbEntry* e, const char* text, size_t len, bool whole_file) {
+void rg_db_parse_header(
+    RgDbEntry* e,
+    const char* text,
+    size_t len,
+    bool whole_file,
+    char protocol[RG_DB_PROTO_MAX]) {
     e->kind = RgDbKindCorrupt;
-    e->protocol[0] = '\0';
+    protocol[0] = '\0';
     e->frequency = 0;
     e->bits = 0;
     e->hash = 0;
@@ -173,18 +221,18 @@ void rg_db_parse_header(RgDbEntry* e, const char* text, size_t len, bool whole_f
         const char* nl = memchr(text + start, '\n', len - start);
         size_t end = nl ? (size_t)(nl - text) : len;
         if(!nl && !whole_file) break; // possibly cut off
-        if(!rg_db_parse_line(e, text + start, end - start, &typed, &first)) break;
+        if(!rg_db_parse_line(e, protocol, text + start, end - start, &typed, &first)) break;
         start = end + 1;
     }
     if(!typed) {
         e->kind = RgDbKindCorrupt;
-        e->protocol[0] = '\0';
+        protocol[0] = '\0';
         e->flags &= (uint8_t)~RG_DB_FLAG_HAS_KEY;
         return;
     }
-    if(e->protocol[0] == '\0') {
+    if(protocol[0] == '\0') {
         e->kind = RgDbKindUnknown;
-    } else if(strcmp(e->protocol, "RAW") == 0) {
+    } else if(strcmp(protocol, "RAW") == 0) {
         e->kind = RgDbKindRaw;
         e->flags &= (uint8_t)~RG_DB_FLAG_HAS_KEY;
         e->hash = 0;
@@ -249,7 +297,7 @@ bool rg_db_same_signal(const RgDbEntry* a, const RgDbEntry* b) {
     if(a->kind == RgDbKindProtocol) {
         return (a->flags & b->flags & RG_DB_FLAG_HAS_KEY) && a->hash == b->hash &&
                a->frequency == b->frequency && a->bits == b->bits &&
-               strcmp(a->protocol, b->protocol) == 0;
+               a->proto_off == b->proto_off; // one table entry per distinct name
     }
     if(a->kind == RgDbKindRaw) {
         return (a->flags & b->flags & RG_DB_FLAG_HASHED) && a->size == b->size &&
@@ -275,7 +323,7 @@ static int rg_db_cmp_signal_key(const RgDb* db, uint16_t ia, uint16_t ib) {
     if(a->kind == RgDbKindRaw) return rg_db_cmp_u32(a->size, b->size);
     c = rg_db_cmp_u32(a->frequency, b->frequency);
     if(!c) c = rg_db_cmp_u32(a->bits, b->bits);
-    if(!c) c = strcmp(a->protocol, b->protocol);
+    if(!c) c = rg_db_cmp_u32(a->proto_off, b->proto_off); // equal names, equal offsets
     return c;
 }
 
@@ -335,7 +383,7 @@ static bool rg_db_shown(const RgDb* db, const RgDbEntry* e, const RgDbQuery* q) 
         if(e->kind != RgDbKindProtocol) return false;
         break;
     case RgDbShowProtocol:
-        if(e->kind != RgDbKindProtocol || rg_db_casecmp(e->protocol, q->protocol) != 0)
+        if(e->kind != RgDbKindProtocol || rg_db_casecmp(rg_db_protocol(db, e), q->protocol) != 0)
             return false;
         break;
     case RgDbShowDuplicates:
@@ -367,7 +415,7 @@ static int rg_db_compare(const RgDb* db, const RgDbEntry* a, const RgDbEntry* b,
     case RgDbSortProtocol: {
         bool da = a->kind < RgDbKindRaw, dbk = b->kind < RgDbKindRaw;
         if(da != dbk) return da ? 1 : -1;
-        c = rg_db_casecmp(a->protocol, b->protocol);
+        c = rg_db_casecmp(rg_db_protocol(db, a), rg_db_protocol(db, b));
         break;
     }
     default:
@@ -399,17 +447,18 @@ size_t rg_db_protocols(const RgDb* db, const char** out, size_t max) {
     for(size_t i = 0; i < db->count; i++) {
         const RgDbEntry* e = &db->entries[i];
         if(e->kind != RgDbKindProtocol) continue;
+        const char* p = rg_db_protocol(db, e);
         bool seen = false;
         for(size_t k = 0; k < n && !seen; k++)
-            seen = rg_db_casecmp(out[k], e->protocol) == 0;
+            seen = rg_db_casecmp(out[k], p) == 0;
         if(seen || n >= max) continue;
         // Insert in order.
         size_t j = n++;
-        while(j > 0 && rg_db_casecmp(out[j - 1], e->protocol) > 0) {
+        while(j > 0 && rg_db_casecmp(out[j - 1], p) > 0) {
             out[j] = out[j - 1];
             j--;
         }
-        out[j] = e->protocol;
+        out[j] = p;
     }
     return n;
 }

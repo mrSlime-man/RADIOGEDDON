@@ -11,7 +11,7 @@
  */
 
 #define RG_ANALYSIS_CHUNK           64u
-/* Free heap kept back beyond the analyzer itself, for the GUI and storage. */
+/* Free heap kept back beyond the analysis itself, for the GUI and storage. */
 #define RG_ANALYSIS_HEAP_SPARE      (6u * 1024u)
 /* Report progress every this many chunks (about 1,000 samples). */
 #define RG_ANALYSIS_PROGRESS_CHUNKS 16u
@@ -28,47 +28,72 @@ static void radiogeddon_analysis_progress(RadioGeddonRawFile* file, int pass) {
     radiogeddon_analysis_report_progress(done, total);
 }
 
-RgAnalyzer*
-    radiogeddon_analysis_run_raw(RadioGeddonRawFile* file, RadioGeddonAnalysisStatus* status) {
-    *status = RadioGeddonAnalysisOk;
-    if(memmgr_heap_get_max_free_block() < sizeof(RgAnalyzer) + RG_ANALYSIS_HEAP_SPARE) {
+/* The analysis of @p file, or of the file at @p path when @p file is NULL.
+ * The result is allocated first, then the file (when opened here) and the
+ * working state above it: when those are freed their blocks join the free
+ * space after the result instead of leaving a hole under it. The working
+ * state lives only for the passes. */
+static RgAnalysis* radiogeddon_analysis_run(
+    RadioGeddonRawFile* file,
+    Storage* storage,
+    const char* path,
+    RadioGeddonAnalysisFinish finish,
+    const RadioGeddonAnalysisTap* tap,
+    RadioGeddonAnalysisStatus* status) {
+    if(memmgr_heap_get_max_free_block() < RADIOGEDDON_ANALYSIS_MEMORY + RG_ANALYSIS_HEAP_SPARE) {
         *status = RadioGeddonAnalysisNoMemory;
+        return NULL;
+    }
+    RgAnalysis* out = malloc(sizeof(RgAnalysis));
+    RadioGeddonRawFile* f = file ? file : radiogeddon_storage_raw_open(storage, path);
+    if(!f) {
+        *status = RadioGeddonAnalysisOpenFailed;
+        free(out);
         return NULL;
     }
     RgAnalyzer* a = malloc(sizeof(RgAnalyzer));
     int32_t chunk[RG_ANALYSIS_CHUNK];
-    rg_analyzer_begin(a);
+    rg_analyzer_begin(a, out);
     do {
-        rg_raw_reader_rewind(&file->reader);
+        rg_raw_reader_rewind(&f->reader);
+        // The tap reads along with the second pass: the timing is known.
+        bool tapped = tap && a->pass == 2;
+        if(tapped) tap->start(tap->context, out);
         size_t n;
         uint32_t chunks = 0;
-        while((n = rg_raw_reader_read(&file->reader, chunk, RG_ANALYSIS_CHUNK)) > 0) {
+        while((n = rg_raw_reader_read(&f->reader, chunk, RG_ANALYSIS_CHUNK)) > 0) {
             rg_analyzer_feed(a, chunk, n);
+            if(tapped) tap->feed(tap->context, chunk, n);
             if(++chunks % RG_ANALYSIS_PROGRESS_CHUNKS == 0)
-                radiogeddon_analysis_progress(file, a->pass);
+                radiogeddon_analysis_progress(f, a->pass);
         }
     } while(rg_analyzer_next_pass(a));
+    if(finish) finish(a);
+    free(a);
 
-    if(file->reader.corrupt) *status = RadioGeddonAnalysisCorrupt;
-    a->result.lost_samples = file->reader.lost;
-    if(a->result.sample_count == 0) {
-        *status = file->reader.corrupt ? RadioGeddonAnalysisCorrupt : RadioGeddonAnalysisNoRaw;
-        free(a);
-        a = NULL;
+    *status = f->reader.corrupt ? RadioGeddonAnalysisCorrupt : RadioGeddonAnalysisOk;
+    out->lost_samples = f->reader.lost;
+    if(out->sample_count == 0) {
+        *status = f->reader.corrupt ? RadioGeddonAnalysisCorrupt : RadioGeddonAnalysisNoRaw;
+        free(out);
+        out = NULL;
     }
-    return a;
+    if(!file) radiogeddon_storage_raw_close(f);
+    return out;
 }
 
-RgAnalyzer* radiogeddon_analysis_run_file(
+RgAnalysis* radiogeddon_analysis_run_raw(
+    RadioGeddonRawFile* file,
+    RadioGeddonAnalysisFinish finish,
+    const RadioGeddonAnalysisTap* tap,
+    RadioGeddonAnalysisStatus* status) {
+    return radiogeddon_analysis_run(file, NULL, NULL, finish, tap, status);
+}
+
+RgAnalysis* radiogeddon_analysis_run_file(
     Storage* storage,
     const char* path,
+    RadioGeddonAnalysisFinish finish,
     RadioGeddonAnalysisStatus* status) {
-    RadioGeddonRawFile* file = radiogeddon_storage_raw_open(storage, path);
-    if(!file) {
-        *status = RadioGeddonAnalysisOpenFailed;
-        return NULL;
-    }
-    RgAnalyzer* a = radiogeddon_analysis_run_raw(file, status);
-    radiogeddon_storage_raw_close(file);
-    return a;
+    return radiogeddon_analysis_run(NULL, storage, path, finish, NULL, status);
 }

@@ -1,5 +1,6 @@
 #include "radiogeddon_recovery.h"
 #include "radiogeddon_storage.h"
+#include "rg_div.h"
 
 #include <datetime/datetime.h>
 #include <dialogs/dialogs.h>
@@ -97,7 +98,7 @@ void radiogeddon_recovery_offer(Storage* storage, DialogsApp* dialogs) {
         return;
     }
     bool repaired = radiogeddon_recovery_repair(storage, rec);
-    uint32_t tenths = (uint32_t)(rec->scan.duration_us / 100000u);
+    uint32_t tenths = rg_div_u64_u32(rec->scan.duration_us, 100000u);
     char text[112];
     snprintf(
         text,

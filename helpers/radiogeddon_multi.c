@@ -6,7 +6,7 @@
 
 size_t radiogeddon_multi_memory(size_t count) {
     if(count > RG_MULTI_MAX_CAPTURES) count = RG_MULTI_MAX_CAPTURES;
-    return count * sizeof(RgMultiCapture) + sizeof(RgMultiResult) + sizeof(RgAnalyzer);
+    return count * sizeof(RgMultiCapture) + sizeof(RgMultiResult) + RADIOGEDDON_ANALYSIS_MEMORY;
 }
 
 bool radiogeddon_multi_capture(
@@ -24,7 +24,7 @@ bool radiogeddon_multi_capture(
 
     RadioGeddonLoadedSignal sig;
     radiogeddon_loaded_signal_init(&sig);
-    bool loaded = radiogeddon_storage_load(storage, path, &sig);
+    bool loaded = radiogeddon_storage_load_header(storage, path, &sig);
     if(loaded) {
         cap->frequency = sig.frequency;
         strlcpy(cap->preset, furi_string_get_cstr(sig.preset), sizeof(cap->preset));
@@ -53,10 +53,10 @@ bool radiogeddon_multi_capture(
         return true;
     }
 
-    RgAnalyzer* a = radiogeddon_analysis_run_file(storage, path, status);
-    if(!a) return false;
-    rg_multi_capture_from_analysis(cap, &a->result);
-    free(a);
+    RgAnalysis* r = radiogeddon_analysis_run_file(storage, path, NULL, status);
+    if(!r) return false;
+    rg_multi_capture_from_analysis(cap, r);
+    free(r);
     return true;
 }
 

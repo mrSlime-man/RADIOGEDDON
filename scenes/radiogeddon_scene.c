@@ -1,4 +1,5 @@
 #include "radiogeddon_scene.h"
+#include "../helpers/rg_div.h"
 #include "../helpers/rg_memstat.h"
 
 #define TAG "RadioGeddonScene"
@@ -103,7 +104,7 @@ void radiogeddon_scene_progress(void* context, uint32_t done, uint32_t total) {
     RadioGeddonApp* app = context;
     radiogeddon_memdiag_sample(NULL); // the work in progress is at its largest now
     if(total == 0) return;
-    uint32_t pct = (uint32_t)((uint64_t)done * 100u / total);
+    uint32_t pct = rg_muldiv_u32(done, 100u, total);
     if(pct > 100) pct = 100;
     uint32_t now = furi_get_tick();
     if(pct == app->progress_pct) return;
@@ -232,9 +233,9 @@ void radiogeddon_scene_show_message(RadioGeddonApp* app, const char* header, con
     scene_manager_next_scene(app->scene_manager, RadioGeddonSceneMessage);
 }
 
-/* The analysis streams the file through the analyzer (sizeof(RgAnalyzer)) and
- * grows a report text of a few kilobytes. */
-#define RADIOGEDDON_UNKNOWN_WORK (sizeof(RgAnalyzer) + 10u * 1024u)
+/* The analysis streams the file through the analyzer (its result and working
+ * state) and grows a report text of a few kilobytes. */
+#define RADIOGEDDON_UNKNOWN_WORK (RADIOGEDDON_ANALYSIS_MEMORY + 10u * 1024u)
 
 RadioGeddonUnknownFn radiogeddon_scene_unknown_begin(void* context) {
 #if RG_EDITION_FULL

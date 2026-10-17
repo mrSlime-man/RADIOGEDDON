@@ -63,9 +63,10 @@ typedef struct {
 } RadioGeddonUnknownModule;
 
 #if RG_FEATURE_BITSTREAM
-/* The Bitstream Explorer's work besides its module: the analyzer (kept for
- * its result while the explorer is open), with heap kept beyond it. */
-#define RADIOGEDDON_BITSTREAM_WORK (sizeof(RgAnalyzer) + 6u * 1024u)
+/* The Bitstream Explorer's work besides its module: the analysis at its peak
+ * (result and working state; only the result is kept while the explorer is
+ * open), with heap kept beyond it. */
+#define RADIOGEDDON_BITSTREAM_WORK (RADIOGEDDON_ANALYSIS_MEMORY + 6u * 1024u)
 #endif
 
 #if RG_FEATURE_MULTI_COMPARE

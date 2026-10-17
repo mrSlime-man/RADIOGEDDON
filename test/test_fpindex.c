@@ -310,7 +310,7 @@ static void test_beyond_500(void) {
     CHECK(stub_io.dir_opens == 2, "two listings for one new recording");
     // A short heap: the index is limited to what fits, never refused.
     size_t heap = stub_heap_free;
-    stub_heap_free = radiogeddon_fp_memory() + 2048 + 300 * 8;
+    stub_heap_free = radiogeddon_fp_memory() + 2048 + 300 * RG_FP_TRACK_BYTES;
     CHECK(search("k_0001.sub"), "search with a short heap");
 #ifdef RG_FP_HAS_LIMIT
     CHECK(g_res.truncated && g_res.limit < 701 && g_res.indexed == g_res.limit, "the first ones");
@@ -404,6 +404,83 @@ static void test_session_scope(void) {
     g_session = NULL;
 }
 
+/* The update's 16-bit name hash (radiogeddon_fp.c): FNV-1a 32, folded. */
+static uint16_t hash16(const char* name) {
+    uint32_t h = 2166136261u;
+    for(const char* p = name; *p; p++)
+        h = (h ^ (uint8_t)*p) * 16777619u;
+    return (uint16_t)(h ^ (h >> 16));
+}
+
+/* Many names sharing a 16-bit hash: the hash only finds candidates, the
+ * names are compared exactly, so every recording keeps its own record. */
+static void test_hash16_collisions(void) {
+    printf("test_hash16_collisions\n");
+    reset_card();
+    // Six names with one hash, and 60 others.
+    static char names[80][32];
+    size_t same = 0, other = 0;
+    uint16_t want = hash16("h_00000.sub");
+    for(unsigned i = 0; i < 2000000u && (same < 6 || other < 60); i++) {
+        char n[32];
+        snprintf(n, sizeof(n), "h_%05u.sub", i);
+        bool hit = hash16(n) == want;
+        if(hit && same < 6) {
+            strcpy(names[same++], n);
+        } else if(!hit && other < 60) {
+            strcpy(names[6 + other++], n);
+        }
+    }
+    CHECK(same == 6, "six names share a 16-bit hash");
+    for(size_t i = 0; i < 66; i++)
+        write_key(names[i], (unsigned)(i * 7919u) & 0xFFFFFF);
+    CHECK(search(names[0]), "search");
+    CHECK(g_res.indexed == 66 && g_res.computed == 66, "every recording indexed");
+    memset(&stub_io, 0, sizeof(stub_io));
+    CHECK(search(names[0]), "search again");
+    CHECK(g_res.indexed == 66 && g_res.computed == 0 && g_res.dropped == 0, "all kept");
+    CHECK(g_res.compared == 65, "every other recording ranked");
+    CHECK(stub_io.dir_opens == 1, "one listing");
+    // Change one of the colliding six: only it is fingerprinted again.
+    write_key(names[3], 0xABCDEF);
+    struct timeval tv[2] = {{1000000000, 0}, {1000000000, 0}};
+    char path[256];
+    path_of(names[3], path, sizeof(path));
+    utimes(path, tv);
+    CHECK(search(names[0]), "search after a change");
+    CHECK(g_res.computed == 1 && g_res.dropped == 1 && g_res.indexed == 66, "only it again");
+    // Remove another: its record goes, the other five stay.
+    unlink(path);
+    path_of(names[4], path, sizeof(path));
+    unlink(path);
+    CHECK(search(names[0]), "search after removals");
+    CHECK(g_res.computed == 0 && g_res.indexed == 64 && g_res.dropped == 2, "two gone");
+    CHECK(stub_files_open == 0, "files closed");
+}
+
+/* An index holding one recording's record twice keeps it once. */
+static void test_duplicate_records(void) {
+    printf("test_duplicate_records\n");
+    reset_card();
+    write_key("d_1.sub", 0x111111);
+    write_key("d_2.sub", 0x222222);
+    CHECK(search("d_1.sub") && g_res.indexed == 2, "indexed");
+    // Append a copy of the first record and fix the count.
+    FILE* f = fopen(RADIOGEDDON_FP_INDEX, "r+b");
+    uint8_t rec[RG_FP_RECORD_BYTES], header[RG_FP_HEADER_BYTES];
+    CHECK(f && fread(header, 1, sizeof(header), f) == sizeof(header), "header");
+    CHECK(fread(rec, 1, sizeof(rec), f) == sizeof(rec), "record");
+    fseek(f, 0, SEEK_END);
+    fwrite(rec, 1, sizeof(rec), f);
+    rg_fp_header_encode(3, header);
+    fseek(f, 0, SEEK_SET);
+    fwrite(header, 1, sizeof(header), f);
+    fclose(f);
+    CHECK(search("d_1.sub"), "search");
+    CHECK(g_res.indexed == 2 && g_res.dropped == 1 && g_res.computed == 0, "the copy dropped");
+    CHECK(g_res.compared == 1, "ranked once");
+}
+
 int main(void) {
     stub_write_fail_after = -1;
     test_ranking();
@@ -413,6 +490,8 @@ int main(void) {
     test_large_collection();
     test_beyond_500();
     test_hash_collision();
+    test_hash16_collisions();
+    test_duplicate_records();
     test_time_window();
     test_session_scope();
     printf("\n%d checks, %d failures\n", g_checks, g_failures);

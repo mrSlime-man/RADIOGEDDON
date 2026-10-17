@@ -77,6 +77,11 @@ jobs:
         run: make -C test fpindex
       - name: Run activity log file tests (rotation, summary, card full)
         run: make -C test actlogfiles
+      # The heavy operations on a model of the firmware's heap allocator:
+      # low-memory sweep (no allocation may fail), a long session (no leak,
+      # no lasting fragmentation), heap restored after each operation.
+      - name: Run memory stress tests (heap model of the firmware's allocator)
+        run: make -C test memstress
       # Synthetic development previews of the drawing code: not device
       # screenshots, never for the Apps Catalog.
       - name: Keep the synthetic UI previews
@@ -191,6 +196,17 @@ jobs:
 
       - name: Build and verify (${{ matrix.target }})
         run: scripts/build_target.sh "${{ matrix.target }}" out
+
+      # The module load-cost model (helpers/rg_elf.c) read the same way by
+      # its C code and by scripts/module_cost.py on the modules just built,
+      # and the loads replayed on fragmented heaps (test/bench_modules.c).
+      - name: Module load cost (C and Python models agree; replay on fragmented heaps)
+        if: matrix.target == 'full-momentum' || matrix.target == 'full-unleashed'
+        run: |
+          make -C test build/elf_cost
+          python3 scripts/module_cost.py --check test/build/elf_cost ".stage/${{ matrix.target }}/dist"
+          python3 scripts/module_cost.py ".stage/${{ matrix.target }}/dist"
+          make -C test benchmodules FAL_DIR="../.stage/${{ matrix.target }}/dist"
 
       - name: Lint (clang-format)
         if: matrix.target == 'catalog-official'

@@ -38,9 +38,12 @@ static const char* k_raw = "Filetype: Flipper SubGhz RAW File\r\n"
                            "RAW_Data: 400 -1200 400\r\n"
                            "Protocol: Fake\r\n";
 
+/* The protocol name parse() last read. */
+static char g_proto[RG_DB_PROTO_MAX];
+
 static void parse(RgDbEntry* e, const char* text, bool whole) {
     memset(e, 0, sizeof(*e));
-    rg_db_parse_header(e, text, strlen(text), whole);
+    rg_db_parse_header(e, text, strlen(text), whole, g_proto);
 }
 
 static void test_parse(void) {
@@ -48,7 +51,7 @@ static void test_parse(void) {
     RgDbEntry e, f;
     parse(&e, k_princeton, true);
     CHECK(e.kind == RgDbKindProtocol, "decoded file");
-    CHECK(strcmp(e.protocol, "Princeton") == 0, "protocol name");
+    CHECK(strcmp(g_proto, "Princeton") == 0, "protocol name");
     CHECK(e.frequency == 433920000u && e.bits == 24, "frequency and bits");
     CHECK(e.flags & RG_DB_FLAG_HAS_KEY, "key seen");
 
@@ -64,7 +67,7 @@ static void test_parse(void) {
     parse(&e, k_raw, true);
     CHECK(e.kind == RgDbKindRaw && e.frequency == 315000000u, "RAW file with CRLF lines");
     CHECK(!(e.flags & RG_DB_FLAG_HAS_KEY) && e.hash == 0, "RAW has no key");
-    CHECK(strcmp(e.protocol, "RAW") == 0, "header ends at RAW_Data (later lines ignored)");
+    CHECK(strcmp(g_proto, "RAW") == 0, "header ends at RAW_Data (later lines ignored)");
 
     parse(&e, "Filetype: Flipper SubGhz Key File\nVersion: 1\nFrequency: 4339x\n", true);
     CHECK(e.kind == RgDbKindUnknown, "no Protocol line: unknown");
@@ -73,7 +76,7 @@ static void test_parse(void) {
     const char* longp = "Filetype: Flipper SubGhz Key File\nProtocol: AVeryLongProtocolName2000\n";
     parse(&e, longp, true);
     CHECK(
-        strlen(e.protocol) == RG_DB_PROTO_MAX - 1 && strncmp(e.protocol, "AVeryLong", 9) == 0,
+        strlen(g_proto) == RG_DB_PROTO_MAX - 1 && strncmp(g_proto, "AVeryLong", 9) == 0,
         "long protocol name truncated");
 
     const char* cut = "Filetype: Flipper SubGhz Key File\nProtocol: CAME\nBit: 12\nKey: 00 00 0";
@@ -98,7 +101,7 @@ static void test_damaged(void) {
     };
     for(size_t i = 0; i < sizeof(cases) / sizeof(cases[0]); i++) {
         parse(&e, cases[i], i != 5);
-        CHECK(e.kind == RgDbKindCorrupt && e.protocol[0] == '\0', "damaged file");
+        CHECK(e.kind == RgDbKindCorrupt && g_proto[0] == '\0', "damaged file");
     }
     parse(&e, "# comment first\nFiletype: Flipper SubGhz RAW File\nProtocol: RAW\n", true);
     CHECK(e.kind == RgDbKindRaw, "leading comment is fine");
@@ -106,12 +109,15 @@ static void test_damaged(void) {
 
 static RgDbEntry g_entries[16];
 static char g_names[256];
+static char g_protos[256];
 
 static RgDbEntry*
     add(RgDb* db, const char* name, const char* text, uint32_t mtime, uint32_t size) {
     RgDbEntry* e = rg_db_add(db, name);
     if(!e) return NULL;
-    rg_db_parse_header(e, text, strlen(text), true);
+    char proto[RG_DB_PROTO_MAX];
+    rg_db_parse_header(e, text, strlen(text), true, proto);
+    if(!rg_db_set_protocol(db, e, proto)) return NULL;
     e->mtime = mtime;
     e->size = size;
     return e;
@@ -122,7 +128,7 @@ static void test_pool(void) {
     RgDb db;
     static RgDbEntry two[2];
     char pool[16];
-    rg_db_init(&db, two, 2, pool, sizeof(pool));
+    rg_db_init(&db, two, 2, pool, sizeof(pool), NULL, 0);
     CHECK(rg_db_add(&db, "a.sub") != NULL, "first");
     CHECK(rg_db_add(&db, "much_too_long.sub") == NULL, "name pool full: refused");
     CHECK(rg_db_add(&db, "b.sub") != NULL, "second");
@@ -131,7 +137,7 @@ static void test_pool(void) {
 }
 
 static void build(RgDb* db) {
-    rg_db_init(db, g_entries, 16, g_names, sizeof(g_names));
+    rg_db_init(db, g_entries, 16, g_names, sizeof(g_names), g_protos, sizeof(g_protos));
     const char* came = "Filetype: Flipper SubGhz Key File\nFrequency: 433920000\nProtocol: CAME\n"
                        "Bit: 12\nKey: 00 00 00 00 00 00 0A BC\n";
     const char* came_868 = "Filetype: Flipper SubGhz Key File\nFrequency: 868350000\n"

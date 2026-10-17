@@ -87,17 +87,16 @@ void radiogeddon_scene_timeline_on_enter(void* context) {
     }
 
     // One analysis pass set: frame starts and Te for navigation, and the
-    // reader's checkpoints for seeking. The analyzer is freed before the view
+    // reader's checkpoints for seeking. The analysis is freed before the view
     // is allocated, so the two are never in memory together.
     RadioGeddonAnalysisStatus status;
-    RgAnalyzer* a = radiogeddon_analysis_run_raw(app->timeline_file, &status);
+    RgAnalysis* r = radiogeddon_analysis_run_raw(app->timeline_file, NULL, NULL, &status);
     radiogeddon_scene_progress_end(app);
-    if(!a) {
+    if(!r) {
         radiogeddon_analysis_cat_status(app->temp_str, status);
         radiogeddon_scene_timeline_show_text(app);
         return;
     }
-    const RgAnalysis* r = &a->result;
     uint64_t starts[RADIOGEDDON_TIMELINE_MAX_FRAMES];
     size_t frames = 0;
     // Navigate the decodable frames; fall back to every frame when none decode.
@@ -110,7 +109,7 @@ void radiogeddon_scene_timeline_on_enter(void* context) {
     uint32_t te = r->te_us;
     uint64_t total_us = app->timeline_file->reader.time_us;
     uint32_t total_samples = app->timeline_file->reader.index;
-    free(a);
+    free(r);
 
     if(memmgr_heap_get_max_free_block() <
        radiogeddon_timeline_view_heap_size() + TIMELINE_HEAP_SPARE) {

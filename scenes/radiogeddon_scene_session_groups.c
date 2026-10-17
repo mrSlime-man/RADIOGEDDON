@@ -104,7 +104,7 @@ void radiogeddon_scene_session_groups_on_enter(void* context) {
         RgSessionItem* it = &g->items[i];
         it->file = rg_db_name(&db->db, e);
         it->frequency = (e->kind == RgDbKindRaw || e->kind == RgDbKindProtocol) ? e->frequency : 0;
-        it->protocol = e->kind == RgDbKindRaw ? "RAW" : e->protocol;
+        it->protocol = e->kind == RgDbKindRaw ? "RAW" : rg_db_protocol(&db->db, e);
         it->bits = e->kind == RgDbKindProtocol ? e->bits : 0;
         it->mtime = e->mtime;
     }

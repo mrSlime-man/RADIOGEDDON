@@ -13,9 +13,14 @@
 /* Kept free beyond the module and its work (GUI, storage, other threads). */
 #define RADIOGEDDON_MODULE_MARGIN (4u * 1024u)
 
-/* The loader's own work beyond the module's sections (symbol and relocation
- * caches, the manager and descriptor), generously. */
-#define RADIOGEDDON_MODULE_LOADER (6u * 1024u)
+/* The loader's fixed structures besides what the module's file itself
+ * makes it allocate (rg_elf.h): the ELF file and application records, the
+ * manifest, the plugin manager and its list, the open file and the storage
+ * service's file object with its sector buffer, name strings; about 1.2 KB
+ * in firmware 1.4.3, generously. Beta 10 reserved a flat 6 KB for all of the
+ * loader's work, which is less than the Range Scanner module's relocation
+ * tables and file object alone and far more than About's. */
+#define RADIOGEDDON_MODULE_LOADER (2u * 1024u)
 
 struct RadioGeddonModule {
     PluginManager* manager;
@@ -26,17 +31,27 @@ static bool radiogeddon_module_read(void* context, uint32_t offset, void* buf, s
     return storage_file_seek(file, offset, true) && storage_file_read(file, buf, len) == len;
 }
 
-/* Bytes the module's code and data take once loaded (rg_elf.h); 0 if its
- * file cannot be read as an ELF32 object. */
-static size_t radiogeddon_module_sections(Storage* storage, const char* path) {
+/* What loading the module takes from the heap (rg_elf.h); false if its file
+ * cannot be read as an ELF32 object. */
+static bool radiogeddon_module_cost(Storage* storage, const char* path, RgElfCost* cost) {
     File* file = storage_file_alloc(storage);
-    size_t total = 0;
-    if(storage_file_open(file, path, FSAM_READ, FSOM_OPEN_EXISTING)) {
-        total = rg_elf_alloc_bytes(radiogeddon_module_read, file);
-    }
+    bool ok = storage_file_open(file, path, FSAM_READ, FSOM_OPEN_EXISTING) &&
+              rg_elf_load_cost(radiogeddon_module_read, file, cost);
     storage_file_close(file);
     storage_file_free(file);
-    return total;
+    return ok;
+}
+
+/* Contiguous free heap a module of load cost @p cost needs with @p extra_heap
+ * for its work: what the loader keeps, its fixed structures, the larger of
+ * the relocation tables and the work, and a margin. */
+static size_t radiogeddon_module_need(const RgElfCost* cost, size_t extra_heap) {
+    // The relocation tables are freed before the module's code runs, so its
+    // work never coexists with them: the larger of the two. They are the
+    // last blocks the loader takes (after every section), so freeing them
+    // gives their space back to the free block the work then uses.
+    size_t later = cost->temporary > extra_heap ? cost->temporary : extra_heap;
+    return cost->resident + RADIOGEDDON_MODULE_LOADER + later + RADIOGEDDON_MODULE_MARGIN;
 }
 
 static RadioGeddonModule* radiogeddon_module_load_timed(
@@ -75,12 +90,17 @@ static RadioGeddonModule* radiogeddon_module_load_timed(
         *status = RadioGeddonModuleMissing;
         return NULL;
     }
-    // What the loader allocates: the module's sections plus its own work.
-    // An unreadable header falls back to the whole file's size, which bounds
-    // it from above.
-    size_t sections = radiogeddon_module_sections(storage, path);
-    size_t load = sections ? sections + RADIOGEDDON_MODULE_LOADER : (size_t)info.size;
-    size_t need = load + extra_heap + RADIOGEDDON_MODULE_MARGIN;
+    // What the loader allocates (rg_elf.h) and then the module's work. An
+    // unreadable header falls back to the whole file's size for the loader,
+    // which bounds what it loads from above, added to the work.
+    RgElfCost cost;
+    size_t need;
+    if(radiogeddon_module_cost(storage, path, &cost)) {
+        need = radiogeddon_module_need(&cost, extra_heap);
+    } else {
+        need =
+            (size_t)info.size + RADIOGEDDON_MODULE_LOADER + extra_heap + RADIOGEDDON_MODULE_MARGIN;
+    }
     if(memmgr_heap_get_max_free_block() < need) {
         FURI_LOG_W(
             TAG,

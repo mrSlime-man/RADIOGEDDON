@@ -8,7 +8,8 @@
  * Per N: a cold search (no index: every recording fingerprinted), a warm
  * one (nothing changed), and one after 5 new recordings. The recordings are
  * synthetic: decoded key files and short RAW captures (one in five). Host
- * time is only relative; the card counts are what the Flipper does too. */
+ * time is only relative; the card counts are what the Flipper does too.
+ * "dir KiB*" is a model of the directory data a FAT card reads (dir_kib). */
 #include "furi.h"
 #include "storage/storage.h"
 #include "../helpers/radiogeddon_fp.h"
@@ -60,6 +61,16 @@ static void write_rec(int i) {
     fclose(fp);
 }
 
+/* Estimated directory bytes a FAT card reads: every listing reads the whole
+ * folder, and every path lookup (stat, timestamp, open) scans it until the
+ * name, half of it on average. 64 bytes per recording: a long-name entry
+ * and its short-name entry for names up to 13 characters. A model, not a
+ * measurement. */
+static unsigned long dir_kib(size_t n) {
+    unsigned long per = 64ul * n;
+    return (stub_io.dir_reads * 64ul + (stub_io.stats + stub_io.file_opens) * per / 2ul) / 1024ul;
+}
+
 static void run(const char* what, size_t n) {
     static RadioGeddonFpResult res;
     char target[256];
@@ -71,7 +82,7 @@ static void run(const char* what, size_t n) {
     bool ok = radiogeddon_fp_find_similar(CARD, target, 0, NULL, &res, NULL, NULL);
     uint64_t t1 = now_ns();
     printf(
-        "%6zu %-6s %3s %6u %8u %7u %7u %7u %8u %10.1f %7zu\n",
+        "%6zu %-6s %3s %6u %8u %7u %7u %9lu %9lu %7u %8u %10.1f %7zu\n",
         n,
         what,
         ok ? "ok" : "NO",
@@ -79,6 +90,8 @@ static void run(const char* what, size_t n) {
         stub_io.dir_reads,
         stub_io.file_opens,
         stub_io.stats,
+        stub_io.read_bytes / 1024ul,
+        dir_kib(n),
         (unsigned)res.indexed,
         (unsigned)res.computed,
         (t1 - t0) / 1e6,
@@ -86,18 +99,20 @@ static void run(const char* what, size_t n) {
 }
 
 int main(void) {
-    static const size_t sizes[] = {10, 100, 500, 1000};
+    static const size_t sizes[] = {10, 100, 500, 1000, 2000};
     stub_write_fail_after = -1;
     stub_heap_free = 64 * 1024; // a Full edition with a tool module loaded
     printf(
-        "%6s %-6s %3s %6s %8s %7s %7s %7s %8s %10s %7s\n",
+        "%6s %-6s %3s %6s %8s %7s %7s %9s %9s %7s %8s %10s %7s\n",
         "N",
         "search",
         "",
         "lists",
         "entries",
         "opens",
-        "stats",
+        "lookups",
+        "read KiB",
+        "dir KiB*",
         "indexed",
         "computed",
         "ms (host)",

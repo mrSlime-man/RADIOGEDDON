@@ -1,4 +1,5 @@
 #include "radiogeddon_dsp.h"
+#include "rg_div.h"
 #include <stdlib.h>
 
 void radiogeddon_dsp_cluster_add(
@@ -14,7 +15,8 @@ void radiogeddon_dsp_cluster_add(
         if(diff <= tol) {
             clusters[i].count++;
             clusters[i].sum += value;
-            clusters[i].center = (uint32_t)(clusters[i].sum / clusters[i].count);
+            // The mean of 32-bit values fits 32 bits: exact.
+            clusters[i].center = rg_div_u64_u32(clusters[i].sum, clusters[i].count);
             return;
         }
     }

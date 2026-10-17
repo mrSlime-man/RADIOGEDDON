@@ -22,7 +22,7 @@ struct RadioGeddonDbView {
 };
 
 /* Short type tag shown at the right of a row. */
-static void radiogeddon_db_view_tag(const RgDbEntry* e, char* out, size_t size) {
+static void radiogeddon_db_view_tag(const RgDb* db, const RgDbEntry* e, char* out, size_t size) {
     const char* t;
     char proto[8];
     switch(e->kind) {
@@ -37,7 +37,7 @@ static void radiogeddon_db_view_tag(const RgDbEntry* e, char* out, size_t size) 
         break;
     default:
         // The tag column fits a short protocol name: cut it there.
-        snprintf(proto, sizeof(proto), "%.*s", (int)(sizeof(proto) - 1), e->protocol);
+        snprintf(proto, sizeof(proto), "%.*s", (int)(sizeof(proto) - 1), rg_db_protocol(db, e));
         t = proto;
         break;
     }
@@ -141,7 +141,7 @@ static void radiogeddon_db_view_draw(Canvas* canvas, void* model) {
             canvas_set_color(canvas, ColorWhite);
         }
         char tag[12];
-        radiogeddon_db_view_tag(e, tag, sizeof(tag));
+        radiogeddon_db_view_tag(&db->db, e, tag, sizeof(tag));
         uint16_t tag_w = canvas_string_width(canvas, tag);
         canvas_draw_str_aligned(canvas, DB_VIEW_TEXT_W, y + 8, AlignRight, AlignBottom, tag);
 

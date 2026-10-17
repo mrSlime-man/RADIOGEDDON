@@ -5,12 +5,34 @@
 
 #define TAG "RadioGeddonDb"
 
-/* Never index more files than this, whatever the heap. */
-#define DB_MAX_FILES  500u
+/* Never index more files than this, whatever the heap (view indices are
+ * 16-bit). */
+#define DB_MAX_FILES       2000u
+/* Nor more bytes than beta 10's index of its 500-file cap took with typical
+ * names (40-byte entries, 2-byte view slots, ~23-byte names): the compact
+ * entries fit about 600 such files in it. */
+#define DB_INDEX_MAX_BYTES (32u * 1024u)
 /* Free heap left untouched for the screens opened from the Database. */
-#define DB_HEAP_SPARE (24u * 1024u)
-#define DB_NAME_BUF   128u
-#define DB_HASH_CHUNK 512u
+#define DB_HEAP_SPARE      (24u * 1024u)
+#define DB_NAME_BUF        128u
+#define DB_HASH_CHUNK      512u
+
+/* Offsets of the parts of the index in its one block. */
+typedef struct {
+    size_t entries, view, names, protos, total;
+} DbLayout;
+
+static size_t db_align(size_t n) {
+    return (n + 7u) & ~(size_t)7u;
+}
+
+static void db_layout(DbLayout* l, size_t cap, size_t pool, size_t protos) {
+    l->entries = db_align(sizeof(RadioGeddonDb));
+    l->view = l->entries + db_align(cap * sizeof(RgDbEntry));
+    l->names = l->view + db_align(cap * sizeof(uint16_t));
+    l->protos = l->names + pool;
+    l->total = l->protos + protos;
+}
 
 static bool radiogeddon_db_is_sub(const FileInfo* info, const char* name) {
     if(file_info_is_dir(info) || name[0] == '.') return false;
@@ -43,9 +65,14 @@ static void radiogeddon_db_count(Storage* storage, char* name, size_t* files, si
     storage_file_free(dir);
 }
 
-/* Read the head of one file into its entry. */
-static void
-    radiogeddon_db_read_entry(Storage* storage, RgDbEntry* e, const char* path, uint8_t* buf) {
+/* Read the head of one file into its entry; false when the protocol table
+ * is full (more distinct protocol names than RG_DB_PROTOS_MAX holds). */
+static bool radiogeddon_db_read_entry(
+    Storage* storage,
+    RgDb* db,
+    RgDbEntry* e,
+    const char* path,
+    uint8_t* buf) {
     uint32_t ts = 0;
     if(storage_common_timestamp(storage, path, &ts) == FSE_OK) e->mtime = ts;
     File* file = storage_file_alloc(storage);
@@ -55,7 +82,9 @@ static void
     }
     storage_file_close(file);
     storage_file_free(file);
-    rg_db_parse_header(e, (const char*)buf, n, n < RG_DB_HEAD_BYTES || n == e->size);
+    char protocol[RG_DB_PROTO_MAX];
+    rg_db_parse_header(e, (const char*)buf, n, n < RG_DB_HEAD_BYTES || n == e->size, protocol);
+    return rg_db_set_protocol(db, e, protocol);
 }
 
 static uint32_t
@@ -80,63 +109,107 @@ RadioGeddonDb* radiogeddon_db_load(
     RadioGeddonProgressCallback progress,
     void* context) {
     *status = RadioGeddonDbOk;
+    // Counting needs a name buffer only: allocated and freed before the
+    // index, so it leaves the heap as it found it.
     char* name = malloc(DB_NAME_BUF);
     size_t files = 0, name_bytes = 0;
     radiogeddon_db_count(storage, name, &files, &name_bytes);
+    free(name);
 
-    // Size the index to the listing, within what the heap can spare.
-    size_t avail = memmgr_heap_get_max_free_block();
-    size_t budget = avail > DB_HEAP_SPARE + sizeof(RadioGeddonDb) + DB_HASH_CHUNK ?
-                        avail - DB_HEAP_SPARE - sizeof(RadioGeddonDb) - DB_HASH_CHUNK :
-                        0;
-    size_t avg_name = files ? name_bytes / files + 1 : 1;
-    size_t per_file = sizeof(RgDbEntry) + sizeof(uint16_t) + avg_name;
-    size_t cap = files < DB_MAX_FILES ? files : DB_MAX_FILES;
-    if(cap > budget / per_file) cap = budget / per_file;
-    if(files > 0 && cap == 0) {
-        free(name);
-        *status = RadioGeddonDbNoMemory;
-        return NULL;
-    }
-    size_t pool = cap == files ? name_bytes : cap * avg_name + 64;
-    if(pool > name_bytes) pool = name_bytes;
-    if(pool > UINT16_MAX) pool = UINT16_MAX;
-
-    RadioGeddonDb* db = malloc(sizeof(RadioGeddonDb));
-    memset(db, 0, sizeof(RadioGeddonDb));
-    RgDbEntry* entries = cap ? malloc(sizeof(RgDbEntry) * cap) : NULL;
-    char* names = pool ? malloc(pool) : NULL;
-    db->view = cap ? malloc(sizeof(uint16_t) * cap) : NULL;
-    rg_db_init(&db->db, entries, cap, names, pool);
-    db->total_files = files;
-    db->query.sort = RgDbSortDate;
-    db->query.show = RgDbShowAll;
-
-    uint8_t* buf = malloc(DB_HASH_CHUNK);
-    FuriString* path = furi_string_alloc();
-    File* dir = storage_file_alloc(storage);
-    if(cap && storage_dir_open(dir, RADIOGEDDON_SIGNALS_FOLDER)) {
-        FileInfo info;
-        while(storage_dir_read(dir, &info, name, DB_NAME_BUF)) {
-            if(!radiogeddon_db_is_sub(&info, name)) continue;
-            RgDbEntry* e = rg_db_add(&db->db, name);
-            if(!e) {
-                db->truncated = true;
-                continue;
-            }
-            e->size = info.size > UINT32_MAX ? UINT32_MAX : (uint32_t)info.size;
+    // A protocol table of 8 bytes an entry (most libraries hold a handful of
+    // protocols); a library with more distinct names than that holds is read
+    // again with one that fits a name for every entry, which never fills.
+    RadioGeddonDb* db = NULL;
+    uint8_t* buf = NULL;
+    FuriString* path = NULL;
+    size_t cap = 0;
+    for(size_t per_entry = 8u; !db; per_entry = RG_DB_PROTO_MAX) {
+        // Size the index to the listing, within what the heap can spare and
+        // DB_INDEX_MAX_BYTES.
+        size_t avail = memmgr_heap_get_max_free_block();
+        size_t work = DB_NAME_BUF + DB_HASH_CHUNK;
+        size_t budget = avail > DB_HEAP_SPARE + work ? avail - DB_HEAP_SPARE - work : 0;
+        if(budget > DB_INDEX_MAX_BYTES) budget = DB_INDEX_MAX_BYTES;
+        size_t avg_name = files ? name_bytes / files + 1 : 1;
+        size_t per_file = sizeof(RgDbEntry) + sizeof(uint16_t) + avg_name + 1u;
+        cap = files < DB_MAX_FILES ? files : DB_MAX_FILES;
+        // The protocol table for that many first (it only shrinks with
+        // cap), then as many entries as fit beside it.
+        size_t fixed = db_align(sizeof(RadioGeddonDb)) + 64u + rg_db_protos_bytes(cap, per_entry);
+        size_t fit = budget > fixed ? (budget - fixed) / per_file : 0;
+        if(cap > fit) cap = fit;
+        size_t protos = rg_db_protos_bytes(cap, per_entry);
+        if(files > 0 && cap == 0) {
+            *status = RadioGeddonDbNoMemory;
+            return NULL;
         }
-    }
-    storage_dir_close(dir);
-    storage_file_free(dir);
-    if(db->db.count < files) db->truncated = true;
+        size_t pool = cap == files ? name_bytes : cap * avg_name + 64;
+        if(pool > name_bytes) pool = name_bytes;
+        if(pool > UINT16_MAX) pool = UINT16_MAX;
 
-    // Then read each file's head (with the directory closed again).
-    for(size_t i = 0; i < db->db.count; i++) {
-        RgDbEntry* e = &db->db.entries[i];
-        radiogeddon_db_path(db, e, path);
-        radiogeddon_db_read_entry(storage, e, furi_string_get_cstr(path), buf);
-        if(progress) progress(context, i + 1, db->db.count);
+        // One block: the list's state, its entries, view, names and
+        // protocol names (beta 10: four blocks, 32 bytes of headers and a
+        // hole each time one of them was freed first).
+        DbLayout l;
+        db_layout(&l, cap, pool, protos);
+        uint8_t* block = malloc(l.total);
+        memset(block, 0, l.entries);
+        db = (RadioGeddonDb*)block;
+        db->view = cap ? (uint16_t*)(block + l.view) : NULL;
+        rg_db_init(
+            &db->db,
+            cap ? (RgDbEntry*)(block + l.entries) : NULL,
+            cap,
+            pool ? (char*)(block + l.names) : NULL,
+            pool,
+            protos ? (char*)(block + l.protos) : NULL,
+            protos);
+        db->total_files = files;
+        db->query.sort = RgDbSortDate;
+        db->query.show = RgDbShowAll;
+
+        // The work buffers, after the index: freed at the end, they leave
+        // the index alone at the bottom of the space it was given.
+        buf = malloc(work);
+        name = (char*)buf + DB_HASH_CHUNK;
+        path = furi_string_alloc();
+        File* dir = storage_file_alloc(storage);
+        if(cap && storage_dir_open(dir, RADIOGEDDON_SIGNALS_FOLDER)) {
+            FileInfo info;
+            while(storage_dir_read(dir, &info, name, DB_NAME_BUF)) {
+                if(!radiogeddon_db_is_sub(&info, name)) continue;
+                RgDbEntry* e = rg_db_add(&db->db, name);
+                if(!e) {
+                    db->truncated = true;
+                    continue;
+                }
+                e->size = info.size > UINT32_MAX ? UINT32_MAX : (uint32_t)info.size;
+            }
+        }
+        storage_dir_close(dir);
+        storage_file_free(dir);
+        if(db->db.count < files) db->truncated = true;
+
+        // Then read each file's head (with the directory closed again).
+        for(size_t i = 0; i < db->db.count; i++) {
+            RgDbEntry* e = &db->db.entries[i];
+            radiogeddon_db_path(db, e, path);
+            if(!radiogeddon_db_read_entry(storage, &db->db, e, furi_string_get_cstr(path), buf)) {
+                if(per_entry < RG_DB_PROTO_MAX) {
+                    // The table is full: again with the one that fits all.
+                    furi_string_free(path);
+                    free(buf);
+                    free(block);
+                    db = NULL;
+                    break;
+                }
+                // Not reached (a name per entry fits); kept as a bound.
+                db->db.count = i;
+                db->truncated = true;
+                break;
+            }
+            if(progress) progress(context, i + 1, db->db.count);
+        }
     }
 
     // Confirm RAW duplicates by content, only where sizes collide. The list's
@@ -155,22 +228,17 @@ RadioGeddonDb* radiogeddon_db_load(
 
     FURI_LOG_I(
         TAG,
-        "%u of %u files indexed, %u bytes",
+        "%u of %u files indexed, %u protocol bytes",
         (unsigned)db->db.count,
         (unsigned)files,
-        (unsigned)(cap * (sizeof(RgDbEntry) + sizeof(uint16_t)) + pool));
+        (unsigned)db->db.protos_len);
     furi_string_free(path);
     free(buf);
-    free(name);
     return db;
 }
 
 void radiogeddon_db_free(RadioGeddonDb* db) {
-    if(!db) return;
-    free(db->db.entries);
-    free(db->db.names);
-    free(db->view);
-    free(db);
+    free(db); // the whole index is one block
 }
 
 void radiogeddon_db_apply(RadioGeddonDb* db) {

@@ -210,6 +210,21 @@ the card, and for battery items the start and end charge.
 | U11 | Full edition, on the firmware where beta 9 did not start: launch the app, then open in turn the Range Scanner (start a scan, open the Waterfall), Settings and Radio bands, the Frequency Hopper and its statistics, and the Bitstream Explorer; return to the main menu after each. | The app starts. Each screen opens (its module loads from the SD card first, a short pause), works as in beta 9, and Back returns. About's lowest free heap after the round is close to the one before it (no leak across module loads). |
 | U12 | Full edition: start the Frequency Hopper, open its statistics, go back, then leave to the main menu; repeat five times. Start a Range Scanner scan, open the Waterfall and go back. | No crash or freeze; the Hopper resumes hopping when its screen is shown again; nothing keeps receiving after the main menu. |
 
+## Memory lifetimes and module loading (beta 11)
+
+Before and after each, note About's free heap and its lowest point.
+
+| ID | Check | Pass when |
+|----|-------|-----------|
+| V1 | Full edition: open the Bitstream Explorer on a long RAW recording, step through frames and fields, leave; repeat five times. | Same frames, bits and fields as beta 10 on the same file; About's free heap while it is open is about 4.5 KB higher than beta 10's on the same device; after leaving, back to where it was. |
+| V2 | Full edition: Pulse Studio and Pulse Timeline on the same recording. | Waveform, bit map and frames as before; both open where beta 10 said `Not enough memory` with little free heap (note the free heap). |
+| V3 | Full edition: Find Similar on a card with 1,000+ recordings, then again; time both. Then add 5 recordings and search again. | First search indexes them all; the second recomputes nothing and is faster than beta 10's second search on the same card; the third fingerprints only the 5 new ones. Rankings match beta 10's. |
+| V4 | Full edition: two recordings whose names differ only in one character, and a recording renamed between two searches. | Both always listed; the renamed one is fingerprinted again, never lost. |
+| V5 | Database with 600+ files: open it, sort and filter by each protocol. | All files listed (beta 10: the first 500), same protocols, order and duplicates as beta 10 for the first 500. |
+| V6 | With little free heap (several tools opened and closed, a long log), open each Full tool in turn. | Each opens or says `Not enough memory`; none crashes. Note which ones beta 10 refused that beta 11 opens. About's module loads show no failed load. |
+| V7 | Open and close every Full tool 20 times in a row (Range Scanner, Settings, Hopper, Bitstream, Find Similar, Studio, Heatmap, Logger, Lab, About). | No crash; About's free heap after the round is close to the one before it. |
+| V8 | Signal Info & Analysis, Unknown Protocol Analysis, Compare and a saved report on RAW recordings with known results from beta 10. | Every figure (Te, peaks, noise %, jitter %, encodings and fits, frames, durations) equal to beta 10's. |
+
 ## Catalog edition transmit check (Official)
 
 | ID | Check | Pass when |

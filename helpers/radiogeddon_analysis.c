@@ -271,9 +271,8 @@ typedef struct {
 static bool
     radiogeddon_dominant_pattern(Storage* storage, const char* path, RadioGeddonPattern* p) {
     RadioGeddonAnalysisStatus status;
-    RgAnalyzer* a = radiogeddon_analysis_run_file(storage, path, &status);
-    if(!a) return false;
-    const RgAnalysis* r = &a->result;
+    RgAnalysis* r = radiogeddon_analysis_run_file(storage, path, NULL, &status);
+    if(!r) return false;
     bool ok = r->group_count > 0;
     if(ok) {
         p->encoding = r->encoding;
@@ -281,7 +280,7 @@ static bool
         p->frames = r->groups[0].exact + r->groups[0].aligned;
         memcpy(p->bits, r->bits, p->bits_len + 1);
     }
-    free(a);
+    free(r);
     return ok;
 }
 

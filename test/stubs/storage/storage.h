@@ -114,6 +114,7 @@ extern unsigned stub_sync_calls;
 /* Every call into the "card", counted (benchmarks of SD-card work). */
 typedef struct {
     unsigned dir_opens, dir_reads, file_opens, stats, reads, writes;
+    unsigned long read_bytes;
 } StubIo;
 extern StubIo stub_io;
 extern uint64_t stub_synced_size;

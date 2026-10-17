@@ -182,37 +182,50 @@ loading another module) through a table the app hands it
 (`radiogeddon_host.h`; in a module build `radiogeddon_host_map.h` maps the
 helpers' names onto it, so the scene sources compile unchanged in both).
 
-Before loading, `rg_elf` sums the `.fal`'s allocated sections and the loader
-adds what the tool will allocate, a loader allowance and a margin; if that
-does not fit the free heap, the screen says `Not enough memory` before
-anything is allocated (Flipper's `malloc` never returns NULL, so the check
-must come first). `RADIOGEDDON_MODULE_API` changes with any module struct, so
+Before loading, `rg_elf` reads the `.fal`'s section table and models what
+the firmware's loader will allocate for it (beta 11): every loaded section
+in an aligned block of its own with its bookkeeping and the debug link
+(kept while loaded), and the `.fast.rel.*` relocation tables (loaded with
+the sections, freed once relocated, so gone before the tool's work starts).
+The free block asked for is that, plus 2 KB for the loader's own records,
+plus the larger of the relocation tables and the tool's work (they never
+coexist), plus a 4 KB margin; if that does not fit, the screen says `Not
+enough memory` before anything is allocated (Flipper's `malloc` never
+returns NULL, so the check must come first). Beta 10 added a flat 6 KB for
+the loader instead, which over-reserved for small modules and was less than
+the Range Scanner module's relocation tables and file object.
+`scripts/module_cost.py` prints the figures for the built modules and, in
+CI, checks the C model against its own reading of them;
+`test/bench_modules.c` replays each module's real load sequence on
+fragmented heaps through the heap model (see "Memory lifetimes" below). `RADIOGEDDON_MODULE_API` changes with any module struct, so
 a stale `.fal` is refused, not called. Sources used only by modules are
 listed in `stage_edition.py`'s `FULL_MODULE_ONLY` and left out of the app
 itself; small shared helpers (`rg_analyzer`, `rg_raw`, `rg_freq`, …) are
 compiled into each module that needs them as well.
 
-| Module | Contents | Beta 8 | Beta 9 | Beta 10 |
-|--------|----------|-------:|-------:|-------:|
-| `radiogeddon_wf.fal` | Waterfall view (with the Dolphin Lab badge and entry reveal) | 4,312 B | 4,496 B | 4,497 B |
-| `radiogeddon_bits.fal` | Bitstream Explorer; since beta 10 its scene and the analyzer it runs | 6,488 B | 6,720 B | 16,593 B |
-| `radiogeddon_unknown.fal` | Smart Protocol Discovery report, hypotheses, checksum hypotheses | 15,608 B | 18,612 B | 18,784 B |
-| `radiogeddon_multi.fal` | `rg_multi`, comparison over files | 15,960 B | 16,987 B | 17,159 B |
-| `radiogeddon_sessions.fal` | Sessions scenes, `rg_session`, the Database list code they use | 16,380 B | 16,422 B | 16,871 B |
-| `radiogeddon_lab.fal` | Room 2.0, Research Journal, Assistant and customization scenes | 8,835 B | 18,297 B | 18,508 B |
-| `radiogeddon_fp.fal` | Find Similar scene, `rg_fp`, index update; since beta 10 the session reader for its session scope | — | 20,370 B | 23,620 B |
-| `radiogeddon_studio.fal` | Pulse Studio and Pulse Timeline scenes and views, `rg_studio`, `rg_timeline` | — | 21,904 B | 22,108 B |
-| `radiogeddon_log.fal` | Activity Logger and Adaptive setup scenes, log files | — | 9,158 B | 9,176 B |
-| `radiogeddon_reports.fal` | Analysis, crypto, comparison and report scenes, report writer | — | 18,198 B | 18,384 B |
-| `radiogeddon_range.fal` | Range Scanner setup and scan, Waterfall scene, scan profiles, the range engine and spectrum view | — | — | 21,740 B |
-| `radiogeddon_settings.fal` | Settings and Radio bands scenes | — | — | 7,296 B |
-| `radiogeddon_hopper.fal` | Frequency Hopper and its statistics, the hopper engine | — | — | 7,264 B |
-| `radiogeddon_heatmap.fal` | RF Activity Heatmap scene and view, `rg_heatmap` | — | — | 5,955 B |
-| `radiogeddon_about.fal` | About, the memory and diagnostics text, the saved report | — | — | 4,168 B |
-| `radiogeddon_recover.fal` | Recording recovery at startup (`rg_recover`), only when a capture was cut off | — | — | 3,554 B |
+| Module | Contents | Beta 8 | Beta 9 | Beta 10 | Beta 11 |
+|--------|----------|-------:|-------:|-------:|-------:|
+| `radiogeddon_wf.fal` | Waterfall view (with the Dolphin Lab badge and entry reveal) | 4,312 B | 4,496 B | 4,497 B | 4,497 B |
+| `radiogeddon_bits.fal` | Bitstream Explorer; since beta 10 its scene and the analyzer it runs | 6,488 B | 6,720 B | 16,593 B | 16,170 B |
+| `radiogeddon_unknown.fal` | Smart Protocol Discovery report, hypotheses, checksum hypotheses | 15,608 B | 18,612 B | 18,784 B | 18,368 B |
+| `radiogeddon_multi.fal` | `rg_multi`, comparison over files | 15,960 B | 16,987 B | 17,159 B | 16,747 B |
+| `radiogeddon_sessions.fal` | Sessions scenes, `rg_session`, the Database list code they use | 16,380 B | 16,422 B | 16,871 B | 16,627 B |
+| `radiogeddon_lab.fal` | Room 2.0, Research Journal, Assistant and customization scenes | 8,835 B | 18,297 B | 18,508 B | 17,914 B |
+| `radiogeddon_fp.fal` | Find Similar scene, `rg_fp`, index update; since beta 10 the session reader for its session scope | — | 20,370 B | 23,620 B | 23,608 B |
+| `radiogeddon_studio.fal` | Pulse Studio and Pulse Timeline scenes and views, `rg_studio`, `rg_timeline` | — | 21,904 B | 22,108 B | 21,711 B |
+| `radiogeddon_log.fal` | Activity Logger and Adaptive setup scenes, log files | — | 9,158 B | 9,176 B | 8,577 B |
+| `radiogeddon_reports.fal` | Analysis, crypto, comparison and report scenes, report writer | — | 18,198 B | 18,384 B | 17,951 B |
+| `radiogeddon_range.fal` | Range Scanner setup and scan, Waterfall scene, scan profiles, the range engine and spectrum view | — | — | 21,740 B | 21,128 B |
+| `radiogeddon_settings.fal` | Settings and Radio bands scenes | — | — | 7,296 B | 6,452 B |
+| `radiogeddon_hopper.fal` | Frequency Hopper and its statistics, the hopper engine | — | — | 7,264 B | 7,316 B |
+| `radiogeddon_heatmap.fal` | RF Activity Heatmap scene and view, `rg_heatmap` | — | — | 5,955 B | 5,365 B |
+| `radiogeddon_about.fal` | About, the memory and diagnostics text, the saved report | — | — | 4,168 B | 3,561 B |
+| `radiogeddon_recover.fal` | Recording recovery at startup (`rg_recover`), only when a capture was cut off | — | — | 3,554 B | 3,003 B |
 
 Sizes are the bytes the loader places in RAM (`scripts/fap_size.py`),
 from the Momentum builds (Unleashed and RogueMaster within a few bytes).
+Beta 11's modules are smaller mostly because none of them links the
+compiler's 64-bit division helper any more (`rg_div`, below).
 
 **Tool forwarders (beta 9).** The newer module screens are ordinary scenes
 whose handlers live in a module. `scenes/radiogeddon_scene_tools.c` (resident)
@@ -260,15 +273,20 @@ and points at the analyzer's result (its first member) instead of copying
 the result out: 8,672 B held, where beta 9 held a 4,072 B copy but needed
 both, 12,744 B, at once, and left a hole where the analyzer had been.
 
+**Beta 11 memory: lifetimes, not just code.** Beta 11 keeps the binary
+footprint where beta 10 left it (resident Full 84,433 B, Catalog 86,565 B;
+beta 10: 84,313 / 86,513 B) and works on the heap the app uses while it
+runs. See "Memory lifetimes" below and [Performance](PERFORMANCE.md).
+
 *Binary footprint is not runtime RAM.* The figures above are code and
 static data, from the built files (`scripts/fap_size.py`); the loader puts
 exactly that in the heap. At run time the heap also holds the app state
 (`RadioGeddonApp` 2,240 B Full, 616 B Catalog), the GUI views, the 4 KB app
 stack, the radio session while a radio screen is open (the About screen
 shows its measured cost), the open tool's module and its work: for example
-the Bitstream Explorer adds its module (16,593 B) and the analyzer
-(8,672 B), Find Similar its module (23,620 B) and one analyzer while
-fingerprinting. Every tool checks the free heap for its module and work
+the Bitstream Explorer adds its module (16,170 B) and keeps the analysis
+result (4,072 B; beta 10 kept the 8,672 B analyzer), Find Similar its
+module (23,608 B) and one analysis while fingerprinting. Every tool checks the free heap for its module and work
 before allocating anything. None of the runtime figures has been measured on
 a device yet; `scripts/struct_sizes.py` gives the heap objects' sizes as the
 device compiler lays them out.
@@ -661,10 +679,18 @@ restarted when missing; none is required to read a recording.
 at most one file open:
 
 1. Count the `.sub` files and the bytes their names need.
-2. Size the index from that count, capped at 500 files and by the free heap
-   (24 KB is always left for the screens opened from the list). If not all
-   fit, the first ones are indexed and the list says `N of M`.
+2. Size the index from that count, capped by the free heap (24 KB is always
+   left for the screens opened from the list), by 32 KiB (what beta 10's
+   500-file index took with typical names) and by 2,000 files. If not all
+   fit, the first ones are indexed and the list says `N of M`. The whole
+   index (list state, entries, view, names, protocol names) is one heap
+   block, allocated before the work buffers so freeing those leaves no
+   hole under it (beta 11; beta 10: four blocks).
 3. List the folder again, storing each name in one shared pool and its size.
+   An entry is 28 bytes on the device (beta 10: 40): its protocol name is
+   kept once per distinct name in a protocol table, 8 bytes an entry; a
+   library with more distinct names than that holds is read again with a
+   table that fits a name for every entry, so it never truncates.
 4. With the folder closed, read each file's first 512 bytes; `rg_db` parses
    `Filetype`, `Frequency`, `Protocol`, `Bit` and `Key` (hashed with FNV-1a)
    and classifies the file as decoded, RAW, another `.sub` kind or damaged.
@@ -692,6 +718,60 @@ name with `rg_db_check_name` and refuses an existing file before calling
 section by section through one reused string, to a new file opened with
 `FSOM_CREATE_NEW`; a partly written report is removed.
 
+## Memory lifetimes (beta 11)
+
+Every large object has an owner and a point where it stops being needed,
+and beta 11 frees it there and allocates in an order that leaves no holes:
+
+| Object | Owner | Lives | Freed |
+|--------|-------|-------|-------|
+| Analysis result (`RgAnalysis`, 4,072 B) | Bitstream Explorer, Pulse Studio/Timeline (until the view has what it needs), reports | while its screen needs it | on exit (explorer) or right after use |
+| Analyzer working state (`RgAnalyzer`, 4,600 B) | the analysis runner | the three passes (and hypotheses) | before the runner returns |
+| Find Similar key table (4 B per old record), handled-position bitmap (250 B), name pool (≤ 4 KB, sized to the missing recordings) | the index update | one update | before ranking |
+| Database index (one block) | the Database list and screens opened from it | until the main menu | one `free` |
+| Module sections, relocation tables | the plugin loader | while the screen is shown / during relocation | unload / after relocation |
+
+Measured on a host model of the firmware's heap (`test/stubs/heap4.h`: one
+arena, 8-byte headers, first fit by address, merging on free, as
+`furi/core/memmgr_heap.c`): `make -C test benchmem` runs the heavy operations
+with every allocation in the model, including the firmware's own
+FlipperFormat and stream code, and reports peak, what stays held, the
+largest free block and the fragments; `make -C test memstress` (CI) also
+sweeps the free memory down in 512-byte steps (no allocation may fail,
+refusals leave nothing allocated) and runs a long random session (no leak,
+the free space joins up again). A shared temporary arena was considered and
+not built: the heavy operations never overlap (one tool screen at a time),
+their peaks are single objects freed in reverse order of allocation, and
+the heap model shows the free space whole again after each, so an arena
+would only add a second allocator to keep correct.
+
+**No 64-bit division helper.** The compiler implements `uint64_t` division
+with `__udivmoddi4` (698 B), which beta 10 linked into the resident app and
+eight modules for a few percentages, means and time conversions.
+`rg_div_u64` (`helpers/rg_div.c`) divides exactly: the hardware's 32-bit
+divide when both values fit, else a shift-and-subtract over the quotient's
+bits; `test_div` checks it against the native division 6.2 million times.
+The fingerprint builder's per-sample bucket test compares products
+(`us·100 < edge·Te`) and does not divide at all.
+
+**Find Similar's index update.** The old index is read once: each readable
+record gets a 32-bit key (a 16-bit hash of its name above its record
+number), sorted. One folder listing then matches recordings to records: a
+name's hash finds its candidates by binary search, and each candidate's
+record is read back to compare the names exactly, so a hash collision can
+never make two recordings one (beta 10 trusted 64-bit hashes). Sizes come
+from the listing; only a recording whose size still matches is asked for
+its time, halving the path lookups (each a scan of the folder on a FAT
+card). New recordings are found by folder position (a bitmap of positions
+handled) with their names packed in a pool. A record already kept is never
+written twice even if the folder changes between listings.
+
+**Heatmap (investigated, unchanged).** The grid's 6-byte cell has no padding
+and every field — listening time, bursts, flags, peak dBm, margin — is merged
+at full precision when columns combine; a smaller cell would drop the
+absolute peak or the margin's precision, which the screen does not show but
+the measurement holds. Beta 11 keeps it.
+
 ## Analysis pipeline
 
 `radiogeddon_analysis.c` builds every text report from the parsed file in
@@ -704,10 +784,17 @@ section by section through one reused string, to a new file opened with
   `radiogeddon_storage_raw_open` wraps it around a Storage file stream;
 - `rg_analyzer` — the engine behind Unknown Protocol Analysis and RAW
   comparison. It streams: the caller feeds the whole file once per pass
-  (timing histograms, then trial decoding, then frame grouping), so its state
-  is a fixed ~8 KB (`RgAnalyzer`) whatever the file length. The app allocates
-  it only while a report is built, after checking the largest free heap block
-  leaves a margin, and frees it before showing the report.
+  (timing histograms, then trial decoding, then frame grouping), so its
+  memory is fixed whatever the file length. Since beta 11 the result
+  (`RgAnalysis`, 4,072 B on the device) and the passes' working state
+  (`RgAnalyzer`, 4,600 B) are separate objects: `radiogeddon_analysis_run_*`
+  allocate the result first, then the file and the working state, run the
+  passes (and, for the reports that list them, the hypotheses through a
+  `finish` callback), free the working state and return only the result.
+  The peak is unchanged (8,688 B with two heap headers); what stays held
+  halves. A `tap` lets another reader ride along with the second pass: Find
+  Similar's fingerprint builder needs only the timing pass's Te and frame
+  gap, so it no longer reads the file a fifth time.
 
 **Decode with Firmware** feeds a RAW capture to the firmware's decoders
 instead of the engine. `rg_decode` streams the file through `rg_raw` and

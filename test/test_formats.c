@@ -204,7 +204,8 @@ static void check_sub_file(const char* path, const char* name, Tally* t, bool ve
     if(fp) fclose(fp);
     RgDbEntry entry;
     memset(&entry, 0, sizeof(entry));
-    rg_db_parse_header(&entry, head, len, whole);
+    char entry_proto[RG_DB_PROTO_MAX];
+    rg_db_parse_header(&entry, head, len, whole, entry_proto);
     RgDbKind dkind = !e.has_protocol ? RgDbKindUnknown : is_raw ? RgDbKindRaw : RgDbKindProtocol;
     char proto[RG_DB_PROTO_MAX]; /* the index keeps the first 15 characters */
     size_t plen = strnlen(e.protocol, sizeof(proto) - 1);
@@ -214,7 +215,7 @@ static void check_sub_file(const char* path, const char* name, Tally* t, bool ve
     CHECK(
         entry.kind == dkind && entry.frequency == e.frequency &&
             (dkind != RgDbKindProtocol ||
-             (strcmp(entry.protocol, proto) == 0 && entry.bits == e.bits)),
+             (strcmp(entry_proto, proto) == 0 && entry.bits == e.bits)),
         what);
 
     if(!is_raw) return;
@@ -227,7 +228,8 @@ static void check_sub_file(const char* path, const char* name, Tally* t, bool ve
     CHECK(raw != NULL, what);
     if(!raw) return;
     static RgAnalyzer a;
-    rg_analyzer_begin(&a);
+    static RgAnalysis res;
+    rg_analyzer_begin(&a, &res);
     int32_t buf[128];
     size_t n;
     size_t count = 0;
@@ -243,7 +245,7 @@ static void check_sub_file(const char* path, const char* name, Tally* t, bool ve
     CHECK(count == e.raw_count && raw->reader.time_us == e.raw_time && !raw->reader.corrupt, what);
     radiogeddon_storage_raw_close(raw);
 
-    const RgAnalysis* r = &a.result;
+    const RgAnalysis* r = &res;
     snprintf(what, sizeof(what), "%s: analysis figures in range", name);
     CHECK(
         r->sample_count <= count && r->noise_pct <= 100 && r->encoding_confidence <= 95 &&

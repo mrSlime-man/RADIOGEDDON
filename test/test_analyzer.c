@@ -533,7 +533,8 @@ static void test_streaming_equivalence(void) {
 
     /* Same data in odd-sized chunks, with one long high split in two. */
     static RgAnalyzer an;
-    rg_analyzer_begin(&an);
+    static RgAnalysis an_res;
+    rg_analyzer_begin(&an, &an_res);
     int passes = 0;
     do {
         passes++;
@@ -549,9 +550,9 @@ static void test_streaming_equivalence(void) {
         }
     } while(rg_analyzer_next_pass(&an));
     CHECK(passes == 3, "three passes over the data");
-    CHECK(strcmp(an.result.bits, g_a.bits) == 0, "chunked feed gives the same bits");
-    CHECK(an.result.sample_count == g_a.sample_count, "split pulse merged back");
-    CHECK(an.result.encoding_confidence == g_a.encoding_confidence, "same confidence");
+    CHECK(strcmp(an_res.bits, g_a.bits) == 0, "chunked feed gives the same bits");
+    CHECK(an_res.sample_count == g_a.sample_count, "split pulse merged back");
+    CHECK(an_res.encoding_confidence == g_a.encoding_confidence, "same confidence");
     rg_analyzer_feed(&an, buf, pos);
     CHECK(!rg_analyzer_next_pass(&an), "a finished analyzer stays finished");
 }

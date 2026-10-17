@@ -21,7 +21,7 @@ static void radiogeddon_scene_multi_cb(void* context, uint32_t index) {
 size_t radiogeddon_scene_multi_memory(size_t count) {
     if(count > RG_MULTI_MAX_CAPTURES) count = RG_MULTI_MAX_CAPTURES;
     // Summaries, the result and one analysis at a time (rg_multi.h).
-    return count * sizeof(RgMultiCapture) + sizeof(RgMultiResult) + sizeof(RgAnalyzer);
+    return count * sizeof(RgMultiCapture) + sizeof(RgMultiResult) + RADIOGEDDON_ANALYSIS_MEMORY;
 }
 
 bool radiogeddon_multi_add(RadioGeddonApp* app, const char* path) {

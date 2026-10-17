@@ -1,4 +1,5 @@
 #include "rg_fp.h"
+#include "rg_div.h"
 #include "../radiogeddon_edition.h"
 
 #if RG_FEATURE_FINGERPRINT
@@ -28,9 +29,11 @@ static uint32_t rg_fp_abs(int32_t v) {
 
 size_t rg_fp_bin(uint32_t us, uint32_t te) {
     if(te == 0) return RG_FP_BINS - 1;
-    uint64_t r = (uint64_t)us * 100u / te;
+    // floor(us * 100 / te) < edge exactly when us * 100 < edge * te: no
+    // division per sample (this runs on every sample of a recording).
+    uint64_t r = (uint64_t)us * 100u;
     for(size_t i = 0; i < RG_FP_BINS - 1; i++)
-        if(r < rg_fp_edges[i]) return i;
+        if(r < (uint64_t)rg_fp_edges[i] * te) return i;
     return RG_FP_BINS - 1;
 }
 
@@ -126,7 +129,7 @@ static void rg_fp_shares(const uint32_t* count, uint8_t* out) {
     for(size_t i = 0; i < RG_FP_BINS; i++)
         total += count[i];
     for(size_t i = 0; i < RG_FP_BINS; i++)
-        out[i] = total ? (uint8_t)(((uint64_t)count[i] * 100u + total / 2u) / total) : 0;
+        out[i] = total ? (uint8_t)rg_div_u64((uint64_t)count[i] * 100u + total / 2u, total) : 0;
 }
 
 void rg_fp_from_analysis(
@@ -239,7 +242,7 @@ static uint32_t rg_fp_ratio_score(uint32_t a, uint32_t b, uint32_t good, uint32_
     uint32_t hi = a > b ? a : b;
     uint32_t lo = a > b ? b : a;
     if(hi == 0) return 100;
-    uint32_t pct = (uint32_t)((uint64_t)(hi - lo) * 100u / hi);
+    uint32_t pct = rg_muldiv_u32(hi - lo, 100u, hi);
     if(pct <= good) return 100;
     if(pct >= bad) return 0;
     return 100u * (bad - pct) / (bad - good);

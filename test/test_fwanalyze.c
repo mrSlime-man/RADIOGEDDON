@@ -214,7 +214,8 @@ static bool find_capture(const char* name, char* path, size_t cap) {
 
 /* Streams the capture through every pass; also returns all its samples so
  * the in-memory run can be compared. */
-static bool analyse(const char* path, RgAnalyzer* a, int32_t** samples, size_t* count) {
+static bool
+    analyse(const char* path, RgAnalyzer* a, RgAnalysis* res, int32_t** samples, size_t* count) {
     FILE* f = fopen(path, "rb");
     if(!f) return false;
     RgRawReader* r = malloc(sizeof(RgRawReader));
@@ -223,7 +224,7 @@ static bool analyse(const char* path, RgAnalyzer* a, int32_t** samples, size_t* 
     size_t cap = 4096, n = 0;
     int32_t* all = malloc(cap * sizeof(int32_t));
     int32_t chunk[128];
-    rg_analyzer_begin(a);
+    rg_analyzer_begin(a, res);
     bool first = true, again;
     do {
         size_t k;
@@ -260,6 +261,7 @@ static unsigned diff(unsigned a, unsigned b) {
 int main(void) {
     printf("test_fwanalyze: rg_analyzer on the firmware's %zu paired RAW captures\n", PAIR_COUNT);
     RgAnalyzer* a = malloc(sizeof(RgAnalyzer));
+    RgAnalysis* res = malloc(sizeof(RgAnalysis));
     RgAnalysis* mem = malloc(sizeof(RgAnalysis));
     unsigned te_ok = 0, family_ok = 0, bits_ok = 0, unknown = 0, analysed = 0, decoded_ok = 0;
     unsigned hyp_family = 0, hyp_bits = 0, conf_right = 0, conf_wrong = 0, n_right = 0,
@@ -287,10 +289,10 @@ int main(void) {
 
         int32_t* samples = NULL;
         size_t count = 0;
-        bool read_ok = analyse(path, a, &samples, &count);
+        bool read_ok = analyse(path, a, res, &samples, &count);
         snprintf(msg, sizeof(msg), "%s: RAW data read in full", p->capture);
         CHECK(read_ok && count > 0, msg);
-        const RgAnalysis* r = &a->result;
+        const RgAnalysis* r = res;
         analysed++;
 
         /* The engine's own rules. */
@@ -402,6 +404,7 @@ int main(void) {
 
     free(mem);
     free(a);
+    free(res);
     printf("\n%d checks, %d failures\n", g_checks, g_failures);
     if(g_failures) {
         printf("CAPTURE ANALYSIS TESTS FAILED\n");

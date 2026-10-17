@@ -53,17 +53,44 @@ typedef enum {
 
 /**
  * Stream a RAW .sub through the three analyzer passes without loading it.
- * Returns the finished analyzer (caller frees) or NULL with @p status saying
- * why. A non-NULL result may still carry RadioGeddonAnalysisCorrupt.
+ * Returns the analysis (caller frees) or NULL with @p status saying why. A
+ * non-NULL result may still carry RadioGeddonAnalysisCorrupt. The working
+ * state of the passes is freed before returning: only the result (about
+ * 4 KB on the device) is kept. @p finish (may be NULL) is called after the
+ * last pass, while the working state still exists: rg_analyzer_hypotheses
+ * for the reports that list them (passed in, so the tools that do not show
+ * them do not link its code).
  */
-RgAnalyzer* radiogeddon_analysis_run_file(
+typedef void (*RadioGeddonAnalysisFinish)(RgAnalyzer* analyzer);
+RgAnalysis* radiogeddon_analysis_run_file(
     Storage* storage,
     const char* path,
+    RadioGeddonAnalysisFinish finish,
     RadioGeddonAnalysisStatus* status);
 
-/** As above on an already open file (its reader keeps the seek checkpoints). */
-RgAnalyzer*
-    radiogeddon_analysis_run_raw(RadioGeddonRawFile* file, RadioGeddonAnalysisStatus* status);
+/**
+ * Another reader of the samples, fed during the analyzer's second pass so
+ * it needs no pass of its own: start() is called once the timing pass has
+ * set the base time and the frame gap (final from then on), then feed()
+ * gets every sample of the recording, in order, once.
+ */
+typedef struct {
+    void (*start)(void* context, const RgAnalysis* timing);
+    void (*feed)(void* context, const int32_t* samples, size_t count);
+    void* context;
+} RadioGeddonAnalysisTap;
+
+/** As above on an already open file (its reader keeps the seek checkpoints).
+ * @p tap (may be NULL) reads the samples along. */
+RgAnalysis* radiogeddon_analysis_run_raw(
+    RadioGeddonRawFile* file,
+    RadioGeddonAnalysisFinish finish,
+    const RadioGeddonAnalysisTap* tap,
+    RadioGeddonAnalysisStatus* status);
+
+/** Heap the analysis takes at its peak: the result and the working state,
+ * two blocks with a heap header (8 bytes) each. */
+#define RADIOGEDDON_ANALYSIS_MEMORY (sizeof(RgAnalysis) + sizeof(RgAnalyzer) + 2u * 8u)
 
 /**
  * Report the progress of whole-file analyses (the passes of

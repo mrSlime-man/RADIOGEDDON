@@ -887,7 +887,8 @@ static void test_studio_view(void) {
     RgRawReader* reader = calloc(1, sizeof(RgRawReader));
     rg_raw_reader_init(reader, (RgRawSource){mem_read, mem_seek, &mf});
     RgAnalyzer* a = calloc(1, sizeof(RgAnalyzer));
-    rg_analyzer_begin(a);
+    RgAnalysis* res = calloc(1, sizeof(RgAnalysis));
+    rg_analyzer_begin(a, res);
     int32_t chunk[128];
     do {
         rg_raw_reader_rewind(reader);
@@ -895,13 +896,14 @@ static void test_studio_view(void) {
         while((n = rg_raw_reader_read(reader, chunk, 128)) > 0)
             rg_analyzer_feed(a, chunk, n);
     } while(rg_analyzer_next_pass(a));
-    CHECK(a->result.frames_kept >= 5, "studio: the analyzer finds the frames");
+    CHECK(res->frames_kept >= 5, "studio: the analyzer finds the frames");
 
     RadioGeddonStudioView* sv = radiogeddon_studio_view_alloc();
     View* view = radiogeddon_studio_view_get_view(sv);
     radiogeddon_studio_view_set_callback(sv, studio_want, NULL);
-    radiogeddon_studio_view_set_analysis(sv, "RAW_gate_test.sub", &a->result);
+    radiogeddon_studio_view_set_analysis(sv, "RAW_gate_test.sub", res);
     free(a);
+    free(res);
     // The view starts on the first frame that decodes (as the scene does).
     for(uint8_t f = 0; f < 8; f++)
         radiogeddon_studio_view_load_frame(sv, reader, f);

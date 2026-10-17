@@ -1,6 +1,7 @@
 #include "radiogeddon_analysis.h"
 #include "rg_analyzer.h"
 #include "rg_checksum.h"
+#include "rg_div.h"
 #include "../radiogeddon_edition.h"
 
 /*
@@ -11,11 +12,9 @@
  */
 
 static void radiogeddon_cat_time(FuriString* out, uint64_t us) {
+    uint32_t ms = rg_div_u64_u32(us, 1000u); // saturates past 49 days
     furi_string_cat_printf(
-        out,
-        "%lu.%03lus",
-        (unsigned long)(us / 1000000u),
-        (unsigned long)((us % 1000000u) / 1000u));
+        out, "%lu.%03lus", (unsigned long)(ms / 1000u), (unsigned long)(ms % 1000u));
 }
 
 /* Hex of a '0'/'1' string, zero-padded at the front to whole nibbles. */
@@ -360,13 +359,13 @@ static void radiogeddon_report_checksums(const RgAnalysis* r, FuriString* out) {
 
 int radiogeddon_analysis_unknown(Storage* storage, const char* path, FuriString* out) {
     RadioGeddonAnalysisStatus status;
-    RgAnalyzer* a = radiogeddon_analysis_run_file(storage, path, &status);
-    if(!a) {
+    // The hypotheses are filled before the working state goes: the report
+    // then holds only the result.
+    RgAnalysis* r = radiogeddon_analysis_run_file(storage, path, rg_analyzer_hypotheses, &status);
+    if(!r) {
         radiogeddon_analysis_cat_status(out, status);
         return -1;
     }
-    rg_analyzer_hypotheses(a);
-    const RgAnalysis* r = &a->result;
 
     furi_string_cat_str(
         out,
@@ -384,6 +383,6 @@ int radiogeddon_analysis_unknown(Storage* storage, const char* path, FuriString*
     radiogeddon_report_checksums(r, out);
 #endif
     int frames = (int)(r->signal_frames > INT32_MAX ? INT32_MAX : r->signal_frames);
-    free(a);
+    free(r);
     return frames;
 }

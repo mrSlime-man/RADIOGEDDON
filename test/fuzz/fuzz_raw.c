@@ -156,7 +156,8 @@ int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
 
     /* Analysis over the same stream, pass by pass, as the device runs it. */
     static RgAnalyzer a;
-    rg_analyzer_begin(&a);
+    static RgAnalysis res;
+    rg_analyzer_begin(&a, &res);
     int passes = 0;
     do {
         REQUIRE(++passes <= 8);
@@ -166,6 +167,6 @@ int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
         while((n = rg_raw_reader_read(&r, buf, step)) > 0)
             rg_analyzer_feed(&a, buf, n);
     } while(rg_analyzer_next_pass(&a));
-    check_analysis(&a.result, first.count);
+    check_analysis(&res, first.count);
     return 0;
 }

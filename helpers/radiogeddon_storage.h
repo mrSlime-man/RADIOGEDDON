@@ -68,6 +68,16 @@ bool radiogeddon_storage_write_serialized(
 bool radiogeddon_storage_load(Storage* storage, const char* path, RadioGeddonLoadedSignal* out);
 
 /**
+ * As radiogeddon_storage_load without the pass over a RAW capture's samples
+ * (raw_sample_count, raw_min_us and raw_max_us stay 0): for callers that
+ * stream the samples themselves, so a RAW file is not read once more.
+ */
+bool radiogeddon_storage_load_header(
+    Storage* storage,
+    const char* path,
+    RadioGeddonLoadedSignal* out);
+
+/**
  * A RAW .sub opened for streaming: samples are read a chunk at a time through
  * rg_raw.h, so analysis and the timeline never load the whole recording.
  */
