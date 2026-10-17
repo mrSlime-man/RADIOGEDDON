@@ -192,24 +192,27 @@ listed in `stage_edition.py`'s `FULL_MODULE_ONLY` and left out of the app
 itself; small shared helpers (`rg_analyzer`, `rg_raw`, `rg_freq`, …) are
 compiled into each module that needs them as well.
 
-| Module | Contents | Beta 8 | Beta 9 | Unreleased |
+| Module | Contents | Beta 8 | Beta 9 | Beta 10 |
 |--------|----------|-------:|-------:|-------:|
-| `radiogeddon_wf.fal` | Waterfall view (with the Dolphin Lab badge and entry reveal) | 4,312 B | 4,496 B | 4,496 B |
-| `radiogeddon_bits.fal` | Bitstream Explorer view, `rg_bits`, glyphs; since unreleased also the analyzer run for it | 6,488 B | 6,720 B | 15,982 B |
+| `radiogeddon_wf.fal` | Waterfall view (with the Dolphin Lab badge and entry reveal) | 4,312 B | 4,496 B | 4,497 B |
+| `radiogeddon_bits.fal` | Bitstream Explorer; since beta 10 its scene and the analyzer it runs | 6,488 B | 6,720 B | 16,593 B |
 | `radiogeddon_unknown.fal` | Smart Protocol Discovery report, hypotheses, checksum hypotheses | 15,608 B | 18,612 B | 18,784 B |
-| `radiogeddon_multi.fal` | `rg_multi`, comparison over files | 15,960 B | 16,987 B | 17,160 B |
-| `radiogeddon_sessions.fal` | Sessions scenes, `rg_session`, the Database list code they use | 16,380 B | 16,422 B | 16,870 B |
-| `radiogeddon_lab.fal` | Room 2.0, Research Journal, Assistant and customization scenes | 8,835 B | 18,297 B | 18,496 B |
-| `radiogeddon_fp.fal` | Find Similar scene, `rg_fp`, index update | — | 20,370 B | 21,824 B |
-| `radiogeddon_studio.fal` | Pulse Studio and Pulse Timeline scenes and views, `rg_studio`, `rg_timeline` | — | 21,904 B | 22,096 B |
-| `radiogeddon_log.fal` | Activity Logger and Adaptive setup scenes, log files | — | 9,158 B | 9,158 B |
-| `radiogeddon_reports.fal` | Analysis, crypto, comparison and report scenes, report writer | — | 18,198 B | 18,370 B |
-| `radiogeddon_heatmap.fal` | RF Activity Heatmap scene and view, `rg_heatmap` | — | — | 5,945 B |
-| `radiogeddon_about.fal` | About, the memory and diagnostics text, the saved report | — | — | 4,153 B |
-| `radiogeddon_recover.fal` | Recording recovery at startup (`rg_recover`), only when a capture was cut off | — | — | 3,556 B |
+| `radiogeddon_multi.fal` | `rg_multi`, comparison over files | 15,960 B | 16,987 B | 17,159 B |
+| `radiogeddon_sessions.fal` | Sessions scenes, `rg_session`, the Database list code they use | 16,380 B | 16,422 B | 16,871 B |
+| `radiogeddon_lab.fal` | Room 2.0, Research Journal, Assistant and customization scenes | 8,835 B | 18,297 B | 18,508 B |
+| `radiogeddon_fp.fal` | Find Similar scene, `rg_fp`, index update; since beta 10 the session reader for its session scope | — | 20,370 B | 23,620 B |
+| `radiogeddon_studio.fal` | Pulse Studio and Pulse Timeline scenes and views, `rg_studio`, `rg_timeline` | — | 21,904 B | 22,108 B |
+| `radiogeddon_log.fal` | Activity Logger and Adaptive setup scenes, log files | — | 9,158 B | 9,176 B |
+| `radiogeddon_reports.fal` | Analysis, crypto, comparison and report scenes, report writer | — | 18,198 B | 18,384 B |
+| `radiogeddon_range.fal` | Range Scanner setup and scan, Waterfall scene, scan profiles, the range engine and spectrum view | — | — | 21,740 B |
+| `radiogeddon_settings.fal` | Settings and Radio bands scenes | — | — | 7,296 B |
+| `radiogeddon_hopper.fal` | Frequency Hopper and its statistics, the hopper engine | — | — | 7,264 B |
+| `radiogeddon_heatmap.fal` | RF Activity Heatmap scene and view, `rg_heatmap` | — | — | 5,955 B |
+| `radiogeddon_about.fal` | About, the memory and diagnostics text, the saved report | — | — | 4,168 B |
+| `radiogeddon_recover.fal` | Recording recovery at startup (`rg_recover`), only when a capture was cut off | — | — | 3,554 B |
 
 Sizes are the bytes the loader places in RAM (`scripts/fap_size.py`),
-from the Momentum builds.
+from the Momentum builds (Unleashed and RogueMaster within a few bytes).
 
 **Tool forwarders (beta 9).** The newer module screens are ordinary scenes
 whose handlers live in a module. `scenes/radiogeddon_scene_tools.c` (resident)
@@ -235,19 +238,40 @@ analyzer's bit map and PWM fixes. The largest module is Pulse Studio
 (21,904 B); with its screen model (about 4 KB) and a frame buffer it
 checks the free heap before opening.
 
-**Unreleased memory.** The resident Full edition is 112,364 B (beta 9:
-119,132 B, −6,768 B) although it gained crash-safe saves, recording
-recovery, the diagnostics counters, the battery saver and the Activity
-Heatmap's entry point: the analyzer and its runner were resident only for
-the Bitstream scene and are now module-only (−8,100 B; the bits module runs
-the analysis), and About with the diagnostics text became a module
-(−2,859 B). The Catalog edition, which has no modules, is 86,501 B (beta 9:
-80,552 B, +5,949 B): recovery (+2.4 KB), the diagnostics and battery saver
-(+2.1 KB), crash-safe saves (+0.6 KB) and the faster Database engine
-(+0.6 KB) are resident there. Figures: `scripts/fap_size.py` on the builds;
-`scripts/struct_sizes.py` gives the heap objects' sizes as the device
-compiler lays them out (`RgAnalyzer` 8,672 B, `RgAnalysis` 4,072 B,
-`RadioGeddonApp` 2,224 B in beta 9).
+**Beta 10 memory.** Beta 9's resident Full edition (119,132 B) did not fit
+the free heap of some devices, so the app did not start. Beta 10 moves the
+Range Scanner (with the Waterfall scene and scan profiles), Settings (with
+Radio bands), the Frequency Hopper (with its statistics), the whole
+Bitstream Explorer (scene, screen and the analyzer), About (with the
+diagnostics text) and recording recovery into modules, without changing
+what any screen does: the resident Full edition is 84,313 B (Momentum;
+−34,819 B, −29 %) although it gained crash-safe saves, the diagnostics
+counters, the battery saver and the new tools' entry points. The Hopper's
+state outlives its screen (until the main menu), so the app keeps its own
+copy of `radiogeddon_hopper_free()` (the linker keeps only that and the stop
+it calls); the Range Scanner's and Hopper's engines reach the radio through
+the host table (`RADIOGEDDON_MODULE_API` 5). The Catalog edition, which has
+no modules, is 86,513 B (beta 9: 80,553 B, +5,960 B): recovery (+2.4 KB),
+the diagnostics and battery saver (+2.1 KB), crash-safe saves (+0.6 KB) and
+the faster Database engine (+0.6 KB) are resident there.
+
+The Bitstream Explorer keeps the analyzer it ran for as long as it is open
+and points at the analyzer's result (its first member) instead of copying
+the result out: 8,672 B held, where beta 9 held a 4,072 B copy but needed
+both, 12,744 B, at once, and left a hole where the analyzer had been.
+
+*Binary footprint is not runtime RAM.* The figures above are code and
+static data, from the built files (`scripts/fap_size.py`); the loader puts
+exactly that in the heap. At run time the heap also holds the app state
+(`RadioGeddonApp` 2,240 B Full, 616 B Catalog), the GUI views, the 4 KB app
+stack, the radio session while a radio screen is open (the About screen
+shows its measured cost), the open tool's module and its work: for example
+the Bitstream Explorer adds its module (16,593 B) and the analyzer
+(8,672 B), Find Similar its module (23,620 B) and one analyzer while
+fingerprinting. Every tool checks the free heap for its module and work
+before allocating anything. None of the runtime figures has been measured on
+a device yet; `scripts/struct_sizes.py` gives the heap objects' sizes as the
+device compiler lays them out.
 
 Built into the app (as measured just before the move), the tools made the
 resident Full edition 128,309 B, 33,633 B more than beta 6; as modules it is
@@ -310,9 +334,10 @@ flowchart LR
   free at start. The room is a module (`radiogeddon_lab.fal`) loaded only
   while it is open and refused, as any module, when it would not fit; it is
   unloaded before any tool it opens starts. Cards replace popups without new
-  allocations. Resident cost: Full 119,428 B (beta 7: 104,388 B); the
-  Catalog edition compiles all of this out (77,782 B, +610 B for the
-  Scanner's sweep cursor and the shared settings fields).
+  allocations. Resident cost when it came (beta 8): Full 119,428 B (beta 7:
+  104,388 B); the Catalog edition compiles all of this out (77,782 B, +610 B
+  for the Scanner's sweep cursor and the shared settings fields). Beta 10's
+  figures are under [Modules](#modules-full-edition).
 
 ## Research lab (Full edition, beta 9)
 

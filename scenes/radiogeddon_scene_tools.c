@@ -213,6 +213,7 @@ const RadioGeddonHost radiogeddon_host_table = {
     .ui_set_scanning = host_ui_set_scanning,
     .ui_apply_style = host_ui_apply_style,
     .ui_active = host_ui_active,
+    .redraw_due = radiogeddon_scene_redraw_due,
     .ui_badge = host_ui_badge,
     .probe_bands = radiogeddon_scene_probe_bands,
     .plan_range = host_plan_range,

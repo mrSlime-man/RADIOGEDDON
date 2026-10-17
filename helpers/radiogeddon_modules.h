@@ -29,7 +29,7 @@
 
 /* The plugin manager's application id and API version for every module. */
 #define RADIOGEDDON_MODULE_APPID "radiogeddon_full"
-#define RADIOGEDDON_MODULE_API   4u
+#define RADIOGEDDON_MODULE_API   5u
 
 /* File names in the app's assets folder (APP_ASSETS_PATH("plugins/...")). */
 #define RADIOGEDDON_MODULE_BITS      "radiogeddon_bits.fal"
@@ -63,9 +63,9 @@ typedef struct {
 } RadioGeddonUnknownModule;
 
 #if RG_FEATURE_BITSTREAM
-/* The Bitstream Explorer's work besides its module: the analyzer and its
- * copied result exist together for a moment, with heap kept beyond them. */
-#define RADIOGEDDON_BITSTREAM_WORK (sizeof(RgAnalyzer) + sizeof(RgAnalysis) + 6u * 1024u)
+/* The Bitstream Explorer's work besides its module: the analyzer (kept for
+ * its result while the explorer is open), with heap kept beyond it. */
+#define RADIOGEDDON_BITSTREAM_WORK (sizeof(RgAnalyzer) + 6u * 1024u)
 #endif
 
 #if RG_FEATURE_MULTI_COMPARE

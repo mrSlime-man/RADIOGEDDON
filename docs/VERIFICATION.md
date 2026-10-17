@@ -2,9 +2,11 @@
 
 What has been verified, how, and what has not. Integrity rule: nothing is
 marked hardware-verified without evidence from a physical device. As of
-`1.0.0-beta.8`, the only physical-hardware results are tester reports on
-earlier code (see "Reported by users" below); no checklist item is
+`1.0.0-beta.10`, the only physical-hardware results are tester reports on
+beta 1 and beta 2 code (see "Reported by users" below); no checklist item is
 independently verified, and the "Not verified" section stands open.
+**Beta 10 is NOT HARDWARE TESTED**: every figure below comes from builds,
+host tests or a stub SD card.
 
 ## Environment
 
@@ -21,26 +23,26 @@ locally.
 | Area | Method | Result |
 |------|--------|--------|
 | Catalog edition, Official build | SDK 1.4.3 pinned by SHA-256, API asserted 87.1, manifest (name `RadioGeddon`, version) verified, all 303 imports exported by the SDK (beta 9: 289) | Pass — `radiogeddon-catalog-official.fap` |
-| Full edition, RogueMaster build | RogueMaster source at commit `38d7ae9`, built with its own `fbt`, API asserted 88.16, manifest (name `RadioGeddon Full`) verified, all 323 imports, and each of the 13 modules' imports, exported by its `api_symbols.csv` | Pass — `radiogeddon-full-roguemaster.fap` |
-| Full edition, Momentum build | Momentum mntm-012 SDK pinned by SHA-256 (matches Momentum's update index), API asserted 87.1, manifest verified, all 323 imports and the 13 modules' imports exported by Momentum's SDK | Pass — `radiogeddon-full-momentum.fap` |
-| Full edition, Unleashed build | SDK unlshd-093 pinned by SHA-256, API asserted 88.9, manifest verified, all 323 imports and the 13 modules' imports exported by the SDK | Pass — `radiogeddon-full-unleashed.fap` |
+| Full edition, RogueMaster build | RogueMaster source at commit `38d7ae9`, built with its own `fbt`, API asserted 88.16, manifest (name `RadioGeddon Full`) verified, all 319 imports, and each of the 16 modules' imports, exported by its `api_symbols.csv` | Pass — `radiogeddon-full-roguemaster.fap` |
+| Full edition, Momentum build | Momentum mntm-012 SDK pinned by SHA-256 (matches Momentum's update index), API asserted 87.1, manifest verified, all 319 imports and the 16 modules' imports exported by Momentum's SDK | Pass — `radiogeddon-full-momentum.fap` |
+| Full edition, Unleashed build | SDK unlshd-093 pinned by SHA-256, API asserted 88.9, manifest verified, all 319 imports and the 16 modules' imports exported by the SDK | Pass — `radiogeddon-full-unleashed.fap` |
 | Edition switches | `test_edition` built three times: as Full, as Catalog and with no edition (must be Catalog); defining both must not compile | Pass — 19 checks each, conflict refused |
 | Lint | `ufbt lint` (clang-format) | Pass, no warnings |
 | DSP/parse unit tests | `make -C test check` → `test_dsp` | Pass — 36 checks |
-| Analysis-engine unit tests | `make -C test check` → `test_analyzer` (beta 9: bit map, competing readings, long-gap PWM, 5-Te PWM periods; unreleased: preamble filler between back-to-back repeats) | Pass — 179 checks |
+| Analysis-engine unit tests | `make -C test check` → `test_analyzer` (beta 9: bit map, competing readings, long-gap PWM, 5-Te PWM periods; beta 10: preamble filler between back-to-back repeats) | Pass — 179 checks |
 | Scanner-logic unit tests | `make -C test check` → `test_scan` | Pass — 31 checks |
 | Hopper-logic unit tests | `make -C test check` → `test_hop` | Pass — 42 checks |
 | RAW-reader unit tests | `make -C test check` → `test_raw` | Pass — 43 checks |
 | Timeline-maths unit tests | `make -C test check` → `test_timeline` | Pass — 42 checks |
 | Sample-ring unit tests | `make -C test check` → `test_ring` | Pass — 47 checks |
 | RAW-writer unit tests | `make -C test check` → `test_rawfmt` | Pass — 18 checks |
-| Recorder tests (stub Furi/Storage) | `make -C test check` → `test_recorder` (unreleased: a reboot 2.6 s into a recording, only what was synced readable: 8,284 of 10,400 samples recovered) | Pass — 41 checks |
+| Recorder tests (stub Furi/Storage) | `make -C test check` → `test_recorder` (beta 10: a reboot 2.6 s into a recording, only what was synced readable: 8,284 of 10,400 samples recovered) | Pass — 41 checks |
 | Crash-safe saves | `make -C test check` → `test_safefile`: power cut at every step of a save (writes and the rename's copy in 16-byte steps) with copying (Official), atomic and non-replacing renames, every step failing once; the protocol before it on the same simulation | Pass — 122 checks; old or new version complete at every cut point (before: neither at 10 of 23) |
 | Recording recovery | `make -C test check` → `test_recover`: a recording cut at every byte offset (1,232 points), plain and with zero / 0xFF tails, repaired and read back through `rg_raw`; finished, foreign and header-only files | Pass — 17 checks; exactly the complete values at every cut |
 | RF Activity Heatmap | `make -C test check` → `test_heatmap` on logs written by `rg_actlog` itself: frequencies, not-observed never quiet, merging keeps every burst, parts read as one file, junk skipped | Pass — 61 checks |
 | Database engine results and cost | `make -C test check` → `bench_db 1`: the duplicate work and every sort and a search on synthetic indexes of 10 to 4,682 entries; result checksums must equal the beta 9 engine's | Pass — identical results; `make -C test bench` for timings (see below) |
 | Database-index unit tests | `make -C test check` → `test_db` | Pass — 75 checks |
-| Memory-bookkeeping unit tests | `make -C test check` → `test_memstat` (unreleased: tick gaps and stalls, the clock's wrap, fragmentation, throughput) | Pass — 43 checks |
+| Memory-bookkeeping unit tests | `make -C test check` → `test_memstat` (beta 10: tick gaps and stalls, the clock's wrap, fragmentation, throughput) | Pass — 43 checks |
 | Database-loading tests (stub Furi/Storage) | `make -C test check` → `test_dbload` | Pass — 45 checks |
 | RAW-to-decoder feeding tests | `make -C test check` → `test_decode` | Pass — 68 checks |
 | Frequency text and range tests | `make -C test check` → `test_freq` | Pass — 32 checks |
@@ -60,14 +62,14 @@ locally.
 | Activity log | `make -C test check` → `test_actlog`: interval rows, unobserved never written as quiet, header and footer, part names and rotation, ranking, coverage, summary | Pass — 29 checks |
 | Journal, XP, assistant | `make -C test check` → `test_journal`: counters and caps, achievements from real counts only, levels, decorations, recent ring, file encode/decode with CRC and recovery; assistant rules, never while recording, rate limits and dismissal | Pass — 90 checks |
 | Pulse Studio maths | `make -C test check` → `test_studio`: pulse-to-bit map both ways, unsure bits, preamble and glitches, windows and pan, histogram, diff | Pass — 106 checks |
-| Fingerprint index files | `make -C test fpindex` → the index written and read through the firmware's FlipperFormat and storage code on a stub SD card: build, update after adding, changing and deleting recordings, damaged index and records rebuilt, temporary file never left; unreleased: 700 recordings, a short heap, a real 32-bit FNV collision pair, folder listings counted, time windows | Pass — 76 checks (the new ones fail on beta 9's indexer) |
-| Activity log files | `make -C test actlogfiles` → log parts, rotation, `# End`, summary file, a full card and a failing write stopping the log without overwriting; unreleased: a 30-minute multi-part log read back as a heatmap from its last part | Pass — 31 checks |
+| Fingerprint index files | `make -C test fpindex` → the index written and read through the firmware's FlipperFormat and storage code on a stub SD card: build, update after adding, changing and deleting recordings, damaged index and records rebuilt, temporary file never left; beta 10: 700 recordings, a short heap, a real 32-bit FNV collision pair, folder listings counted, time windows, the session scope (only the session's recordings ranked, an empty session) | Pass — 85 checks (the new ones fail on beta 9's indexer) |
+| Activity log files | `make -C test actlogfiles` → log parts, rotation, `# End`, summary file, a full card and a failing write stopping the log without overwriting; beta 10: a 30-minute multi-part log read back as a heatmap from its last part | Pass — 31 checks |
 | Sprites from their art | `make -C test check` → `tools/dolphin/build_sprites.py --check`: `helpers/rg_sprites.c` is what `art/dolphin/*.txt` generates | Pass |
-| Offline UI, Dolphin Lab | `make -C test ui` → `test_ui_lab`: the dashboard in Dolphin Lab and Cyber Lab for every mascot state and every 100 ms frame of 12 s; navigation, events and the menu window; redraws only on a change (120 in 60 s of idle at 100 ms ticks); every message the app shows (listed from the sources) on a card, whole and inside the screen in both styles; save, busy and progress cards (no figure without progress); wipe and dither transitions ended by a key; the badges on the Scanner (its sweep cursor), Receive, Range Scanner and Waterfall screens; the Waterfall's entry reveal; the lab room's stations, wipes, gallery and oscilloscope; synthetic previews of each | Pass — 285 checks (unreleased adds the Activity Heatmap: every cursor position, 24 frequencies scrolled, the widest footer, the legend; beta 9 adds Room 2.0's six stations and the rack, every dolphin look and decoration, the adaptive Scanner's header, and Pulse Studio drawn on a synthetic RAW file through the real reader and analyzer, every page and frame inside the screen) |
+| Offline UI, Dolphin Lab | `make -C test ui` → `test_ui_lab`: the dashboard in Dolphin Lab and Cyber Lab for every mascot state and every 100 ms frame of 12 s; navigation, events and the menu window; redraws only on a change (120 in 60 s of idle at 100 ms ticks); every message the app shows (listed from the sources) on a card, whole and inside the screen in both styles; save, busy and progress cards (no figure without progress); wipe and dither transitions ended by a key; the badges on the Scanner (its sweep cursor), Receive, Range Scanner and Waterfall screens; the Waterfall's entry reveal; the lab room's stations, wipes, gallery and oscilloscope; synthetic previews of each | Pass — 285 checks (beta 10 adds the Activity Heatmap: every cursor position, 24 frequencies scrolled, the widest footer, the legend; beta 9 adds Room 2.0's six stations and the rack, every dolphin look and decoration, the adaptive Scanner's header, and Pulse Studio drawn on a synthetic RAW file through the real reader and analyzer, every page and frame inside the screen) |
 | Offline UI | `make -C test ui` → `test_ui`: screens drawn with the firmware's own canvas fonts (u8g2 data from the pinned SDK) on a 128x64 host canvas; no text off screen or overlapping, keys driven through the Waterfall and Bitstream Explorer, the Database list with no, long-named and 200 files; synthetic previews written as PNG (CI artifact `synthetic-ui-previews`, labelled synthetic, not hardware screenshots) | Pass — 141 checks |
-| Format tests (firmware code, real files) | `make -C test formats` → `test_formats`: the firmware's FlipperFormat and stream code and its 85 Sub-GHz test files, from the commit of Official 1.4.3 | Pass — 701 checks (unreleased: every interrupted-save state of settings and favorites through the firmware's FlipperFormat, recording recovery and its startup flow on the stub card; also settings shared between editions and with beta 5 and beta 8 files, favorites and scan profiles) |
+| Format tests (firmware code, real files) | `make -C test formats` → `test_formats`: the firmware's FlipperFormat and stream code and its 85 Sub-GHz test files, from the commit of Official 1.4.3 | Pass — 701 checks (beta 10: every interrupted-save state of settings and favorites through the firmware's FlipperFormat, recording recovery and its startup flow on the stub card; also settings shared between editions and with beta 5 and beta 8 files, favorites and scan profiles) |
 | Analyzer on real captures | `make -C test captures` → `test_fwanalyze`: `rg_analyzer` on the firmware's 50 paired RAW test captures, scored against each protocol's decoder source | Pass — 407 checks; Te right for 50, encoding family for 48, frame length for 43 against the decoders' minimum lengths and 44 against what they decode from the captures (`test/fw_decoded_bits.h`, checked by `test_fwdecode`; beta 9: 42 and 43), the right family among the competing readings for 48; mean confidence 87 when right, 67 when wrong (see below) |
-| Decoder tests (firmware code, real captures) | `make -C test decoders` → `test_fwdecode`: the firmware's Sub-GHz receiver and all its protocol decoders, fed its 50 RAW test captures through `rg_decode` | Pass — 339 checks; all 50 decode and are described as the app describes them, and every decode saved as the app saves a key names its preset (see below) |
+| Decoder tests (firmware code, real captures) | `make -C test decoders` → `test_fwdecode`: the firmware's Sub-GHz receiver and all its protocol decoders, fed its 50 RAW test captures through `rg_decode` | Pass — 313 checks; all 50 decode and are described as the app describes them, and every decode saved as the app saves a key names its preset (see below) |
 | Preset check on the firmware's presets | `make -C test decoders` → `test_fwpreset`: `rg_preset_check` on the firmware's six built-in CC1101 presets and the custom presets in its example settings file | Pass — 26 checks; all eight pass and end where the firmware ends them |
 | Engine lifecycle | `make -C test lifecycle` → `test_lifecycle`: the real Scanner, Range Scanner (with and without a waterfall history) and Hopper engines started and stopped repeatedly on real threads against a fake radio, every allocation counted | Pass — 43 checks (beta 9: the Scanner in each adaptive mode with its observer); memory unchanged between cycles and fully returned on free, every scan session and capture closed, no probe inside a band gap, activity detected after calibration, hold on hit |
 | Apps Catalog rules | `scripts/check_catalog.py --catalog`: fam fields, icon, description and changelog through the catalog's own Markdown filter, ASCII-only strings, writes only under `apps_data/radiogeddon` | Pass; screenshots missing (need hardware) |
@@ -75,17 +77,16 @@ locally.
 | Fuzz corpus replay | `make -C test check` → `replay_fuzz_raw`, `replay_fuzz_db`, `replay_fuzz_samples`, `replay_fuzz_session`, `replay_fuzz_ui`, `replay_fuzz_fp`, `replay_fuzz_recover`, `replay_fuzz_heatmap` | Pass — every committed input (`fuzz_recover` keeps the one input that broke an invariant before the fix) |
 | Fuzzing | `make -C test fuzz` (libFuzzer with ASan/UBSan; 60 s per target in CI) | Pass — no crash, sanitizer report or broken invariant |
 | Static analysis | `scripts/static_analysis.py`: GCC `-fanalyzer` and clang-tidy ([`.clang-tidy`](../.clang-tidy)) over the device code with the build flags: the Catalog edition on the Official SDK, the Full edition on the Momentum and Unleashed SDKs | Pass — 0 findings (beta 8: 2 findings in the new code fixed first, a parameter name and an implicit narrowing; beta 7: 19, two of them real uninitialised-value paths) |
-| Thread safety | `make -C test tsan` (ThreadSanitizer, its own CI job): the ring, the recorder and the Scanner, Range Scanner and Hopper lifecycles | Pass — no reports (unreleased: 6 data-race reports on the engines' stop flags fixed first) |
+| Thread safety | `make -C test tsan` (ThreadSanitizer, its own CI job): the ring, the recorder and the Scanner, Range Scanner and Hopper lifecycles | Pass — no reports (beta 10: 6 data-race reports on the engines' stop flags fixed first) |
 | Memory safety of tested code | tests built `-Werror` under `-fsanitize=address,undefined` | Pass — no ASan/UBSan reports |
 | Documentation links | `scripts/check_links.py` (offline link + anchor check) | Pass |
 | Release metadata | `scripts/release_meta.py`: version in `radiogeddon_version.h` and `application.fam`, release notes, CHANGELOG section, the API listed for each `.fap` against the pins, download links | Pass |
 | Newer firmware (canary) | `scripts/firmware_watch.py --build` (weekly in CI): Catalog edition on the Official 1.5.1-rc SDK, API 88.2 | Builds; `APPCHK`, manifest and imports pass. No release targets it yet, not hardware-tested |
 | `.fap` metadata | `scripts/verify_fap.py` parses `.fapmeta` and asserts magic, API, target, name, version, icon; with `--symbols`, that every undefined symbol in the ELF symbol table is exported by the SDK | Pass for all four artifacts |
-| Resident code size (unreleased) | `scripts/fap_size.py` on the four builds | Catalog 86,501 B (beta 9: 80,552 B); Full 112,364 B Momentum, 112,359 B Unleashed, 112,363 B RogueMaster (beta 9: 119,132 / 119,127 / 119,131 B); modules in [Architecture](ARCHITECTURE.md#modules-full-edition) |
-| Resident code size | `scripts/fap_size.py`: the sum of the allocated (`SHF_ALLOC`) ELF sections of the built files, which is what the loader places in the heap | Catalog 77,782 B (beta 7: 77,172 B, same script), Full 119,428 B (beta 7: 104,388 B); Full modules, loaded only while in use: Waterfall 4,315 B, Bitstream 6,484 B, Unknown 15,608 B, Multi 15,959 B, Sessions 16,380 B, Dolphin Lab room 8,830 B |
-| Embedded modules | `scripts/verify_fap.py --modules`: unpacks the Full `.fap`'s `.fapassets`, checks each of the six `.fal` plugins' manifest and that every symbol it imports is exported by that firmware's SDK | Pass for all three Full builds |
+| Binary footprint (resident code and static data) | `scripts/fap_size.py`: the sum of the allocated (`SHF_ALLOC`) ELF sections of the built files, which is exactly what the loader places in the heap. **Not runtime RAM** (see "Binary footprint and runtime RAM" below) | Beta 10: Catalog 86,513 B (beta 9: 80,553 B); Full 84,313 B Momentum, 84,308 B Unleashed (beta 9: 119,132 / 119,127 B; RogueMaster built in CI); 16 Full modules, 3,554–23,620 B each, in [Architecture](ARCHITECTURE.md#modules-full-edition) |
+| Embedded modules | `scripts/verify_fap.py --modules`: unpacks the Full `.fap`'s `.fapassets`, checks each of the 16 `.fal` plugins' manifest and that every symbol it imports is exported by that firmware's SDK | Pass for all three Full builds |
 
-Host-test total: **2,115 checks, 0 failures** (`make -C test check`; the format, capture and decoder tests are counted on their own). What the suite covers (synthetic
+Host-test total: **2,756 checks, 0 failures** (`make -C test check`, beta 10; the format, decoder, capture, lifecycle, UI, fingerprint-index and activity-log-file suites above are counted on their own: 701, 339, 407, 43, 426, 85 and 31 checks). What the suite covers (synthetic
 signals, not real captures):
 
 - `test_dsp` — RAW `RAW_Data` parsing (incl. whitespace, signs, out-of-range
@@ -358,16 +359,17 @@ It fails if a total drops. The misses are listed by
 pulse-width codes with equal pulse and gap per bit read as Manchester, and
 frame lengths that include a long preamble or count bits differently.
 
-## Measurements (unreleased), host and stub card
+## Measurements (beta 10), host and stub card
 
 None of these is a device measurement. Sizes are from the built `.fap`s;
 times are on the x86 build host (relative cost only); card-call counts are
 from the stub SD card and are what the device would do.
 
-| Metric | Beta 9 | Unreleased | How |
+| Metric | Beta 9 | Beta 10 | How |
 |--------|-------:|-----------:|-----|
-| Resident RAM, Full (Momentum) | 119,132 B | 112,364 B (−6,768 B) | `scripts/fap_size.py` |
-| Resident RAM, Catalog (Official) | 80,552 B | 86,501 B (+5,949 B: recovery, diagnostics, crash-safe saves, Database engine are resident there) | `scripts/fap_size.py` |
+| Binary footprint, Full (Momentum) | 119,132 B | 84,313 B (−34,819 B) | `scripts/fap_size.py` |
+| Binary footprint, Catalog (Official) | 80,553 B | 86,513 B (+5,960 B: recovery, diagnostics, crash-safe saves, Database engine are resident there) | `scripts/fap_size.py` |
+| Bitstream Explorer, heap beyond the resident app while it opens (module + analyzer + result copy) | 6,720 + 8,672 + 4,072 = 19,464 B | 16,593 + 8,672 = 25,265 B; with the resident app 109,578 B (beta 9: 138,596 B) | `fap_size.py`, `struct_sizes.py`; computed, not measured |
 | Database duplicate work, 500 / 1,000 entries | 620.8 / 2,489.6 µs | 57.2 / 135.4 µs | `make -C test bench` |
 | Database name sort, 500 / 1,000 entries | 894.4 / 3,312.3 µs | 127.2 / 293.5 µs | `make -C test bench` |
 | Find Similar, 500 recordings, cold: folder listings / entries read | 43 / 21,543 | 9 / 2,794 | `make -C test benchfp` |
@@ -377,6 +379,32 @@ from the stub SD card and are what the device would do.
 | Reboot 2.6 s into a recording: samples readable | 0 (FAT size not synced) | 8,284 of 10,400 | `test_recorder` |
 | Frame length, firmware captures (decoded lengths) | 43 / 50 | 44 / 50 | `make -C test captures` |
 | `-O2` instead of `-Os` on `rg_analyzer.c` | — | +3,067 B (`-O3`: +9,943 B); not adopted | ufbt flags, `arm-none-eabi-size` |
+
+## Binary footprint and runtime RAM
+
+Two different things, often both called "RAM":
+
+- **Binary footprint** is what the `.fap` (or a module's `.fal`) puts in the
+  heap when it is loaded: its code and static data, the allocated ELF
+  sections. It is measured exactly from the built files by
+  `scripts/fap_size.py`, the same for every run of the same build. Every
+  size in this file, the release notes and [Architecture](ARCHITECTURE.md)
+  called "resident" is this figure.
+- **Runtime RAM** is everything the app uses while it runs: the binary
+  footprint, plus the heap it allocates (the app state — `RadioGeddonApp`
+  is 2,240 B in the Full edition and 616 B in the Catalog edition, as the
+  device compiler lays it out — the GUI views, the 4 KB app stack, the radio
+  session while a radio screen is open, the open tool's module and its
+  working memory, such as 8,672 B for an analyzer). It depends on what is
+  open and on the firmware's own use of the heap, and **has not been
+  measured on a device for beta 10**. The About screen shows the free heap,
+  its lowest point and the measured radio-session cost on the device; those
+  are the figures to report (checklist F15, U11).
+
+What the host can say about runtime RAM is computed, not measured: the
+sizes of the heap objects (`scripts/struct_sizes.py`, with the device
+compiler) and the checks each tool makes before allocating (module size
+from its ELF plus its declared work, against the largest free block).
 
 ## Release-pipeline integrity
 
@@ -437,7 +465,7 @@ report through the hardware-report form to count as verified.
 Everything about on-device radio behaviour, and the end-to-end workflow. See the
 [hardware checklist](HARDWARE_CHECKLIST.md). In particular:
 
-- Everything unreleased (checklist U1–U10): recovery after a real power
+- Everything new in beta 10 (checklist U1–U12): that the Full edition now starts on the devices where beta 9 ran out of memory, each new module (Range Scanner, Settings, Hopper, Bitstream Explorer, About, recovery) loading through the firmware's plugin manager, recovery after a real power
   loss (the FAT sync behaviour is simulated on the host, not observed), the
   crash-safe saves on a real card, Find Similar and the Database with large
   real libraries (only host and stub-card figures exist), the Activity
@@ -508,8 +536,9 @@ Everything about on-device radio behaviour, and the end-to-end workflow. See the
   (checklist C1–C3); the host tests check the decision for every combination
   of the firmware's answers, not the firmware's region data.
 - Memory headroom of the larger Full edition on a device (checklist M1–M5):
-  its resident code is 119,428 B (beta 7: 104,388 B; beta 6: 94,676 B), and
-  each module needs its own size free while in use.
+  its binary footprint is 84,313 B in beta 10 (beta 9: 119,132 B; beta 8:
+  119,428 B), and each module needs its own size and work free while in
+  use. Runtime RAM on a device has not been measured.
 - The beta 7 research tools on a device (checklist B1–B9): the Waterfall's
   real sweep rate and readability, module loading by each firmware's plugin
   manager, the Bitstream Explorer and Multi-Capture Compare on captures from a

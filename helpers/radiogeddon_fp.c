@@ -334,6 +334,7 @@ bool radiogeddon_fp_find_similar(
     Storage* storage,
     const char* target,
     uint32_t window_s,
+    const RgSession* session,
     RadioGeddonFpResult* out,
     RadioGeddonProgressCallback progress,
     void* context) {
@@ -388,6 +389,10 @@ bool radiogeddon_fp_find_similar(
         while(!end) {
             uint32_t this_id = id++;
             if(!fp_read_record(file, rec, &end) || strcmp(rec->name, tname) == 0) continue;
+            if(session && rg_session_find(session, rec->name) < 0) {
+                out->out_of_scope++;
+                continue;
+            }
             if(window_s) {
                 // In scope only with both times known and close enough.
                 uint32_t d = rec->timestamp > target_ts ? rec->timestamp - target_ts :

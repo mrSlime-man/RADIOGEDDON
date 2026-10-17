@@ -85,6 +85,7 @@ extern const RadioGeddonHost* radiogeddon_host;
 #define radiogeddon_scene_radio_memory_learn (radiogeddon_host->radio_memory_learn)
 #define radiogeddon_scene_receiver_badge     (radiogeddon_host->receiver_badge)
 #define radiogeddon_ui_active                (radiogeddon_host->ui_active)
+#define radiogeddon_scene_redraw_due         (radiogeddon_host->redraw_due)
 #define radiogeddon_ui_badge(app, frame, cyber) \
     (radiogeddon_host->ui_badge((app), (frame), (cyber)))
 #define radiogeddon_scene_probe_bands     (radiogeddon_host->probe_bands)
@@ -97,10 +98,10 @@ extern const RadioGeddonHost* radiogeddon_host;
 #define radiogeddon_scene_unknown_end     (radiogeddon_host->unknown_end)
 #define radiogeddon_scene_decoders_fit    (radiogeddon_host->decoders_fit)
 #define radiogeddon_analysis_decode       (radiogeddon_host->analysis_decode)
-#define radiogeddon_memdiag_stats            (radiogeddon_host->memdiag_stats)
-#define radiogeddon_memdiag_diags            (radiogeddon_host->memdiag_diags)
-#define radiogeddon_subghz_session_cost (radiogeddon_host->subghz_session_cost)
-#define radiogeddon_scene_radio_cost    (radiogeddon_host->radio_cost)
+#define radiogeddon_memdiag_stats         (radiogeddon_host->memdiag_stats)
+#define radiogeddon_memdiag_diags         (radiogeddon_host->memdiag_diags)
+#define radiogeddon_subghz_session_cost   (radiogeddon_host->subghz_session_cost)
+#define radiogeddon_scene_radio_cost      (radiogeddon_host->radio_cost)
 #else
 #define RADIOGEDDON_PRESET_LABEL(index) (radiogeddon_presets[(index)].label)
 #endif

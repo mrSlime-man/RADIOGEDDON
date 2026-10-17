@@ -68,7 +68,7 @@ static void run(const char* what, size_t n) {
     size_t base = stub_live_bytes;
     stub_peak_bytes = base;
     uint64_t t0 = now_ns();
-    bool ok = radiogeddon_fp_find_similar(CARD, target, 0, &res, NULL, NULL);
+    bool ok = radiogeddon_fp_find_similar(CARD, target, 0, NULL, &res, NULL, NULL);
     uint64_t t1 = now_ns();
     printf(
         "%6zu %-6s %3s %6u %8u %7u %7u %7u %8u %10.1f %7zu\n",

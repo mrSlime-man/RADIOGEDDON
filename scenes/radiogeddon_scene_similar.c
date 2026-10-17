@@ -1,3 +1,4 @@
+#include "../helpers/radiogeddon_sessions.h"
 #include "radiogeddon_scene.h"
 #include "../helpers/radiogeddon_fp.h"
 
@@ -11,25 +12,29 @@
  * the main menu. Similar structure is shown as a heuristic, never as proof
  * of a common transmitter.
  *
- * Scope: all recordings, or those saved within an hour or a day of the
- * target (the "Scope" row cycles and ranks again; the index is reused).
+ * Scope: all recordings, those saved within an hour or a day of the
+ * target, or those of the active research session (offered only while one
+ * is active). The "Scope" row cycles and ranks again; the index is reused.
  *
  * Scene state: the list (low byte 0) or a match's actions (1), and the
  * match chosen (above it).
  */
 
-static const uint32_t similar_scope_s[] = {0, 3600u, 86400u};
+static const uint32_t similar_scope_s[] = {0, 3600u, 86400u, 0};
 static const char* const similar_scope_text[] = {
     "Scope: all recordings",
     "Scope: within 1 hour",
     "Scope: within 1 day",
+    "Scope: session",
 };
+#define SIMILAR_SCOPE_SESSION 3u
 
 typedef struct RadioGeddonSimilar {
     RadioGeddonFpResult res;
     char why[RG_FP_TOP][200];
     char target[RG_FP_NAME_MAX];
     uint8_t scope; // index into similar_scope_s
+    char session[RG_SESSION_NAME_MAX]; // the session searched (session scope)
 } RadioGeddonSimilar;
 
 typedef enum {
@@ -103,7 +108,12 @@ static void similar_show_list(RadioGeddonApp* app, uint32_t selected) {
         snprintf(line, sizeof(line), "%lu compared", (unsigned long)r->compared);
     }
     submenu_add_item(submenu, line, SimilarItemInfo, similar_cb, app);
-    submenu_add_item(submenu, similar_scope_text[s->scope], SimilarItemScope, similar_cb, app);
+    if(s->scope == SIMILAR_SCOPE_SESSION) {
+        snprintf(line, sizeof(line), "Scope: %s", s->session);
+        submenu_add_item(submenu, line, SimilarItemScope, similar_cb, app);
+    } else {
+        submenu_add_item(submenu, similar_scope_text[s->scope], SimilarItemScope, similar_cb, app);
+    }
     if(r->count > 1)
         submenu_add_item(submenu, "Compare all matches", SimilarItemCompareAll, similar_cb, app);
     submenu_set_selected_item(submenu, selected);
@@ -123,7 +133,9 @@ static void similar_show_match(RadioGeddonApp* app, size_t i) {
 
 /* Run the search. */
 static bool similar_search(RadioGeddonApp* app) {
-    if(memmgr_heap_get_max_free_block() < radiogeddon_fp_memory() + sizeof(RadioGeddonSimilar)) {
+    // The session scope reads the session (its names) for the search only.
+    size_t need = radiogeddon_fp_memory() + sizeof(RadioGeddonSimilar) + sizeof(RgSession);
+    if(memmgr_heap_get_max_free_block() < need) {
         app->message_header = "Not enough memory";
         app->message_text = "Close other tools or\nuse Classic mode.";
         return false;
@@ -138,15 +150,31 @@ static bool similar_search(RadioGeddonApp* app) {
     memset(s, 0, sizeof(*s));
     s->scope = scope;
     strlcpy(s->target, similar_name(furi_string_get_cstr(app->file_path)), sizeof(s->target));
+    RgSession* session = NULL;
+    if(s->scope == SIMILAR_SCOPE_SESSION) {
+        radiogeddon_session_active(app->storage, s->session, sizeof(s->session));
+        session = malloc(sizeof(RgSession));
+        RgSessionLoad load = s->session[0] ?
+                                 radiogeddon_session_load(app->storage, s->session, session) :
+                                 RgSessionLoadMissing;
+        if(load != RgSessionLoadOk && load != RgSessionLoadRecovered) {
+            // The session went away: rank everything instead.
+            free(session);
+            session = NULL;
+            s->scope = 0;
+        }
+    }
     radiogeddon_scene_show_progress(app, "Fingerprinting...");
     bool ok = radiogeddon_fp_find_similar(
         app->storage,
         furi_string_get_cstr(app->file_path),
         similar_scope_s[s->scope],
+        session,
         &s->res,
         radiogeddon_scene_progress,
         app);
     radiogeddon_scene_progress_end(app);
+    free(session);
     if(ok) {
         for(size_t i = 0; i < s->res.count; i++)
             radiogeddon_fp_explain(&s->res, i, s->why[i], sizeof(s->why[i]));
@@ -246,6 +274,12 @@ bool radiogeddon_scene_similar_on_event(void* context, SceneManagerEvent event) 
     switch(event.event) {
     case SimilarItemScope:
         s->scope = (uint8_t)((s->scope + 1u) % COUNT_OF(similar_scope_s));
+        if(s->scope == SIMILAR_SCOPE_SESSION) {
+            // Offered only while a session is active.
+            char active[RG_SESSION_NAME_MAX];
+            radiogeddon_session_active(app->storage, active, sizeof(active));
+            if(!active[0]) s->scope = 0;
+        }
         if(!similar_search(app)) {
             view_dispatcher_send_custom_event(app->view_dispatcher, SimilarEventFailed);
             return true;

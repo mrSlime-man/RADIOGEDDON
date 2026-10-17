@@ -39,6 +39,7 @@ static int g_card;
 static Storage* const CARD = (Storage*)&g_card; // never dereferenced by the stub
 static RadioGeddonFpResult g_res;
 static uint32_t g_window = 0; // the search's time window (0: all)
+static const RgSession* g_session = NULL; // the search's session (NULL: all)
 
 static void path_of(const char* name, char* out, size_t size) {
     snprintf(out, size, "%s/%s", RADIOGEDDON_SIGNALS_FOLDER, name);
@@ -121,7 +122,7 @@ static int hit_index(const char* name) {
 static bool search(const char* target) {
     char path[256];
     path_of(target, path, sizeof(path));
-    return radiogeddon_fp_find_similar(CARD, path, g_window, &g_res, NULL, NULL);
+    return radiogeddon_fp_find_similar(CARD, path, g_window, g_session, &g_res, NULL, NULL);
 }
 
 static const char* KEY_A = "101100111000101011110001";
@@ -376,6 +377,33 @@ static void test_time_window(void) {
     g_window = 0;
 }
 
+/* Find Similar within a research session: only the recordings it names. */
+static void test_session_scope(void) {
+    printf("test_session_scope\n");
+    reset_card();
+    char name[32];
+    for(int i = 0; i < 5; i++) {
+        snprintf(name, sizeof(name), "s_%d.sub", i);
+        write_raw(name, KEY_A, 350, 5, 433920000);
+    }
+    static RgSession session;
+    rg_session_init(&session, "Garage", "");
+    CHECK(rg_session_add(&session, "s_0.sub") == RgSessionAddOk, "target added");
+    CHECK(rg_session_add(&session, "s_3.sub") == RgSessionAddOk, "s_3 added");
+    CHECK(rg_session_add(&session, "gone.sub") == RgSessionAddOk, "a missing one added");
+    CHECK(search("s_0.sub") && g_res.compared == 4, "all: 4 ranked");
+    g_session = &session;
+    memset(&stub_io, 0, sizeof(stub_io));
+    CHECK(search("s_0.sub") && g_res.computed == 0, "the index is reused");
+    CHECK(g_res.compared == 1 && g_res.out_of_scope == 3, "session: only s_3 ranked");
+    CHECK(g_res.count == 1 && strcmp(g_res.hit[0].name, "s_3.sub") == 0, "s_3 is the match");
+    // A session with no other recording ranks nothing, and says so.
+    rg_session_init(&session, "Empty", "");
+    CHECK(search("s_0.sub") && g_res.compared == 0 && g_res.count == 0, "empty session");
+    CHECK(g_res.out_of_scope == 4, "all four out of scope");
+    g_session = NULL;
+}
+
 int main(void) {
     stub_write_fail_after = -1;
     test_ranking();
@@ -386,6 +414,7 @@ int main(void) {
     test_beyond_500();
     test_hash_collision();
     test_time_window();
+    test_session_scope();
     printf("\n%d checks, %d failures\n", g_checks, g_failures);
     return g_failures ? 1 : 0;
 }

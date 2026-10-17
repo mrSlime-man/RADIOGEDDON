@@ -60,7 +60,7 @@ FORMATS_SRC := test_formats.c stubs/furi_stub.c ../helpers/radiogeddon_storage.c
 
 # Fingerprint index tests: Find Similar Signals over real files through the
 # stub Storage, the recordings parsed by the firmware's FlipperFormat code.
-FPINDEX_SRC := test_fpindex.c stubs/furi_stub.c ../helpers/radiogeddon_fp.c ../helpers/radiogeddon_safefile.c ../helpers/rg_safefile.c ../helpers/rg_fp.c \
+FPINDEX_SRC := test_fpindex.c stubs/furi_stub.c ../helpers/radiogeddon_fp.c ../helpers/radiogeddon_safefile.c ../helpers/rg_safefile.c ../helpers/rg_fp.c ../helpers/rg_session.c \
 		../helpers/rg_crc.c ../helpers/radiogeddon_analysis_run.c ../helpers/radiogeddon_analysis_status.c ../helpers/radiogeddon_storage.c \
 		../helpers/rg_raw.c ../helpers/rg_analyzer.c ../helpers/radiogeddon_dsp.c
 

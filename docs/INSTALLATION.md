@@ -37,20 +37,20 @@ Using a different fork? See [Firmware Compatibility](FIRMWARE_COMPATIBILITY.md).
 
 ## Step 2 — Download
 
-From the [**v1.0.0-beta.9 release page**](https://github.com/mrSlime-man/RADIOGEDDON/releases/tag/v1.0.0-beta.9),
+From the [**v1.0.0-beta.10 release page**](https://github.com/mrSlime-man/RADIOGEDDON/releases/tag/v1.0.0-beta.10),
 or directly:
 
-- [radiogeddon-catalog-official.fap](https://github.com/mrSlime-man/RADIOGEDDON/releases/download/v1.0.0-beta.9/radiogeddon-catalog-official.fap) — Official firmware
-- [radiogeddon-full-roguemaster.fap](https://github.com/mrSlime-man/RADIOGEDDON/releases/download/v1.0.0-beta.9/radiogeddon-full-roguemaster.fap) — RogueMaster
-- [radiogeddon-full-momentum.fap](https://github.com/mrSlime-man/RADIOGEDDON/releases/download/v1.0.0-beta.9/radiogeddon-full-momentum.fap) — Momentum
-- [radiogeddon-full-unleashed.fap](https://github.com/mrSlime-man/RADIOGEDDON/releases/download/v1.0.0-beta.9/radiogeddon-full-unleashed.fap) — Unleashed
+- [radiogeddon-catalog-official.fap](https://github.com/mrSlime-man/RADIOGEDDON/releases/download/v1.0.0-beta.10/radiogeddon-catalog-official.fap) — Official firmware
+- [radiogeddon-full-roguemaster.fap](https://github.com/mrSlime-man/RADIOGEDDON/releases/download/v1.0.0-beta.10/radiogeddon-full-roguemaster.fap) — RogueMaster
+- [radiogeddon-full-momentum.fap](https://github.com/mrSlime-man/RADIOGEDDON/releases/download/v1.0.0-beta.10/radiogeddon-full-momentum.fap) — Momentum
+- [radiogeddon-full-unleashed.fap](https://github.com/mrSlime-man/RADIOGEDDON/releases/download/v1.0.0-beta.10/radiogeddon-full-unleashed.fap) — Unleashed
 
 The Catalog edition is being prepared for the official Flipper Apps Catalog;
 until it is accepted there, install it from this page.
 
-The Full edition's optional tools (Waterfall, Bitstream Explorer,
-Multi-Capture Compare, Unknown Protocol Analysis, Sessions) are modules
-packed inside its `.fap`; the firmware unpacks them to
+The Full edition's optional tools (the Range Scanner, Settings, the Hopper,
+the research tools, About and recording recovery: 16 modules) are packed
+inside its `.fap`; the firmware unpacks them to
 `apps_assets/radiogeddon_full/plugins/` when the app starts. There is
 nothing extra to copy. Updating from an earlier beta: replace the `.fap`.
 

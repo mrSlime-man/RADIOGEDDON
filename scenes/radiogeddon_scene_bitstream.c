@@ -1,12 +1,16 @@
 #include "radiogeddon_scene.h"
 
+#include <stddef.h>
+
 #if RG_FEATURE_BITSTREAM
 
 // Full edition: Bitstream Explorer for the open RAW capture. The scene, its
 // screen and the analyzer are a module (radiogeddon_modules.h), loaded with
 // the scene; the analyzer streams the file (three passes, never loaded
-// whole) and only its result, the frames and their bits (an RgAnalysis), is
-// kept while the explorer is open. Screen and result are freed on exit.
+// whole) and its result, the frames and their bits (an RgAnalysis), is kept
+// while the explorer is open. Screen and analyzer are freed on exit.
+
+_Static_assert(offsetof(RgAnalyzer, result) == 0, "bits_doc frees the analyzer");
 
 typedef enum {
     BitstreamEventFailed = 970,
@@ -28,8 +32,8 @@ static const char* radiogeddon_scene_bitstream_error(RadioGeddonAnalysisStatus s
 void radiogeddon_scene_bitstream_on_enter(void* context) {
     RadioGeddonApp* app = context;
     RadioGeddonAnalysisStatus status = RadioGeddonAnalysisOk;
-    // The analyzer and its copied result exist together for a moment. The
-    // module was loaded with this much to spare (scene_tools.c).
+    // The analyzer, whose result the explorer keeps. The module was loaded
+    // with this much to spare (scene_tools.c).
     size_t work = RADIOGEDDON_BITSTREAM_WORK;
     if(memmgr_heap_get_max_free_block() < work) {
         status = RadioGeddonAnalysisNoMemory;
@@ -41,11 +45,11 @@ void radiogeddon_scene_bitstream_on_enter(void* context) {
             app->storage, furi_string_get_cstr(app->file_path), &status);
         radiogeddon_analysis_set_progress(NULL, NULL);
         radiogeddon_scene_progress_end(app);
-        if(a) {
-            app->bits_doc = malloc(sizeof(RgAnalysis));
-            memcpy(app->bits_doc, &a->result, sizeof(RgAnalysis));
-            free(a);
-        }
+        // The result is the analyzer's first member: keep the analyzer and
+        // point at its result rather than copying it out, so the two never
+        // exist at once (4 KB less at the peak, no hole left in the heap).
+        // Freeing bits_doc frees the analyzer.
+        if(a) app->bits_doc = &a->result;
     }
     if(!app->bits_doc) {
         app->message_header = "Cannot explore";

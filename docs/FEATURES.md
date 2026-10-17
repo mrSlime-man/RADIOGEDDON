@@ -36,7 +36,7 @@ settings — is the same code in both.
 | [Research Journal, Research XP, Dolphin Assistant](#research-journal-xp-and-assistant-full-edition) | — | ✓ |
 | Main menu | the tools listed directly | grouped: Scan, Receive & Record, Analyze, Database, Sessions, Settings, About |
 | [Replay](#authorized-signal-replay) | the app checks the firmware's region first and explains a refusal; then the firmware's own check | the firmware's own check only |
-| Resident code (from the built files; beta 9 in brackets) | 86,501 B (80,552 B) | 112,364 B (119,132 B), plus [modules](#modules-full-edition) loaded only while used |
+| Binary footprint (resident code from the built files, not runtime RAM; beta 9 in brackets) | 86,513 B (80,553 B) | 84,313 B (119,132 B), plus [modules](#modules-full-edition) loaded only while used |
 
 The Catalog edition keeps every receiving and analysis feature the app had;
 the Full-only features are the research tools that go beyond the built-in
@@ -309,8 +309,10 @@ customization screens are the 18 KB `radiogeddon_lab` module.
   damaged index or record is rebuilt rather than trusted. Up to 2,000
   recordings, or as many as the free heap can track (8 bytes each); beyond
   that the first ones are indexed and the result line says `first N`.
-- **Scope**: all recordings, or only those saved within an hour or a day of
-  the one searched for (the Scope row on the results; the index is reused).
+- **Scope**: all recordings, only those saved within an hour or a day of
+  the one searched for, or (beta 10, while a research session is active)
+  only the active session's recordings. The Scope row on the results cycles
+  them and ranks again; the index is reused.
 - **Ranking**: weighted feature agreement, at most 8 matches. Every score is
   capped by its evidence: 30 when either side has no frame structure, 60 for
   RAW against decoded, 65 when the timing disagrees; bit patterns count only
@@ -423,22 +425,26 @@ takes RAM only then:
 
 | Module | Size | Loaded while |
 |--------|------:|--------------|
-| `radiogeddon_wf.fal` | 4,496 B | the Waterfall is open |
-| `radiogeddon_bits.fal` | 15,982 B | the Bitstream Explorer is open (it runs the analysis itself) |
-| `radiogeddon_multi.fal` | 17,160 B | a comparison or a session export runs |
+| `radiogeddon_wf.fal` | 4,497 B | the Waterfall is open |
+| `radiogeddon_bits.fal` | 16,593 B | the Bitstream Explorer is open (its scene and the analyzer are in it) |
+| `radiogeddon_multi.fal` | 17,159 B | a comparison or a session export runs |
 | `radiogeddon_unknown.fal` | 18,784 B | Protocol Discovery (or a report) runs |
-| `radiogeddon_sessions.fal` | 16,870 B | any Sessions screen is open |
-| `radiogeddon_lab.fal` | 18,496 B | the room, journal, assistant or customization screen is open |
-| `radiogeddon_fp.fal` | 21,824 B | Find Similar runs or shows its results |
-| `radiogeddon_studio.fal` | 22,096 B | Pulse Studio or the Pulse Timeline is open |
-| `radiogeddon_log.fal` | 9,158 B | the Activity Logger or the adaptive setup is open |
-| `radiogeddon_reports.fal` | 18,370 B | an analysis, crypto, comparison or session report is shown |
-| `radiogeddon_heatmap.fal` | 5,945 B | the Activity Heatmap is open |
-| `radiogeddon_about.fal` | 4,153 B | About is open |
-| `radiogeddon_recover.fal` | 3,556 B | at start, only when a recording was cut off |
+| `radiogeddon_sessions.fal` | 16,871 B | any Sessions screen is open |
+| `radiogeddon_lab.fal` | 18,508 B | the room, journal, assistant or customization screen is open |
+| `radiogeddon_fp.fal` | 23,620 B | Find Similar runs or shows its results |
+| `radiogeddon_studio.fal` | 22,108 B | Pulse Studio or the Pulse Timeline is open |
+| `radiogeddon_log.fal` | 9,176 B | the Activity Logger or the adaptive setup is open |
+| `radiogeddon_reports.fal` | 18,384 B | an analysis, crypto, comparison or session report is shown |
+| `radiogeddon_heatmap.fal` | 5,955 B | the Activity Heatmap is open |
+| `radiogeddon_about.fal` | 4,168 B | About is open |
+| `radiogeddon_recover.fal` | 3,554 B | at start, only when a recording was cut off |
+| `radiogeddon_range.fal` | 21,740 B | a Range Scanner, Waterfall or scan profile screen is open |
+| `radiogeddon_settings.fal` | 7,296 B | Settings or Radio bands is open |
+| `radiogeddon_hopper.fal` | 7,264 B | the Frequency Hopper or its statistics are open |
 
-Sizes are the bytes the loader places in RAM, measured from the Momentum
-build. Beta 9's screens are hosted by a generic forwarder with two module
+Sizes are the bytes the loader places in RAM (binary footprint), measured
+from the Momentum build of beta 10; each module's working memory comes on
+top while it runs. Beta 9's screens are hosted by a generic forwarder with two module
 slots; a module is unloaded once none of its screens is shown.
 
 Before loading, the app checks the module's code and data (its allocated ELF

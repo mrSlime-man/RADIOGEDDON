@@ -75,6 +75,8 @@ typedef struct {
     void (*ui_set_scanning)(RadioGeddonApp* app, bool scanning);
     void (*ui_apply_style)(RadioGeddonApp* app);
     bool (*ui_active)(RadioGeddonApp* app);
+    /* Battery saver: whether a live screen should redraw now. */
+    bool (*redraw_due)(RadioGeddonApp* app);
     /* Dolphin Lab badge: RgMascotFrame* frame (radiogeddon_ui_badge). */
     bool (*ui_badge)(RadioGeddonApp* app, void* frame, bool* cyber);
     /* Range Scanner (Full edition): bands of the radio, the planned range. */

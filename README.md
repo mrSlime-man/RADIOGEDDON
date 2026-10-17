@@ -22,14 +22,15 @@ Sub-GHz signals — entirely on the device, with no computer, phone or network.
 ---
 
 > [!WARNING]
-> **Public beta.** Every feature is implemented and the builds pass all
-> automated checks (lint, 2,528 host-test checks, format, decoder, capture,
-> engine-lifecycle, file and offline UI tests, fuzzing, static analysis of
-> both editions, four firmware builds with API, manifest, imported-symbol and
-> module verification). On physical hardware there is only one tester report
-> so far, for the beta 2 code (RogueMaster: launches and works); **nothing in
-> betas 3 to 9 is verified on a device yet** — including the research lab
-> tools that beta 9 adds, the Dolphin Lab interface of beta 8 and the
+> **Public beta, NOT HARDWARE TESTED.** Every feature is implemented and the
+> builds pass all automated checks (lint, 2,756 host-test checks, format,
+> decoder, capture, engine-lifecycle, file and offline UI tests, ThreadSanitizer,
+> fuzzing, static analysis of both editions, four firmware builds with API,
+> manifest, imported-symbol and module verification). On physical hardware
+> there is only one tester report so far, for the beta 2 code (RogueMaster:
+> launches and works); **nothing in betas 3 to 10 is verified on a device
+> yet** — including beta 10's smaller Full edition and its new modules, the
+> research lab tools of beta 9, the Dolphin Lab interface of beta 8 and the
 > on-demand modules of beta 7. Expect rough edges, and see
 > [VERIFICATION.md](docs/VERIFICATION.md) for exactly what has and hasn't been
 > tested. Testing on real hardware is the single most useful thing you can
@@ -138,7 +139,7 @@ Flipper, with no computer, phone, network or cloud service.
   customization, *Animation level* Off / Minimal / Normal / Full, and a lab
   room with six stations.
 
-Nothing in beta 9 transmits; RadioGeddon does not recover keys, predict
+Nothing in beta 9 or 10 transmits; RadioGeddon does not recover keys, predict
 rolling codes or brute-force anything.
 
 <img src="docs/assets/beta9-previews.png" alt="Synthetic previews: Pulse Studio's waveform and timing pages, the Adaptive Scanner, the lab room's workbench, equipment rack, dolphin corner and research terminal, and Pulse Studio's frame page" width="100%">
@@ -179,16 +180,16 @@ with the firmware's own fonts — not screenshots of a Flipper Zero.</sub>
 ## ⬇ Download
 
 Grab the build that matches your firmware from the
-[**v1.0.0-beta.9 release**](https://github.com/mrSlime-man/RADIOGEDDON/releases/tag/v1.0.0-beta.9),
+[**v1.0.0-beta.10 release**](https://github.com/mrSlime-man/RADIOGEDDON/releases/tag/v1.0.0-beta.10),
 then copy it to `apps/Sub-GHz/` on the SD card (full steps in
 [Installation](docs/INSTALLATION.md)).
 
 | Your firmware | Edition | Download this file |
 |---------------|---------|--------------------|
-| **Official** (flipperzero.one) | Catalog | [`radiogeddon-catalog-official.fap`](https://github.com/mrSlime-man/RADIOGEDDON/releases/download/v1.0.0-beta.9/radiogeddon-catalog-official.fap) |
-| **RogueMaster** | Full | [`radiogeddon-full-roguemaster.fap`](https://github.com/mrSlime-man/RADIOGEDDON/releases/download/v1.0.0-beta.9/radiogeddon-full-roguemaster.fap) |
-| **Momentum** | Full | [`radiogeddon-full-momentum.fap`](https://github.com/mrSlime-man/RADIOGEDDON/releases/download/v1.0.0-beta.9/radiogeddon-full-momentum.fap) |
-| **Unleashed** | Full | [`radiogeddon-full-unleashed.fap`](https://github.com/mrSlime-man/RADIOGEDDON/releases/download/v1.0.0-beta.9/radiogeddon-full-unleashed.fap) |
+| **Official** (flipperzero.one) | Catalog | [`radiogeddon-catalog-official.fap`](https://github.com/mrSlime-man/RADIOGEDDON/releases/download/v1.0.0-beta.10/radiogeddon-catalog-official.fap) |
+| **RogueMaster** | Full | [`radiogeddon-full-roguemaster.fap`](https://github.com/mrSlime-man/RADIOGEDDON/releases/download/v1.0.0-beta.10/radiogeddon-full-roguemaster.fap) |
+| **Momentum** | Full | [`radiogeddon-full-momentum.fap`](https://github.com/mrSlime-man/RADIOGEDDON/releases/download/v1.0.0-beta.10/radiogeddon-full-momentum.fap) |
+| **Unleashed** | Full | [`radiogeddon-full-unleashed.fap`](https://github.com/mrSlime-man/RADIOGEDDON/releases/download/v1.0.0-beta.10/radiogeddon-full-unleashed.fap) |
 
 Each firmware family has its own SDK and symbol table, so **install the file
 for your firmware** — the wrong one is refused ("Outdated App / Firmware" or
@@ -279,10 +280,12 @@ flowchart LR
 
 The radio layer uses only the portable `subghz_devices` API — the same one the
 stock app uses — so a single source tree builds both editions for all four
-firmware families. The Full edition's optional tools (Waterfall and Bitstream
-Explorer screens, Multi-Capture Compare, Unknown Protocol Analysis, Sessions,
-the lab room and journal, Find Similar, Pulse Studio and the Pulse Timeline,
-the activity logger and adaptive setup, analysis reports — ten modules) are
+firmware families. The Full edition's optional tools (the Range Scanner and
+Waterfall, Settings, the Frequency Hopper, the Bitstream Explorer,
+Multi-Capture Compare, Unknown Protocol Analysis, Sessions, the lab room and
+journal, Find Similar, Pulse Studio and the Pulse Timeline, the activity
+logger, adaptive setup and heatmap, analysis reports, About and recording
+recovery — 16 modules) are
 plugins packed inside the `.fap` and loaded only while their screen is open,
 so their code takes RAM only then. The analysis engine (`helpers/rg_analyzer.*`, `helpers/radiogeddon_dsp.*`)
 has no firmware dependencies, so it is unit-tested on a normal computer. Deeper
