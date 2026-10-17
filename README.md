@@ -23,13 +23,13 @@ Sub-GHz signals — entirely on the device, with no computer, phone or network.
 
 > [!WARNING]
 > **Public beta, NOT HARDWARE TESTED.** Every feature is implemented and the
-> builds pass all automated checks (lint, 2,756 host-test checks, format,
-> decoder, capture, engine-lifecycle, file and offline UI tests, ThreadSanitizer,
+> builds pass all automated checks (lint, 2,903 host-test checks, format,
+> decoder, capture, engine-lifecycle, file, memory-stress and offline UI tests, ThreadSanitizer,
 > fuzzing, static analysis of both editions, four firmware builds with API,
 > manifest, imported-symbol and module verification). On physical hardware
 > there is only one tester report so far, for the beta 2 code (RogueMaster:
-> launches and works); **nothing in betas 3 to 10 is verified on a device
-> yet** — including beta 10's smaller Full edition and its new modules, the
+> launches and works); **nothing in betas 3 to 11 is verified on a device
+> yet** — including beta 11's memory work, beta 10's smaller Full edition and its new modules, the
 > research lab tools of beta 9, the Dolphin Lab interface of beta 8 and the
 > on-demand modules of beta 7. Expect rough edges, and see
 > [VERIFICATION.md](docs/VERIFICATION.md) for exactly what has and hasn't been
@@ -180,16 +180,16 @@ with the firmware's own fonts — not screenshots of a Flipper Zero.</sub>
 ## ⬇ Download
 
 Grab the build that matches your firmware from the
-[**v1.0.0-beta.10 release**](https://github.com/mrSlime-man/RADIOGEDDON/releases/tag/v1.0.0-beta.10),
+[**v1.0.0-beta.11 release**](https://github.com/mrSlime-man/RADIOGEDDON/releases/tag/v1.0.0-beta.11),
 then copy it to `apps/Sub-GHz/` on the SD card (full steps in
 [Installation](docs/INSTALLATION.md)).
 
 | Your firmware | Edition | Download this file |
 |---------------|---------|--------------------|
-| **Official** (flipperzero.one) | Catalog | [`radiogeddon-catalog-official.fap`](https://github.com/mrSlime-man/RADIOGEDDON/releases/download/v1.0.0-beta.10/radiogeddon-catalog-official.fap) |
-| **RogueMaster** | Full | [`radiogeddon-full-roguemaster.fap`](https://github.com/mrSlime-man/RADIOGEDDON/releases/download/v1.0.0-beta.10/radiogeddon-full-roguemaster.fap) |
-| **Momentum** | Full | [`radiogeddon-full-momentum.fap`](https://github.com/mrSlime-man/RADIOGEDDON/releases/download/v1.0.0-beta.10/radiogeddon-full-momentum.fap) |
-| **Unleashed** | Full | [`radiogeddon-full-unleashed.fap`](https://github.com/mrSlime-man/RADIOGEDDON/releases/download/v1.0.0-beta.10/radiogeddon-full-unleashed.fap) |
+| **Official** (flipperzero.one) | Catalog | [`radiogeddon-catalog-official.fap`](https://github.com/mrSlime-man/RADIOGEDDON/releases/download/v1.0.0-beta.11/radiogeddon-catalog-official.fap) |
+| **RogueMaster** | Full | [`radiogeddon-full-roguemaster.fap`](https://github.com/mrSlime-man/RADIOGEDDON/releases/download/v1.0.0-beta.11/radiogeddon-full-roguemaster.fap) |
+| **Momentum** | Full | [`radiogeddon-full-momentum.fap`](https://github.com/mrSlime-man/RADIOGEDDON/releases/download/v1.0.0-beta.11/radiogeddon-full-momentum.fap) |
+| **Unleashed** | Full | [`radiogeddon-full-unleashed.fap`](https://github.com/mrSlime-man/RADIOGEDDON/releases/download/v1.0.0-beta.11/radiogeddon-full-unleashed.fap) |
 
 Each firmware family has its own SDK and symbol table, so **install the file
 for your firmware** — the wrong one is refused ("Outdated App / Firmware" or
@@ -287,7 +287,12 @@ journal, Find Similar, Pulse Studio and the Pulse Timeline, the activity
 logger, adaptive setup and heatmap, analysis reports, About and recording
 recovery — 16 modules) are
 plugins packed inside the `.fap` and loaded only while their screen is open,
-so their code takes RAM only then. The analysis engine (`helpers/rg_analyzer.*`, `helpers/radiogeddon_dsp.*`)
+so their code takes RAM only then. Beta 11 works on the memory the app
+uses while it runs: the Bitstream Explorer holds 4,072 B instead of 8,672 B,
+the Database's entries are 28 bytes instead of 40, Find Similar tracks a
+recording in 4 bytes and matches names exactly, and each module's load
+cost is read from its own file ([Performance](docs/PERFORMANCE.md);
+simulated and computed, not measured on a device). The analysis engine (`helpers/rg_analyzer.*`, `helpers/radiogeddon_dsp.*`)
 has no firmware dependencies, so it is unit-tested on a normal computer. Deeper
 dive: [Architecture](docs/ARCHITECTURE.md).
 
@@ -316,7 +321,7 @@ manifest and that every symbol it imports is exported by that SDK. A plain
 ## Testing & verification
 
 ```bash
-make -C test check               # 2,528 host checks (both editions) and the fuzz corpus, ASan + UBSan
+make -C test check               # 2,903 host checks (both editions) and the fuzz corpus, ASan + UBSan
 make -C test formats             # the firmware's file code, its 85 Sub-GHz test files, settings, favorites, profiles
 make -C test decoders            # the firmware's Sub-GHz decoders on its RAW test captures, and its presets
 make -C test captures            # the analyzer on those captures, scored against the decoders
@@ -324,12 +329,15 @@ make -C test lifecycle           # Scanner, Range Scanner, Waterfall, Hopper sta
 make -C test ui                  # screens drawn on a host 128x64 canvas with the firmware's fonts (synthetic previews)
 make -C test fpindex             # the fingerprint index through the firmware's FlipperFormat on a stub SD card
 make -C test actlogfiles         # activity log files: rotation, summary, a full card
+make -C test memstress           # heavy operations on a model of the firmware's heap: low memory, leaks, fragmentation
+make -C test benchmem            # their peak and held heap, largest free block, fragments (docs/PERFORMANCE.md)
 python3 scripts/check_catalog.py # the Catalog edition against the Apps Catalog's rules
 python3 scripts/check_links.py   # documentation links and anchors
 ```
 
 CI runs the link check, the release metadata check, the host, format,
-decoder, capture, lifecycle and offline UI tests, the fuzzers, the Apps Catalog checks
+decoder, capture, lifecycle, memory-stress and offline UI tests, the module
+load-cost check and load replay, the fuzzers, the Apps Catalog checks
 (including the catalog's own bundler), static analysis of both editions (GCC
 `-fanalyzer` and clang-tidy) and all four firmware builds (with API, manifest
 and imported-symbol verification plus lint) on every pull request and release. A weekly firmware watch builds the app

@@ -7,6 +7,83 @@ to follow [Semantic Versioning](https://semver.org/) (pre-1.0.0 releases use
 
 ## [Unreleased]
 
+## [1.0.0-beta.11] - 2026-10-17
+
+Memory and performance release: the same features using less heap while
+they run, fewer SD-card operations and no 64-bit division helper. Nothing
+new transmits; no feature removed. Figures are from the built files, the
+device compiler's sizes and a host model of the firmware's heap — **not
+measured on a device; not tested on hardware** (checklist V1–V8).
+
+### Changed
+- **Bitstream Explorer holds 4,072 B instead of 8,672 B** while open: the
+  analyzer's result and the passes' working state are separate objects; the
+  working state (4,600 B) is freed when the passes end, and the result is
+  allocated before the file and the working state, so freeing those leaves
+  no hole under it. The peak is unchanged (+8 B for a second heap header).
+  Pulse Studio, the Pulse Timeline, the reports, Multi-Capture Compare and
+  Find Similar keep only the result too.
+- **Find Similar**: the index update lists the folder once, matches
+  recordings to old records through a sorted table of 16-bit name hashes
+  and compares every candidate's name exactly, so no two recordings can be
+  mistaken for one (beta 10 trusted 64-bit hashes); 4 bytes per recording
+  instead of 8; sizes from the listing, so half the path lookups; new
+  recordings gathered by folder position, a third as many listings when
+  indexing; the fingerprint builder reads along with the analyzer's second
+  pass and the header is parsed without a pass over the samples (a RAW
+  recording is read 4 times instead of 6). Host benchmark at 2,000
+  recordings: cold peak 31.2 → 15.9 KB, warm peak 16.7 → 9.6 KB, path
+  lookups 4,000 → 2,000. Rankings unchanged.
+- **Database**: entries are 28 bytes instead of 40 (protocol names kept once
+  each in a shared table); the whole index is one heap block (was four); the
+  500-file cap is now the 32 KiB beta 10's 500-file index took, which holds
+  about 600–660 files with typical names (at most 2,000). Sorting,
+  filtering, search and duplicates give the same results (benchmark
+  checksums equal to beta 10's).
+- **Module loading**: the free block asked for before loading a module is
+  computed from the module's own section table with a model of the
+  firmware's loader (its relocation tables counted, and not added to the
+  tool's work, since they are freed before it starts) instead of a flat
+  6 KB; 1.9–3.8 KB less for 15 of the 16 modules, the 4 KB margin
+  unchanged. On 4,000 simulated fragmented heaps per module, 3,952 fewer
+  loads that fit are refused and none that is allowed runs out of memory.
+- **No 64-bit division helper**: every 64-bit division in the app and its
+  modules is done exactly by `rg_div_u64`, so `__udivmoddi4` (698 B) is
+  linked nowhere (beta 10: the resident app and 8 modules); 14 of the 16
+  modules are smaller. The fingerprint builder's per-sample bucket test no
+  longer divides.
+- Resident code: Full 84,433 B (beta 10: 84,313 B), Catalog 86,565 B
+  (86,513 B).
+
+### Fixed
+- Beta 10's module check reserved less than the Range Scanner module's
+  relocation tables and file object take while it loads (absorbed by the
+  margin until now).
+
+### Testing
+- A host model of the firmware's heap_4 allocator (`test/stubs/heap4.h`),
+  with AddressSanitizer poisoning inside it; `make -C test memstress` (CI):
+  the heavy operations with every allocation in the model, a low-memory
+  sweep where no allocation may fail, a long random session with no leak
+  or lasting fragmentation; `make -C test benchmem` for the tables
+  ([Performance](docs/PERFORMANCE.md)).
+- `test/bench_modules.c` (CI): each built module's real load sequence on
+  fragmented heaps, and 20,000 load/unload cycles.
+- `scripts/module_cost.py --check` (CI): the C load-cost model against an
+  independent reading of the built modules.
+- New checks: the heap model (128), 64-bit division (6.2 million), Find
+  Similar with names sharing a 16-bit hash and a duplicated record, the
+  builder along the second pass, the Database with 24 distinct protocols.
+
+### Investigated, unchanged
+- **Activity Heatmap grid**: every field of its 6-byte cell is needed at full
+  precision when columns are merged; a smaller cell would drop the peak dBm
+  or the margin's precision.
+- **A shared work arena**: the heavy operations never overlap and free in
+  reverse order of allocation; the heap model shows the free space whole
+  again after each, so an arena would add an allocator without saving
+  memory.
+
 ## [1.0.0-beta.10] - 2026-10-17
 
 Optimization release: the Full edition's resident code drops from 119,132 B
@@ -764,7 +841,8 @@ on physical hardware** — see `docs/VERIFICATION.md`.
 - Settings are not persisted across launches; internal radio only; RAW capture
   capped at 16,384 samples (engine analysis uses the first 4,096).
 
-[Unreleased]: https://github.com/mrSlime-man/RADIOGEDDON/compare/v1.0.0-beta.10...HEAD
+[Unreleased]: https://github.com/mrSlime-man/RADIOGEDDON/compare/v1.0.0-beta.11...HEAD
+[1.0.0-beta.11]: https://github.com/mrSlime-man/RADIOGEDDON/compare/v1.0.0-beta.10...v1.0.0-beta.11
 [1.0.0-beta.10]: https://github.com/mrSlime-man/RADIOGEDDON/compare/v1.0.0-beta.9...v1.0.0-beta.10
 [1.0.0-beta.2]: https://github.com/mrSlime-man/RADIOGEDDON/compare/v1.0.0-beta.1...v1.0.0-beta.2
 [1.0.0-beta.1]: https://github.com/mrSlime-man/RADIOGEDDON/releases/tag/v1.0.0-beta.1
