@@ -44,24 +44,24 @@ Using a different fork? See [Firmware Compatibility](FIRMWARE_COMPATIBILITY.md).
 
 ## Step 2 — Download
 
-From the [**v1.0.0-beta.13 release page**](https://github.com/mrSlime-man/RADIOGEDDON/releases/tag/v1.0.0-beta.13),
+From the [**v1.0.0 release page**](https://github.com/mrSlime-man/RADIOGEDDON/releases/tag/v1.0.0),
 or directly:
 
-- [radiogeddon-catalog-official.fap](https://github.com/mrSlime-man/RADIOGEDDON/releases/download/v1.0.0-beta.13/radiogeddon-catalog-official.fap) — Official firmware
-- [radiogeddon-full-roguemaster.fap](https://github.com/mrSlime-man/RADIOGEDDON/releases/download/v1.0.0-beta.13/radiogeddon-full-roguemaster.fap) — RogueMaster
-- [radiogeddon-full-momentum.fap](https://github.com/mrSlime-man/RADIOGEDDON/releases/download/v1.0.0-beta.13/radiogeddon-full-momentum.fap) — Momentum
-- [radiogeddon-full-unleashed.fap](https://github.com/mrSlime-man/RADIOGEDDON/releases/download/v1.0.0-beta.13/radiogeddon-full-unleashed.fap) — Unleashed
-- [radiogeddon-full-roguemaster-4f2e06200-api88.4.fap](https://github.com/mrSlime-man/RADIOGEDDON/releases/download/v1.0.0-beta.13/radiogeddon-full-roguemaster-4f2e06200-api88.4.fap) — RogueMaster `4f2e06200`, API 88.4 only
+- [radiogeddon-catalog-official.fap](https://github.com/mrSlime-man/RADIOGEDDON/releases/download/v1.0.0/radiogeddon-catalog-official.fap) — Official firmware
+- [radiogeddon-full-roguemaster.fap](https://github.com/mrSlime-man/RADIOGEDDON/releases/download/v1.0.0/radiogeddon-full-roguemaster.fap) — RogueMaster
+- [radiogeddon-full-momentum.fap](https://github.com/mrSlime-man/RADIOGEDDON/releases/download/v1.0.0/radiogeddon-full-momentum.fap) — Momentum
+- [radiogeddon-full-unleashed.fap](https://github.com/mrSlime-man/RADIOGEDDON/releases/download/v1.0.0/radiogeddon-full-unleashed.fap) — Unleashed
+- [radiogeddon-full-roguemaster-4f2e06200-api88.4.fap](https://github.com/mrSlime-man/RADIOGEDDON/releases/download/v1.0.0/radiogeddon-full-roguemaster-4f2e06200-api88.4.fap) — RogueMaster `4f2e06200`, API 88.4 only
 
-The Catalog edition is being prepared for the official Flipper Apps Catalog;
-until it is accepted there, install it from this page.
+The Catalog edition is being submitted to the official Flipper Apps Catalog;
+until it is accepted and listed there, install it from this page.
 
 The Full edition's optional tools (the Range Scanner, Settings, the Hopper,
 the research tools, the Database, the analysis menu, the Scanner's screen,
 About and recording recovery: 19 modules) are packed
 inside its `.fap`; the firmware unpacks them to
 `apps_assets/radiogeddon_full/plugins/` when the app starts. There is
-nothing extra to copy. Updating from an earlier beta: replace the `.fap`.
+nothing extra to copy. Updating from an earlier version or beta: replace the `.fap`.
 
 ### Optional: verify the download
 

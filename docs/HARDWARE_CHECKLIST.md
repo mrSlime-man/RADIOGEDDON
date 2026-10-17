@@ -2,8 +2,10 @@
 
 RadioGeddon builds as two editions — **Catalog** for Official firmware and
 **Full** for RogueMaster, Momentum and Unleashed — and passes all automated
-checks, but **none of the items below has been verified on a physical Flipper
-Zero yet** (beyond one beta 2 launch report on RogueMaster). This is the test plan for doing that. Any subset is useful — please
+checks. On a physical Flipper Zero only a few items have results so far:
+a beta 2 launch report on RogueMaster, and the owner's session with the
+1.0.0 code on RogueMaster `4f2e06200` (Y1, and Y2 and Y6 in part — see
+[Memory and relaunch](#memory-and-relaunch-beta-13)). This is the test plan for doing that. Any subset is useful — please
 report results (passes and failures alike) with the
 [Hardware test report](https://github.com/mrSlime-man/RADIOGEDDON/issues/new?template=hardware_report.yml)
 form, quoting the item IDs.
@@ -245,6 +247,15 @@ expects.
 | Y8 | Analyze menu → Multi-Capture Compare with 3 files; Smart Protocol Discovery; Decode with Firmware. | Results as in beta 12. |
 | Y9 | Scanner: let it find activity, OK into Receive, Back. Repeat from the Range Scanner. | The Scanner list returns with its results and highlighted row; Receive starts every time. |
 | Y10 | Settings → Favorites: add, change, delete; the frequency keyboard from Settings and from the Range Scanner. | Works as in beta 12. |
+
+**Results so far (owner, beta 13 = 1.0.0 code, RogueMaster `4f2e06200`,
+2026-10-17):** Y1 passed (opens; about 65.9 KB of sections loaded and about
+45 KB of heap free after start). Y2 in part: four launches and exits
+without a reboot, no `.rgtext` failure (twenty fast reopenings not yet run).
+Y6 in part: the Adaptive Scanner starts and stops and the RF Activity Logger
+loads after it (five rounds not yet logged). No crash; occasional `ViewPort
+lockup` warnings during brief screen-transition delays. Y3–Y5 and Y7–Y10
+are still open. Details: [VERIFICATION.md](VERIFICATION.md#reported-by-users-on-physical-hardware).
 
 ## Crash and relaunch fixes (beta 12)
 

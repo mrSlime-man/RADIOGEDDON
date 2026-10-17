@@ -9,11 +9,11 @@ Scan, hop, capture, identify, analyse, compare and (where authorized) replay
 Sub-GHz signals — entirely on the device, with no computer, phone or network.
 
 [![CI](https://github.com/mrSlime-man/RADIOGEDDON/actions/workflows/ci.yml/badge.svg)](https://github.com/mrSlime-man/RADIOGEDDON/actions/workflows/ci.yml)
-[![Latest release](https://img.shields.io/github/v/release/mrSlime-man/RADIOGEDDON?include_prereleases&sort=semver&label=release)](https://github.com/mrSlime-man/RADIOGEDDON/releases)
+[![Latest release](https://img.shields.io/github/v/release/mrSlime-man/RADIOGEDDON?sort=semver&label=release)](https://github.com/mrSlime-man/RADIOGEDDON/releases)
 [![License: MIT](https://img.shields.io/badge/license-MIT-22d3ee.svg)](LICENSE)
 [![Platform: Flipper Zero](https://img.shields.io/badge/platform-Flipper%20Zero%20(f7)-a855f7.svg)](https://flipperzero.one)
 [![Firmware: Official · RogueMaster · Momentum · Unleashed](https://img.shields.io/badge/firmware-Official%20%C2%B7%20RogueMaster%20%C2%B7%20Momentum%20%C2%B7%20Unleashed-0ea5e9.svg)](docs/FIRMWARE_COMPATIBILITY.md)
-[![Hardware: unverified](https://img.shields.io/badge/hardware-unverified-f59e0b.svg)](docs/VERIFICATION.md)
+[![Hardware: partially tested](https://img.shields.io/badge/hardware-partially%20tested-f59e0b.svg)](docs/VERIFICATION.md)
 
 [Download](#-download) · [Install](docs/INSTALLATION.md) · [User Guide](docs/USER_GUIDE.md) · [Features](docs/FEATURES.md) · [Docs](docs/)
 
@@ -21,20 +21,22 @@ Sub-GHz signals — entirely on the device, with no computer, phone or network.
 
 ---
 
-> [!WARNING]
-> **Public beta, NOT HARDWARE TESTED.** Every feature is implemented and the
-> builds pass all automated checks (lint, 2,903 host-test checks, format,
-> decoder, capture, engine-lifecycle, file, memory-stress and offline UI tests, ThreadSanitizer,
-> fuzzing, static analysis of both editions, five firmware builds with API,
-> manifest, imported-symbol and module verification). On physical hardware
-> there is only one tester report so far, for the beta 2 code (RogueMaster:
-> launches and works); **nothing in betas 3 to 13 is verified on a device
-> yet** — including beta 13's memory and relaunch work, beta 12's crash fixes, beta 11's memory work, beta 10's smaller Full edition and its new modules, the
-> research lab tools of beta 9, the Dolphin Lab interface of beta 8 and the
-> on-demand modules of beta 7. Expect rough edges, and see
-> [VERIFICATION.md](docs/VERIFICATION.md) for exactly what has and hasn't been
-> tested. Testing on real hardware is the single most useful thing you can
-> contribute — the [hardware checklist](docs/HARDWARE_CHECKLIST.md) shows how.
+> [!NOTE]
+> **Stable release 1.0.0.** Every feature is implemented and the builds pass
+> all automated checks (lint, 2,903 host-test checks, format, decoder,
+> capture, engine-lifecycle, file, memory-stress and offline UI tests,
+> ThreadSanitizer, fuzzing, static analysis of both editions, five firmware
+> builds with API, manifest, imported-symbol and module verification).
+> **Hardware testing is real but limited:** the owner ran the 1.0.0 code
+> (released as beta 13) on a Flipper Zero with RogueMaster `4f2e06200`
+> (API 88.4) — four launches and exits without a reboot, the Frequency
+> Scanner, the Adaptive Scanner and the RF Activity Logger after it, no
+> crash, about 45 KB of heap free after start. Receiving, recording,
+> transmitting, most of the 19 modules and the Catalog edition on Official
+> firmware are **not** yet confirmed on a device. See
+> [VERIFICATION.md](docs/VERIFICATION.md) for exactly what has and hasn't
+> been tested; reports from the [hardware checklist](docs/HARDWARE_CHECKLIST.md)
+> are the most useful contribution.
 
 ## What is it?
 
@@ -180,17 +182,17 @@ with the firmware's own fonts — not screenshots of a Flipper Zero.</sub>
 ## ⬇ Download
 
 Grab the build that matches your firmware from the
-[**v1.0.0-beta.13 release**](https://github.com/mrSlime-man/RADIOGEDDON/releases/tag/v1.0.0-beta.13),
+[**v1.0.0 release**](https://github.com/mrSlime-man/RADIOGEDDON/releases/tag/v1.0.0),
 then copy it to `apps/Sub-GHz/` on the SD card (full steps in
 [Installation](docs/INSTALLATION.md)).
 
 | Your firmware | Edition | Download this file |
 |---------------|---------|--------------------|
-| **Official** (flipperzero.one) | Catalog | [`radiogeddon-catalog-official.fap`](https://github.com/mrSlime-man/RADIOGEDDON/releases/download/v1.0.0-beta.13/radiogeddon-catalog-official.fap) |
-| **RogueMaster** | Full | [`radiogeddon-full-roguemaster.fap`](https://github.com/mrSlime-man/RADIOGEDDON/releases/download/v1.0.0-beta.13/radiogeddon-full-roguemaster.fap) |
-| **Momentum** | Full | [`radiogeddon-full-momentum.fap`](https://github.com/mrSlime-man/RADIOGEDDON/releases/download/v1.0.0-beta.13/radiogeddon-full-momentum.fap) |
-| **Unleashed** | Full | [`radiogeddon-full-unleashed.fap`](https://github.com/mrSlime-man/RADIOGEDDON/releases/download/v1.0.0-beta.13/radiogeddon-full-unleashed.fap) |
-| **RogueMaster `4f2e0620 [88.4]`** (exact device build) | Full | [`radiogeddon-full-roguemaster-4f2e06200-api88.4.fap`](https://github.com/mrSlime-man/RADIOGEDDON/releases/download/v1.0.0-beta.13/radiogeddon-full-roguemaster-4f2e06200-api88.4.fap) |
+| **Official** (flipperzero.one) | Catalog | [`radiogeddon-catalog-official.fap`](https://github.com/mrSlime-man/RADIOGEDDON/releases/download/v1.0.0/radiogeddon-catalog-official.fap) |
+| **RogueMaster** | Full | [`radiogeddon-full-roguemaster.fap`](https://github.com/mrSlime-man/RADIOGEDDON/releases/download/v1.0.0/radiogeddon-full-roguemaster.fap) |
+| **Momentum** | Full | [`radiogeddon-full-momentum.fap`](https://github.com/mrSlime-man/RADIOGEDDON/releases/download/v1.0.0/radiogeddon-full-momentum.fap) |
+| **Unleashed** | Full | [`radiogeddon-full-unleashed.fap`](https://github.com/mrSlime-man/RADIOGEDDON/releases/download/v1.0.0/radiogeddon-full-unleashed.fap) |
+| **RogueMaster `4f2e0620 [88.4]`** (exact device build) | Full | [`radiogeddon-full-roguemaster-4f2e06200-api88.4.fap`](https://github.com/mrSlime-man/RADIOGEDDON/releases/download/v1.0.0/radiogeddon-full-roguemaster-4f2e06200-api88.4.fap) |
 
 The last file is a device-specific build for RogueMaster commit `4f2e06200`
 (API 88.4), made in that commit's own tree. If *Settings → About → Firmware
@@ -203,8 +205,9 @@ a missing-symbol error) rather than loading. Every file is compiled against
 that firmware's own pinned SDK; none is a renamed copy of another. Not sure
 which you have? See [Firmware Compatibility](docs/FIRMWARE_COMPATIBILITY.md).
 Every release lists `SHA256SUMS` and ships signed build-provenance
-attestations. The Catalog edition is being prepared for the official Apps
-Catalog; it is **not** in the catalog yet.
+attestations. The Catalog edition is being submitted to the official Apps
+Catalog; it is **not** listed there yet, so install it from the release page.
+Earlier beta release notes stay in [docs/releases](docs/releases/).
 
 ## Features
 
@@ -291,7 +294,7 @@ Waterfall, Settings, the Frequency Hopper, the Bitstream Explorer,
 Multi-Capture Compare, Unknown Protocol Analysis, Sessions, the lab room and
 journal, Find Similar, Pulse Studio and the Pulse Timeline, the activity
 logger, adaptive setup and heatmap, analysis reports, About, recording
-recovery and, from beta 13, the Signal Database, the analysis menu and the
+recovery and, since beta 13, the Signal Database, the analysis menu and the
 Frequency Scanner's screen — 19 modules) are
 plugins packed inside the `.fap` and loaded only while their screen is open,
 so their code takes RAM only then. Beta 11 works on the memory the app
@@ -349,16 +352,16 @@ load-cost check and load replay, the fuzzers, the Apps Catalog checks
 `-fanalyzer` and clang-tidy) and all four firmware builds (with API, manifest
 and imported-symbol verification plus lint) on every pull request and release. A weekly firmware watch builds the app
 against newer firmware SDKs as they appear.
-**CI cannot exercise the radio**, so on-device behaviour remains unverified —
-tracked honestly in [VERIFICATION.md](docs/VERIFICATION.md) with the test plan
+**CI cannot exercise the radio**, so on-device behaviour is only as verified
+as the hardware reports behind it — tracked honestly in [VERIFICATION.md](docs/VERIFICATION.md) with the test plan
 in [HARDWARE_CHECKLIST.md](docs/HARDWARE_CHECKLIST.md).
 
 ## Roadmap
 
-Development runs through numbered milestones (scanner, hopper, analyzer,
-streaming recording, database, interface, external radio, reliability), with
-hardware verification as the gate to a stable `1.0.0`. See the
-[Roadmap](docs/ROADMAP.md).
+RadioGeddon 1.0.0 is the first stable release, and the project is now in
+maintenance: bug fixes from reports, firmware compatibility updates, and
+optional feature updates when they are worth it. No further beta series is
+planned. See the [Roadmap](docs/ROADMAP.md).
 
 ## Contributing
 

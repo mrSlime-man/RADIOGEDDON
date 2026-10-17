@@ -3,9 +3,10 @@
 This guide walks through every RadioGeddon screen. Text in `code` style is
 exactly what appears on the Flipper.
 
-> RadioGeddon is in public beta and its on-device behaviour has not yet been
-> verified on physical hardware. If something doesn't behave as described here,
-> please [report it](https://github.com/mrSlime-man/RADIOGEDDON/issues/new/choose).
+> RadioGeddon 1.0.0 is a stable release, but its on-device behaviour is only
+> partly verified on physical hardware (see [Verification](VERIFICATION.md)).
+> If something doesn't behave as described here, please
+> [report it](https://github.com/mrSlime-man/RADIOGEDDON/issues/new/choose).
 
 ## Starting the app
 

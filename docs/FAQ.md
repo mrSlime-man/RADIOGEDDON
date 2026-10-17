@@ -27,29 +27,33 @@ per-frequency RSSI scanner and a frequency hopper.
 
 ### Is it finished?
 
-It is a **public beta** (`1.0.0-beta.5`). Every feature is implemented and the
-builds pass all automated checks. One tester has reported that the beta 2
-RogueMaster build launches and works on a physical Flipper Zero; nothing in
-betas 3 to 5 has been tried on a device yet, and the hardware checklist has not been
-worked through and logged. See [VERIFICATION.md](VERIFICATION.md) for exactly
-what has and hasn't been tested, and consider helping with the
-[hardware checklist](HARDWARE_CHECKLIST.md).
+Yes: `1.0.0` is the first stable release. Every feature is implemented and
+the builds pass all automated checks. Hardware evidence is real but limited:
+the owner has run the 1.0.0 code on RogueMaster `4f2e06200` (launches and
+exits, the Frequency Scanner, the Adaptive Scanner and the RF Activity
+Logger, no crash); receiving, recording, transmitting, most tools and the
+Catalog edition on Official firmware have not been confirmed on a device.
+See [VERIFICATION.md](VERIFICATION.md) for exactly what has and hasn't been
+tested, and consider helping with the
+[hardware checklist](HARDWARE_CHECKLIST.md). The project is now maintained:
+bug reports are welcome in the issue tracker.
 
 ## Installation and compatibility
 
 ### Which file do I download?
 
 The one that matches your firmware: `radiogeddon-catalog-official.fap`
-(Official), `radiogeddon-full-roguemaster.fap`, `radiogeddon-full-momentum.fap`
-or `radiogeddon-full-unleashed.fap`. See
+(Official), `radiogeddon-full-roguemaster.fap` (or, on RogueMaster
+`4f2e0620 [88.4]` exactly, `radiogeddon-full-roguemaster-4f2e06200-api88.4.fap`),
+`radiogeddon-full-momentum.fap` or `radiogeddon-full-unleashed.fap`. See
 [Installation](INSTALLATION.md).
 
-### Why are there three different files?
+### Why are there several different files?
 
 Each firmware family has its own SDK API version, and the Flipper refuses to
 run an app built for a different major API version. Building one file per
 family, each against that family's own SDK, is the safe way to support all
-three. Details: [Firmware Compatibility](FIRMWARE_COMPATIBILITY.md).
+of them. Details: [Firmware Compatibility](FIRMWARE_COMPATIBILITY.md).
 
 ### I get "Error: Outdated App", "Outdated Firmware" or "Missing Imports".
 

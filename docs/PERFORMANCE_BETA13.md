@@ -2,7 +2,10 @@
 
 Beta 12 against beta 13, same compiler (`arm-none-eabi-gcc` 12.3.1 from the
 pinned SDKs), same SDKs and firmware trees, same host. **Nothing here was
-measured on a Flipper Zero; every build is NOT HARDWARE TESTED.** The
+measured on a Flipper Zero when this was written.** The owner's later
+session on RogueMaster `4f2e06200` read about 65.9 KB of loaded sections
+and about 45 KB free after start (see
+[VERIFICATION.md](VERIFICATION.md#reported-by-users-on-physical-hardware)). The
 device checks are Y1–Y10 in the
 [hardware checklist](HARDWARE_CHECKLIST.md#memory-and-relaunch-beta-13).
 

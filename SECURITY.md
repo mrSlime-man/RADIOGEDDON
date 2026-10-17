@@ -2,13 +2,13 @@
 
 ## Supported versions
 
-RadioGeddon is in public beta. Security fixes are made on `main` and shipped in
-the next release; only the latest release receives fixes.
+Security fixes are made on `main` and shipped in the next release; only the
+latest stable release receives fixes.
 
 | Version | Supported |
 |---------|-----------|
-| 1.0.0-beta.x (latest) | ✅ |
-| Anything older | ❌ |
+| 1.0.x (latest) | ✅ |
+| 1.0.0-beta.x and older | ❌ |
 
 ## Reporting a vulnerability
 

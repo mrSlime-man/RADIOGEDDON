@@ -7,7 +7,7 @@ in two editions (see [Features → Editions](FEATURES.md#editions)), and because
 each firmware family publishes its own SDK, **each family gets its own `.fap`,
 compiled against that family's SDK**.
 
-## Supported firmware (v1.0.0-beta.12)
+## Supported firmware (v1.0.0)
 
 | Firmware | Edition | Built against | SDK API | Download |
 |----------|---------|---------------|---------|----------|
@@ -23,9 +23,12 @@ next to the RogueMaster release build, not instead of it. "Supported" here means
 build compiles cleanly against that firmware's own SDK, passes the SDK's
 API-compatibility check (`APPCHK`), carries a verified manifest, and every
 symbol it imports is exported by that SDK's `api_symbols.csv`
-(`scripts/verify_fap.py --symbols`). On-device behaviour is not yet
-independently verified on any firmware; a tester has reported that the beta 2
-RogueMaster build launches and works (see [VERIFICATION.md](VERIFICATION.md)).
+(`scripts/verify_fap.py --symbols`). On a device, the owner has run the
+1.0.0 code (as beta 13) with the RogueMaster `4f2e06200` build: launch,
+exit, the Frequency Scanner, the Adaptive Scanner and the RF Activity Logger
+worked. The other four builds, and the Catalog edition on Official firmware,
+have not been run on a device for this release (see
+[VERIFICATION.md](VERIFICATION.md)).
 
 The exact SDK URLs, SHA-256 checksums and the RogueMaster commit are pinned in
 [`scripts/firmware_pins.sh`](../scripts/firmware_pins.sh); every release lists
