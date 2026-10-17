@@ -3,7 +3,8 @@
 #   git tag -a v1.0.0-beta.1 -m "RadioGeddon v1.0.0 Beta 1" && git push origin v1.0.0-beta.1
 #
 # Flow: validate the tag, versions, release notes and download links
-# (scripts/release_meta.py) -> rebuild all four .fap files from the tagged
+# (scripts/release_meta.py) -> rebuild all five .fap files (four firmware
+# families + the device-specific RogueMaster build) from the tagged
 # commit through the shared pipeline (build.yml) -> package + re-verify, write
 # SHA256SUMS -> attest build provenance and verify the attestation -> create a
 # DRAFT release with every asset -> download the assets back and check them ->
@@ -140,6 +141,8 @@ jobs:
       - name: Create draft release with all assets
         run: |
           set -euo pipefail
+          source scripts/firmware_pins.sh
+          DEVICE_FAP="full-roguemaster-${ROGUEMASTER_DEVICE_REF:0:9}-api${ROGUEMASTER_DEVICE_API}"
           tail -n +2 "docs/releases/${TAG}.md" > "$RUNNER_TEMP/notes.md"
           args=(--draft --title "$TITLE" --notes-file "$RUNNER_TEMP/notes.md" --target "$SHA")
           if [ "$PRERELEASE" = "true" ]; then args+=(--prerelease); else args+=(--latest); fi
@@ -149,6 +152,7 @@ jobs:
             release/radiogeddon-full-roguemaster.fap \
             release/radiogeddon-full-momentum.fap \
             release/radiogeddon-full-unleashed.fap \
+            "release/radiogeddon-${DEVICE_FAP}.fap" \
             release/SHA256SUMS \
             release/BUILD_INFO.txt
 
@@ -158,7 +162,9 @@ jobs:
           mkdir "$RUNNER_TEMP/check"
           gh release download "$TAG" --dir "$RUNNER_TEMP/check"
           count="$(find "$RUNNER_TEMP/check" -type f | wc -l)"
-          [ "$count" -eq 6 ] || { echo "::error::expected 6 assets, found $count"; exit 1; }
+          # 5 .fap + SHA256SUMS + BUILD_INFO.txt
+          [ "$count" -eq 7 ] || { echo "::error::expected 7 assets, found $count"; exit 1; }
+          [ "$(grep -c '\.fap$' "$RUNNER_TEMP/check/SHA256SUMS")" -eq 5 ] || { echo "::error::SHA256SUMS must list 5 .fap files"; exit 1; }
           (cd "$RUNNER_TEMP/check" && sha256sum -c SHA256SUMS)
 
       - name: Publish release

@@ -19,8 +19,10 @@
 #   catalog     Apps Catalog requirements for the Catalog edition
 #               (scripts/check_catalog.py)
 #   fuzz        the fuzz targets under libFuzzer for a fixed time each
-#   fap         one .fap per edition and firmware family, built against the
-#               SDK pinned in scripts/firmware_pins.sh (checksum-verified), API
+#   fap         one .fap per edition and firmware family, plus the
+#               device-specific RogueMaster build (full-roguemaster-device),
+#               built against the SDK pinned in scripts/firmware_pins.sh
+#               (checksum-verified), API
 #               asserted, manifest and every imported symbol verified;
 #               clang-format lint on the Catalog job; static analysis (GCC
 #               -fanalyzer, clang-tidy) of each edition on the ufbt SDKs
@@ -182,7 +184,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        target: [catalog-official, full-roguemaster, full-momentum, full-unleashed]
+        target: [catalog-official, full-roguemaster, full-momentum, full-unleashed, full-roguemaster-device]
     steps:
       - uses: actions/checkout@v6
         with:
@@ -221,7 +223,7 @@ jobs:
       # Each edition is analysed as it is built: the Catalog edition in the
       # checkout, the Full edition in the copy build_target.sh staged.
       - name: Static analysis (GCC -fanalyzer, clang-tidy)
-        if: matrix.target != 'full-roguemaster'
+        if: ${{ !startsWith(matrix.target, 'full-roguemaster') }}
         env:
           TARGET: ${{ matrix.target }}
         run: |
@@ -234,17 +236,20 @@ jobs:
       - name: Summary
         run: |
           {
-            echo "### radiogeddon-${{ matrix.target }}.fap"
-            echo '```'
-            cat "out/radiogeddon-${{ matrix.target }}.build-info"
-            echo '```'
+            for info in out/radiogeddon-*.build-info; do
+              echo "### $(sed -n 's/^artifact: //p' "$info")"
+              echo '```'
+              cat "$info"
+              echo '```'
+            done
           } >> "$GITHUB_STEP_SUMMARY"
 
       - uses: actions/upload-artifact@v6
         with:
           name: fap-${{ matrix.target }}
+          # The device build is named after its firmware commit and API.
           path: |
-            out/radiogeddon-${{ matrix.target }}.fap
-            out/radiogeddon-${{ matrix.target }}.build-info
+            out/radiogeddon-*.fap
+            out/radiogeddon-*.build-info
           if-no-files-found: error
           retention-days: 30

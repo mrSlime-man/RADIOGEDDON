@@ -13,7 +13,8 @@ about to become). For that version this checks:
 - CHANGELOG.md has an [Unreleased] section and a [<version>] section;
 - every API version the release notes and docs/FIRMWARE_COMPATIBILITY.md
   give for a .fap equals the one pinned in scripts/firmware_pins.sh, so the
-  notes never describe a build the release does not contain;
+  notes never describe a build the release does not contain (this includes
+  the device-specific RogueMaster build, ROGUEMASTER_DEVICE_REF/_API);
 - every release link in README.md and docs/INSTALLATION.md points at
   v<version>, so the download links move with the version.
 
@@ -31,8 +32,8 @@ TARGETS = ("catalog-official", "full-roguemaster", "full-momentum", "full-unleas
 VERSION = re.compile(r"^(\d+)\.(\d+)\.(\d+)(-[0-9A-Za-z.]+)?$")
 # A table cell naming `radiogeddon-<target>.fap` next to a cell with its API,
 # in either order ("| `radiogeddon-catalog-official.fap` | 87.1 |", "| **87.1** | `...` |").
-FAP_THEN_API = re.compile(r"`radiogeddon-([\w-]+)\.fap`[^|\n]*\|\s*\**(\d+\.\d+)\**\s*\|")
-API_THEN_FAP = re.compile(r"\|\s*\**(\d+\.\d+)\**\s*\|\s*`radiogeddon-([\w-]+)\.fap`")
+FAP_THEN_API = re.compile(r"`radiogeddon-([\w.-]+)\.fap`[^|\n]*\|\s*\**(\d+\.\d+)\**\s*\|")
+API_THEN_FAP = re.compile(r"\|\s*\**(\d+\.\d+)\**\s*\|\s*`radiogeddon-([\w.-]+)\.fap`")
 RELEASE_LINK = re.compile(r"/releases/(?:tag|download)/(v[^/)\s]+)")
 
 
@@ -42,8 +43,14 @@ def read(rel):
 
 
 def pinned_apis():
+    """API of every release artifact, keyed by its name without
+    radiogeddon- and .fap; the device build's name carries its commit and API."""
     pins = dict(re.findall(r'^([A-Z_]+)="([^"]*)"', read("scripts/firmware_pins.sh"), re.M))
-    return {t: pins.get(t.split("-", 1)[1].upper() + "_API") for t in TARGETS}
+    apis = {t: pins.get(t.split("-", 1)[1].upper() + "_API") for t in TARGETS}
+    ref, api = pins.get("ROGUEMASTER_DEVICE_REF"), pins.get("ROGUEMASTER_DEVICE_API")
+    if ref and api:
+        apis["full-roguemaster-%s-api%s" % (ref[:9], api)] = api
+    return apis
 
 
 def fap_api_problems(rel, text, apis):
@@ -61,7 +68,7 @@ def fap_api_problems(rel, text, apis):
             problems.append(
                 "%s: radiogeddon-%s.fap is listed with API %s, pinned API is %s" % (rel, target, api, apis[target])
             )
-    for target in TARGETS:
+    for target in apis:
         if target not in found:
             problems.append("%s: no API listed for radiogeddon-%s.fap" % (rel, target))
     return problems

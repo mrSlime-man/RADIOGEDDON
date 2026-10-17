@@ -7,7 +7,7 @@ in two editions (see [Features → Editions](FEATURES.md#editions)), and because
 each firmware family publishes its own SDK, **each family gets its own `.fap`,
 compiled against that family's SDK**.
 
-## Supported firmware (v1.0.0-beta.7)
+## Supported firmware (v1.0.0-beta.12)
 
 | Firmware | Edition | Built against | SDK API | Download |
 |----------|---------|---------------|---------|----------|
@@ -15,8 +15,11 @@ compiled against that family's SDK**.
 | **RogueMaster** | Full | RogueMaster source at commit [`38d7ae9`](https://github.com/RogueMaster/flipperzero-firmware-wPlugins/commit/38d7ae9ae7eb2d25b31cea9b9fcf88fd11c1f3d3), built with its own `fbt` | **88.16** | `radiogeddon-full-roguemaster.fap` |
 | **Momentum** | Full | Momentum **mntm-012** SDK (tag commit [`e1784e7`](https://github.com/Next-Flip/Momentum-Firmware/commit/e1784e7418d8b074e971983ceb6fef0f37e52ae4)) | **87.1** | `radiogeddon-full-momentum.fap` |
 | **Unleashed** | Full | Unleashed **unlshd-093** SDK | **88.9** | `radiogeddon-full-unleashed.fap` |
+| **RogueMaster `4f2e06200`** (device-specific) | Full | RogueMaster source at commit [`4f2e06200`](https://github.com/RogueMaster/flipperzero-firmware-wPlugins/commit/4f2e062001b10b5cf12d820ad8cfaa17c1b04817) (2026-10-01), built with its own `fbt` | **88.4** | `radiogeddon-full-roguemaster-4f2e06200-api88.4.fap` |
 
-All four are built from the same source tree by CI. "Supported" here means the
+All five are built from the same source tree and commit by CI. The fifth is
+an extra build for one exact RogueMaster commit (a tester's device), shipped
+next to the RogueMaster release build, not instead of it. "Supported" here means the
 build compiles cleanly against that firmware's own SDK, passes the SDK's
 API-compatibility check (`APPCHK`), carries a verified manifest, and every
 symbol it imports is exported by that SDK's `api_symbols.csv`
@@ -74,6 +77,7 @@ firmware family ships updates within the same major API version:
 | `radiogeddon-full-roguemaster.fap` | 88.16 | RogueMaster with API 88.x whose firmware exports every function the app imports (see below) |
 | `radiogeddon-full-momentum.fap` | 87.1 | Momentum with API 87.x, x ≥ 1 |
 | `radiogeddon-full-unleashed.fap` | 88.9 | Unleashed with API 88.x, x ≥ 9 |
+| `radiogeddon-full-roguemaster-4f2e06200-api88.4.fap` | 88.4 | RogueMaster commit `4f2e06200` (its exact tree and symbol table) |
 
 RogueMaster changes its API minor with almost every build and its loader
 compares only the major version, so a RogueMaster build also opens on older
@@ -164,7 +168,11 @@ RM_REF=4f2e0620 RM_API=88.4 scripts/build_target.sh full-roguemaster
 ```
 
 The API is still asserted against that tree; the build record marks it as a
-device build. Release artifacts always use the pins in `firmware_pins.sh`.
+device build, and the file is named after the commit and API
+(`radiogeddon-full-roguemaster-4f2e0620-api88.4.fap`), so it never replaces
+`radiogeddon-full-roguemaster.fap`. Since beta 12 each release also ships one
+such build, pinned in `firmware_pins.sh` (`ROGUEMASTER_DEVICE_REF` /
+`ROGUEMASTER_DEVICE_API`, target `full-roguemaster-device`).
 
 ## Radio-layer differences that were checked
 

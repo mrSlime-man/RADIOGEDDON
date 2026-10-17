@@ -9,6 +9,9 @@
 #   full-momentum      Full      Momentum (ufbt SDK zip)
 #   full-unleashed     Full      Unleashed (ufbt SDK zip)
 #   full-roguemaster   Full      RogueMaster (its own source tree and fbt)
+#   full-roguemaster-device
+#                      Full      RogueMaster at ROGUEMASTER_DEVICE_REF/_API
+#                                (the device-specific release build)
 #
 # This is the exact build path used by CI and by the release workflow, so a
 # local build reproduces a release artifact. Steps:
@@ -37,8 +40,11 @@
 #       scripts/build_target.sh full-roguemaster
 #
 # Both are required together, the API is still asserted against that tree,
-# and the build record names the commit; such a build is not a release
-# artifact (releases always use the pins in scripts/firmware_pins.sh).
+# and the build record names the commit. The artifact is named after them,
+# radiogeddon-full-roguemaster-<first 9 hex of the commit>-api<api>.fap, so it
+# never replaces the release build radiogeddon-full-roguemaster.fap. The
+# release ships one such build, pinned in scripts/firmware_pins.sh
+# (target full-roguemaster-device).
 
 set -euo pipefail
 
@@ -53,8 +59,12 @@ case "${target}" in
     full-momentum) edition=full firmware=momentum ;;
     full-unleashed) edition=full firmware=unleashed ;;
     full-roguemaster) edition=full firmware=roguemaster ;;
+    full-roguemaster-device)
+        edition=full firmware=roguemaster
+        RM_REF="${RM_REF:-${ROGUEMASTER_DEVICE_REF}}" RM_API="${RM_API:-${ROGUEMASTER_DEVICE_API}}"
+        ;;
     *)
-        echo "usage: $0 <catalog-official|full-roguemaster|full-momentum|full-unleashed> [OUT_DIR]" >&2
+        echo "usage: $0 <catalog-official|full-roguemaster|full-momentum|full-unleashed|full-roguemaster-device> [OUT_DIR]" >&2
         exit 64
         ;;
 esac
@@ -97,9 +107,13 @@ fw_label="${!fw_label_var}"
 if [ -n "${RM_REF:-}${RM_API:-}" ]; then
     [ "${firmware}" = roguemaster ] || die "RM_REF/RM_API apply to full-roguemaster only"
     [ -n "${RM_REF:-}" ] && [ -n "${RM_API:-}" ] || die "set both RM_REF and RM_API"
+    [[ "${RM_REF}" =~ ^[0-9a-f]{7,40}$ ]] || die "RM_REF must be a commit hash (7-40 hex digits)"
+    [[ "${RM_API}" =~ ^[0-9]+\.[0-9]+$ ]] || die "RM_API must be MAJOR.MINOR (e.g. 88.4)"
     ROGUEMASTER_REF="${RM_REF}"
     pinned_api="${RM_API}"
-    fw_label="RogueMaster @ ${RM_REF} (device build, not the release pin)"
+    fw_label="RogueMaster @ ${RM_REF:0:9} (device-specific build, API ${RM_API})"
+    # Named after the device's firmware, never radiogeddon-full-roguemaster.fap.
+    target="full-roguemaster-${RM_REF:0:9}-api${RM_API}"
 fi
 artifact="${out_dir}/radiogeddon-${target}.fap"
 rm -f "${artifact}"

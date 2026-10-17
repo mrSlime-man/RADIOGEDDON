@@ -7,7 +7,11 @@ to follow [Semantic Versioning](https://semver.org/) (pre-1.0.0 releases use
 
 ## [Unreleased]
 
-Beta 12 stability pass (to be released together with the beta 12 features).
+## [1.0.0-beta.12] - 2026-10-17
+
+Stability release: the Adaptive Scanner crash reported on RogueMaster and
+the relaunch-for-lack-of-RAM failure, plus a device-specific RogueMaster
+build. No feature removed; all 16 Full-edition modules kept (module API 6).
 **Not hardware tested**; the device checks are X1–X10 of the
 [hardware checklist](docs/HARDWARE_CHECKLIST.md#crash-and-relaunch-fixes-beta-12),
 the analysis is in [STABILITY_BETA12.md](docs/STABILITY_BETA12.md).
@@ -27,6 +31,13 @@ the analysis is in [STABILITY_BETA12.md](docs/STABILITY_BETA12.md).
   section (`.rgtext`): the largest block a launch needs is 39.8 KB instead of
   70.9 KB (Unleashed Full), and every module splits the same way.
 - The Hopper's engine no longer keeps a pointer to its unloaded screen's code.
+- The fingerprint index accepted a record whose fingerprint's 4 reserved
+  bytes were not zero (found by libFuzzer in CI after the stability merge):
+  such a record decoded, but the app writes those bytes as zeros, so it did
+  not encode back to the same bytes. The reader now refuses it, like a
+  name with non-zero padding; the app itself never writes one, so existing
+  index files are unaffected. The failing input is kept in the fuzz corpus
+  and `test_fp` checks the rule.
 
 ### Added
 - The Scanner checks memory before starting (firmware `malloc` cannot fail
@@ -38,7 +49,15 @@ the analysis is in [STABILITY_BETA12.md](docs/STABILITY_BETA12.md).
   arguments the firmware `furi_check()`s, derived from the five pinned
   firmware trees; it finds the three beta 11 calls above.
 - `RM_REF`/`RM_API` for `scripts/build_target.sh full-roguemaster`: build in
-  the tree of the RogueMaster commit a device runs (API asserted).
+  the tree of the RogueMaster commit a device runs (API asserted). The file
+  is named `radiogeddon-full-roguemaster-<commit>-api<api>.fap`, so it never
+  replaces the RogueMaster release build.
+- A fifth release file, `radiogeddon-full-roguemaster-4f2e06200-api88.4.fap`:
+  the Full edition built in the tree of RogueMaster `4f2e06200` (API 88.4),
+  pinned in `scripts/firmware_pins.sh` (target `full-roguemaster-device`).
+  CI builds and verifies it like the other four; the release packages,
+  checksums, attests and re-downloads all five and refuses files built from
+  different source revisions.
 - Tests: the Adaptive Scanner driven 1,200 times as its screens do (all
   modes, pause, reset, free/realloc; ASan and TSan); a replay of the app's
   launch on fragmented heaps (`make -C test benchlaunch`).
@@ -877,7 +896,8 @@ on physical hardware** — see `docs/VERIFICATION.md`.
 - Settings are not persisted across launches; internal radio only; RAW capture
   capped at 16,384 samples (engine analysis uses the first 4,096).
 
-[Unreleased]: https://github.com/mrSlime-man/RADIOGEDDON/compare/v1.0.0-beta.11...HEAD
+[Unreleased]: https://github.com/mrSlime-man/RADIOGEDDON/compare/v1.0.0-beta.12...HEAD
+[1.0.0-beta.12]: https://github.com/mrSlime-man/RADIOGEDDON/compare/v1.0.0-beta.11...v1.0.0-beta.12
 [1.0.0-beta.11]: https://github.com/mrSlime-man/RADIOGEDDON/compare/v1.0.0-beta.10...v1.0.0-beta.11
 [1.0.0-beta.10]: https://github.com/mrSlime-man/RADIOGEDDON/compare/v1.0.0-beta.9...v1.0.0-beta.10
 [1.0.0-beta.2]: https://github.com/mrSlime-man/RADIOGEDDON/compare/v1.0.0-beta.1...v1.0.0-beta.2

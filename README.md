@@ -25,11 +25,11 @@ Sub-GHz signals — entirely on the device, with no computer, phone or network.
 > **Public beta, NOT HARDWARE TESTED.** Every feature is implemented and the
 > builds pass all automated checks (lint, 2,903 host-test checks, format,
 > decoder, capture, engine-lifecycle, file, memory-stress and offline UI tests, ThreadSanitizer,
-> fuzzing, static analysis of both editions, four firmware builds with API,
+> fuzzing, static analysis of both editions, five firmware builds with API,
 > manifest, imported-symbol and module verification). On physical hardware
 > there is only one tester report so far, for the beta 2 code (RogueMaster:
-> launches and works); **nothing in betas 3 to 11 is verified on a device
-> yet** — including beta 11's memory work, beta 10's smaller Full edition and its new modules, the
+> launches and works); **nothing in betas 3 to 12 is verified on a device
+> yet** — including beta 12's crash and relaunch fixes, beta 11's memory work, beta 10's smaller Full edition and its new modules, the
 > research lab tools of beta 9, the Dolphin Lab interface of beta 8 and the
 > on-demand modules of beta 7. Expect rough edges, and see
 > [VERIFICATION.md](docs/VERIFICATION.md) for exactly what has and hasn't been
@@ -180,16 +180,22 @@ with the firmware's own fonts — not screenshots of a Flipper Zero.</sub>
 ## ⬇ Download
 
 Grab the build that matches your firmware from the
-[**v1.0.0-beta.11 release**](https://github.com/mrSlime-man/RADIOGEDDON/releases/tag/v1.0.0-beta.11),
+[**v1.0.0-beta.12 release**](https://github.com/mrSlime-man/RADIOGEDDON/releases/tag/v1.0.0-beta.12),
 then copy it to `apps/Sub-GHz/` on the SD card (full steps in
 [Installation](docs/INSTALLATION.md)).
 
 | Your firmware | Edition | Download this file |
 |---------------|---------|--------------------|
-| **Official** (flipperzero.one) | Catalog | [`radiogeddon-catalog-official.fap`](https://github.com/mrSlime-man/RADIOGEDDON/releases/download/v1.0.0-beta.11/radiogeddon-catalog-official.fap) |
-| **RogueMaster** | Full | [`radiogeddon-full-roguemaster.fap`](https://github.com/mrSlime-man/RADIOGEDDON/releases/download/v1.0.0-beta.11/radiogeddon-full-roguemaster.fap) |
-| **Momentum** | Full | [`radiogeddon-full-momentum.fap`](https://github.com/mrSlime-man/RADIOGEDDON/releases/download/v1.0.0-beta.11/radiogeddon-full-momentum.fap) |
-| **Unleashed** | Full | [`radiogeddon-full-unleashed.fap`](https://github.com/mrSlime-man/RADIOGEDDON/releases/download/v1.0.0-beta.11/radiogeddon-full-unleashed.fap) |
+| **Official** (flipperzero.one) | Catalog | [`radiogeddon-catalog-official.fap`](https://github.com/mrSlime-man/RADIOGEDDON/releases/download/v1.0.0-beta.12/radiogeddon-catalog-official.fap) |
+| **RogueMaster** | Full | [`radiogeddon-full-roguemaster.fap`](https://github.com/mrSlime-man/RADIOGEDDON/releases/download/v1.0.0-beta.12/radiogeddon-full-roguemaster.fap) |
+| **Momentum** | Full | [`radiogeddon-full-momentum.fap`](https://github.com/mrSlime-man/RADIOGEDDON/releases/download/v1.0.0-beta.12/radiogeddon-full-momentum.fap) |
+| **Unleashed** | Full | [`radiogeddon-full-unleashed.fap`](https://github.com/mrSlime-man/RADIOGEDDON/releases/download/v1.0.0-beta.12/radiogeddon-full-unleashed.fap) |
+| **RogueMaster `4f2e0620 [88.4]`** (exact device build) | Full | [`radiogeddon-full-roguemaster-4f2e06200-api88.4.fap`](https://github.com/mrSlime-man/RADIOGEDDON/releases/download/v1.0.0-beta.12/radiogeddon-full-roguemaster-4f2e06200-api88.4.fap) |
+
+The last file is a device-specific build for RogueMaster commit `4f2e06200`
+(API 88.4), made in that commit's own tree. If *Settings → About → Firmware
+Info* shows `4f2e0620 [88.4]`, take it; otherwise take the RogueMaster file
+above. Install only one of the two.
 
 Each firmware family has its own SDK and symbol table, so **install the file
 for your firmware** — the wrong one is refused ("Outdated App / Firmware" or

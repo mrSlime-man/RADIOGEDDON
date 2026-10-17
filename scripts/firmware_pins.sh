@@ -16,6 +16,9 @@
 #   full-roguemaster   Full edition, RogueMaster source tree
 #   full-momentum      Full edition, Momentum SDK
 #   full-unleashed     Full edition, Unleashed SDK
+#   full-roguemaster-device
+#                      Full edition, RogueMaster source tree at the device
+#                      commit below (radiogeddon-full-roguemaster-<commit>-api<api>.fap)
 #
 # To move to a newer firmware: update URL + SHA256 (+ API) here, rebuild, run
 # the hardware checklist, and note the change in CHANGELOG.md.
@@ -61,6 +64,15 @@ ROGUEMASTER_REPO="https://github.com/RogueMaster/flipperzero-firmware-wPlugins"
 ROGUEMASTER_REF="38d7ae9ae7eb2d25b31cea9b9fcf88fd11c1f3d3"
 ROGUEMASTER_FW_LABEL="RogueMaster @ 38d7ae9"
 ROGUEMASTER_API="88.16"
+
+# A device-specific diagnostic build shipped next to the RogueMaster release
+# build (never instead of it): the exact RogueMaster commit a tester's Flipper
+# runs, whose API minor differs from the pin above (Settings > About >
+# Firmware Info: "4f2e0620 [88.4]"). Built like RM_REF/RM_API in
+# scripts/build_target.sh; the artifact name carries the commit and API,
+# radiogeddon-full-roguemaster-4f2e06200-api88.4.fap.
+ROGUEMASTER_DEVICE_REF="4f2e062001b10b5cf12d820ad8cfaa17c1b04817"
+ROGUEMASTER_DEVICE_API="88.4"
 
 # Flipper Apps Catalog tools (tools/bundle.py) the Catalog edition is
 # validated with in CI (scripts/catalog_bundle.py), pinned to a commit.
