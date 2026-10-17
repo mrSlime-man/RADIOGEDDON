@@ -27,6 +27,18 @@
 #
 # Environment overrides: RG_UFBT_HOME (SDK home), RM_DIR (RogueMaster tree),
 # FBT_TOOLCHAIN_PATH (toolchain home for the RogueMaster build).
+#
+# RogueMaster ships often and its API minor changes with almost every build,
+# so a device rarely runs exactly the pinned commit. To build for the commit
+# a device actually runs (Settings > About > Firmware Info shows its short
+# hash and API, e.g. "4f2e0620 [88.4]"):
+#
+#   RM_REF=<full or short commit> RM_API=<api on the device> \
+#       scripts/build_target.sh full-roguemaster
+#
+# Both are required together, the API is still asserted against that tree,
+# and the build record names the commit; such a build is not a release
+# artifact (releases always use the pins in scripts/firmware_pins.sh).
 
 set -euo pipefail
 
@@ -82,6 +94,13 @@ pinned_api_var="${upper}_API"
 pinned_api="${!pinned_api_var}"
 fw_label_var="${upper}_FW_LABEL"
 fw_label="${!fw_label_var}"
+if [ -n "${RM_REF:-}${RM_API:-}" ]; then
+    [ "${firmware}" = roguemaster ] || die "RM_REF/RM_API apply to full-roguemaster only"
+    [ -n "${RM_REF:-}" ] && [ -n "${RM_API:-}" ] || die "set both RM_REF and RM_API"
+    ROGUEMASTER_REF="${RM_REF}"
+    pinned_api="${RM_API}"
+    fw_label="RogueMaster @ ${RM_REF} (device build, not the release pin)"
+fi
 artifact="${out_dir}/radiogeddon-${target}.fap"
 rm -f "${artifact}"
 
@@ -147,16 +166,26 @@ build_with_roguemaster() {
     export GIT_LFS_SKIP_SMUDGE=1
     mkdir -p "${FBT_TOOLCHAIN_PATH}"
 
-    if [ "$(git -C "${rm_dir}" rev-parse HEAD 2> /dev/null || true)" != "${ROGUEMASTER_REF}" ]; then
+    local head
+    head="$(git -C "${rm_dir}" rev-parse HEAD 2> /dev/null || true)"
+    if [ -z "${head}" ] || [ "${head#"${ROGUEMASTER_REF}"}" = "${head}" ]; then
         log "fetching RogueMaster ${ROGUEMASTER_REF}"
         rm -rf "${rm_dir}"
         git init -q "${rm_dir}"
         git -C "${rm_dir}" remote add origin "${ROGUEMASTER_REPO}"
-        git -C "${rm_dir}" fetch -q --depth 1 origin "${ROGUEMASTER_REF}"
-        git -C "${rm_dir}" checkout -q FETCH_HEAD
+        if ! git -C "${rm_dir}" fetch -q --depth 1 origin "${ROGUEMASTER_REF}" 2> /dev/null; then
+            # A short hash cannot be fetched by itself: look it up on the
+            # default branch's recent history.
+            git -C "${rm_dir}" fetch -q --filter=blob:none --shallow-since=2025-01-01 origin 420
+            ROGUEMASTER_REF="$(git -C "${rm_dir}" rev-parse --verify "${ROGUEMASTER_REF}^{commit}")" ||
+                die "RogueMaster commit ${RM_REF:-} not found"
+        fi
+        git -C "${rm_dir}" checkout -q "${ROGUEMASTER_REF}" 2> /dev/null || git -C "${rm_dir}" checkout -q FETCH_HEAD
         git -C "${rm_dir}" submodule update -q --init --depth 1 --jobs 4
     fi
-    [ "$(git -C "${rm_dir}" rev-parse HEAD)" = "${ROGUEMASTER_REF}" ] || die "RogueMaster tree is not at ${ROGUEMASTER_REF}"
+    head="$(git -C "${rm_dir}" rev-parse HEAD)"
+    [ "${head#"${ROGUEMASTER_REF}"}" != "${head}" ] || die "RogueMaster tree is not at ${ROGUEMASTER_REF}"
+    ROGUEMASTER_REF="${head}"
 
     symbols_csv="${rm_dir}/targets/f7/api_symbols.csv"
     local api
