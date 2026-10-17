@@ -25,10 +25,10 @@ locally.
 | Area | Method | Result |
 |------|--------|--------|
 | Catalog edition, Official build | SDK 1.4.3 pinned by SHA-256, API asserted 87.1, manifest (name `RadioGeddon`, version) verified, all 303 imports exported by the SDK (beta 9: 289) | Pass — `radiogeddon-catalog-official.fap` |
-| Full edition, RogueMaster build | RogueMaster source at commit `38d7ae9`, built with its own `fbt`, API asserted 88.16, manifest (name `RadioGeddon Full`) verified, all 319 imports, and each of the 16 modules' imports, exported by its `api_symbols.csv` | Pass — `radiogeddon-full-roguemaster.fap` |
-| Full edition, Momentum build | Momentum mntm-012 SDK pinned by SHA-256 (matches Momentum's update index), API asserted 87.1, manifest verified, all 319 imports and the 16 modules' imports exported by Momentum's SDK | Pass — `radiogeddon-full-momentum.fap` |
-| Full edition, Unleashed build | SDK unlshd-093 pinned by SHA-256, API asserted 88.9, manifest verified, all 319 imports and the 16 modules' imports exported by the SDK | Pass — `radiogeddon-full-unleashed.fap` |
-| Full edition, RogueMaster device build (beta 12) | RogueMaster source at commit `4f2e06200`, built with its own `fbt`, API asserted 88.4, manifest verified, all imports and the 16 modules' imports exported by that commit's `api_symbols.csv`; the release package checks the build record names that commit and that all five files come from one source revision | Pass — `radiogeddon-full-roguemaster-4f2e06200-api88.4.fap` |
+| Full edition, RogueMaster build | RogueMaster source at commit `38d7ae9`, built with its own `fbt`, API asserted 88.16, manifest (name `RadioGeddon Full`) verified, all 301 imports, and each of the 19 modules' imports, exported by its `api_symbols.csv` | Pass — `radiogeddon-full-roguemaster.fap` |
+| Full edition, Momentum build | Momentum mntm-012 SDK pinned by SHA-256 (matches Momentum's update index), API asserted 87.1, manifest verified, all 301 imports and the 19 modules' imports exported by Momentum's SDK | Pass — `radiogeddon-full-momentum.fap` |
+| Full edition, Unleashed build | SDK unlshd-093 pinned by SHA-256, API asserted 88.9, manifest verified, all 301 imports and the 19 modules' imports exported by the SDK | Pass — `radiogeddon-full-unleashed.fap` |
+| Full edition, RogueMaster device build (beta 12) | RogueMaster source at commit `4f2e06200`, built with its own `fbt`, API asserted 88.4, manifest verified, all imports and the 19 modules' imports exported by that commit's `api_symbols.csv`; the release package checks the build record names that commit and that all five files come from one source revision | Pass — `radiogeddon-full-roguemaster-4f2e06200-api88.4.fap` |
 | Edition switches | `test_edition` built three times: as Full, as Catalog and with no edition (must be Catalog); defining both must not compile | Pass — 19 checks each, conflict refused |
 | Lint | `ufbt lint` (clang-format) | Pass, no warnings |
 | DSP/parse unit tests | `make -C test check` → `test_dsp` | Pass — 36 checks |
@@ -365,6 +365,21 @@ It fails if a total drops. The misses are listed by
 [PROTOCOL_ANALYSIS.md](PROTOCOL_ANALYSIS.md#accuracy-on-the-firmwares-test-captures):
 pulse-width codes with equal pulse and gap per bit read as Manchester, and
 frame lengths that include a long preamble or count bits differently.
+
+## Measurements (beta 13), built files and heap model
+
+From [PERFORMANCE_BETA13.md](PERFORMANCE_BETA13.md); simulations, not
+device measurements.
+
+| Measurement | Beta 12 | Beta 13 | Source |
+|---|---:|---:|---|
+| Resident footprint, RogueMaster `4f2e06200` build | 84,812 B | 66,003 B | `fap_size.py` |
+| Largest block a launch needs | 39,828 B | 13,492 B | `fap_size.py` |
+| Launches that fit after an app closed (126,000 heaps) | 31,643 | 83,569 | `bench_launch` |
+| Receive session cost, RogueMaster model | 35,920 B (device: 36,568 B) | 25,184 B | `bench_flows` |
+| Decodes identical with only the fed decoders (51 captures) | — | 1,358 of 1,358 | `test_fwdecode` |
+| Receive sessions allowed that ran out (18,000 split heaps) | 298 | 0 | `bench_flows` |
+| Logger refused after the Adaptive Scanner (8,000 rounds) | 3,288 | 0 | `bench_flows` |
 
 ## Measurements (beta 11), host, stub card and heap model
 

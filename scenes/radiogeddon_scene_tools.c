@@ -38,7 +38,7 @@ typedef struct {
     uint32_t scene;
     const char* file;
     uint8_t index;
-    uint16_t work_kb; // heap its work needs besides the module
+    uint8_t work_kb; // heap its work needs besides the module
     uint8_t prep; // ToolPrep
 } ToolScene;
 

@@ -225,6 +225,27 @@ Before and after each, note About's free heap and its lowest point.
 | V7 | Open and close every Full tool 20 times in a row (Range Scanner, Settings, Hopper, Bitstream, Find Similar, Studio, Heatmap, Logger, Lab, About). | No crash; About's free heap after the round is close to the one before it. |
 | V8 | Signal Info & Analysis, Unknown Protocol Analysis, Compare and a saved report on RAW recordings with known results from beta 10. | Every figure (Te, peaks, noise %, jitter %, encodings and fits, frames, durations) equal to beta 10's. |
 
+## Memory and relaunch (beta 13)
+
+Build: on RogueMaster `4f2e0620 [88.4]`, the release's
+`radiogeddon-full-roguemaster-4f2e06200-api88.4.fap`. Keep a CLI log open
+(`log info`) and save it with each result; the `RG.mem` lines carry the
+figures. [PERFORMANCE_BETA13.md](PERFORMANCE_BETA13.md) has what the model
+expects.
+
+| ID | Check | Pass when |
+|----|-------|-----------|
+| Y1 | Fresh boot, launch. | Opens; note `RG.mem` `launch` and `app start` (beta 12: 40416 → 25568 free; beta 13 should start about 18–19 KB higher). |
+| Y2 | Exit and reopen within 1 s, 20 times; every 5th time open Receive, the Scanner and the Database first. | Opens every time (beta 12 failed with `Error loading section '.rgtext'`). If one fails, note the log's section name and the `free` / `free_blocks` CLI output. |
+| Y3 | Open another large app (NFC, Infrared), leave it, then RadioGeddon; repeat 5 times with different apps. | Opens every time. |
+| Y4 | Receive on the main menu. | Starts (beta 12: `Radio not started: 24704 free, session took 36568`); note `Receive session took` (expected ~25–27 KB). |
+| Y5 | Receive, then a known remote (any protocol the stock Sub-GHz app decodes). | Decoded with the same name and key as the stock app. |
+| Y6 | Scan → Adaptive Scanner → Start scanner, 30 s, Back, Back, then RF Activity Logger, Start logging, Back, Back; 5 rounds. | The Logger opens every time (beta 12: `radiogeddon_log.fal needs 17088, 13024 free`); `Scanner stopped` largest block close to its free heap. |
+| Y7 | Database: open, open a file, Rename, back, Delete a test file, Options → Sort / Show / Search; leave and reopen. | Same screens and behaviour as beta 12; the list keeps its place when you come back from a file. |
+| Y8 | Analyze menu → Multi-Capture Compare with 3 files; Smart Protocol Discovery; Decode with Firmware. | Results as in beta 12. |
+| Y9 | Scanner: let it find activity, OK into Receive, Back. Repeat from the Range Scanner. | The Scanner list returns with its results and highlighted row; Receive starts every time. |
+| Y10 | Settings → Favorites: add, change, delete; the frequency keyboard from Settings and from the Range Scanner. | Works as in beta 12. |
+
 ## Crash and relaunch fixes (beta 12)
 
 Builds: on RogueMaster `4f2e0620 [88.4]`, the release's

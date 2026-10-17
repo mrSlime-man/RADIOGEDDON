@@ -23,10 +23,7 @@
 #pragma once
 
 #include <furi.h>
-#include <lib/subghz/environment.h>
-#include <lib/subghz/receiver.h>
-#include <lib/subghz/registry.h>
-#include <lib/subghz/types.h>
+#include <lib/subghz/receiver.h> /* types.h: the registry, protocol and environment types */
 
 /* The heap BinRAW's decoder takes besides its object: its two capture
  * buffers (2,048 int32 levels and 2,048 bytes), freed by not allocating it. */

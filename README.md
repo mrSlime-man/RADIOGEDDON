@@ -28,8 +28,8 @@ Sub-GHz signals — entirely on the device, with no computer, phone or network.
 > fuzzing, static analysis of both editions, five firmware builds with API,
 > manifest, imported-symbol and module verification). On physical hardware
 > there is only one tester report so far, for the beta 2 code (RogueMaster:
-> launches and works); **nothing in betas 3 to 12 is verified on a device
-> yet** — including beta 12's crash and relaunch fixes, beta 11's memory work, beta 10's smaller Full edition and its new modules, the
+> launches and works); **nothing in betas 3 to 13 is verified on a device
+> yet** — including beta 13's memory and relaunch work, beta 12's crash fixes, beta 11's memory work, beta 10's smaller Full edition and its new modules, the
 > research lab tools of beta 9, the Dolphin Lab interface of beta 8 and the
 > on-demand modules of beta 7. Expect rough edges, and see
 > [VERIFICATION.md](docs/VERIFICATION.md) for exactly what has and hasn't been
@@ -180,17 +180,17 @@ with the firmware's own fonts — not screenshots of a Flipper Zero.</sub>
 ## ⬇ Download
 
 Grab the build that matches your firmware from the
-[**v1.0.0-beta.12 release**](https://github.com/mrSlime-man/RADIOGEDDON/releases/tag/v1.0.0-beta.12),
+[**v1.0.0-beta.13 release**](https://github.com/mrSlime-man/RADIOGEDDON/releases/tag/v1.0.0-beta.13),
 then copy it to `apps/Sub-GHz/` on the SD card (full steps in
 [Installation](docs/INSTALLATION.md)).
 
 | Your firmware | Edition | Download this file |
 |---------------|---------|--------------------|
-| **Official** (flipperzero.one) | Catalog | [`radiogeddon-catalog-official.fap`](https://github.com/mrSlime-man/RADIOGEDDON/releases/download/v1.0.0-beta.12/radiogeddon-catalog-official.fap) |
-| **RogueMaster** | Full | [`radiogeddon-full-roguemaster.fap`](https://github.com/mrSlime-man/RADIOGEDDON/releases/download/v1.0.0-beta.12/radiogeddon-full-roguemaster.fap) |
-| **Momentum** | Full | [`radiogeddon-full-momentum.fap`](https://github.com/mrSlime-man/RADIOGEDDON/releases/download/v1.0.0-beta.12/radiogeddon-full-momentum.fap) |
-| **Unleashed** | Full | [`radiogeddon-full-unleashed.fap`](https://github.com/mrSlime-man/RADIOGEDDON/releases/download/v1.0.0-beta.12/radiogeddon-full-unleashed.fap) |
-| **RogueMaster `4f2e0620 [88.4]`** (exact device build) | Full | [`radiogeddon-full-roguemaster-4f2e06200-api88.4.fap`](https://github.com/mrSlime-man/RADIOGEDDON/releases/download/v1.0.0-beta.12/radiogeddon-full-roguemaster-4f2e06200-api88.4.fap) |
+| **Official** (flipperzero.one) | Catalog | [`radiogeddon-catalog-official.fap`](https://github.com/mrSlime-man/RADIOGEDDON/releases/download/v1.0.0-beta.13/radiogeddon-catalog-official.fap) |
+| **RogueMaster** | Full | [`radiogeddon-full-roguemaster.fap`](https://github.com/mrSlime-man/RADIOGEDDON/releases/download/v1.0.0-beta.13/radiogeddon-full-roguemaster.fap) |
+| **Momentum** | Full | [`radiogeddon-full-momentum.fap`](https://github.com/mrSlime-man/RADIOGEDDON/releases/download/v1.0.0-beta.13/radiogeddon-full-momentum.fap) |
+| **Unleashed** | Full | [`radiogeddon-full-unleashed.fap`](https://github.com/mrSlime-man/RADIOGEDDON/releases/download/v1.0.0-beta.13/radiogeddon-full-unleashed.fap) |
+| **RogueMaster `4f2e0620 [88.4]`** (exact device build) | Full | [`radiogeddon-full-roguemaster-4f2e06200-api88.4.fap`](https://github.com/mrSlime-man/RADIOGEDDON/releases/download/v1.0.0-beta.13/radiogeddon-full-roguemaster-4f2e06200-api88.4.fap) |
 
 The last file is a device-specific build for RogueMaster commit `4f2e06200`
 (API 88.4), made in that commit's own tree. If *Settings → About → Firmware
@@ -290,8 +290,9 @@ firmware families. The Full edition's optional tools (the Range Scanner and
 Waterfall, Settings, the Frequency Hopper, the Bitstream Explorer,
 Multi-Capture Compare, Unknown Protocol Analysis, Sessions, the lab room and
 journal, Find Similar, Pulse Studio and the Pulse Timeline, the activity
-logger, adaptive setup and heatmap, analysis reports, About and recording
-recovery — 16 modules) are
+logger, adaptive setup and heatmap, analysis reports, About, recording
+recovery and, from beta 13, the Signal Database, the analysis menu and the
+Frequency Scanner's screen — 19 modules) are
 plugins packed inside the `.fap` and loaded only while their screen is open,
 so their code takes RAM only then. Beta 11 works on the memory the app
 uses while it runs: the Bitstream Explorer holds 4,072 B instead of 8,672 B,

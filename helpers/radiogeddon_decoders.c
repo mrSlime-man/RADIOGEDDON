@@ -1,6 +1,8 @@
 #include "radiogeddon_decoders.h"
 #include "../radiogeddon_edition.h" /* RG_CORE_TEXT */
 
+#include <lib/subghz/subghz_protocol_registry.h>
+#include <lib/subghz/registry.h>
 #include <string.h>
 
 RG_CORE_TEXT bool
@@ -45,14 +47,15 @@ RG_CORE_TEXT SubGhzReceiver* radiogeddon_decoders_receiver_alloc(
     // Every protocol fits: the list is at most the registry's size. It is
     // only read while the receiver allocates its decoders.
     size_t count = subghz_protocol_registry_count(all);
-    const SubGhzProtocol** items = malloc((count ? count : 1) * sizeof(*items));
+    const SubGhzProtocol** items =
+        (const SubGhzProtocol**)malloc((count ? count : 1) * sizeof(const SubGhzProtocol*));
     size_t n = radiogeddon_decoders_select(all, filter, items, count);
     const SubGhzProtocolRegistry fed = {.items = items, .size = n};
 
     subghz_environment_set_protocol_registry(environment, (void*)&fed);
     SubGhzReceiver* receiver = subghz_receiver_alloc_init(environment);
     subghz_environment_set_protocol_registry(environment, (void*)all);
-    free(items);
+    free((void*)items);
 
     subghz_receiver_set_filter(receiver, filter);
     return receiver;
