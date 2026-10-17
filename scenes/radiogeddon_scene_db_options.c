@@ -216,7 +216,6 @@ bool radiogeddon_scene_db_options_on_event(void* context, SceneManagerEvent even
 
 void radiogeddon_scene_db_options_on_exit(void* context) {
     RadioGeddonApp* app = context;
-    variable_item_list_set_enter_callback(app->var_item_list, NULL, NULL);
-    variable_item_list_reset(app->var_item_list);
+    radiogeddon_scene_var_list_release(app);
     text_input_reset(app->text_input);
 }

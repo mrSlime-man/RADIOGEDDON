@@ -382,7 +382,7 @@ void radiogeddon_scene_range_setup_on_exit(void* context) {
     RadioGeddonApp* app = context;
     range_plan_item = NULL;
     radiogeddon_app_save_settings(app);
-    variable_item_list_reset(app->var_item_list);
+    radiogeddon_scene_var_list_release(app);
 }
 
 #endif

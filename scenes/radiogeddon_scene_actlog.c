@@ -384,8 +384,7 @@ void radiogeddon_scene_actlog_on_exit(void* context) {
     actlog_free_run(app);
     if(app->scanner) radiogeddon_scanner_set_observer(app->scanner, NULL, NULL);
     radiogeddon_app_save_settings(app);
-    variable_item_list_set_enter_callback(app->var_item_list, NULL, NULL);
-    variable_item_list_reset(app->var_item_list);
+    radiogeddon_scene_var_list_release(app);
     widget_reset(app->widget);
     text_box_reset(app->text_box);
 }

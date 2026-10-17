@@ -139,6 +139,18 @@ bool radiogeddon_scene_redraw_due(RadioGeddonApp* app) {
     return true;
 }
 
+/* Resident, so it is valid whatever module is loaded or unloaded later. */
+static void radiogeddon_scene_var_list_noop(void* context, uint32_t index) {
+    UNUSED(context);
+    UNUSED(index);
+}
+
+void radiogeddon_scene_var_list_release(RadioGeddonApp* app) {
+    variable_item_list_reset(app->var_item_list);
+    variable_item_list_set_enter_callback(
+        app->var_item_list, radiogeddon_scene_var_list_noop, app);
+}
+
 void radiogeddon_scene_receiver_badge(RadioGeddonApp* app) {
 #if RG_FEATURE_DOLPHIN_LAB
     RgMascotFrame f;

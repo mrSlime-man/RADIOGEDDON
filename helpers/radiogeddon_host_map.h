@@ -102,6 +102,7 @@ extern const RadioGeddonHost* radiogeddon_host;
 #define radiogeddon_memdiag_diags         (radiogeddon_host->memdiag_diags)
 #define radiogeddon_subghz_session_cost   (radiogeddon_host->subghz_session_cost)
 #define radiogeddon_scene_radio_cost      (radiogeddon_host->radio_cost)
+#define radiogeddon_scene_var_list_release (radiogeddon_host->var_list_release)
 #else
 #define RADIOGEDDON_PRESET_LABEL(index) (radiogeddon_presets[(index)].label)
 #endif

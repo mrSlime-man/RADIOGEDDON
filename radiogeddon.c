@@ -127,6 +127,8 @@ RadioGeddonApp* radiogeddon_app_alloc(void) {
     app->popup = popup_alloc();
     app->text_input = text_input_alloc();
     app->text_box = text_box_alloc();
+    // Never without an enter callback: firmware forbids NULL (see the helper).
+    radiogeddon_scene_var_list_release(app);
     app->scanner_view = radiogeddon_scanner_view_alloc();
     app->receiver_view = radiogeddon_receiver_view_alloc();
 

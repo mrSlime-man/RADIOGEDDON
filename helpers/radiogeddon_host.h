@@ -156,6 +156,8 @@ typedef struct {
     const RgDiag* (*memdiag_diags)(void);
     uint32_t (*subghz_session_cost)(RadioGeddonSubGhz* subghz);
     uint32_t (*radio_cost)(RadioGeddonApp* app);
+    /* The shared VariableItemList, emptied with a resident enter callback. */
+    void (*var_list_release)(RadioGeddonApp* app);
 } RadioGeddonHost;
 
 /** The table (scenes/radiogeddon_scene_tools.c). */

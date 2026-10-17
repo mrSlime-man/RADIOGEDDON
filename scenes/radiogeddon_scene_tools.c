@@ -271,6 +271,7 @@ const RadioGeddonHost radiogeddon_host_table = {
     .memdiag_diags = radiogeddon_memdiag_diags,
     .subghz_session_cost = radiogeddon_subghz_session_cost,
     .radio_cost = radiogeddon_scene_radio_cost,
+    .var_list_release = radiogeddon_scene_var_list_release,
 };
 
 /* ---- slots ----------------------------------------------------------------- */

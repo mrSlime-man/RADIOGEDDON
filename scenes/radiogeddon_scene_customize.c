@@ -118,7 +118,8 @@ static VariableItem* customize_add(
 
 void radiogeddon_scene_customize_on_enter(void* context) {
     RadioGeddonApp* app = context;
-    variable_item_list_reset(app->var_item_list);
+    // No enter action here: never keep another screen's callback.
+    radiogeddon_scene_var_list_release(app);
     RgMascotLook look;
     memcpy(&look, app->settings.look, sizeof(look));
     rg_mascot_look_sanitize(&look);
@@ -159,7 +160,7 @@ bool radiogeddon_scene_customize_on_event(void* context, SceneManagerEvent event
 void radiogeddon_scene_customize_on_exit(void* context) {
     RadioGeddonApp* app = context;
     radiogeddon_app_save_settings(app);
-    variable_item_list_reset(app->var_item_list);
+    radiogeddon_scene_var_list_release(app);
 }
 
 #endif

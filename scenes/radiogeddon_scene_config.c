@@ -652,5 +652,5 @@ void radiogeddon_scene_config_on_exit(void* context) {
     // A new style takes effect at once (the lab view is not on screen now).
     radiogeddon_ui_apply_style(app);
 #endif
-    variable_item_list_reset(app->var_item_list);
+    radiogeddon_scene_var_list_release(app);
 }
