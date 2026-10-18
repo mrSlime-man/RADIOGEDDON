@@ -10,7 +10,7 @@ firmware, copy it to the Flipper, and open it from the Apps menu.
 
   | Firmware family | Edition | Built against | API |
   |-----------------|---------|---------------|-----|
-  | Official | Catalog | 1.4.3 | 87.1 |
+  | Official | Catalog | 1.5.1 | 88.2 |
   | RogueMaster | Full | commit `38d7ae9` | 88.16 |
   | Momentum | Full | mntm-012 | 87.1 |
   | Unleashed | Full | unlshd-093 | 88.9 |
@@ -25,7 +25,7 @@ qFlipper):
 
 | You see | Your firmware | File to download |
 |---------|---------------|------------------|
-| A plain version number such as `1.4.3` | Official | `radiogeddon-catalog-official.fap` |
+| A plain version number such as `1.5.1` | Official | `radiogeddon-catalog-official.fap` |
 | A RogueMaster version | RogueMaster | `radiogeddon-full-roguemaster.fap` |
 | A version starting with `mntm-` | Momentum | `radiogeddon-full-momentum.fap` |
 | A version starting with `unlshd-` | Unleashed | `radiogeddon-full-unleashed.fap` |
@@ -37,21 +37,26 @@ About → Firmware Info* second line reads `4f2e0620 [88.4]`; any other
 RogueMaster build takes `radiogeddon-full-roguemaster.fap`. Copy only one of
 the two to the SD card (both are *RadioGeddon Full*).
 
-Momentum and Official report the same API version (87.1) but are different
-firmware: take the file named for yours.
+Official 1.4.x users: v1.0.1's Catalog file is built for Official 1.5.x
+(API 88.2) and does not load on 1.4.x (API 87). Update the firmware, or use
+the Catalog file of the v1.0.0 release on the
+[releases page](https://github.com/mrSlime-man/RADIOGEDDON/releases).
+
+Official, Unleashed and RogueMaster all report API major 88 but are
+different firmware: take the file named for yours.
 
 Using a different fork? See [Firmware Compatibility](FIRMWARE_COMPATIBILITY.md).
 
 ## Step 2 — Download
 
-From the [**v1.0.0 release page**](https://github.com/mrSlime-man/RADIOGEDDON/releases/tag/v1.0.0),
+From the [**v1.0.1 release page**](https://github.com/mrSlime-man/RADIOGEDDON/releases/tag/v1.0.1),
 or directly:
 
-- [radiogeddon-catalog-official.fap](https://github.com/mrSlime-man/RADIOGEDDON/releases/download/v1.0.0/radiogeddon-catalog-official.fap) — Official firmware
-- [radiogeddon-full-roguemaster.fap](https://github.com/mrSlime-man/RADIOGEDDON/releases/download/v1.0.0/radiogeddon-full-roguemaster.fap) — RogueMaster
-- [radiogeddon-full-momentum.fap](https://github.com/mrSlime-man/RADIOGEDDON/releases/download/v1.0.0/radiogeddon-full-momentum.fap) — Momentum
-- [radiogeddon-full-unleashed.fap](https://github.com/mrSlime-man/RADIOGEDDON/releases/download/v1.0.0/radiogeddon-full-unleashed.fap) — Unleashed
-- [radiogeddon-full-roguemaster-4f2e06200-api88.4.fap](https://github.com/mrSlime-man/RADIOGEDDON/releases/download/v1.0.0/radiogeddon-full-roguemaster-4f2e06200-api88.4.fap) — RogueMaster `4f2e06200`, API 88.4 only
+- [radiogeddon-catalog-official.fap](https://github.com/mrSlime-man/RADIOGEDDON/releases/download/v1.0.1/radiogeddon-catalog-official.fap) — Official firmware
+- [radiogeddon-full-roguemaster.fap](https://github.com/mrSlime-man/RADIOGEDDON/releases/download/v1.0.1/radiogeddon-full-roguemaster.fap) — RogueMaster
+- [radiogeddon-full-momentum.fap](https://github.com/mrSlime-man/RADIOGEDDON/releases/download/v1.0.1/radiogeddon-full-momentum.fap) — Momentum
+- [radiogeddon-full-unleashed.fap](https://github.com/mrSlime-man/RADIOGEDDON/releases/download/v1.0.1/radiogeddon-full-unleashed.fap) — Unleashed
+- [radiogeddon-full-roguemaster-4f2e06200-api88.4.fap](https://github.com/mrSlime-man/RADIOGEDDON/releases/download/v1.0.1/radiogeddon-full-roguemaster-4f2e06200-api88.4.fap) — RogueMaster `4f2e06200`, API 88.4 only
 
 The Catalog edition is being submitted to the official Flipper Apps Catalog;
 until it is accepted and listed there, install it from this page.

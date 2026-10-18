@@ -7,6 +7,55 @@ to follow [Semantic Versioning](https://semver.org/) (the releases before
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-10-18
+
+Official firmware compatibility patch. Official 1.5.x moved its API major
+from 87 to 88, so firmware 1.5.1 refuses v1.0.0's
+`radiogeddon-catalog-official.fap` (API 87.1) with "Outdated app". The
+Catalog edition is now built against the Official 1.5.1 SDK (API 88.2).
+Apart from the version string on the About screen, no application source
+changed: no feature added or removed, the other four
+builds and every transmit restriction are unchanged. Notes:
+[docs/releases/v1.0.1.md](docs/releases/v1.0.1.md).
+
+### Changed
+- Official SDK pin (`scripts/firmware_pins.sh`): firmware 1.5.1,
+  `flipper-z-f7-sdk-1.5.1.zip` from `update.flipperzero.one`, SHA-256
+  `dfde39df…2e2ffe` (the sdk_zip entry for f7 in Official's update index,
+  release channel), API **88.2** (was 1.4.3, API 87.1). Firmware source pin
+  moved to tag 1.5.1 (`9e810dc`); its M\*LIB submodule is unchanged.
+- `radiogeddon-catalog-official.fap` now targets Official firmware with
+  API 88.x, x ≥ 2 (1.5.1 and later 1.5.x). It no longer loads on Official
+  1.4.x: users of 1.4.x keep v1.0.0's file or update their firmware.
+- Version `1.0.1`; the Apps Catalog `fap_version` stays `1.0`, as in the
+  first submission.
+- Host decoder tests follow the firmware's own Sub-GHz unit tests at 1.5.1,
+  which add the Elplast decoder and its capture (`elplast_raw.sub`, 18-bit
+  key decoded, matching the firmware's key file); the firmware test-file
+  manifest (`test/firmware/files.sha256`) is regenerated from tag 1.5.1.
+  The test Makefile now rebuilds the decoder and capture tests when
+  `test/fw_decoded_bits.h` changes.
+- Documentation: firmware compatibility, installation, FAQ, verification,
+  README download links and the Apps Catalog submission steps. Official and
+  Momentum no longer share an API version; Official now shares API major 88
+  with Unleashed and RogueMaster, so the advice to install the file named
+  for your firmware still applies.
+
+### Checked against 1.5.1
+- Every symbol the Catalog edition imports (305) is exported by the 1.5.1
+  SDK; the API removed only USB CCID functions, which the app does not use.
+- 1.5.1 inserts a preset (`FuriHalSubGhzPreset2FSKDev12KAsync`) into the
+  preset enum, shifting the later values; the app uses the named constants
+  compiled from the 1.5.1 headers and stores presets by name, never by
+  number. `furi_hal_subghz_is_frequency_valid()`'s ranges are unchanged.
+- The firmware's furi_check() argument contracts at 1.5.1 add nothing to
+  `scripts/fw_contracts.json`.
+
+### Hardware evidence
+- None yet for this build: the Catalog edition has not been run on a Flipper
+  with Official 1.5.1. Hardware compatibility is claimed only once the owner
+  confirms that it launches.
+
 ## [1.0.0] - 2026-10-17
 
 First stable release. The application code is beta 13's, unchanged: no

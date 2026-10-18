@@ -64,4 +64,5 @@ static const FwDecodedBits fw_decoded_bits[] = {
     {"feron_raw.sub", {32, 0}},
     {"legrand_raw.sub", {18, 0}},
     {"marantec24_raw.sub", {24, 0}},
+    {"elplast_raw.sub", {18, 0}},
 };

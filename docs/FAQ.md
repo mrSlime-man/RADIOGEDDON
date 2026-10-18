@@ -64,9 +64,9 @@ firmware. See [Troubleshooting](TROUBLESHOOTING.md#the-app-wont-open).
 ### Does it work on Momentum?
 
 Yes: `radiogeddon-full-momentum.fap` is the Full edition built against
-Momentum mntm-012's own SDK. Don't use the Official file on Momentum (or the
-other way round): both report API 87.1, so the Flipper may start it, but the
-firmware structures differ. See
+Momentum mntm-012's own SDK. Don't use another firmware's file on Momentum:
+the firmware structures differ, and since v1.0.1 the Official file (API 88.2)
+is refused there anyway, as Momentum is at API 87.1. See
 [Firmware Compatibility](FIRMWARE_COMPATIBILITY.md#momentum).
 
 ### What is the difference between the Full and Catalog editions?

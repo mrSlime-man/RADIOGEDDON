@@ -22,8 +22,9 @@ the Apps Catalog or Flipper Lab yet.
 
 ## Steps left
 
-1. On Official firmware, install `radiogeddon-catalog-official.fap` from the
-   v1.0.0 release and take 2-6 screenshots with qFlipper's screenshot
+1. On Official firmware 1.5.1, install `radiogeddon-catalog-official.fap`
+   from the v1.0.1 release (built against the 1.5.1 SDK, API 88.2; v1.0.0's
+   file is refused there as "Outdated app") and take 2-6 screenshots with qFlipper's screenshot
    button. Commit them unedited as `catalog/screenshots/ss0.png`, `ss1.png`,
    ... (`ss0.png` is the preview).
 2. `python3 scripts/check_catalog.py --submission` must pass.
@@ -33,8 +34,8 @@ the Apps Catalog or Flipper Lab yet.
    `python3 tools/bundle.py --nolint applications/Sub-GHz/radiogeddon/manifest.yml bundle.zip`.
 5. Open the pull request with the body below. Keep the Reviewer Checklist.
 
-The commit with the screenshots is newer than the `v1.0.0` tag; its
-application source is the same as v1.0.0's as long as only
+The commit with the screenshots is newer than the `v1.0.1` tag; its
+application source is the same as v1.0.1's as long as only
 `catalog/screenshots/` changed in between.
 
 ## Pull request body (draft)
@@ -45,7 +46,7 @@ application source is the same as v1.0.0's as long as only
 - RadioGeddon 1.0 (Catalog edition): a standalone Sub-GHz research and signal analysis toolkit for the Official firmware. Scanner and frequency hopper, receive and protocol identification with the firmware's own decoders, streaming RAW recording to the SD card, Decode with Firmware, signal analysis (timing, encoding, frame structure, field map, labelled as confirmed/measured/inferred), pulse timeline, comparison, signal database, recording recovery, memory diagnostics and replay.
 - Transmission: every transmission is gated on furi_hal_region_is_frequency_allowed() and furi_hal_subghz_is_frequency_valid() (helpers/radiogeddon_subghz.c, radiogeddon_subghz_tx_check); a refusal is explained on screen. Decoded rolling-code protocols are never replayed. No key recovery or decryption.
 - Files: writes only under /ext/apps_data/radiogeddon. Recordings are standard .sub files.
-- Source: https://github.com/mrSlime-man/RADIOGEDDON (MIT), release v1.0.0.
+- Source: https://github.com/mrSlime-man/RADIOGEDDON (MIT), release v1.0.1.
 
 # Extra Requirements
 

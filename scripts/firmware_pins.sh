@@ -26,18 +26,22 @@
 # uFBT version used to deploy SDKs and build (pip install "ufbt==${UFBT_VERSION}").
 UFBT_VERSION="0.2.6"
 
-# Official Flipper Zero firmware 1.4.3 (release channel).
-OFFICIAL_SDK_URL="https://update.flipperzero.one/builds/firmware/1.4.3/flipper-z-f7-sdk-1.4.3.zip"
-OFFICIAL_SDK_SHA256="2e89e70c6b5770440cbf02f2ca01a2f8804e05ddb77f66afdd23ed2584740c7f"
-OFFICIAL_FW_LABEL="Official 1.4.3"
-OFFICIAL_API="87.1"
-# The firmware source commit of that release (tag 1.4.3). Host tests build the
+# Official Flipper Zero firmware 1.5.1 (release channel). The URL and SHA-256
+# are the sdk_zip entry for f7 in Official's update index
+# (https://update.flipperzero.one/firmware/directory.json, channel release).
+# 1.5.x moved the Official API major from 87 to 88, so firmware 1.5.x refuses
+# a .fap built against 1.4.x ("Outdated app") and 1.4.x refuses this one.
+OFFICIAL_SDK_URL="https://update.flipperzero.one/builds/firmware/1.5.1/flipper-z-f7-sdk-1.5.1.zip"
+OFFICIAL_SDK_SHA256="dfde39df32ba8a9789b26afc1d702579ad8399a1c285770637cfe3287b2e2ffe"
+OFFICIAL_FW_LABEL="Official 1.5.1"
+OFFICIAL_API="88.2"
+# The firmware source commit of that release (tag 1.5.1). Host tests build the
 # firmware's own FlipperFormat code and read its Sub-GHz test files from it
 # (test/firmware/fetch.sh); they are downloaded for testing, never shipped.
-OFFICIAL_SOURCE_COMMIT="8622f1a2b83d8f4918dd5fa3f43de963f6d6f819"
+OFFICIAL_SOURCE_COMMIT="9e810dc399e027e48ce07751df72168abbb19065"
 # The firmware's lib/mlib submodule (M*LIB, BSD-2-Clause), which its Sub-GHz
-# receiver and keystore use: V0.6.0, whose m-core.h and m-array.h are the ones
-# the 1.4.3 SDK ships. Fetched for the host decoder tests only.
+# receiver and keystore use: V0.6.0, the commit 1.5.1 pins (unchanged since
+# 1.4.3). Fetched for the host decoder tests only.
 OFFICIAL_MLIB_COMMIT="62c8ac3e5d4a7a4f8757328e7a80286fde2686b6"
 
 # Unleashed firmware unlshd-093 (release channel).

@@ -153,6 +153,7 @@ static const Pair pairs[] = {
     PAIR("feron_raw.sub", SUBGHZ_PROTOCOL_FERON_NAME, ExpectDecode),
     PAIR("legrand_raw.sub", SUBGHZ_PROTOCOL_LEGRAND_NAME, ExpectDecode),
     PAIR("marantec24_raw.sub", SUBGHZ_PROTOCOL_MARANTEC24_NAME, ExpectDecode),
+    PAIR("elplast_raw.sub", SUBGHZ_PROTOCOL_ELPLAST_NAME, ExpectDecode),
 };
 #define PAIR_COUNT (sizeof(pairs) / sizeof(pairs[0]))
 

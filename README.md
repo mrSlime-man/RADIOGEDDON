@@ -22,8 +22,9 @@ Sub-GHz signals — entirely on the device, with no computer, phone or network.
 ---
 
 > [!NOTE]
-> **Stable release 1.0.0.** Every feature is implemented and the builds pass
-> all automated checks (lint, 2,903 host-test checks, format, decoder,
+> **Stable release 1.0.1** (1.0.0 rebuilt for Official firmware 1.5.1,
+> API 88.2; Official 1.4.x keeps v1.0.0's Catalog file). Every feature is
+> implemented and the builds pass all automated checks (lint, 2,903 host-test checks, format, decoder,
 > capture, engine-lifecycle, file, memory-stress and offline UI tests,
 > ThreadSanitizer, fuzzing, static analysis of both editions, five firmware
 > builds with API, manifest, imported-symbol and module verification).
@@ -33,7 +34,7 @@ Sub-GHz signals — entirely on the device, with no computer, phone or network.
 > Scanner, the Adaptive Scanner and the RF Activity Logger after it, no
 > crash, about 45 KB of heap free after start. Receiving, recording,
 > transmitting, most of the 19 modules and the Catalog edition on Official
-> firmware are **not** yet confirmed on a device. See
+> firmware (1.5.1) are **not** yet confirmed on a device. See
 > [VERIFICATION.md](docs/VERIFICATION.md) for exactly what has and hasn't
 > been tested; reports from the [hardware checklist](docs/HARDWARE_CHECKLIST.md)
 > are the most useful contribution.
@@ -182,17 +183,17 @@ with the firmware's own fonts — not screenshots of a Flipper Zero.</sub>
 ## ⬇ Download
 
 Grab the build that matches your firmware from the
-[**v1.0.0 release**](https://github.com/mrSlime-man/RADIOGEDDON/releases/tag/v1.0.0),
+[**v1.0.1 release**](https://github.com/mrSlime-man/RADIOGEDDON/releases/tag/v1.0.1),
 then copy it to `apps/Sub-GHz/` on the SD card (full steps in
 [Installation](docs/INSTALLATION.md)).
 
 | Your firmware | Edition | Download this file |
 |---------------|---------|--------------------|
-| **Official** (flipperzero.one) | Catalog | [`radiogeddon-catalog-official.fap`](https://github.com/mrSlime-man/RADIOGEDDON/releases/download/v1.0.0/radiogeddon-catalog-official.fap) |
-| **RogueMaster** | Full | [`radiogeddon-full-roguemaster.fap`](https://github.com/mrSlime-man/RADIOGEDDON/releases/download/v1.0.0/radiogeddon-full-roguemaster.fap) |
-| **Momentum** | Full | [`radiogeddon-full-momentum.fap`](https://github.com/mrSlime-man/RADIOGEDDON/releases/download/v1.0.0/radiogeddon-full-momentum.fap) |
-| **Unleashed** | Full | [`radiogeddon-full-unleashed.fap`](https://github.com/mrSlime-man/RADIOGEDDON/releases/download/v1.0.0/radiogeddon-full-unleashed.fap) |
-| **RogueMaster `4f2e0620 [88.4]`** (exact device build) | Full | [`radiogeddon-full-roguemaster-4f2e06200-api88.4.fap`](https://github.com/mrSlime-man/RADIOGEDDON/releases/download/v1.0.0/radiogeddon-full-roguemaster-4f2e06200-api88.4.fap) |
+| **Official** (flipperzero.one) 1.5.x | Catalog | [`radiogeddon-catalog-official.fap`](https://github.com/mrSlime-man/RADIOGEDDON/releases/download/v1.0.1/radiogeddon-catalog-official.fap) |
+| **RogueMaster** | Full | [`radiogeddon-full-roguemaster.fap`](https://github.com/mrSlime-man/RADIOGEDDON/releases/download/v1.0.1/radiogeddon-full-roguemaster.fap) |
+| **Momentum** | Full | [`radiogeddon-full-momentum.fap`](https://github.com/mrSlime-man/RADIOGEDDON/releases/download/v1.0.1/radiogeddon-full-momentum.fap) |
+| **Unleashed** | Full | [`radiogeddon-full-unleashed.fap`](https://github.com/mrSlime-man/RADIOGEDDON/releases/download/v1.0.1/radiogeddon-full-unleashed.fap) |
+| **RogueMaster `4f2e0620 [88.4]`** (exact device build) | Full | [`radiogeddon-full-roguemaster-4f2e06200-api88.4.fap`](https://github.com/mrSlime-man/RADIOGEDDON/releases/download/v1.0.1/radiogeddon-full-roguemaster-4f2e06200-api88.4.fap) |
 
 The last file is a device-specific build for RogueMaster commit `4f2e06200`
 (API 88.4), made in that commit's own tree. If *Settings → About → Firmware

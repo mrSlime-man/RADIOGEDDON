@@ -115,6 +115,7 @@ static const Pair pairs[] = {
     {"feron_raw.sub", "feron.c"},
     {"legrand_raw.sub", "legrand.c"},
     {"marantec24_raw.sub", "marantec24.c"},
+    {"elplast_raw.sub", "elplast.c"},
 };
 #define PAIR_COUNT (sizeof(pairs) / sizeof(pairs[0]))
 

@@ -7,11 +7,11 @@ in two editions (see [Features → Editions](FEATURES.md#editions)), and because
 each firmware family publishes its own SDK, **each family gets its own `.fap`,
 compiled against that family's SDK**.
 
-## Supported firmware (v1.0.0)
+## Supported firmware (v1.0.1)
 
 | Firmware | Edition | Built against | SDK API | Download |
 |----------|---------|---------------|---------|----------|
-| **Official** | Catalog | Flipper Zero firmware **1.4.3** SDK | **87.1** | `radiogeddon-catalog-official.fap` |
+| **Official** | Catalog | Flipper Zero firmware **1.5.1** SDK | **88.2** | `radiogeddon-catalog-official.fap` |
 | **RogueMaster** | Full | RogueMaster source at commit [`38d7ae9`](https://github.com/RogueMaster/flipperzero-firmware-wPlugins/commit/38d7ae9ae7eb2d25b31cea9b9fcf88fd11c1f3d3), built with its own `fbt` | **88.16** | `radiogeddon-full-roguemaster.fap` |
 | **Momentum** | Full | Momentum **mntm-012** SDK (tag commit [`e1784e7`](https://github.com/Next-Flip/Momentum-Firmware/commit/e1784e7418d8b074e971983ceb6fef0f37e52ae4)) | **87.1** | `radiogeddon-full-momentum.fap` |
 | **Unleashed** | Full | Unleashed **unlshd-093** SDK | **88.9** | `radiogeddon-full-unleashed.fap` |
@@ -26,9 +26,14 @@ symbol it imports is exported by that SDK's `api_symbols.csv`
 (`scripts/verify_fap.py --symbols`). On a device, the owner has run the
 1.0.0 code (as beta 13) with the RogueMaster `4f2e06200` build: launch,
 exit, the Frequency Scanner, the Adaptive Scanner and the RF Activity Logger
-worked. The other four builds, and the Catalog edition on Official firmware,
-have not been run on a device for this release (see
+worked. The other four builds, and the Catalog edition on Official firmware
+(1.5.1 since v1.0.1), have not been run on a device for this release (see
 [VERIFICATION.md](VERIFICATION.md)).
+
+v1.0.1 moved the Official build from 1.4.3 (API 87.1) to 1.5.1 (API 88.2):
+Official 1.5.x changed its API major version, so it refuses v1.0.0's
+Catalog file ("Outdated app"). Official 1.4.x keeps working with v1.0.0's
+`radiogeddon-catalog-official.fap`; v1.0.1's does not load there.
 
 The exact SDK URLs, SHA-256 checksums and the RogueMaster commit are pinned in
 [`scripts/firmware_pins.sh`](../scripts/firmware_pins.sh); every release lists
@@ -43,8 +48,8 @@ another one:
   [mntm-012 GitHub release](https://github.com/Next-Flip/Momentum-Firmware/releases/tag/mntm-012),
   SHA-256 `c90530c3…08cc2`, the same file and checksum Momentum's own update
   index (`up.momentum-fw.dev/firmware/directory.json`, release channel) lists.
-- **API**: Momentum numbers its API like Official (**87.1**), but its symbol
-  table differs from Official's in 522 entries, and its Sub-GHz headers differ
+- **API**: Momentum reports API **87.1**, as Official 1.4.x did, but its symbol
+  table differs from Official 1.4.3's in 522 entries, and its Sub-GHz headers differ
   too. Among them: the device vtable (`SubGhzDeviceInterconnect`) has an extra
   `check_tx` entry and its `begin` hook takes a `SubGhzDeviceConf`
   (extended range, region bypass, amp settings), the decoder base has
@@ -76,7 +81,7 @@ firmware family ships updates within the same major API version:
 
 | Artifact | Built with | Expected to load on |
 |----------|------------|---------------------|
-| `radiogeddon-catalog-official.fap` | 87.1 | Official firmware with API 87.x, x ≥ 1 |
+| `radiogeddon-catalog-official.fap` | 88.2 | Official firmware with API 88.x, x ≥ 2 (1.5.1 and later 1.5.x) |
 | `radiogeddon-full-roguemaster.fap` | 88.16 | RogueMaster with API 88.x whose firmware exports every function the app imports (see below) |
 | `radiogeddon-full-momentum.fap` | 87.1 | Momentum with API 87.x, x ≥ 1 |
 | `radiogeddon-full-unleashed.fap` | 88.9 | Unleashed with API 88.x, x ≥ 9 |
@@ -88,9 +93,11 @@ compares only the major version, so a RogueMaster build also opens on older
 beta 11 build, made at 88.16, opened on a device at 88.4). For an exact
 match, build for the commit your device runs (next section).
 
-Momentum and Official share API 87.1, so the firmware's version check alone
-would not stop the wrong one from loading — **install the file named for your
-firmware**. The structure layouts differ (see above), so a build for the other
+Since v1.0.1, Official (88.2) shares API major 88 with Unleashed (88.9) and
+RogueMaster (88.x), and Momentum keeps 87.1, so the firmware's version check
+alone does not always stop the wrong file from loading — **install the file
+named for your firmware**. The forks' structure layouts and symbol tables
+differ from Official's (see the Momentum section), so a build for another
 firmware may misbehave even if it starts.
 
 If a future firmware release changes its API **major** version, the app will be
@@ -112,7 +119,8 @@ python3 scripts/verify_fap.py radiogeddon-full-momentum.fap --api 87.1 --json \
 
 Check your firmware in **Settings → About** on the Flipper (or in qFlipper):
 
-- Version like `1.4.3` from flipperzero.one → **Official** → Catalog edition
+- Version like `1.5.1` from flipperzero.one → **Official** → Catalog edition
+  (Official 1.4.x: v1.0.0's Catalog file)
 - Version starting with `mntm-` → **Momentum** → Full edition
 - Version starting with `unlshd-` → **Unleashed** → Full edition
 - RogueMaster build (version string mentions RM / RogueMaster) → **RogueMaster** → Full edition
@@ -126,16 +134,12 @@ The **Firmware watch** workflow checks every week for firmware newer than the
 pinned SDKs (Official release and release candidate, Unleashed, Momentum,
 RogueMaster), with its API version, and canary-builds the app against every
 newer Official (Catalog edition), Unleashed or Momentum (Full edition) SDK.
-State on 2026-10-10:
+State on 2026-10-18:
 
-- **Official 1.5.1-rc** (release candidate) moves to API **88.2**, so
-  `radiogeddon-catalog-official.fap` (API 87.1) will be refused on it. No
-  release targets it yet. The Catalog edition builds against the 1.5.1-rc SDK
-  (compile, `APPCHK`, manifest and imported-symbol checks pass), but nothing
-  has been tested on a device with it. If you run the release candidate, build
-  from source as below with `ufbt update --hw-target f7 --channel rc`. The
-  Official pin moves to 1.5.1 once it is released and the hardware checklist
-  has been run on it.
+- **Official 1.5.1** is released (API **88.2**) and is the pinned Official
+  SDK since v1.0.1. The Catalog edition builds against it (compile,
+  `APPCHK`, manifest and imported-symbol checks pass); it has not been run on
+  a device yet.
 - Unleashed unlshd-093, Momentum mntm-012 and RogueMaster `38d7ae9` are the
   newest of their families.
 
@@ -191,7 +195,7 @@ sources:
   which shifts the numeric values. RadioGeddon only uses the named preset
   constants, so each build gets the right values for its own SDK.
 - **Tuning ranges**: `furi_hal_subghz_is_frequency_valid()` is 300–348 /
-  387–464 / 779–928 MHz on Official 1.4.3 and 281–361 / 378–481 / 749–962 MHz
+  387–464 / 779–928 MHz on Official 1.5.1 (unchanged since 1.4.3) and 281–361 / 378–481 / 749–962 MHz
   on RogueMaster `38d7ae9`, Momentum mntm-012 and Unleashed unlshd-093 (read
   from each firmware's `targets/f7/furi_hal/furi_hal_subghz.c`). The Full
   edition's band probe (`rg_range_probe_bands`) is tested against both tables.

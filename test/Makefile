@@ -482,7 +482,7 @@ $(SUBGHZ_SRC): $(FW)/.fetched ;
 captures: $(BUILD)/test_fwanalyze
 	$(BUILD)/test_fwanalyze
 
-$(BUILD)/test_fwanalyze: $(FWANALYZE_SRC) ../helpers/rg_analyzer.h ../helpers/rg_raw.h \
+$(BUILD)/test_fwanalyze: $(FWANALYZE_SRC) ../helpers/rg_analyzer.h ../helpers/rg_raw.h fw_decoded_bits.h \
 		$(FW)/.fetched | $(BUILD)
 	$(CC) $(CFLAGS) $(SAN) -o $@ $(FWANALYZE_SRC)
 
@@ -502,7 +502,7 @@ $(BUILD)/fwdec/%.o: $(FW)/%.c $(DEC_STUB_HDRS)
 
 $(BUILD)/test_fwdecode: $(FWDECODE_SRC) $(DEC_STUB_HDRS) ../helpers/rg_decode.h ../helpers/rg_raw.h \
 		../helpers/radiogeddon_decode_text.h ../helpers/radiogeddon_bands.h \
-		../helpers/radiogeddon_decoders.h $(DEC_FW_OBJ) | $(BUILD)
+		../helpers/radiogeddon_decoders.h fw_decoded_bits.h $(DEC_FW_OBJ) | $(BUILD)
 	$(CC) $(CFLAGS) $(SAN) -D_GNU_SOURCE $(DEC_INC) -pthread \
 		-o $@ $(FWDECODE_SRC) $(DEC_FW_OBJ) -lm
 
